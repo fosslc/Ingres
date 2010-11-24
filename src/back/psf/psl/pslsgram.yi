@@ -3628,6 +3628,9 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **          in the target list.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	5-Oct-2010 (kschendel) SIR 124544
+**	    Clean up WITH-option parsing some more.  Eliminate create-dgtt
+**	    flag, create-stmt flag is plenty.
 */
 %{
 
@@ -3639,6 +3642,26 @@ GLOBALREF PSF_SERVBLK *Psf_srvblk;
 FUNC_EXTERN DB_STATUS	gwf_call();
 FUNC_EXTERN DB_STATUS	rdf_call();
 FUNC_EXTERN DB_STATUS	qsf_call();
+
+static DB_STATUS psl_do_insert(
+	PSS_SESBLK	*cb,
+	PSQ_CB		*psq_cb,
+	PST_QNODE	*root_node,
+	bool		*shareable_qp,
+	PST_QTREE	**tree,
+	bool		isdbp,
+	PST_J_ID	num_joins,
+	PSS_Q_XLATE	*xlated_qry,
+	DB_SHR_RPTQRY_INFO	**qry_info,
+	PST_QNODE	*sort_list,
+	PST_QNODE	*first_n,
+	PST_QNODE	*offset_n);
+
+static void psl_nonupdt_err(
+	PSQ_CB	*psq_cb,
+	PSS_SESBLK *cb,
+	i4	reason,
+	i4	*err_code);
 
 static DB_STATUS psl_fatt(
 	PSS_SESBLK	*cb,
@@ -3686,10 +3709,9 @@ static DB_STATUS psl_tbl_ref(
 
 static DB_STATUS
 psl_reg_struct(
-	i4     *pst_struct,
 	DMU_CB      *dmu_cb,
 	char        *ssname,
-	i4         dmu_c_flag,
+	bool        unique,
 	DB_ERROR    *err_blk);
 static DB_STATUS
 psl_usr_func(
@@ -4023,7 +4045,6 @@ QUEUE		*col_list);
     PSC_CURBLK	    *psl_crblk;		/* A cursor control block */
     DB_DATA_VALUE   *psl_dbval;		/* A db data value */
     bool	    psl_bool;		/* a boolean */
-    PST_RESKEY	    *psl_reskey;	/* key struct ptr */
     PST_STATEMENT   *psl_stmt;		/* statement node ptr */
     PSS_DECVAR	    *psl_decvar;	/* ptr to var declaration */
     PSS_LOOP 	    *psl_while;		/* ptr to while label */
@@ -4764,8 +4785,6 @@ QUEUE		*col_list);
 %type	<psl_col_ref>	col_ref all_col_ref
 %type   <psl_inttype>   usr_priv usr_priv_list alm_obj_spec
 %type	<psl_strtype>	twith_nkw_kwd twith_nkw_bts name_or_alt_kwd
-%type	<psl_reskey>	twith_list_clist_elem twith_list_inside
-%type	<psl_reskey>	twith_list_partition twith_list_commalist
 
 /* constraint and default tokens
  */
@@ -5266,31 +5285,17 @@ create_index:     index_prefix index_defs
     {
 	DMU_CB *dmu_cb;
 	QEU_CB *qeu_cb, *temp_cb, *end;
-	DMU_CHAR_ENTRY  *char_entry;
-	i4         char_count, ix, ixcount;
-	DB_TAB_ID 	save_tab;
+	i4		ixcount;
+	DB_TAB_ID	save_tab;
 	i4		err_code;
-	bool		c_idx, concurrent_idx = FALSE;
+	bool		c_idx, concurrent_idx;
 
 	qeu_cb = (QEU_CB *) cb->pss_save_qeucb;	/* get the first one */
 	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
 	save_tab = dmu_cb->dmu_tbl_id;
 
-	char_entry = 
-	      (DMU_CHAR_ENTRY *) ((char *) dmu_cb->dmu_char_array.data_address);
-	char_count = dmu_cb->dmu_char_array.data_in_size/sizeof(DMU_CHAR_ENTRY);
-	for (ix = 0; ix < char_count; ix++)
-	{
-	    switch (char_entry[ix].char_id)
-	    {
-		case DMU_CONCURRENT_ACCESS:
-		    if (char_entry[ix].char_value == DMU_C_ON)
-	  		concurrent_idx = TRUE;
-		    break;
-		default :
-		    continue;
-	    }
-	}
+	concurrent_idx = BTtest(DMU_CONCURRENT_ACCESS, dmu_cb->dmu_chars.dmu_indicators)
+		&& (dmu_cb->dmu_chars.dmu_flags & DMU_FLAG_CONCUR_A) != 0;
 
 	for (end = qeu_cb->qeu_prev, temp_cb = qeu_cb, ixcount = 1; ;
 	     temp_cb = temp_cb->qef_next, ixcount++)
@@ -5303,47 +5308,14 @@ create_index:     index_prefix index_defs
 			(i4) sizeof("CREATE INDEX")-1, "CREATE INDEX");
 		return(E_DB_ERROR);
 	    }
-	    char_entry = 
-	      (DMU_CHAR_ENTRY *) ((char *) dmu_cb->dmu_char_array.data_address);
-	    char_count = 
-	      dmu_cb->dmu_char_array.data_in_size/sizeof(DMU_CHAR_ENTRY);
-	    
-	    c_idx = FALSE;
-	    for (ix = 0; ix < char_count; ix++)
+	    c_idx = BTtest(DMU_CONCURRENT_ACCESS, dmu_cb->dmu_chars.dmu_indicators)
+		&& (dmu_cb->dmu_chars.dmu_flags & DMU_FLAG_CONCUR_A) != 0;
+	    if ((c_idx && !concurrent_idx) || (!c_idx && concurrent_idx))
 	    {
-		switch (char_entry[ix].char_id)
-		{
-		    case DMU_CONCURRENT_ACCESS:
-			if ((char_entry[ix].char_value == DMU_C_ON) &&
-				 (!concurrent_idx))
-			{
-	        	    (VOID) psf_error(9351, 0L, PSF_USERERR,
-					&err_code, &psq_cb->psq_error, 1,
-					(i4) sizeof("CREATE INDEX")-1, 
-					"CREATE INDEX");
-			    return(E_DB_ERROR);
-			}
-			else if ((char_entry[ix].char_value == DMU_C_OFF) &&
-				 (concurrent_idx))
-			{
-	        	    (VOID) psf_error(9351, 0L, PSF_USERERR,
-					&err_code, &psq_cb->psq_error, 1,
-					(i4) sizeof("CREATE INDEX")-1, 
-					"CREATE INDEX");
-			    return(E_DB_ERROR);
-			}
-	    		c_idx = TRUE;
-		        break;
-		    default:
-			continue;
-		}
-	    } 
-	    if ((concurrent_idx) && (!c_idx)) 
-	    {
-	        (VOID) psf_error(9351, 0L, PSF_USERERR, &err_code, 
-				 &psq_cb->psq_error, 1,
-				 (i4) sizeof("CREATE INDEX")-1, 
-				 "CREATE INDEX");
+		(VOID) psf_error(9351, 0L, PSF_USERERR,
+			&err_code, &psq_cb->psq_error, 1,
+			(i4) sizeof("CREATE INDEX")-1, 
+			"CREATE INDEX");
 		return(E_DB_ERROR);
 	    }
 
@@ -5385,37 +5357,19 @@ index_def:       indexlocname ON indexrel
 		    LPAREN indexcols RPAREN index_unique tbl_with_clause
     {
 	DB_STATUS	status;
-	i4		unique = FALSE;
-	i4		err_code;
 
-	/* cannot specify 2 unique options */
-        if (($Yunique) && ($7 == TRUE))
-	{
-	    (VOID) psf_error(9350, 0L, PSF_USERERR,
-			&err_code, &psq_cb->psq_error, 1,
-			(i4) sizeof("CREATE INDEX")-1, "CREATE INDEX");
-	    return(E_DB_ERROR);
-	}
-
-	/* 
-	** if parallel style index is specified and old style unique is 
-	** specified, consider all the indexes unique as long as the
-	** syntax does not have in unique in individual create indexes.
-	*/
-	if ($Yunique)
-	    unique = TRUE;
-	else
-	    unique = $7;
-
-	/* Now dmu_cb char_id must be fixed up for unique indexes */
-	status = psl_ci1_create_index(cb, &$Ywith_clauses, unique,
-					&psq_cb->psq_error);
+	status = psl_ci1_create_index(cb, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
 ;
 
-index_prefix:	    CREATE index_unique INDEX
+index_prefix:	    CREATE
+    {
+	/* Let's make sure... */
+	cb->pss_object = NULL;
+    }
+		    index_unique INDEX
     {
 	DB_STATUS		status;
 
@@ -5424,9 +5378,8 @@ index_prefix:	    CREATE index_unique INDEX
 	** RMSGW's REGISTER INDEX
 	*/
 	psq_cb->psq_mode = PSQ_INDEX;
-	cb->pss_object = (PTR) 0;
-	cb->pss_save_qeucb = (PTR) 0;
-	$Yunique = $2;
+	cb->pss_save_qeucb = (PTR) NULL;
+	$Yunique = $3;
         
 	/*
 	** next we will be parsing the name of the new index; we are trying to
@@ -5439,11 +5392,33 @@ index_prefix:	    CREATE index_unique INDEX
 
 index_unique:	    UNIQUE
     {
-	$$ = TRUE;
+	QEU_CB *qeucb = (QEU_CB *)cb->pss_object;
+	DMU_CB *dmucb;
+	i4 err_code;
+
 	/* Set unique-with here in case this is inside an index-def
 	** (new style) rather than the old style unique prefix.
+	** We're *not* in a with-clause context so set this in the DMUCB.
 	*/
-	PSS_WC_SET_MACRO(PSS_WC_UNIQUE, &$Ywith_clauses);
+	if (qeucb != NULL)
+	{
+	    /* yep, inside index-def.  Make sure the initial create index
+	    ** prefix didn't also say UNIQUE.  i.e.
+	    ** create unique index (ix on t(...) unique with ...
+	    ** is an error.
+	    */
+	    if ($Yunique)
+	    {
+		(VOID) psf_error(9350, 0L, PSF_USERERR,
+			    &err_code, &psq_cb->psq_error, 1,
+			    (i4) sizeof("CREATE INDEX")-1, "CREATE INDEX");
+		return(E_DB_ERROR);
+	    }
+
+	    dmucb = (DMU_CB *) qeucb->qeu_d_cb;
+	    BTset(DMU_UNIQUE, dmucb->dmu_chars.dmu_indicators);
+	}
+	$$ = TRUE;
     }
 	    |
     {
@@ -5455,11 +5430,12 @@ indexlocname:	    NAME COLON obj_spec
     {
 	DB_STATUS		status;
 
-	status = psl_ci2_index_prefix(cb, psq_cb, &$Ywith_clauses, $Yunique);
+	/* Pass unique here if we have global (prefix) index uniqueness. */
+	status = psl_ci2_index_prefix(cb, psq_cb, $Yunique);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
-	status = psl_ci5_indexlocname(cb, $1, $3, &$Ywith_clauses, psq_cb);
+	status = psl_ci5_indexlocname(cb, $1, $3, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
@@ -5476,12 +5452,12 @@ indexlocname:	    NAME COLON obj_spec
     {
 	DB_STATUS		status;
 
-	status = psl_ci2_index_prefix(cb, psq_cb, &$Ywith_clauses, $Yunique);
+	/* Pass unique here if we have global (prefix) index uniqueness. */
+	status = psl_ci2_index_prefix(cb, psq_cb, $Yunique);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
-	status = psl_ci5_indexlocname(cb, (char *) NULL, $1, &$Ywith_clauses,
-	    psq_cb);
+	status = psl_ci5_indexlocname(cb, (char *) NULL, $1, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
@@ -5499,7 +5475,7 @@ indexrel:           obj_spec
     {
 	DB_STATUS		status;
 
-	status = psl_ci3_indexrel(cb, $1, &psq_cb->psq_error, psq_cb->psq_mode);
+	status = psl_ci3_indexrel(cb, psq_cb, $1);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -5546,7 +5522,7 @@ copy:              copstmnt copytable coparam keywd
 	DB_STATUS		status;
 
 	status = psl_cp1_copy(cb, psq_cb, &$Yxlated_qry,
-			$Yscanbuf_ptr, &$Ywith_clauses, &psq_cb->psq_error);
+			$Yscanbuf_ptr, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
@@ -5555,9 +5531,8 @@ copy:              copstmnt copytable coparam keywd
 copstmnt:          COPY copy_tbl_kwd
     {
 	DB_STATUS		status;
-	
-	status = psl_cp2_copstmnt( cb, &psq_cb->psq_mode, &$Ywith_clauses,
-				   &psq_cb->psq_error);
+
+	status = psl_cp2_copstmnt( cb, &psq_cb->psq_mode, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
@@ -6007,18 +5982,24 @@ copyfile:	    strconst
 ;
 
 copywith:
-	|    WITH copyclause
     {
+	psl_withopt_init(cb, psq_cb);
     }
+	copywith_clause
+    {
+	DB_STATUS status;
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return (status);
+    }
+
+copywith_clause:	/* nothing */
+	|	WITH copyclause
 ;
 
 copyclause:	    copyoption
-    {
-    }
 	  |
 		    copyclause COMMA copyoption
-    {
-    }
 ;
 
 copyoption:	    nonkeyword EQUAL nonkeyword
@@ -6061,8 +6042,7 @@ copyoption:	    nonkeyword EQUAL nonkeyword
     {
 	DB_STATUS	status;
 
-    	status = psl_cp11_nm_eq_no( cb, $1, $3, &$Ywith_clauses, 
-				    &psq_cb->psq_error);
+	status = psl_cp11_nm_eq_no( cb, psq_cb, $1, $3);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -8596,8 +8576,8 @@ dgtt_kwd:	    DECLARE GLOBAL TEMPORARY TABLE
 	}
 
 	psq_cb->psq_mode = PSQ_DGTT;
-	cb->pss_stmt_flags |= PSS_CREATE_DGTT; /* bug 76902 */
-	status = psl_ct10_crt_tbl_kwd(cb, psq_cb, &$Ywith_clauses, TRUE);
+	cb->pss_stmt_flags |= PSS_CREATE_STMT; /* bug 76902 */
+	status = psl_ct10_crt_tbl_kwd(cb, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
@@ -8623,7 +8603,7 @@ dgtt_stmt:	dgtt_kwd new_loc_name LPAREN tbl_elem_list RPAREN dgtton tbl_with_cla
     {
 	DB_STATUS		    status;
 
-	status = psl_ct1_create_table(cb, psq_cb, &$Ywith_clauses, (PSS_CONS *) NULL);
+	status = psl_ct1_create_table(cb, psq_cb, (PSS_CONS *) NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -8697,7 +8677,7 @@ create_table:	    crt_tbl_kwd new_loc_name LPAREN tbl_elem_list RPAREN tbl_with_
 	    return(E_DB_OK);
 	}
 
-	status = psl_ct1_create_table(cb, psq_cb, &$Ywith_clauses, $Ycons_list);
+	status = psl_ct1_create_table(cb, psq_cb, $Ycons_list);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
@@ -8745,19 +8725,11 @@ create_table:	    crt_tbl_kwd new_loc_name LPAREN tbl_elem_list RPAREN tbl_with_
 	psq_cb->psq_mode = PSQ_RETINTO;
 
 	/* Do column name and other fixes before the with clause, so that
-	** partition definition sees a reasonably good set of columns.
+	** WITH-parsing sees a reasonably good set of columns.
 	*/
 	status = psl_crtas_fixup_columns(cb, $3, $6, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
-
-	/* The query tree isn't hooked up until after the with clause, yet
-	** the with clause (partition) needs to get at the column names!
-	** Drop a copy of the tree pointer into the yyvars for partition
-	** definition, so that it can check out column names..
-	*/
-	$Ypart_crtas_qtree = $6;
-	
     }
 		    tbl_with_clause
     {
@@ -8821,9 +8793,9 @@ crt_tbl_kwd:	    CREATE TABLE
 	    $Ycons_list = (PSS_CONS *) NULL;
 	    return(E_DB_OK);
 	}
-	    
+
 	psq_cb->psq_mode = PSQ_CREATE;
-	status = psl_ct10_crt_tbl_kwd(cb, psq_cb, &$Ywith_clauses, FALSE);
+	status = psl_ct10_crt_tbl_kwd(cb, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
@@ -8836,12 +8808,11 @@ new_loc_name:	    NAME COLON crname
     {
 	DB_STATUS		    status;
 
-	status = psl_ct9_new_loc_name(cb, psq_cb, $1, $3, &$Ywith_clauses,
-					&$Yxlated_qry);
+	status = psl_ct9_new_loc_name(cb, psq_cb, $1, $3);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
-	/* 
+	/*
 	** distributed thread must convert location: to a
 	** WITH-clause item
 	*/
@@ -8851,8 +8822,7 @@ new_loc_name:	    NAME COLON crname
     {
 	DB_STATUS		    status;
 
-	status = psl_ct9_new_loc_name(cb, psq_cb, (char *) NULL,
-				      $1, &$Ywith_clauses, &$Yxlated_qry);
+	status = psl_ct9_new_loc_name(cb, psq_cb, (char *) NULL, $1);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -8940,7 +8910,7 @@ newcolspec:	    LPAREN newcollist RPAREN
 	    i4 	len;
 	    i4		max_cols = DB_MAX_COLS;
 
-	    psl_command_string(psq_cb->psq_mode, cb->pss_lang, command, &len);
+	    psl_command_string(psq_cb->psq_mode, cb, command, &len);
 
 	    (VOID) psf_error(E_PS0BE0_TOO_MANY_COLS, 0L, PSF_USERERR, &err_code,
 		&psq_cb->psq_error, 3,
@@ -9306,17 +9276,17 @@ user_default:       with_noise DEFAULT
 	    */
 	    if ((cb->pss_distrib & DB_3_DDB_SESS)
 		|| ( (psq_cb->psq_mode != PSQ_CREATE) &&
-		     (psq_cb->psq_mode != PSQ_ATBL_ADD_COLUMN) && 
+		     (psq_cb->psq_mode != PSQ_ATBL_ADD_COLUMN) &&
 		     (psq_cb->psq_mode != PSQ_ATBL_ALTER_COLUMN) ) )
 	    {
-		psl_command_string(psq_cb->psq_mode, 
-				   cb->pss_lang, command, &length);
-		
+		psl_command_string(psq_cb->psq_mode,
+				   cb, command, &length);
+
 		if (cb->pss_distrib & DB_3_DDB_SESS)
 		    err = E_PS0489_DDB_USER_DEFAULT_NOT_ALLOWED;
-		else 
+		else
 		    err = E_PS0476_USER_DEFAULT_NOTALLOWED;
-		
+
 		_VOID_ psf_error(err, 0L, PSF_USERERR,
 				 &err_code, &psq_cb->psq_error, 1,
 				 length, command);
@@ -9341,7 +9311,7 @@ user_default:       with_noise DEFAULT
 		/* return error
 		 */
 		psl_command_string(psq_cb->psq_mode, 
-				   cb->pss_lang, command, &length);
+				   cb, command, &length);
 
 		if ( (psq_cb->psq_mode == PSQ_CREATE) ||
 		     (psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN) || 
@@ -10078,11 +10048,11 @@ con_with:	    WITH
 	}
 	$Ysavemode = psq_cb->psq_mode;		/* save query mode */
 	psq_cb->psq_mode = PSQ_CONS;		/* & reset for checks */
-	/* reset options */
-	MEfill(sizeof ($Ywith_clauses), 0, &$Ywith_clauses); 
+	psl_withopt_init(cb, psq_cb);
     }
 		    con_with_list
     {
+	DB_STATUS status;
 	i4 flags = cb->pss_curcons->pss_cons_flags;
 	/* (kibro01) b119050 - Disallow NOINDEX or BASETAB with anything else */
 	if ( (flags & PSS_CONS_OTHER_OPTS) &&
@@ -10090,10 +10060,11 @@ con_with:	    WITH
 	{
 	    psl_yerror(3, cb, psq_cb);
 	}
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return (status);
 	psq_cb->psq_mode = $Ysavemode;		/* reset query mode */
 	$$ = 0;
-	/* reset options */
-	MEfill(sizeof ($Ywith_clauses), 0, &$Ywith_clauses);
     }
 ;
 
@@ -10683,12 +10654,18 @@ collate:		/* empty */
     }
 ;
 
-tbl_with_clause:    tbloptionalwith
+tbl_with_clause:
+    {
+	psl_withopt_init(cb, psq_cb);
+    }
+		    tbloptionalwith
     {
 	DB_STATUS		status;
 
-	status = psl_ct3_crwith(cb, psq_cb->psq_mode, &$Ywith_clauses,
-	    &psq_cb->psq_error);
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return (status);
+	status = psl_ct3_crwith(cb, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -10699,6 +10676,9 @@ tbloptionalwith:    WITH tblwithlist
 ;
 
 
+/* Some statements (modify, constraint-with) enter here;  they have their own
+** rules for with-setup and -finishup.
+*/
 tblwithlist:	    tblwithopt
 	    |	    tblwithlist COMMA tblwithopt
 ;
@@ -10745,8 +10725,7 @@ twith_name:	    nonkeyword EQUAL twith_nkw_kwd
 	}
 	else
 	{
-	    status = psl_nm_eq_nm(cb, $1, $3, &$Ywith_clauses, psq_cb->psq_mode,
-		&psq_cb->psq_error);
+	    status = psl_nm_eq_nm(cb, psq_cb, $1, $3);
 	}
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -10765,8 +10744,8 @@ twith_nm_eq_hexconst:	    nonkeyword EQUAL HEXCONST
 	}
 	else
 	{
-	    status = psl_nm_eq_hexconst(cb, $1, $3->db_t_count, $3->db_t_text,
-		&$Ywith_clauses, psq_cb->psq_mode, &psq_cb->psq_error);
+	    status = psl_nm_eq_hexconst(cb, psq_cb, $1,
+		$3->db_t_count, $3->db_t_text);
 	}
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -10814,8 +10793,7 @@ twith_ix_name:  INDEX EQUAL twith_nkw_bts
 	}
 	else
 	{
-	    status = psl_nm_eq_nm(cb, ERx("index"), $3, &$Ywith_clauses, 
-		psq_cb->psq_mode, &psq_cb->psq_error);
+	    status = psl_nm_eq_nm(cb, psq_cb, "index", $3);
 	    if (DB_FAILURE_MACRO(status))
 		return(status);
 	}
@@ -10843,8 +10821,7 @@ twith_nm_eq_str:    nonkeyword EQUAL SCONST
 	    status = psl_ct15_distr_with(cb, $1, sconvert($3),
 		    		&$Yxlated_qry, TRUE, psq_cb);
 	else
-	    status = psl_nm_eq_nm(cb, $1, sconvert($3), &$Ywith_clauses,
-		psq_cb->psq_mode, &psq_cb->psq_error);
+	    status = psl_nm_eq_nm(cb, psq_cb, $1, sconvert($3));
 
         if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -10860,10 +10837,9 @@ twith_tb_eq_id:	    twith_tb_wd EQUAL internal_ident
 	if (~cb->pss_distrib & DB_3_DDB_SESS)
 	{
 	    /* This is essentially "error", there is no table= option
-	    ** outside of STAR.
+	    ** outside of STAR.  Issue a standard with-type message.
 	    */
-	    status = psl_nm_eq_nm(cb, "table", $3, &$Ywith_clauses,
-		psq_cb->psq_mode, &psq_cb->psq_error);
+	    status = psl_nm_eq_nm(cb, psq_cb, "table", $3);
 	}
 	else
 	{
@@ -10902,8 +10878,7 @@ twith_num:	    nonkeyword EQUAL intconst_e
     {
 	DB_STATUS		status;
 
-	status = psl_nm_eq_no(cb, $1, $3, &$Ywith_clauses, psq_cb->psq_mode,
-	    &psq_cb->psq_error, &$Yxlated_qry);
+	status = psl_nm_eq_no(cb, psq_cb, $1, $3, &$Yxlated_qry);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -10921,54 +10896,16 @@ twith_num:	    nonkeyword EQUAL intconst_e
 twith_word:	    nonkeyword
     {
 	DB_STATUS	status;
-	i4		qmode;
-	i4		toss_err;
 
-	qmode = psq_cb->psq_mode;
-	/* There aren't any single-word options allowed on a partition's
-	** with clause.  Rather than add the test to all the various
-	** places below, check it right away here.
-	*/
-	if (cb->pss_stmt_flags & PSS_PARTITION_DEF)
-	{
-	    (void) psf_error(E_US1931_6449_PARTITION_BADOPT, 0, PSF_USERERR,
-			&toss_err, &psq_cb->psq_error, 2,
-			0, uld_psq_modestr(qmode),
-			STlength($1), $1);
-	    return (E_DB_ERROR);
-	}
-	if (qmode == PSQ_CONS && $Ysavemode == PSQ_ALTERTABLE)
-	{
-	    /* Relocated check for only alter table add constraint option */
-	    /* (schka24) This disallows "compression" as a constraint
-	    ** index with-option, but I guess one can always use the
-	    ** "compression=(key)" flavor.
-	    */
-	    if (STcompare($1, "nojournal_check"))
-	    {
-		psq_cb->psq_mode = $Ysavemode;
-		psl_yerror(3, cb, psq_cb);
-		return(E_DB_ERROR);
-	    }
-	    if (cb->pss_curcons)
-		cb->pss_curcons->pss_cons_flags |= PSS_NO_JOURNAL_CHECK;
-	    status = E_DB_OK;
-	}
-	else if (qmode == PSQ_INDEX)
-	    status = psl_ci7_index_woword(cb, $1, &$Ywith_clauses,
-		&psq_cb->psq_error);
-	else if (qmode == PSQ_CREATE || qmode == PSQ_RETINTO
-		 || qmode == PSQ_DGTT || qmode == PSQ_DGTT_AS_SELECT)
-	    status = psl_ct6_cr_single_kwd(cb, $1, &$Ywith_clauses,
-		psq_cb->psq_mode, &psq_cb->psq_error, &$Yxlated_qry);
-	else if (qmode == PSQ_MODIFY)
-	    status = psl_md9_modopt_word(cb, $1, &$Ywith_clauses,
-		&psq_cb->psq_error);
-	else
-	{
-	    psl_yerror(3, cb, psq_cb);
-	    return (E_DB_ERROR);
-	}
+	status = psl_with_kwd(cb, psq_cb, $1, &$Yxlated_qry);
+	if (DB_FAILURE_MACRO(status))
+	    return (status);
+    }
+		| UNIQUE
+    {
+	DB_STATUS	status;
+
+	status = psl_with_kwd(cb, psq_cb, "unique", &$Yxlated_qry);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
@@ -10984,12 +10921,7 @@ twith_list:    twith_list_prefix LPAREN twith_list_inside RPAREN
     {
 	/* Turn off the funky special keyword stuff */
 	cb->pss_yacc->yy_partalt_kwds = FALSE;
-
-	/* FIXME get rid of this later along with pss_restab goop. */
-	if ($Ycreate_with_key)
-	    cb->pss_restab.pst_reskey = $3;
 	$Ylist_clause = 0;		/* done with this clause */
-	$Ycreate_with_key = FALSE;
     }
 ;
 
@@ -10997,24 +10929,14 @@ twith_list:    twith_list_prefix LPAREN twith_list_inside RPAREN
 ** keyword handling for partitions.  Note that for create schema, the
 ** create-with-key flag will remain off, and no weird KEY= stuff happens.
 */
-twith_list_prefix:   nonkeyword EQUAL 
+twith_list_prefix:   nonkeyword EQUAL
     {
 	DB_STATUS		status;
 
-	$Ycreate_with_key = FALSE;
-	status = psl_lst_prefix(cb, psq_cb, $1, yyvarsp);
+	status = psl_withlist_prefix(cb, psq_cb, $1, &$Yxlated_qry);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
-	/* **** TEMP until I get everything handled as dmu char */
-	/* KEY= option on a create-table-ish thing is handled as a
-	** linked list of reskey's
-	** (notice that key= on register as import is NOT done that way)
-	*/
-	if ($Ylist_clause == PSS_KEY_CLAUSE &&
-	  (psq_cb->psq_mode == PSQ_CREATE || psq_cb->psq_mode == PSQ_RETINTO
-	   || psq_cb->psq_mode == PSQ_DGTT
-	   || psq_cb->psq_mode == PSQ_DGTT_AS_SELECT))
-	    $Ycreate_with_key = TRUE;
+
 	/* If we have a PARTITION= list, turn on the alternate keyword
 	** list (replacing the normal keyword list).
 	*/
@@ -11028,27 +10950,7 @@ twith_list_inside:  twith_list_commalist
 ;
 
 twith_list_commalist:	twith_list_clist_elem
-    {
-	if ($Ycreate_with_key)
-	    $$ = $1;
-    }
 	    |	    twith_list_commalist COMMA twith_list_clist_elem
-    {
-	if ($Ycreate_with_key)
-	{
-	    PST_RESKEY	*reskey;
-
-	    /*
-	    ** Find the last key in the list.
-	    */
-	    for (reskey = $1; reskey->pst_nxtkey; reskey = reskey->pst_nxtkey)
-	    ;
-     
-	    reskey->pst_nxtkey = $3;
-
-	    $$ = $1;
-	}
-    }
 ;
 
 /* WITH clause: element of list in thing = (elem, elem, ...)
@@ -11074,17 +10976,11 @@ twith_list_commalist:	twith_list_clist_elem
 ** However, it may yet happen, and this is a useful grammar simplification
 ** in any case.)
 **
-** Note: this production is defined as type psl_reskey because of the list
-** hookup that you see in twith_list_commalist.  It's only REALLY a
-** psl_reskey when the list is KEY= in a CREATE TABLE context.  The
-** rest of the time, we have to return NULL to keep yacc's type checking
-** happy.
-**
 ** Most elements are names (identifiers).  One kind, the STREAM=, has string
 ** constants as elements.  We'll parse either kind and leave the element
-** handler (psl_ct8_cr_lst_elem or psl_lst_elem) to check $Yid_type to
-** enforce the proper element syntax.  (Both kinds of elements have
-** asciz-string values, so if desired, a list type could accept either.)
+** handler (psl_withopt_elem) to check $Yid_type to enforce the proper
+** element syntax.  (Both kinds of elements have asciz-string values,
+** so if desired, a list type could accept either.)
 */
 twith_list_clist_elem:	    sconst_ident asc_desc
     {
@@ -11093,7 +10989,6 @@ twith_list_clist_elem:	    sconst_ident asc_desc
 	i4			err_code;
 	i4			id_len;
 	i4			qmode;
-	PST_RESKEY		*reskey;
 	u_char			*id_name;
 	u_char			delim_buf[DB_MAX_DELIMID+1];
 
@@ -11141,33 +11036,11 @@ twith_list_clist_elem:	    sconst_ident asc_desc
 	        CMtolower(letter, letter);
 	}
 
-	if (qmode == PSQ_CREATE || qmode == PSQ_RETINTO
-		|| qmode == PSQ_REG_IMPORT
-		|| qmode == PSQ_DGTT || qmode == PSQ_DGTT_AS_SELECT
-		|| qmode == PSQ_CREATE_SCHEMA)
-	{
-	    /* Create-table-ish statements */
-	    status = psl_ct8_cr_lst_elem(cb, psq_cb, yyvarsp, $1,
-	    	$Ycreate_with_key ? &reskey : (PST_RESKEY **) NULL,
-		&$Yxlated_qry);
-	}
-	else
-	{
-	    /* Index, modify, constraint-with */
-	    status = psl_lst_elem(cb, yyvarsp, $1, qmode,
-		&psq_cb->psq_error);
-	}
+	status = psl_withlist_elem(cb, psq_cb, $1, &$Yxlated_qry);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
-		    
-	if ($Ycreate_with_key)
-	    $$ = reskey;
     }
 	|	index_rspec
-    {
-	/* Keep yacc type-checking happy */
-	$$ = NULL;
-    }
     ;
 
 index_rspec:    LPAREN index_rlst RPAREN
@@ -11185,8 +11058,7 @@ index_relem:    sign_op I2CONST
 	if ($1 == ADI_MINUS_OP)
 	  *$2 = -(*$2);
 	tmp = *$2;
-	status = psl_lst_relem(cb, $Ylist_clause, &tmp, PSQ_INDEX,
-			    &psq_cb->psq_error);
+	status = psl_withlist_relem(cb, psq_cb, &tmp);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
@@ -11198,8 +11070,7 @@ index_relem:    sign_op I2CONST
 	if ($1 == ADI_MINUS_OP)
 	  *$2 = -(*$2);
 	tmp = *$2;
-	status = psl_lst_relem(cb, $Ylist_clause, &tmp, PSQ_INDEX,
-			    &psq_cb->psq_error);
+	status = psl_withlist_relem(cb, psq_cb, &tmp);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
@@ -11225,8 +11096,7 @@ index_relem:    sign_op I2CONST
 	    MHpkneg((PTR)tmpdec, prec, scale, d);
 	}
 	CVpkf(d, prec, scale, &tmp);
-	status = psl_lst_relem(cb, $Ylist_clause, &tmp, PSQ_INDEX,
-				    &psq_cb->psq_error);
+	status = psl_withlist_relem(cb, psq_cb, &tmp);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
@@ -11238,8 +11108,7 @@ index_relem:    sign_op I2CONST
 	if ($1 == ADI_MINUS_OP)
 	    *$2 = -(*$2);
 	tmp = *$2;
-	status = psl_lst_relem(cb, $Ylist_clause, &tmp, PSQ_INDEX,
-				    &psq_cb->psq_error);
+	status = psl_withlist_relem(cb, psq_cb, &tmp);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
@@ -11252,8 +11121,7 @@ index_relem:    sign_op I2CONST
 	    *$2 = -(*$2);
 	tmp = *$2;
 
-	status = psl_lst_relem(cb, $Ylist_clause, &tmp, PSQ_INDEX,
-				    &psq_cb->psq_error);
+	status = psl_withlist_relem(cb, psq_cb, &tmp);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
@@ -11266,19 +11134,9 @@ index_relem:    sign_op I2CONST
 ** parsing proceeds, so the various semantic actions are somewhat delicately
 ** interdependent.  It would be good to have some understanding of who
 ** does what, before doing any major surgery on the grammar.
-**
-** The return value on this production is just to satisfy yacc;
-** some other with- list=() type productions have a return type,
-** so they all have to have a return type.
 */
 twith_list_partition:	partition_dim partition_def_done
-    {
-	$$ = NULL;
-    }
 		|	partition_dim_list partition_def_done
-    {
-	$$ = NULL;
-    }
 ;
 
 /* This empty production is just a way to hang an action off the end of
@@ -11303,7 +11161,7 @@ partition_dim_list:	LPAREN partition_dim RPAREN
 
 	if (STcompare($2,"subpartition") != 0)
 	{
-	    psl_command_string(psq_cb->psq_mode, cb->pss_lang, command, &len);
+	    psl_command_string(psq_cb->psq_mode, cb, command, &len);
 	    (void) psf_error(E_US1930_6448_PARTITION_EXPECTS,
 		    0, PSF_USERERR, &toss_err, &psq_cb->psq_error,
 		    3, len, command, sizeof("subpartition")-1, "subpartition",
@@ -11704,11 +11562,17 @@ partition_with:	/* empty */
     {
 	/* This is a recursive WITH clause, save what's going on in the
 	** outside world.  Fortunately we only have one level of recursion.
+	** Note we don't use psl_withopt_init() which is sorta kinda OK,
+	** since the only WITH-option allowed inside the partition()
+	** clause is LOCATION=().  Specifically, we don't want to hurt
+	** the DMU_CHAR being used by the outer world.  (If this changes,
+	** need to save and restore the entire current dmu chars.)
 	*/
 	$Ysave_list_clause = $Ylist_clause;
 	$Ylist_clause = 0;
-	MEcopy(&$Ywith_clauses, sizeof(PSS_WITH_CLAUSE), &$Ysave_with_clauses);
-	MEfill(sizeof ($Ywith_clauses), 0, &$Ywith_clauses);
+	MEcopy($Ycur_chars->dmu_indicators, sizeof($Ysave_indicators),
+		$Ysave_indicators);
+	MEfill(sizeof ($Ycur_chars->dmu_indicators), 0, $Ycur_chars->dmu_indicators);
     }
 		partition_with_clause
     {
@@ -11826,11 +11690,8 @@ alter_table:		alt_tbl ADD tbl_constraint
     {
         DB_STATUS               status;
         PSS_OBJ_NAME		newname; 
-        PSS_OBJ_NAME		oldname; 
-        PSS_RNGTAB              *rngtable;
     	i4          		err_code;
     	i4			tbls_to_lookup = (PSS_USRTBL | PSS_DBATBL | PSS_INGTBL);
-	i4			scope = 0;
 	PSS_RNGTAB          	*resrange;
         i4                  	rngvar_info;
 
@@ -12099,7 +11960,6 @@ create_dbproc:	    cdbp_kwd cdbp_procname cdbp_parmspec
 	QSF_RCB		qsf_rb;
 	i4		err_code;
 	PSS_DBPALIAS	dbpid;
-	DB_CURSOR_ID	*dbpidp = (DB_CURSOR_ID *) dbpid;
 	ADF_CB		*adf_scb = (ADF_CB*) cb->pss_adfcb;
 	PST_DECVAR	*decvar;
 	i4		qsf_op;
@@ -12650,7 +12510,6 @@ cdbp_procname:	    obj_spec
 	i4		dbpshow_flags;
 	i4		err_code;
         DB_STATUS	local_status;
-        i4              access = 0;
    
 	/* If name was qualified, it'd better be the same as the user */
 	if ($1->pss_objspec_flags & PSS_OBJSPEC_EXPL_SCHEMA &&
@@ -12773,7 +12632,6 @@ cdbp_procname:	    obj_spec
 	** first n slots in var array.
 	*/
 	{
-	    bool		found = FALSE;
 	    DB_PARM_NAME	varname;
 	    PSS_DECVAR	*var;
             char		*tempstr;
@@ -12896,7 +12754,6 @@ cdbp_parmspec:	    /* empty */
     {
 	i4	err_code;
 	char 	*dbpname;
-	i4	val1=0, val2=0;  /* for trace point checking */
 
 	/*   a set-input parameter is only allowed in a CREATE PROCEDURE
 	** statement if it is generated by the system (i.e. QEF) in an 
@@ -13195,7 +13052,6 @@ cdbp_named_rowelem_list:  cdbp_named_rowelem
 	i4		maxparm;
 	i4		err_code;
 	PSS_DECVAR	*var;
-	QUEUE		*varq;
 
 	/* Just check for too many "columns". */
 	var = (PSS_DECVAR *)$Ydbpinfo->pss_resrowq.q_next;
@@ -13285,7 +13141,6 @@ cdbp_unnamed_rowelem_list:  cdbp_unnamed_rowelem
 	i4		maxparm;
 	i4		err_code;
 	PSS_DECVAR	*var;
-	QUEUE		*varq;
 
 	/* Just check for too many "columns". */
 	var = (PSS_DECVAR *)$Ydbpinfo->pss_resrowq.q_next;
@@ -13302,9 +13157,7 @@ cdbp_unnamed_rowelem_list:  cdbp_unnamed_rowelem
 
 cdbp_unnamed_rowelem:   /* Do the code first. */	
     {
-	i4		err_code;
 	DB_STATUS	status;
-	bool		found = FALSE;
 	DB_PARM_NAME	varname;
 	PSS_DECVAR	*var;
 	QUEUE		*varq;
@@ -14032,10 +13885,7 @@ cdbp_dmlstmt:	    cdbp_dml1stmt
 	** has been set to 0 above)
 	*/
 	*$Yagg_list_stack = (YYAGG_NODE_PTR *) NULL;
-	$Ywith_journaling = 0;
-	$Ywith_location	= 0;
 	$Ywith_dups	= PST_DNTCAREDUPS;
-	$Yis_heapsort	= 0;
 	$Yin_target_clause = 0;
 	$Ytarget_clause_depth = 0;
 	$Ysort_list	= 0;
@@ -15172,7 +15022,6 @@ cdbp_retrow_spec1:  LPAREN
 	PST_QNODE	*node;
 	DB_STATUS	status;
 	i4		err_code;
-	char		colname[DB_ATT_MAXNAME + 2];
 
 	if ($Ydbpinfo->pss_resrowno <= 0)
 	{
@@ -16725,7 +16574,6 @@ curop_ini_dsql:	    curop_ini_1 generic_ident for_rdonly
 	i4		    err_code;
 	bool		    use_view;
 	i4		    rng_count;
-	bool		    qpcomp;
 
 	/*
 	** Obtain the prototype query tree from QSF and duplicate the tree.
@@ -21695,10 +21543,10 @@ tbl_priv_obj:	    obj_spec
 		char        command[PSL_MAX_COMM_STRING];
 		i4     length;
 
-		psl_command_string(psq_cb->psq_mode, cb->pss_lang, command, 
+		psl_command_string(psq_cb->psq_mode, cb, command,
 		    &length);
 
-		(VOID) psf_error(E_US088E_2190_INACCESSIBLE_TBL, 0L, 
+		(VOID) psf_error(E_US088E_2190_INACCESSIBLE_TBL, 0L,
 		    PSF_USERERR,&err_code, &psq_cb->psq_error, 3,
 		    length, command,
 		    psf_trmwhite(sizeof($1->pss_owner), 
@@ -21794,7 +21642,7 @@ tbl_priv_obj:	    obj_spec
 			char        qry[PSL_MAX_COMM_STRING];
 			i4     qry_len;
 
-			psl_command_string(psq_cb->psq_mode, cb->pss_lang, 
+			psl_command_string(psq_cb->psq_mode, cb,
 			    qry, &qry_len);
 
 			psl_syn_info_msg(cb, resrange, $1, rngvar_info,
@@ -22312,7 +22160,6 @@ seq_priv_obj:	    obj_spec
 	PSY_CB          *psy_cb = (PSY_CB *) cb->pss_object;
 	PSY_TBL		*psy_tbl;
 	DB_STATUS	status;
-	i4		nopriv = 0;
 	i4		gseq_flags;
 	i4		seq_mask = 0;
 	DB_IISEQUENCE	seqtup;
@@ -23468,8 +23315,6 @@ crt_alm_kwd:         CRTSECALM
 ;
 crt_alm_name:		generic_ident
     {
-	i4		err_code;
-
 	/* test alarm name for reserved or too long name
 	 */
 	if (PSL_IS_RESERVED_IDENT($1, cb, psq_cb, TRUE) ||
@@ -24221,7 +24066,6 @@ sec_aud_ltok:	    nonkeyword
 sec_aud_lvl:	    name_or_sconst
     {
 	PSY_CB	    *psy_cb;
-	char	    *str = $1;
 	i4	    error;
 	DB_STATUS   status;
 
@@ -25563,7 +25407,6 @@ create_sequence:	crt_seq_kwd obj_spec seq_opt_list
     {
 	i4                err_code;
 	DB_STATUS	       status;
-	DB_IISEQUENCE	       *seqp;
 
 	/* test sequence name for reserved name
 	 */
@@ -25672,7 +25515,6 @@ common_seq_opt_list1:	common_seq_opt
 seq_opt:	AS seq_type
     {
 	i4                err_code;
-	DB_STATUS	       status;
 	PSY_CB		*psy_cb;
 
 	if (psq_cb->psq_mode != PSQ_CSEQUENCE)
@@ -25763,7 +25605,6 @@ common_seq_opt:	    START WITH sign_op number
 		|   CACHE number
     {
 	i4                err_code;
-	DB_STATUS	       status;
 	i4		cacheval;
 	
 	/* FIXME disallow i8 cache value for now */
@@ -25829,7 +25670,6 @@ common_seq_opt:	    START WITH sign_op number
 		|   ORDER
     {
 	i4                err_code;
-	DB_STATUS	       status;
 
 	if ($Yseqp->dbs_flag & DBS_NOORDER)
 	{
@@ -25845,7 +25685,6 @@ common_seq_opt:	    START WITH sign_op number
 		|   NOMAX
     {
 	i4                err_code;
-	DB_STATUS	       status;
 
 	if ($Yseqp->dbs_flag & DBS_MAXVAL)
 	{
@@ -25861,7 +25700,6 @@ common_seq_opt:	    START WITH sign_op number
 		|   NOMIN
     {
 	i4                err_code;
-	DB_STATUS	       status;
 
 	if ($Yseqp->dbs_flag & DBS_MINVAL)
 	{
@@ -25877,7 +25715,6 @@ common_seq_opt:	    START WITH sign_op number
 		|   NOCACHE
     {
 	i4                err_code;
-	DB_STATUS	       status;
 
 	if ($Yseqp->dbs_flag & DBS_CACHE)
 	{
@@ -25894,7 +25731,6 @@ common_seq_opt:	    START WITH sign_op number
 		|   NOCYCLE
     {
 	i4                err_code;
-	DB_STATUS	       status;
 
 	if ($Yseqp->dbs_flag & DBS_CYCLE)
 	{
@@ -25910,7 +25746,6 @@ common_seq_opt:	    START WITH sign_op number
 		|   NOORDER
     {
 	i4                err_code;
-	DB_STATUS	       status;
 
 	if ($Yseqp->dbs_flag & DBS_ORDER)
 	{
@@ -27339,7 +27174,6 @@ inexpr:		    select_expr
     }
 	    |	    DEFAULT
     {
-	DB_STATUS	status;
 	PST_QNODE	*node, *prevnode;
 	bool		found;
 	i4		err_code;
@@ -27380,8 +27214,13 @@ modify:		modstmnt modtable modnoise modstorage modkeys mod_with_or_where
     {
 	DB_STATUS		    status;
 
-	status = psl_md1_modify(cb, yyvarsp, &psq_cb->psq_error);
+	/* First, post-process any WITH-list */
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return (status);
 
+	/* Wrap up the MODIFY */
+	status = psl_md1_modify(cb, yyvarsp, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -27410,6 +27249,12 @@ modtable:	    obj_spec
 
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
+
+	/* Do WITH-setup early because we might have MODIFY xx TO PRIORITY=n
+	** which parses as if it were a with-option.  We wait until after
+	** the table-name is parsed in case it's a Vectorwise table.
+	*/
+	psl_withopt_init(cb, psq_cb);
     }
 		modpartition
 ;
@@ -27460,7 +27305,7 @@ modstorage:         modstorname
     {
 	DB_STATUS		status;
 
-	status = psl_md3_modstorage(cb,
+	status = psl_md3_modunique(cb,
 				    yyvarsp, &psq_cb->psq_error);
 
 	if (DB_FAILURE_MACRO(status))
@@ -27478,14 +27323,12 @@ modscope:	/* Nuffin' */
     {
 	DB_STATUS		status;
 
-	if (STcompare($1, "unique_scope") || 
-		(STcompare($3, "statement") && (STcompare($3, "row"))))
+	if (STcompare($1, "unique_scope") != 0)
 	{
 	    psl_yerror(3, cb, psq_cb);
 	    return(E_DB_ERROR);
 	}
-	status = psl_md4_modstorname(cb, "unique_scope", yyvarsp, &psq_cb->psq_error);
-
+	status = psl_nm_eq_nm(cb, psq_cb, "unique_scope", $3);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -27495,7 +27338,7 @@ modstorname:	    nonkeyword
     {
 	DB_STATUS		status;
 
-	status = psl_md4_modstorname(cb, $1, yyvarsp, &psq_cb->psq_error);
+	status = psl_md4_modstorname(cb, psq_cb, $1);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -27504,7 +27347,7 @@ modstorname:	    nonkeyword
     {
 	DB_STATUS		status;
 
-	status = psl_md4_modstorname(cb, "relocate", yyvarsp, &psq_cb->psq_error);
+	status = psl_md4_modstorname(cb, psq_cb, "relocate");
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -27513,19 +27356,34 @@ modstorname:	    nonkeyword
     {
 	DB_STATUS		status;
 
-	/* ****FIXME what about unique_scope = row? !!! */
-	if (STcompare($1, "unique_scope") || 
-		(STcompare($3, "statement") && (STcompare($3, "row"))))
+	if (STcompare($1, "unique_scope") != 0)
 	{
 	    psl_yerror(3, cb, psq_cb);
 	    return(E_DB_ERROR);
 	}
-	status = psl_md4_modstorname(cb, "unique_scope", yyvarsp, &psq_cb->psq_error);
-
-	if (DB_FAILURE_MACRO(status))
+	/* Process the unique-scope option, "post-process" which will set the
+	** modify action dmu-char-array entry, then reset for the real with
+	** clause if there is any.
+	*/
+	status = psl_nm_eq_nm(cb, psq_cb, $1, $3);
+	if (status != E_DB_OK)
 	    return(status);
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return(status);
+	psl_withopt_init(cb, psq_cb);
     }
-	|	twith_num	
+	|	twith_num
+    {
+	DB_STATUS status;
+	/* "Post-process" to set the modify action dmu-char-array entry,
+	** then reset for the real with clause if there is any.
+	*/
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return(status);
+	psl_withopt_init(cb, psq_cb);
+    }
 ;
 
 modkeys:           ON modrptkey
@@ -27549,8 +27407,8 @@ modbasekey:         modkeyname
     {
 	DB_STATUS		    status;
 
-	status = psl_md6_modbasekey(cb, (i4) ($2 == PSS_ASCENDING),
-	    $Yis_heapsort, &psq_cb->psq_error);
+	status = psl_md6_modbasekey(cb, ($2 == PSS_ASCENDING),
+	    &psq_cb->psq_error);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -27596,6 +27454,7 @@ modkeyname:	    col_spec
 
 /* MODIFY needs a separate WITH-clause introducer, because it also allows
 ** the (obsolete?  deprecated) form WHERE clause...
+** Note that withclause-init is called early for MODIFY, don't do it here.
 */
 mod_with_or_where:	WITH tblwithlist
 		|	WHERE tblwithlist
@@ -27912,7 +27771,6 @@ exe_stmnt:	    EXECUTE generic_ident
     {
 	PST_PROCEDURE   *pnode;
 	DB_STATUS	status;
-	bool		qpcomp;
 
 	psq_cb->psq_mode = PSQ_EXECQRY;
 
@@ -28560,7 +28418,7 @@ with_list_element:	tbl_spec dcollist AS LPAREN
 query_clause:	    order_clause result_offset_clause fetch_first_clause
     {
 	$$ = $1;
-	/* $$ = ($1 != -1) ? $1 : ($2 != -1) ? $2 : $3;
+	/* $$ = ($1 != -1) ? $1 : ($2 != -1) ? $2 : $3; */
 					/* first value != -1, else -1 */
     }
 /*
@@ -28688,7 +28546,6 @@ order_clause:	    ORDER BY
 result_offset_clause	:	OFFSET const_or_dbparm
     {
 	i4	ilen, ival;
-	PTR	cptr;
 	i4	err_code;
 
 	/* Check for "first n" in wrong place (can only be in first select
@@ -28747,7 +28604,6 @@ result_offset_clause	:	OFFSET const_or_dbparm
 fetch_first_clause:	FETCH first_or_next const_or_dbparm row_or_rows ONLY
     {
 	i4	ilen, ival;
-	PTR	cptr;
 	i4	err_code;
 
 	/* Make sure he hasn't already coded "select first n ...". */
@@ -29109,7 +28965,6 @@ query_expr_1:	    query_term
     }
 	|	    query_expr_1 union query_term
     {
-	DB_STATUS	status;
 	PST_QNODE	*ss;
 	i4		err_code;
 
@@ -29279,7 +29134,7 @@ subselect:	    select first_n distinct target_spec into_clause from
 	    i4 len;
 	    i4 max_cols = DB_MAX_COLS;
 
-	    psl_command_string(psq_cb->psq_mode, cb->pss_lang, command, &len);
+	    psl_command_string(psq_cb->psq_mode, cb, command, &len);
 
 	    (VOID) psf_error(E_PS0BE0_TOO_MANY_COLS, 0L, PSF_USERERR, &err_code,
 		&psq_cb->psq_error, 3,
@@ -29378,7 +29233,6 @@ subselect:	    select first_n distinct target_spec into_clause from
 	i4		    err_code;
 	char		    emptycol[DB_ATT_MAXNAME];
 	char		    colname[DB_ATT_MAXNAME + 2];
-	i4		    tcount, hcount;
 	YYAGG_NODE_PTR	    *agg_node,
 			    *cur_agg_list =
 				$Yagg_list_stack[cb->pss_qualdepth];
@@ -31278,7 +31132,6 @@ table_proc:	exdbp_name LPAREN
 	PST_J_MASK	*mask;
 	DB_STATUS	status;
 	PSS_RNGTAB	*resrange;
-	i4		err_code;
 
 	if (!--$Yin_target_clause)
 	    $Ytarget_clause_depth = 0;
@@ -31813,7 +31666,6 @@ joined_table:	    cross_join
 
 qualified_join:	    from_list_item join_type from_list_item
     {
-	DB_STATUS	status;
 	PSS_1JOIN	    *join_info;
 	PST_J_MASK	    mask;
 
@@ -32437,14 +32289,12 @@ named_column:		generic_ident
 	PSS_1JOIN	*join_info;
 	i4		left, right;
 	PSS_RNGTAB	*left_rel, *right_rel;
-	i4		cols;
 	DMT_ATT_ENTRY	*left_attr, *right_attr;
 	DB_ATT_NAME	colname;
 	PST_QNODE	*var1, *var2, *oper;
 	PST_VAR_NODE	var_node;
 	PST_OP_NODE	op_node;
 	DB_STATUS	status;
-	i4		mask;
 	bool		found = FALSE;
 	
 	join_info = $Ypss_join_info.pss_join + $Ypss_join_info.depth;
@@ -33390,7 +33240,7 @@ cname:			col_ref
 			    char        command[PSL_MAX_COMM_STRING];
 			    i4     length;
 
-			    psl_command_string(psq_cb->psq_mode, DB_SQL,
+			    psl_command_string(psq_cb->psq_mode, cb,
 				command, &length);
 
 			    _VOID_ psf_error(E_PS0483_CONS_NO_COL, 0L,
@@ -33618,7 +33468,6 @@ order_column:		select_expr
     {
 	DB_STATUS	status;
 	PST_QNODE	*sortnode;
-	i4		err_code;
 
 	psl_bp(/*order_column*/);
 
@@ -34351,7 +34200,6 @@ predicate:		select_expr comparison select_expr
 	PST_QNODE           *rnode1, *rnode2;
 	PST_QNODE	    *ornode1, *ornode2;
 	PST_QNODE           *xnode2, *xnode3, *xnode4, *ynode2, *znode2;
-	YYAGG_NODE_PTR	    *agg_node_list = (YYAGG_NODE_PTR *) NULL;
 	PST_OP_NODE	    opnode;
 	DB_STATUS	    status;
 	i4		    pst_node_flags;
@@ -35744,7 +35592,6 @@ element:		FROM
 		|	case_function
     {
 	i4	err_code;
-	DB_STATUS status;
 
 	if (psl_seqop_search($1))
 	{
@@ -35979,7 +35826,6 @@ constant:		number
             ADF_CB              *adf_scb = (ADF_CB*) cb->pss_adfcb;
             DB_DATA_VALUE	src_dbv;
             DB_STATUS		mny_status;
-            ADI_LENSPEC		lenspec;
             DB_DATA_VALUE       *pop[2];
             ADI_FI_ID		cvid;
             ADI_FI_DESC		*adi_fdesc;
@@ -36976,7 +36822,6 @@ nonreswd_function:	func LPAREN RPAREN
 	    |	func LPAREN trim_or_extract_spec FROM sel_expr_or_null RPAREN
     {
 	DB_STATUS	status;
-	i4		err_code;
 	PST_QNODE	*newnode;
 	ADI_OPINFO	*opinfo;
 	bool		extract = FALSE;
@@ -37261,7 +37106,6 @@ trim_or_extract_spec:		nonkeyword strconst_e
 	PST_QNODE	*newnode;
 	PST_CNST_NODE	cconst;
 	DB_STATUS	status;
-	i4		err_code;
 	i2		i, constlen;
 	char		trimval[3];
 	char		*cptr;
@@ -37323,7 +37167,6 @@ trim_or_extract_spec:		nonkeyword strconst_e
 	PST_QNODE	*newnode;
 	PST_CNST_NODE	cconst;
 	DB_STATUS	status;
-	i1		trimcode;
 	i4		copylen;
 	char		trimval[3];
 
@@ -38887,14 +38730,12 @@ relocate:          RELOCATE obj_spec TO NAME
 
 rename:          rename_tbl TO obj_spec 
     {
-	i4             err_code, err_num = 0L;
-	DB_STATUS	    status;
-	i4		    rngvar_info;
-	DMU_CB		    *dmu_cb;
-	PSS_RNGTAB	    *resrange;
-	bool		    audit_err = FALSE;
-        PSS_OBJ_NAME	    newname; 
-    	i4		    tbls_to_lookup = (PSS_USRTBL | PSS_DBATBL | PSS_INGTBL);
+	i4		err_code;
+	DB_STATUS	status;
+	i4		rngvar_info;
+	PSS_RNGTAB	*resrange;
+        PSS_OBJ_NAME	newname; 
+    	i4		tbls_to_lookup = (PSS_USRTBL | PSS_DBATBL | PSS_INGTBL);
 
         STmove((char *)$3, ' ', sizeof(PSS_OBJ_NAME), (char *)&newname);
 	psq_cb->psq_mode = PSQ_ATBL_RENAME_TABLE; 
@@ -40171,9 +40012,9 @@ setcrecomp:	    SETCREATECOMPRESSION
 	}
 
 	if ($1 == PSL_ONSET)
-	    cb->pss_create_compression = DMU_C_ON;	/* compression = DATA */
+	    cb->pss_create_compression = DMU_COMP_ON;	/* compression = DATA */
 	else
-	    cb->pss_create_compression = DMU_C_OFF;	/* compression NONE */
+	    cb->pss_create_compression = DMU_COMP_OFF;	/* compression NONE */
     }
 ;
 
@@ -41215,7 +41056,6 @@ setmxidle:	    setmxidle_kwd intsetparam
 ;
 setmxidle_kwd:	    SETMXIDLE
     {
-	i4                err_code;
 	DB_STATUS	       status;
 
 	psq_cb->psq_mode = PSQ_MXSESSION;
@@ -41266,7 +41106,6 @@ setmxconnect:	    setmxconnect_kwd intsetparam
 
 setmxconnect_kwd:	    SETMXCONNECT
     {
-	i4                err_code;
 	DB_STATUS	       status;
 
 	psq_cb->psq_mode = PSQ_MXSESSION;
@@ -41990,7 +41829,6 @@ setsession:	    setsessstmt setsessopts setsesswith
 setsessstmt:	    SETSESSION
     {
 	DB_STATUS		status;
-	QEF_RCB			*qef_rcb;
 
 	/*
 	** Doing a SET SESSION statement
@@ -42168,7 +42006,6 @@ setsessparm:        nonkeyword EQUAL nonkeyword
     | nonkeyword
     {
 	DB_STATUS   status;
-	i4     err_code;
 
 	status=psl_us15_set_nonkw(psq_cb, cb, $1);
 	if(DB_FAILURE_MACRO(status))
@@ -42717,55 +42554,22 @@ settracestmnt:	    SETTRACE
 
 setresstruct:	    SETRESSTRUCT strsetparam
     {
-	i4            err_code;
-	DB_STATUS	   status;
-	OPF_CB		   *opf_cb;
-	char		   *ch = $2;
-	bool		   not_distr = ((cb->pss_distrib & DB_3_DDB_SESS) == 0);
-	i4		   *val, dummy;
+	i4		err_code;
+	i4		sstruct;
+	char		*ch = $2;
+	bool		compressed = FALSE;
 
 	psq_cb->psq_mode = PSQ_SRINTO;
-
-	if (not_distr)
-	{
-	    /* Allocate OPF control block for set result_structure command */
-	    status = psf_mopen(cb, QSO_QP_OBJ, &cb->pss_ostream, &psq_cb->psq_error);
-	    if (status != E_DB_OK)
-		return (status);
-	    status = psf_malloc(cb, &cb->pss_ostream, sizeof(OPF_CB), (PTR *) &opf_cb,
-		&psq_cb->psq_error);
-	    if (status != E_DB_OK)
-		return (status);
-	    status = psf_mroot(cb, &cb->pss_ostream, (PTR) opf_cb,
-		&psq_cb->psq_error);
-	    if (status != E_DB_OK)
-		return (status);
-
-	    /* Fill in OPF control block */
-	    opf_cb->opf_length = sizeof(opf_cb);
-	    opf_cb->opf_type = OPFCB_CB;
-	    opf_cb->opf_owner = (PTR)DB_PSF_ID;
-	    opf_cb->opf_ascii_id = OPFCB_ASCII_ID;
-	    opf_cb->opf_level = OPF_SESSION;
-	    opf_cb->opf_alter = OPF_RET_INTO;
-	    opf_cb->opf_compressed = FALSE;
-	    val = &opf_cb->opf_value;
-	}
-	else /* distributed */
-	{
-	    val = &dummy;
-	}
-
 	if (!CMcmpnocase(ch, "c"))
 	{
+	    compressed = TRUE;
 	    CMnext(ch);
-	    if (not_distr)
-	        opf_cb->opf_compressed = TRUE;
 	}
 
 	/* Decode storage structure.  Error if unknown. */
-	*val = uld_struct_xlate(ch);
-	if (*val == 0)
+	sstruct = uld_struct_xlate(ch);
+	if (sstruct == 0 || sstruct == DB_RTRE_STORE
+	  || sstruct == DB_X100IX_STORE)
 	{
 	    (VOID) psf_error(5916L, 0L, PSF_USERERR, &err_code,
 		&psq_cb->psq_error, 1, (i4) STtrmwhite($2), $2);
@@ -42774,16 +42578,21 @@ setresstruct:	    SETRESSTRUCT strsetparam
 
 	if (cb->pss_distrib & DB_3_DDB_SESS)
 	{
-	    /* cheapsort is the longest option */
-	    char	str[sizeof("set result_structure 'cheapsort' ")];
+	    /* vectorwise_row is the longest option */
+	    char	str[sizeof("set result_structure 'vectorwise_row plus slop' ")];
 	    DB_STATUS	status;
 
 	    status = psl_send_setqry(cb,
 			STpolycat(3, "set result_structure '", $2, "' ", str),
 			psq_cb);
-	    
+
 	    if (DB_FAILURE_MACRO(status))
 		return(status);
+	}
+	else
+	{
+	    cb->pss_result_compression = compressed;
+	    cb->pss_result_struct = sstruct;
 	}
     }
 ;
@@ -43006,7 +42815,6 @@ setunicodesub:      SETUNICODESUB
     } | SETUNICODESUB strconst_e
     {
         i4                 err_code;
-        char               inchar[4] = {'\0'};
         i4                 inlength = 0;
 
         /* "set usub " is not allowed in distributed yet */
@@ -43994,7 +43802,6 @@ update_item:		col_spec2 EQUAL select_expr
 		    &$1->pst_sym.pst_value.pst_s_var.pst_atname;
 	DMT_ATT_ENTRY	       *coldesc;
 	i4		       err_code;
-	DB_ERROR	       err_blk;
 
 	coldesc = pst_coldesc(cb->pss_resrng, colname->db_att_name, DB_ATT_MAXNAME);
 	if (coldesc == (DMT_ATT_ENTRY *) NULL)
@@ -45135,12 +44942,9 @@ reg_keywd:	    reg_tvp
 
 		psq_cb->psq_mode = PSQ_REG_IMPORT;
 		$1 = DD_2OBJ_TABLE;
-		status = psl_ct10_crt_tbl_kwd(cb, psq_cb,
-				&$Ywith_clauses, FALSE);
+		status = psl_ct10_crt_tbl_kwd(cb, psq_cb);
 		if (DB_FAILURE_MACRO(status))
 		    return (status);
-		$Ywith_dups = -1;
-		$Ywith_journaling = -1;
 	    }
 	    else
 	    {
@@ -45184,7 +44988,7 @@ reg_name:	    obj_spec
 		return(status);
 
 	    status = psl_ct9_new_loc_name(cb, psq_cb, (char *) NULL,
-			$1->pss_orig_obj_name, &$Ywith_clauses, &$Yxlated_qry);
+			$1->pss_orig_obj_name);
 	    if (DB_FAILURE_MACRO(status))
 		return(status);
 	}
@@ -45369,6 +45173,11 @@ ldb_spec_list:	    ldb_spec_item
 	|	    ldb_spec_list COMMA ldb_spec_item
 ;
 
+/* Although these call common WITH-parsing routines, this is a STAR
+** production, and the with-routines will immediately divert off to
+** do STAR text hacking.  Hence, no need for the usual "withopt-init"
+** or post processing.
+*/
 ldb_spec_item:	    twith_name
 	|	    twith_nm_eq_str
 	|	    twith_tb_eq_id
@@ -45379,7 +45188,6 @@ reg_gateway_tab:    reg_keywd reg_name LPAREN reg_attr_list
 		    reg_with_list reg_exit_rtn
     {
 	i4		    err_code;
-	i4		    colno;
 	QEU_CB              *qeu_cb;
 	DMU_CB              *dmu_cb;
 	DMF_ATTR_ENTRY      **attrs;
@@ -45422,7 +45230,7 @@ reg_gateway_tab:    reg_keywd reg_name LPAREN reg_attr_list
 
 	/* Ensure GW_IMA tables are structure=sortkeyed (b117546) kibro01 */
 	if (dmu_cb->dmu_gw_id == DMGW_IMA &&
-	    cb->pss_restab.pst_struct != DB_BTRE_STORE)
+	    dmu_cb->dmu_chars.dmu_struct != DB_BTRE_STORE)
 	{
 	    /* Error! - structure must be sortkeyed */
 	    (VOID) psf_error(9357L, 0L, PSF_USERERR, &err_code,
@@ -45480,16 +45288,6 @@ reg_gateway_tab:    reg_keywd reg_name LPAREN reg_attr_list
 	    }
 	}
 
-        /* Make sure there is a location */
-        if (!dmu_cb->dmu_location.data_in_size)
-        {
-	    /* Default location for 'normal' & 'subselect' versions */
-	    STmove("$default", ' ', sizeof(DB_LOC_NAME),
-	           (char*) dmu_cb->dmu_location.data_address);
-            dmu_cb->dmu_location.data_in_size = sizeof(DB_LOC_NAME);
-        }
-
-
 	/* Default if no "rows=" clause is given, is 1000 rows. */
 	if (dmu_cb->dmu_gwrowcount == DMGW_NO_ROW_ENTRY)
 	    dmu_cb->dmu_gwrowcount = 1000;
@@ -45499,49 +45297,31 @@ reg_gateway_tab:    reg_keywd reg_name LPAREN reg_attr_list
 	*/
 	if (dmu_cb->dmu_gw_id == DMGW_IMA)
 	{
-	    DMU_CHAR_ENTRY	*char_entry;
-	    i4		char_count;
-	    i4		ix;
-	    DMU_FROM_PATH_ENTRY *from_path;
-	    char	*from_ptr;
 
-	    char_entry = (DMU_CHAR_ENTRY *)
-		((char *) dmu_cb->dmu_char_array.data_address);
-	    char_count = 
-		dmu_cb->dmu_char_array.data_in_size/sizeof(DMU_CHAR_ENTRY);
-
-	    for (ix = 0; ix < char_count; ix++)
+	    /* Technically we should be testing the indicator too
+	    ** but for testing flag-SET it doesn't matter...
+	    */
+	    if (dmu_cb->dmu_chars.dmu_flags & DMU_FLAG_UPDATE)
 	    {
-		switch (char_entry[ix].char_id)
-		{
-		    case DMU_GW_UPDT:
-			from_path = (DMU_FROM_PATH_ENTRY *)
+		DMU_FROM_PATH_ENTRY *from_path;
+		char	*from_ptr;
+		from_path = (DMU_FROM_PATH_ENTRY *)
 				dmu_cb->dmu_olocation.data_address;
-			from_ptr = from_path->from_buffer;
-
-			if (char_entry[ix].char_value == DMU_C_ON &&
-				STbcompare(from_ptr,0,"OBJECTS",0,TRUE) != 0)
-			{
-			    char *x = "UPDATE";
-			    /* Cannot have UPDATE on IMA tables */
-			    (VOID) psf_error(9311L, 0L, PSF_USERERR, &err_code,
-				&psq_cb->psq_error, 1, (i4) STlen(x), x);
-	    		    return (E_DB_ERROR);
-			}
-			break;
-		    case DMU_JOURNALED:
-			if (char_entry[ix].char_value == DMU_C_ON)
-			{
-			    char *x = "JOURNALING";
-			    /* Cannot have JOURNALING on IMA tables */
-			    (VOID) psf_error(9311L, 0L, PSF_USERERR, &err_code,
-				&psq_cb->psq_error, 1, (i4) STlen(x), x);
-	    		    return (E_DB_ERROR);
-			}
-			break;
-		    default:
-			break;
+		from_ptr = from_path->from_buffer;
+		if ( STbcompare(from_ptr,0,"OBJECTS",0,TRUE) != 0)
+		{
+		    /* Cannot have UPDATE on IMA tables */
+		    (VOID) psf_error(9311L, 0L, PSF_USERERR, &err_code,
+			&psq_cb->psq_error, 1, 0, "UPDATE");
+		    return (E_DB_ERROR);
 		}
+	    }
+	    if (dmu_cb->dmu_chars.dmu_journaled != DMU_JOURNAL_OFF)
+	    {
+		/* Cannot have JOURNALING on IMA tables */
+		(VOID) psf_error(9311L, 0L, PSF_USERERR, &err_code,
+		    &psq_cb->psq_error, 1, 0, "JOURNALING");
+		return (E_DB_ERROR);
 	    }
 	}
     }
@@ -45634,7 +45414,21 @@ reg_file_name:	    SCONST
     }
 ;
 
-reg_with_list:	    WITH reg_parm_list
+reg_with_list:
+    {
+	psl_withopt_init(cb, psq_cb);
+    }
+	     WITH reg_parm_list
+    {
+	DB_STATUS status;
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return (status);
+	status = psl_ct3_crwith(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return (status);
+    }
+
 	     |	    /* No WITH clause. This will cause a sensible error 
 		    ** later on (missing DBMS type) rather than a generic
 		    ** syntax error is WITH was mandatory
@@ -45788,8 +45582,7 @@ reg_dbms_or_struct_parm:    nonkeyword EQUAL nonkey_or_sconst
 			"Register STRUCTURE value is '%s'\n", $3);
             }
 
-	    status = psl_reg_struct(&cb->pss_restab.pst_struct, dmu_cb, $3,
-		(i4) DMU_C_OFF, &psq_cb->psq_error);
+	    status = psl_reg_struct(dmu_cb, $3, FALSE, &psq_cb->psq_error);
 	    if (DB_FAILURE_MACRO(status))
 		return (status);
         }
@@ -45815,8 +45608,7 @@ reg_dbms_or_struct_parm:    nonkeyword EQUAL nonkey_or_sconst
 	{
             DB_STATUS                   status;
 
-            status = psl_reg_struct(&cb->pss_restab.pst_struct, dmu_cb, $4,
-		(i4) DMU_C_ON, &psq_cb->psq_error);
+            status = psl_reg_struct(dmu_cb, $4, TRUE, &psq_cb->psq_error);
             if (status != E_DB_OK)
                 return (status);
         }
@@ -45859,214 +45651,15 @@ reg_rows_parm:	    ROWS EQUAL intconst_p
     }
 ;
 
-reg_keywd_only_parm:	    nonkeyword
+reg_keywd_only_parm:
+	twith_word
+	| UPDATE
     {
-	/*
-	** this is for the keyword parameters: duplicates, noduplicates,
-	** journaling, nojournaling, update, noupdate, recovery, norecovery.
-	*/
-	QEU_CB		    *qeu_cb;
-	DMU_CB		    *dmu_cb;
-	i4		    err_code;
-	DMU_CHAR_ENTRY	    *chr;
-	DMU_CHAR_ENTRY	    *chr_start;
-	i4		    val1,val2;
-    	char		    trbuf[PSF_MAX_TEXT + 1]; /* last char for `\n' */
+	DB_STATUS status;
 
-	qeu_cb = (QEU_CB *) cb->pss_object;
-	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-	chr_start = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
- 
-        if (ult_check_macro(&cb->pss_trace, 20, &val1, &val2))
-        {
-    	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
-		"Register Table read keyword '%s'\n",$1);
-			
-        }
- 
-	if (STcompare($1, "duplicates") == 0)
-	{
-	    /*
-	    ** if this is the first duplicates entry, char_value should be
-	    ** DMU_C_NOT_SET.  If not, issue error message for duplicate or
-	    ** conflicting entry.
-	    */
-	    chr = chr_start + 2;			/* third entry */
-	    if (chr->char_value != DMU_C_NOT_SET)
-	    {
-		/* duplicate or conflict duplicates/noduplicates parm */
-		(VOID) psf_error(9314L, 0L, PSF_USERERR, &err_code,
-				 &psq_cb->psq_error, 1,
-				 (i4) STtrmwhite($1), $1);
-		return (E_DB_ERROR);
-	    }
-	    chr->char_id = DMU_DUPLICATES;
-	    chr->char_value = DMU_C_ON;
-	    cb->pss_restab.pst_resdup = TRUE;
-	    $Ywith_dups = 1;
-	}
-	else if (STcompare($1, "noduplicates") == 0)
-	{
-	    /*
-	    ** if this is the first duplicates entry, char_value should be
-	    ** DMU_C_NOT_SET.  If not, issue error message for duplicate or
-	    ** conflicting entry.
-	    */
-	    chr = chr_start + 2;	/* third entry */
-	    if (chr->char_value != DMU_C_NOT_SET)
-	    {
-		(VOID) psf_error(9314L, 0L, PSF_USERERR, &err_code,
-				 &psq_cb->psq_error, 1,
-				 (i4) STtrmwhite($1), $1);
-		return (E_DB_ERROR);
-	    }
-	    /*
-	    ** replace default DUPLICATES value by NODUPLICATES in the third
-	    ** entry
-	    */
-	    chr->char_id = DMU_DUPLICATES;
-	    chr->char_value = DMU_C_OFF;   /* disallow duplicates */
-	    cb->pss_restab.pst_resdup = FALSE;
-	    $Ywith_dups = 0;
-	}
-	else if (STcompare($1, "journaling") == 0)
-	{
-	    /*
-	    ** if this is the first journaling entry, char_value should be
-	    ** DMU_C_NOT_SET.  If not, issue error message for duplicate or
-	    ** conflicting entry.
-	    */
-	    chr = chr_start + 3;	/* fourth entry */
-	    if (chr->char_value != DMU_C_NOT_SET)
-	    {
-		/* duplicate or conflict */
-		(VOID) psf_error(9314L, 0L, PSF_USERERR, &err_code,
-				 &psq_cb->psq_error, 1,
-				(i4) STtrmwhite($1), $1);
-		return (E_DB_ERROR);
-	    }
- 
-	    chr->char_id = DMU_JOURNALED;
-	    chr->char_value = DMU_C_ON;        /* enable journaling */
-/*************************DO AT EXIT*************************/
-	    if (cb->pss_ses_flag & PSS_JOURNALED_DB)
-		cb->pss_restab.pst_resjour = PST_RESJOUR_ON;
-	    else
-		cb->pss_restab.pst_resjour = PST_RESJOUR_LATER;
-	    $Ywith_journaling = 1;
-	}
-	else if (STcompare($1, "nojournaling") == 0) /* default parm */
-	{
-	    /*
-	    ** if this is the first journaling entry, char_value should be
-	    ** DMU_C_NOT_SET.  If not, issue error message for duplicate or
-	    ** conflicting entry.
-	    */
-	    chr = chr_start + 3;	/* fourth entry */
-	    if (chr->char_value != DMU_C_NOT_SET)   /* duplicate or conflict */
-	    {
-		(VOID) psf_error(9314L, 0L, PSF_USERERR, &err_code,
-				 &psq_cb->psq_error, 1,
-				 (i4) STtrmwhite($1), $1);
-		return (E_DB_ERROR);
-	    }
-	    chr->char_id = DMU_JOURNALED;
-	    chr->char_value = DMU_C_OFF;        /* disable journaling */
-	    cb->pss_restab.pst_resjour = PST_RESJOUR_OFF;
-	    $Ywith_journaling = 0;
-	}
-	else if (STcompare($1, "noupdate") == 0)
-	{
-	    /*
-	    ** if this is the first update entry, char_value should be
-	    ** DMU_C_NOT_SET.  If not, issue error message for duplicate or
-	    ** conflicting entry.
-	    */
-	    chr = chr_start + 5;	/* sixth entry */
-	    if (chr->char_value != DMU_C_NOT_SET) /* duplicate or conflict */
-	    {
-		(VOID) psf_error(9314L, 0L, PSF_USERERR, &err_code,
-				 &psq_cb->psq_error, 1,
-				 (i4) STtrmwhite($1), $1);
-		return (E_DB_ERROR);
-	    }
-	    chr->char_id = DMU_GW_UPDT;
-	    chr->char_value = DMU_C_OFF;
-	}
-	else if (STcompare($1, "recovery") == 0)
-	{
-	    /*
-	    ** if this is the first parm, parm flag should be OFF if the value
-	    ** of flag is PARM_ON then issue error message for duplicate or
-	    ** conflict parm
-	    */
-	    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_gwchar_array.data_address;
-	    if (chr->char_value != DMU_C_NOT_SET) /* duplicate or conflict */
-	    {
-		/* duplicate or conflict parm found */
-		(VOID) psf_error(9314L, 0L, PSF_USERERR, &err_code,
-				 &psq_cb->psq_error, 1,
-				 (i4) STtrmwhite($1), $1);
-		return (E_DB_ERROR);
-	    }
-	    chr->char_id = DMU_GW_RCVR;
-	    chr->char_value = DMU_C_ON;
-	}
-	else if (STcompare($1, "norecovery") == 0) /* default value */
-	{
-	    /*
-	    ** if this is the first parm, parm flag should be OFF if the value
-	    ** of flag is PARM_ON then issue error message for duplicate or
-	    ** conflict parm
-	    */
-	    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_gwchar_array.data_address;
-
-	    if (chr->char_value != DMU_C_NOT_SET) /* duplicate or conflict */
-	    {
-		(VOID) psf_error(9314L, 0L, PSF_USERERR, &err_code,
-				 &psq_cb->psq_error, 1,
-				 (i4) STtrmwhite($1), $1);
-		return (E_DB_ERROR);
-	    }
-	    chr->char_id = DMU_GW_RCVR;
-	    chr->char_value = DMU_C_OFF;
-	}
-	else 
-	{
-	    (VOID) psf_error(8007L, 0L, PSF_USERERR, &err_code,
-			     &psq_cb->psq_error, 1,
-			     (i4) STtrmwhite($1), $1);
-	    return (E_DB_ERROR);
-	}
-    }
-	|	    UPDATE
-
-    {
-	QEU_CB		    *qeu_cb;
-	DMU_CB		    *dmu_cb;
-	i4		    err_code;
-	DMU_CHAR_ENTRY    *chr;
-
-	qeu_cb = (QEU_CB *) cb->pss_object;
-	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-
-	/*
-	** if this is the first update entry, char_value should be
-	** DMU_C_NOT_SET.  If not, issue error message for duplicate or
-	** conflicting entry.
-	*/
-	chr = (DMU_CHAR_ENTRY *)
-	    (((char *) dmu_cb->dmu_char_array.data_address)
-	    + 5 * sizeof(DMU_CHAR_ENTRY));    /* 6th entry */
-	if (chr->char_value != DMU_C_NOT_SET) /* duplicate or conflict */
-	{
-	    (VOID) psf_error(9314L, 0L, PSF_USERERR, &err_code,
-			     &psq_cb->psq_error, 1,
-			     (i4) sizeof("update"), "update");
-	    return (E_DB_ERROR);
-	}
-	chr->char_id = DMU_GW_UPDT;
-	chr->char_value = DMU_C_ON;
+	status = psl_with_kwd(cb, psq_cb, "update", &$Yxlated_qry);
+	if (status != E_DB_OK)
+	    return (status);
     }
 ;
 
@@ -46078,14 +45671,9 @@ reg_exit_rtn:
     {
 	QEU_CB		*qeu_cb;
 	DMU_CB		*dmu_cb;
-	DMU_CHAR_ENTRY	*chr;
 	i4		err_code;
 	bool		keyed;
-	bool		unique;
-	bool		duplicates;
 	i4		storestruct;
-	i4	        val1,val2;
-    	char		trbuf[PSF_MAX_TEXT + 1]; /* last char for `\n' */
 
 	qeu_cb = (QEU_CB *) cb->pss_object;
 	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
@@ -46104,21 +45692,9 @@ reg_exit_rtn:
 	    return (E_DB_ERROR);
 	}
 
-	/* First entry in characteristics array is storage structure */
-	chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-
-        if (ult_check_macro(&cb->pss_trace, 20, &val1, &val2))
-        {
-    	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
-		"Register Table gateway attribute list starts at %d (X%p)\n",
-		chr,chr);
-	}
-
-	/* if structure not set, set it to defaule DB_HEAP_STORE */
-	if (chr->char_value == DMU_C_NOT_SET)
-	    chr->char_value = DB_HEAP_STORE;
-	keyed = (chr->char_value != DB_HEAP_STORE);
-	storestruct = chr->char_value;
+	/* Structure is defaulted by with-option post processing */
+	storestruct = dmu_cb->dmu_chars.dmu_struct;
+	keyed = (storestruct != DB_HEAP_STORE);
 
 	/*  If RMS Gateway, disallow "fullkey" structure specifier. */
 	if ((dmu_cb->dmu_gw_id == DMGW_RMS) && (storestruct == DB_HASH_STORE))
@@ -46129,16 +45705,7 @@ reg_exit_rtn:
 	    return (E_DB_ERROR);
 	}
 
-	/* no keys on heap */
-	if (chr->char_value == DB_HEAP_STORE
-	    &&
-	    dmu_cb->dmu_key_array.ptr_in_count != 0)
-	{
-	    (VOID) psf_error(9317L, 0L, PSF_USERERR, &err_code,
-			     &psq_cb->psq_error, 0);
-	        return (E_DB_ERROR);
-	}
-	else if (chr->char_value != DB_HEAP_STORE &&
+	if (storestruct != DB_HEAP_STORE &&
 		 dmu_cb->dmu_key_array.ptr_in_count == 0)
 	{
 	    /* NOTE this is a warning message */
@@ -46155,59 +45722,14 @@ reg_exit_rtn:
 	        return (E_DB_OK);
 	}
 
-	/* if unique is not set, set it to default of non-unique */
-	chr++;
-	if (chr->char_value == DMU_C_NOT_SET)
-	    chr->char_value = DMU_C_OFF;
-	unique = (chr->char_value == DMU_C_ON);
-
-	/*  If duplicates not set, default appropriately for struct type. */
-	chr++;
-	if (chr->char_value == DMU_C_NOT_SET)
-	{
-	    if (keyed && unique)
-		chr->char_value = DMU_C_OFF;
-	    else
-		chr->char_value = DMU_C_ON;
-	}
-	duplicates = (chr->char_value == DMU_C_ON);
-
-	/* if journaled is not set, set it to default of not journaled */
-	chr++;
-	/*
-	**	Make sure this is set to DMU_JOURNALED if not already
-	*/
-	if ( chr->char_id != DMU_JOURNALED)
-		chr->char_id = DMU_JOURNALED;
-
-	if (chr->char_value == DMU_C_NOT_SET)
-	    chr->char_value = DMU_C_OFF;
-
-	/* skip gateway (always set) */
-	chr++;
-
-	/* if update is not set, set it to default of not updatable */
-	chr++;
-	/*
-	**	Make sure this is set to DMU_GW_UPDT if not already
-	*/
-	if ( chr->char_id != DMU_GW_UPDT)
-		chr->char_id = DMU_GW_UPDT;
-	if (chr->char_value == DMU_C_NOT_SET)
-	    chr->char_value = DMU_C_OFF;
-
-	/* Now do gwchar entry, recovery */
-	/* if recovery is not set, set it to default of no recovery */
-	chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_gwchar_array.data_address;
-	if (chr->char_value == DMU_C_NOT_SET)
-	    chr->char_value = DMU_C_OFF;
-    
 	/*
 	**  Check for compatible values of structure, uniqueness and duplicates.
 	*/
 
 	/*  If heap, disallow either "noduplicates" or "unique" qualifiers. */
-	if (!keyed && (!duplicates || unique))
+	if (!keyed
+	  && ( (dmu_cb->dmu_chars.dmu_flags & DMU_FLAG_DUPS) == 0
+	      || BTtest(DMU_UNIQUE, dmu_cb->dmu_chars.dmu_indicators)))
 	{
 	    (VOID) psf_error(9321L, 0L, PSF_USERERR, &err_code,
 			     &psq_cb->psq_error, 0);
@@ -46215,7 +45737,9 @@ reg_exit_rtn:
 	}
 
 	/*  If keyed and unique, disallow duplicates. */
-	if (keyed && unique && duplicates)
+	if (keyed
+	  && dmu_cb->dmu_chars.dmu_flags & DMU_FLAG_DUPS
+	  && BTtest(DMU_UNIQUE, dmu_cb->dmu_chars.dmu_indicators) )
 	{
 	    (VOID) psf_error(9322L, 0L, PSF_USERERR, &err_code,
 			     &psq_cb->psq_error, 0);
@@ -46254,9 +45778,6 @@ reg_gateway_idx:    reg_idx reg_idx_name ON indexrel
     {
 	QEU_CB		    *qeu_cb;
 	DMU_CB		    *dmu_cb;
-	DMU_CHAR_ENTRY	    *chr, *charlim;
-	bool		    ssfound = FALSE;
-	i4		    sstruct;
 	i4                  err_code;
 	DB_STATUS	    status;
 	i4		    len;
@@ -46307,11 +45828,8 @@ reg_gateway_idx:    reg_idx reg_idx_name ON indexrel
             DMT_ATT_ENTRY	*attribute;
             DMF_ATTR_ENTRY **idx_att = (DMF_ATTR_ENTRY **)
                                    dmu_cb->dmu_attr_array.ptr_address;
-
-            i4             att_count =
-                                   cb->pss_resrng->pss_tabdesc->tbl_attr_count;
             i4             idx_count = dmu_cb->dmu_key_array.ptr_in_count;
-            i4 type_abs, i, j, mismatch;
+            i4 type_abs, i, mismatch;
 
             if (idx_count > 1)
             {
@@ -46378,62 +45896,17 @@ reg_gateway_idx:    reg_idx reg_idx_name ON indexrel
             }
 
         } 
-	/* Find the end of the characteristics array */
-	charlim = (DMU_CHAR_ENTRY *)
-	    ((char *) dmu_cb->dmu_char_array.data_address
-	     + dmu_cb->dmu_char_array.data_in_size);
 
 	/*
 	** Check whether storage structure has been specified, if not, specify
-	** the session default.
+	** the session default.  (which cannot be heap.)
 	*/
-	for (chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-	     chr < charlim;
-	     chr++
-	    )
+	if (! BTtest(DMU_STRUCTURE, dmu_cb->dmu_chars.dmu_indicators))
 	{
-	    if (chr->char_id == DMU_STRUCTURE)
-	    {
-		ssfound = TRUE;
-		break;
-	    }
-	}
-
-	if (ssfound == FALSE)
-	{
-	    /* Two characteristics needed */
-	    if (dmu_cb->dmu_char_array.data_in_size >=
-		(PSS_MAX_INDEX_CHARS) * (i4)sizeof (DMU_CHAR_ENTRY))
-	    {
-		/* Invalid with clause - too many options */
-		(VOID) psf_error(E_PS1103_IDX_TOOMANYOPT, 0L, PSF_USERERR,
-                    &err_code, &psq_cb->psq_error, 0);
-		return (E_DB_ERROR);
-	    }
-
-	    chr = (DMU_CHAR_ENTRY *)
-		((char *) dmu_cb->dmu_char_array.data_address
-		+ dmu_cb->dmu_char_array.data_in_size);
-	    chr->char_id = DMU_COMPRESSED;
-	    chr->char_value = DMU_C_OFF;
-	    chr++;
-	    chr->char_id = DMU_STRUCTURE;
-	    chr->char_value = abs(cb->pss_idxstruct);
-	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY) * 2;
-	}
-
-	sstruct = chr->char_value;
-
-	/* Check for legal storage structure */
-	if (sstruct == DB_HEAP_STORE || sstruct == DB_SORT_STORE)
-	{
-	    (VOID) psf_error(5540L, 0L, PSF_USERERR, &err_code,
-		&psq_cb->psq_error, 2,
-		psf_trmwhite(sizeof(DB_TAB_NAME), 
-		    (char *) &dmu_cb->dmu_table_name),
-		&dmu_cb->dmu_table_name,
-		0, "HEAP");
-	    return (E_DB_ERROR);
+	    dmu_cb->dmu_chars.dmu_struct = abs(cb->pss_idxstruct);
+	    dmu_cb->dmu_chars.dmu_dcompress = DMU_COMP_OFF;
+	    BTset(DMU_STRUCTURE, dmu_cb->dmu_chars.dmu_indicators);
+	    BTset(DMU_DCOMPRESSION, dmu_cb->dmu_chars.dmu_indicators);
 	}
     }
 ;
@@ -46455,7 +45928,7 @@ reg_idx:	    reg_idx_key
 
 	if (~cb->pss_distrib & DB_3_DDB_SESS)
 	{
-	    status = psl_ci2_index_prefix(cb, psq_cb, &$Ywith_clauses, $1);
+	    status = psl_ci2_index_prefix(cb, psq_cb, $1);
 	    if (DB_FAILURE_MACRO(status))
 		return(status);
 	}
@@ -46501,8 +45974,7 @@ reg_idx_name:	    obj_spec
 
 	if (~cb->pss_distrib & DB_3_DDB_SESS)
 	{
-	    status = psl_ci5_indexlocname(cb, (char *) NULL, $1, 
-		&$Ywith_clauses, psq_cb);
+	    status = psl_ci5_indexlocname(cb, (char *) NULL, $1, psq_cb);
 	    if (DB_FAILURE_MACRO(status))
 		return(status);
 	}
@@ -46530,6 +46002,9 @@ as_link:  	    AS nonkeyword
     }
 ;
 
+/* Note, this is all hand parsing, if it's ever changed to use standard
+** with-option routines we'll need a call to withopt-init somewhere.
+*/
 reg_idx_withopts:   reg_idx_withopt
 	|	    reg_idx_withopts COMMA reg_idx_withopt
 ;
@@ -46548,7 +46023,6 @@ reg_idx_withopt:    nonkeyword EQUAL nonkeyword
 	i4             err_code;
 	QEU_CB		    *qeu_cb;
 	DMU_CB		    *dmu_cb;
-	DMU_CHAR_ENTRY	    *chr;
 	i4		    storestruct;
 
 	if (STcompare($1, "structure") == 0)
@@ -46577,25 +46051,10 @@ reg_idx_withopt:    nonkeyword EQUAL nonkeyword
 	    qeu_cb = (QEU_CB *) cb->pss_object;
 	    dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
 
-	    /* Put the storage structure info in the characteristics array. */
+	    /* Put the storage structure info in the characteristics . */
 
-	    if (dmu_cb->dmu_char_array.data_in_size >=
-		PSS_MAX_INDEX_CHARS * (i4)sizeof (DMU_CHAR_ENTRY))
-	    {
-		/* Invalid with clause - too many options */
-		(VOID) psf_error(5327L, 0L, PSF_USERERR,
-		    &err_code, &psq_cb->psq_error, 0);
-		return (E_DB_ERROR);
-	    }
-
-	    chr = (DMU_CHAR_ENTRY *) 
-		((char *) dmu_cb->dmu_char_array.data_address
-		+ dmu_cb->dmu_char_array.data_in_size);
-
-	    chr->char_id = DMU_STRUCTURE;
-	    chr->char_value = storestruct;
-	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-
+	    BTset(DMU_STRUCTURE, dmu_cb->dmu_chars.dmu_indicators);
+	    dmu_cb->dmu_chars.dmu_struct = storestruct;
 	}
 	else
 	{
@@ -47008,7 +46467,6 @@ col_spec2:	col_ref
 	i4		err_code;
 	DMT_ATT_ENTRY	*attribute;
 	PST_FWDVAR_NODE	fwdvar;
-	PST_RL_NODE	rulenode;
 
 
 	if (PSL_IS_RESERVED_IDENT($1->pss_col_name, cb, psq_cb, FALSE))
@@ -47422,7 +46880,7 @@ psl_fatt(
 		char        command[PSL_MAX_COMM_STRING];
 		i4     length;
 
-		psl_command_string(psq_cb->psq_mode, DB_SQL, command, &length);
+		psl_command_string(psq_cb->psq_mode, cb, command, &length);
 
 		_VOID_ psf_error(E_PS0483_CONS_NO_COL, 0L,
 		    PSF_USERERR, &err_code, &psq_cb->psq_error, 3,
@@ -49877,7 +49335,7 @@ psl_crskeyflag(
 {
 	DB_STATUS	status = E_DB_OK;
 	DB_ERROR	err_blk;
-	i4		err_code, err_num;
+	i4		err_code;
 	PST_QNODE	*resdomp;
 	RDF_CB		rdfcb, *rdf_cb = &rdfcb;
 	RDR_RB		*rdf_rb = &rdf_cb->rdf_rb;
@@ -50109,7 +49567,7 @@ psl_crskeyflag(
 **	    from different contexts (regular FOR UPDATE cursor and SCROLL
 **	    KEYSET cursor).
 */
-i4
+static void
 psl_nonupdt_err(
 	PSQ_CB	*psq_cb,
 	PSS_SESBLK *cb,
@@ -50228,14 +49686,14 @@ psl_nonupdt_err(
 **	15-feb-2008 (dougi)
 **	    Add support for offset/first "n".
 */
-DB_STATUS
+static DB_STATUS
 psl_do_insert(
 	PSS_SESBLK	*cb,
 	PSQ_CB		*psq_cb,
 	PST_QNODE	*root_node,
 	bool		*shareable_qp,
 	PST_QTREE	**tree,
-	i4		isdbp,
+	bool		isdbp,
 	PST_J_ID	num_joins,
 	PSS_Q_XLATE	*xlated_qry,
 	DB_SHR_RPTQRY_INFO	**qry_info,
@@ -50286,7 +49744,8 @@ psl_do_insert(
 
     /* If inserting into a view save view name for error reporting */
 
-    if (insert_into_view = resrng->pss_tabdesc->tbl_status_mask & DMT_VIEW)
+    insert_into_view = (resrng->pss_tabdesc->tbl_status_mask & DMT_VIEW) != 0;
+    if (insert_into_view)
     {
 	STRUCT_ASSIGN_MACRO(resrng->pss_tabname, view_name);
     }
@@ -50781,8 +50240,6 @@ psl_p_tlist(
 	    PSL_P_TELEM_CTX ctx;
 	    PSS_RNGTAB  *rngtable = NULL;
 	    PST_TYPE	save_type = sym->pst_type;
-	    PST_QNODE	*fwdvar = NULL;
-	    bool	unresolved = FALSE;
 
 	    ctx.cb = cb;
 	    ctx.psq_cb = psq_cb;
@@ -51587,8 +51044,8 @@ psl_p_telem(
 		    /* attribute with specified name not found */
 		    char command[PSL_MAX_COMM_STRING];
 		    i4	length;
-		    
-		    psl_command_string(ctx->psq_cb->psq_mode, DB_SQL,
+
+		    psl_command_string(ctx->psq_cb->psq_mode, ctx->cb,
 			command, &length);
 
 		    if (ctx->psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN)
@@ -51686,7 +51143,6 @@ psl_p_telem(
 	    */
 	    if (!sym->pst_value.pst_s_fwdvar.pst_fwdref)
 	    {
-		PST_QNODE	        *newnode = (PST_QNODE *) NULL;
 		PST_J_MASK		*from_list =
 					    &from_list_stack[ctx->cb->pss_qualdepth];
 		bool			found = FALSE;
@@ -53443,7 +52899,6 @@ psl_subsel_compare(
 {
     PST_OP_NODE	opnode;
     DB_STATUS	status;
-    DB_ERROR	*err_blk = &psq_cb->psq_error;
     i4		pst_node_flags = 0;
     PST_QNODE	*cnst = NULL;
     PST_QNODE	*cast = NULL;
@@ -55438,10 +54893,10 @@ psl_tbl_rngent(PSS_SESBLK *cb, PSQ_CB *psq_cb, PSS_OBJ_NAME *objname,
 ** Input:
 **      dmu_cb     -- pointer to DMU_CB structure
 **      ssname     -- pointer to the NAME after EQUAL [UNIQUE]
-**      dmu_c_flag -- flag telling if the structure object is unique
+**      unique -- flag telling if the structure object is unique
 **
 ** Output:
-**      pst_struct -- set to indicate type of storage.
+**	Sets structure in DMU_CB characteristics
 **      err_blk    -- set if error.
 **	
 ** Returns:
@@ -55450,25 +54905,25 @@ psl_tbl_rngent(PSS_SESBLK *cb, PSQ_CB *psq_cb, PSS_OBJ_NAME *objname,
 ** History:
 **      22-jun-92 (schang)
 **          add the above documentation. Created for 06-15-92 integration.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Changes for new DMU characteristics.
 */
 static DB_STATUS
 psl_reg_struct(
-	i4	    *pst_struct,
 	DMU_CB	    *dmu_cb,
 	char	    *ssname,
-	i4	    dmu_c_flag,
+	bool	    unique,
 	DB_ERROR    *err_blk)
 {
     i4  err_code;
     i4	     storestruct;
-    DMU_CHAR_ENTRY  *chr;
 
     /*
     ** If this is the first structure parameter, pst_struct should be
     ** 0L.  If pst_struct is non-NULL then issue error message for
     ** duplicate parameter.
     */
-    if (*pst_struct != 0L)
+    if (BTtest(DMU_STRUCTURE,dmu_cb->dmu_chars.dmu_indicators))
     {
         /* duplicate parm found  */
 	(VOID) psf_error(9309L, 0L, PSF_USERERR, &err_code, err_blk, 1,
@@ -55476,9 +54931,6 @@ psl_reg_struct(
 	return (E_DB_ERROR);
     }
 
-    /* First entry in characteristics array is storage structure */
-    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
- 
     /*
     ** statements for decoding compressed storage structure are deleted,
     ** as no storage structure is compressed in REGISTER TABLE command
@@ -55498,7 +54950,7 @@ psl_reg_struct(
     else if (!STcasecmp(ssname, "none"))
     {
     /* schang : if unique, then specifying "none" is an error */
-        if (dmu_c_flag == DMU_C_ON)
+        if (unique)
         {
             (VOID) psf_error(9321L, 0L, PSF_USERERR, &err_code, err_blk, 0);
 	    return (E_DB_ERROR);
@@ -55515,16 +54967,11 @@ psl_reg_struct(
         return (E_DB_ERROR);
     }
 
-    chr->char_value = storestruct;
-    *pst_struct = (i4) storestruct;
+    BTset(DMU_STRUCTURE, dmu_cb->dmu_chars.dmu_indicators);
+    dmu_cb->dmu_chars.dmu_struct = storestruct;
+    if (unique)
+	BTset(DMU_UNIQUE, dmu_cb->dmu_chars.dmu_indicators);
 
-    /*
-    ** replace default NOUNIQUENESS by UNIQUENESS in the second entry
-    ** of characteristics array
-    */
-    chr++;
-    chr->char_id = DMU_UNIQUE;
-    chr->char_value = dmu_c_flag;
     return(E_DB_OK);   
 }
 
@@ -56156,7 +55603,7 @@ psl_reserved_ident(
 	    return(FALSE);
 
 	psl_command_string(psq_cb->psq_mode, 
-			   sess_cb->pss_lang, command, &length);
+			   sess_cb, command, &length);
 
 	_VOID_ psf_error(E_PS047B_RESERVED_IDENT, 0L, PSF_USERERR,
 			 &err_code, &psq_cb->psq_error, 2,
@@ -57216,7 +56663,6 @@ psl_arg_room(PSS_SESBLK *cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp, i4 n)
 {
 
     i4 err_code;
-    i4 i;
     i4 newmax;
     i4 psize;
     PSS_ARG_FL *newargs;
@@ -58934,13 +58380,11 @@ psl_ansi_strtodt(
 {
 	DB_STATUS		status = E_DB_OK;
 	PST_CNST_NODE		cconst;
-	i4			constSize;
 	i2			stringlen;
 	i2			precision = 0;
 	DB_DATA_VALUE		indv;
 	DB_DATA_VALUE		outdv;
 	DB_DATA_VALUE		*outp;
-	i4			composite;
 	AD_ADATE		adate;
 	AD_TIME			atime;
 	AD_TIMESTAMP		atimestamp;

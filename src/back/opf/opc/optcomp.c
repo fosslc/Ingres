@@ -1449,6 +1449,8 @@ opt_part_dim(
 **          supported in star
 **	5-Aug-2009 (kschendel) SIR 122512
 **	    Update qep flag printing, print for-depth.
+**	18-Oct-2010 (kschendel) SIR 124544
+**	    Update create-integrity details, has DMU characteristics.
 */
 static VOID
 opt_ahd(
@@ -1854,18 +1856,18 @@ SCROLL,KEYSET,PARM_FIRSTN,PARM_OFFSETN,LOAD_CTAS,PART_SEPARATE,HAS-HASHOP,MAIN",
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN,
 		"idx_fillfac: %d, idx_leaff: %d, idx_nonleaff: %d\n\n",
-		cint->qci_idx_fillfac, cint->qci_idx_leaff, 
-		cint->qci_idx_nonleaff);
+		cint->qci_dmu_chars.dmu_fillfac, cint->qci_dmu_chars.dmu_leaff,
+		cint->qci_dmu_chars.dmu_nonleaff);
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN,
 		"idx_page_size: %d, idx_minpgs: %d, idx_maxpgs: %d\n\n",
-		cint->qci_idx_page_size, cint->qci_idx_minpgs,
-		cint->qci_idx_maxpgs);
+		cint->qci_dmu_chars.dmu_page_size, cint->qci_dmu_chars.dmu_minpgs,
+		cint->qci_dmu_chars.dmu_maxpgs);
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN,
 		"idx_alloc: %d, idx_extend: %d, idx_struct: %d\n\n",
-		cint->qci_idx_alloc, cint->qci_idx_extend,
-		cint->qci_idx_struct);
+		cint->qci_dmu_chars.dmu_alloc, cint->qci_dmu_chars.dmu_extend,
+		cint->qci_dmu_chars.dmu_struct);
 	    }
 	    break;
 	}

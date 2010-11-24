@@ -277,7 +277,7 @@
 **                                          an array of entries of type
 **                                          DMT_CHAR_ENTRY.
 **                                          See below for description of 
-**                                          <dmu_char_array> entries.
+**                                          <dmt_char_array> entries.
 **          .dmt_char_array.data_in_size    Length of char_array data in bytes.
 **
 **          .dmt_attr_array.ptr_address	    Pointer to array of pointer. Each
@@ -621,9 +621,8 @@ DMT_CB  *dmt_cb)
     i4         	    char_count;
     i4	    	    error, local_error;
     DB_STATUS	    status;
-    i4	    	    i,j,k;
+    i4	    	    i,j;
     i4         	    newtable_width;    
-    i4         	    compare;
     i4         	    bad_attr;    
     i4         	    structure;    
     i4	    	    allocation = DM_TTBL_DEFAULT_ALLOCATION;

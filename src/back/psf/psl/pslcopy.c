@@ -4,6 +4,7 @@
 
 #include    <compat.h>
 #include    <gl.h>
+#include    <bt.h>
 #include    <cs.h>
 #include    <cv.h>
 #include    <me.h>
@@ -345,6 +346,9 @@
 **	    TABLE etc. but is also essential for things like MODIFY
 **	    TABLE where the CUT records for encrypted table rows may be
 **	    much shorter than the rows as stored in DMF.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    Common WITH-option code is centralized.  Replace dmu char array
+**	    with DMU characteristics.
 */
 DB_STATUS
 psl_cp1_copy(
@@ -352,7 +356,6 @@ psl_cp1_copy(
 	PSQ_CB		*psq_cb,
 	PSS_Q_XLATE	*xlated_qry,
 	PTR		scanbuf_ptr,
-	PSS_WITH_CLAUSE *with_clauses,
 	DB_ERROR	*err_blk)
 {
 
@@ -371,14 +374,10 @@ psl_cp1_copy(
     i4		err_code;
     i4		tab_mask;
     i4		num_atts;
-    i4			i;
-    i4	    		dt_bits;
+    i4		i;
+    i4		dt_bits;
     i4		perms_required;
     DMR_CB		*dmr_cb;
-    i4			min_pages, max_pages;
-    i4		storage_structure;
-    i4		char_count;
-    DMU_CHAR_ENTRY	*chr;
     i4                  peripheral_seen = 0;
     QEU_CPATTINFO	*cpattcur=NULL;
     i4		        ext_offset=0;
@@ -388,6 +387,7 @@ psl_cp1_copy(
     i4			seq_defaults;
     i4			seq_datalen;
     bool		proto_exp_imp;
+    bool		keep_chars;
     i2			null_adjust;
     i4			proto_shrinkage = 0;
     GCA_DBMS_VALUE	*gca_attdbv;
@@ -419,7 +419,6 @@ psl_cp1_copy(
     qef_rcb  = (QEF_RCB *) sess_cb->pss_object;
     qe_copy  = qef_rcb->qeu_copy;
     dmr_cb   = qe_copy->qeu_dmrcb;
-    chr = (DMU_CHAR_ENTRY *)dmr_cb->dmr_char_array.data_address;
 
     tab_mask = sess_cb->pss_resrng->pss_tabdesc->tbl_status_mask;
 
@@ -475,44 +474,24 @@ psl_cp1_copy(
     ** }
     */
 
-    /*
-    ** Validate that the options specified are OK
+    /* If COPY INTO, or COPY FROM with no indicators set, pretend that
+    ** the DMU characteristics info isn't there.  That's simplest for
+    ** the downstream code.
     */
-    if ( with_clauses )
+    keep_chars = FALSE;
+    if (qe_copy->qeu_direction == CPY_FROM)
     {
-	min_pages = 0;
-	max_pages = 0;
+	DMU_CHARACTERISTICS *dmuchar;
 
-	storage_structure = sess_cb->pss_resrng->pss_tabdesc->tbl_storage_type;
-
-	char_count = dmr_cb->dmr_char_array.data_in_size / 
-				sizeof( DMU_CHAR_ENTRY );
-
-	for ( i = 0; i < char_count ; i++)
-	{
-		switch (chr[i].char_id)
-		{
-		case DMU_MINPAGES:
-			min_pages = chr[i].char_value;
-			continue;
-		case DMU_MAXPAGES:
-			max_pages = chr[i].char_value;
-			continue;
-		default:
-			continue;
-		}
-	}
-
-	/* Pass 0 for allocation because we still check that one at
-	** parse time for COPY, we don't deal with partitioning.
-	*/
-	status = psl_validate_options( sess_cb, PSQ_COPY, with_clauses,
-				       storage_structure, min_pages, 
-				       max_pages, (i4) FALSE, (i4) FALSE,
-				       0,
-				       err_blk);
-	if (DB_FAILURE_MACRO(status))
-	    return( status );
+	dmuchar = (DMU_CHARACTERISTICS *) dmr_cb->dmr_char_array.data_address;
+	if (BTcount(dmuchar->dmu_indicators, DMU_CHARIND_LAST) > 0)
+	    keep_chars = TRUE;
+    }
+    if (! keep_chars)
+    {
+	dmr_cb->dmr_char_array.data_in_size = 0;
+	dmr_cb->dmr_char_array.data_address = NULL;
+	dmr_cb->dmr_flags_mask &= DMR_CHAR_ENTRIES;
     }
 
     /*
@@ -529,7 +508,7 @@ psl_cp1_copy(
     qe_copy->qeu_tup_physical = sess_cb->pss_resrng->pss_tabdesc->tbl_width;
 if (qe_copy->qeu_tup_length == 0)
 {
-TRdisplay("CRYPT_FIXME in psl_cp1_copy qeu_tup_length=%d so reset to qeu_tup_physical=%d\n",qe_copy->qeu_tup_length,qe_copy->qeu_tup_physical);
+/* ** TRdisplay("CRYPT_FIXME in psl_cp1_copy qeu_tup_length=%d so reset to qeu_tup_physical=%d\n",qe_copy->qeu_tup_length,qe_copy->qeu_tup_physical); */
 qe_copy->qeu_tup_length = qe_copy->qeu_tup_physical; 
 }
     qe_copy->qeu_ext_length = qe_copy->qeu_tup_length; 
@@ -1382,7 +1361,6 @@ DB_STATUS
 psl_cp2_copstmnt(
 	PSS_SESBLK	*sess_cb,
 	PSQ_MODE	*qmode,
-	PSS_WITH_CLAUSE *with_clauses,
 	DB_ERROR	*err_blk)
 {
 
@@ -1448,23 +1426,19 @@ psl_cp2_copstmnt(
     dmr_cb->length = sizeof(DMR_CB);
 
     /*
-    ** Allocate the array of DMU_CHAR_ARRAY entries
+    ** Allocate the DMU_CHARACTERISTICS structure, it's not embedded
+    ** into a DMR_CB like it is in the DMU_CB.
     */
     status = psf_malloc( sess_cb, &sess_cb->pss_ostream,
-			 PSS_MAX_MODIFY_CHARS * sizeof(DMU_CHAR_ENTRY),
-			 (PTR *) &dmr_cb->dmr_char_array.data_address,
+			 sizeof(DMU_CHARACTERISTICS),
+			 &dmr_cb->dmr_char_array.data_address,
 			 err_blk);
     if ( status != E_DB_OK )
 	return( status );
+    MEfill(sizeof(DMU_CHARACTERISTICS), 0, dmr_cb->dmr_char_array.data_address);
 
     dmr_cb->dmr_flags_mask = DMR_CHAR_ENTRIES;
-    dmr_cb->dmr_char_array.data_in_size = 0;
-
-    /*
-    ** Initialise mask which tracks with_clauses
-    */
-    MEfill(sizeof(PSS_WITH_CLAUSE), 0, with_clauses);
-		
+    dmr_cb->dmr_char_array.data_in_size = 1;
 
     /* Allocate the copy file descriptor */
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(QEU_CPFILED),
@@ -2629,14 +2603,15 @@ psl_cp10_nm_eq_str(
 **	   are passed onto to DMF through the  characteristics array in
 **	   the DMR_CB. The new with clauses are are already dealt with
 **	   in psl_nm_eq_no, so call that routine from here.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    nm-eq-no call changed, fix here.
 */
 DB_STATUS
 psl_cp11_nm_eq_no(
 	PSS_SESBLK	*sess_cb,
+	PSQ_CB		*psq_cb,
 	char		*name,
-	i4		value,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk)
+	i4		value)
 {
     QEF_RCB	*qef_rcb;
     QEU_COPY	*qe_copy;
@@ -2662,13 +2637,7 @@ psl_cp11_nm_eq_no(
     }
     else
     {
-	status = psl_nm_eq_no( sess_cb,
-			       name,
-			       value,
-			       with_clauses,
-			       PSQ_COPY,
-			       err_blk,
-			       (PSS_Q_XLATE *) NULL);
+	status = psl_nm_eq_no( sess_cb, psq_cb, name, value, NULL);
 	return( status );
     }
 
@@ -2678,16 +2647,16 @@ psl_cp11_nm_eq_no(
     if (value < 0)
     {
 	char		numbuf[25];
-	
+
 	(VOID) CVla((i4) value, numbuf);
 	(VOID) psf_error(5852L, 0L, PSF_USERERR, &err_code,
-	    err_blk, 1, STlength(numbuf), numbuf);
+	    &psq_cb->psq_error, 1, STlength(numbuf), numbuf);
 	return (E_DB_ERROR);
     }
 
     if (qe_copy->qeu_stat & CPY_CONTINUE)
     {
-	(VOID) psf_error(5853L, 0L, PSF_USERERR, &err_code, err_blk, 0);
+	(VOID) psf_error(5853L, 0L, PSF_USERERR, &err_code, &psq_cb->psq_error, 0);
 	return (E_DB_ERROR);
     }
 

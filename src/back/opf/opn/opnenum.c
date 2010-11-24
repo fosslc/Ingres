@@ -568,6 +568,12 @@ opn_uniquecheck(
 **	    didn't appear to be justified.
 **	6-feb-2008 (dougi)
 **	    Guard against SEGV because of "distinct" on constant view.
+**	14-Oct-2010 (kschendel)
+**	    Delete weird sort test that looked at default result structure
+**	    instead of actual result structure.  I think it was trying to
+**	    test for heapsort, but who knows why.  We actually allow
+**	    ctas into a heapsort, but it's done with a post-modify, not
+**	    a sort on the query.
 */
 static bool
 opn_ovqp(
@@ -697,14 +703,6 @@ opn_ovqp(
 	}
     }
     if(	dupsort
-	||
-	(
-	    (subquery->ops_mode == PSQ_RETINTO) /* is this a retrieval
-					** into relation */
-	    &&
-	    				/* is relation to be sorted ? */
-	    (global->ops_cb->ops_alter.ops_storage == DB_SORT_STORE)
-	)
 	||
 	(subquery->ops_sqtype == OPS_PROJECTION)
 	||

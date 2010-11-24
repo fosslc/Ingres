@@ -154,7 +154,14 @@
 **	    Allow alter table alter column with lob only if type doesn't change.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Change how we store DMU characteristics
 */
+
+static DB_STATUS psl_atbl_partcheck(
+	PSS_SESBLK    *sess_cb,
+	PSQ_CB        *psq_cb,
+	DMT_ATT_ENTRY *dmt_attr);
 
 static DB_STATUS psl_atbl_alter_lob(
 	PSS_SESBLK *sess_cb,
@@ -678,6 +685,8 @@ psl_d_cons(
 **	    resjour values expanded, fix here.
 **	30-Mar-2009 (inkdo01, gupsh01)
 **	    Add support for "rename column"
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Change the way the DMU CB is set up.
 */
 DB_STATUS
 psl_alt_tbl_col(
@@ -687,11 +696,10 @@ psl_alt_tbl_col(
     DB_STATUS	status;
     DB_ERROR	*err_blk = &psq_cb->psq_error;
     PSS_RNGTAB	*rngvar;
-    QEU_CB	*qeu_cb;	
+    QEU_CB	*qeu_cb;
     DMU_CB	*dmu_cb;
-    DMU_CHAR_ENTRY  *chr;
     i4	err_code;
-    
+
 
     rngvar = (PSS_RNGTAB *) sess_cb->pss_resrng;
 
@@ -753,7 +761,7 @@ psl_alt_tbl_col(
 
     qeu_cb->qeu_d_cb = (PTR) dmu_cb;
 
-    MEfill(sizeof(DMU_CB), NULLCHAR, (PTR) dmu_cb);
+    MEfill(sizeof(DMU_CB), 0, (PTR) dmu_cb);
 
     /* fill in the DMU control block header */
     dmu_cb->type = DMU_UTILITY_CB;
@@ -763,12 +771,6 @@ psl_alt_tbl_col(
     STRUCT_ASSIGN_MACRO(rngvar->pss_tabid, dmu_cb->dmu_tbl_id);
     STRUCT_ASSIGN_MACRO(rngvar->pss_tabname, dmu_cb->dmu_table_name);
     dmu_cb->dmu_nphys_parts = rngvar->pss_tabdesc->tbl_nparts;
-
-    /* default for journaling is NOJOURNALING */
-    sess_cb->pss_restab.pst_resjour = PST_RESJOUR_OFF;
-
-    /* default for session table recovery is False */
-    sess_cb->pss_restab.pst_recovery = FALSE;
 
     /* allocate attribute entry.  Only 1 (or 2 for RENAME COLUMN) required 
     ** as ALTER TABLE ADD/DROP COLUMN only supports altering one column 
@@ -794,28 +796,18 @@ psl_alt_tbl_col(
       dmu_cb->dmu_attr_array.ptr_size = 0;
     }
 
-    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, (sizeof(DMU_CHAR_ENTRY) * 2),
-			(PTR *) &dmu_cb->dmu_char_array.data_address,
-			err_blk);
-    if (DB_FAILURE_MACRO(status))
-       return (status);
-
-    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-    chr->char_id = DMU_ALTER_TYPE;
     if (psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN)
-       chr->char_value = DMU_C_ADD_ALTER;
+	dmu_cb->dmu_action = DMU_ALT_ADDCOL;
     if (psq_cb->psq_mode == PSQ_ATBL_DROP_COLUMN)
-       chr->char_value = DMU_C_DROP_ALTER;
+	dmu_cb->dmu_action = DMU_ALT_DROPCOL;
     if (psq_cb->psq_mode == PSQ_ATBL_ALTER_COLUMN)
-       chr->char_value = DMU_C_ALTCOL_ALTER;
+	dmu_cb->dmu_action = DMU_ALT_ALTERCOL;
     if (psq_cb->psq_mode == PSQ_ATBL_RENAME_TABLE)
-       chr->char_value = DMU_C_ALTTBL_RENAME;
+	dmu_cb->dmu_action = DMU_ALT_TBL_RENAME;
     if (psq_cb->psq_mode == PSQ_ATBL_RENAME_COLUMN)
-       chr->char_value = DMU_C_ALTCOL_RENAME;
-    chr++;
-    chr->char_id = DMU_CASCADE;
-    chr->char_value = DMU_C_OFF;
-    dmu_cb->dmu_char_array.data_in_size = (sizeof(DMU_CHAR_ENTRY) * 2);
+	dmu_cb->dmu_action = DMU_ALT_COL_RENAME;
+
+    /* "cascade" is initially OFF thanks to zeroing the DMU CB */
 
     /* Allocate the location entries.  Assume DM_LOC_MAX */
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
@@ -874,10 +866,9 @@ psl_alt_tbl_col_drop(
 {
     DB_STATUS	status;
     DB_ERROR	*err_blk = &psq_cb->psq_error;
-    QEU_CB	*qeu_cb;			
+    QEU_CB	*qeu_cb;
     DMU_CB	*dmu_cb;
     DMF_ATTR_ENTRY **dmu_attr;
-    DMU_CHAR_ENTRY *chr;
     DMT_ATT_ENTRY  *dmt_attr;
     RDF_CB	rdf_cb;
     i4	err_code;
@@ -937,10 +928,8 @@ psl_alt_tbl_col_drop(
     dmu_attr[0]->attr_size = dmt_attr->att_number;
     dmu_cb->dmu_attr_array.ptr_in_count = 1;
 
-    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-    chr++;
-    chr->char_value = DMU_CASCADE;
-    chr->char_value = (cascade ? DMU_C_ON : DMU_C_OFF);
+    if (cascade)
+	BTset(DMU_CASCADE, dmu_cb->dmu_chars.dmu_indicators);
 
     /* Invalidate base table information from RDF cache */
     pst_rdfcb_init(&rdf_cb, sess_cb);
@@ -1026,10 +1015,9 @@ psl_alt_tbl_col_add(
 {
     DB_STATUS	status;
     DB_ERROR	*err_blk = &psq_cb->psq_error;
-    QEU_CB	*qeu_cb;	
+    QEU_CB	*qeu_cb;
     DMU_CB	*dmu_cb;
     DMF_ATTR_ENTRY **dmu_attr;
-    DMU_CHAR_ENTRY *chr;
     DMT_ATT_ENTRY  *dmt_attr;
     PST_STATEMENT  *stmt_list;
     PST_CREATE_INTEGRITY *cr_integ;
@@ -1223,15 +1211,11 @@ psl_alt_tbl_col_rename(
 {
     DB_STATUS	status;
     DB_ERROR	*err_blk = &psq_cb->psq_error;
-    QEU_CB	*qeu_cb;	
+    QEU_CB	*qeu_cb;
     DMU_CB	*dmu_cb;
     DMF_ATTR_ENTRY **dmu_attr;
-    DMU_CHAR_ENTRY *chr;
     DMT_ATT_ENTRY  *dmt_attr;
     DMT_ATT_ENTRY  *newdmt_attr;
-    PST_STATEMENT  *stmt_list;
-    PST_CREATE_INTEGRITY *cr_integ;
-    DB_COLUMN_BITMAP *integ_cols;
     RDF_CB	rdf_cb;
     i4		err_code;
     PST_PROCEDURE 	*proc_node; 
@@ -1374,14 +1358,12 @@ psl_alt_tbl_rename(
 {
     DB_STATUS		status;
     DB_ERROR		*err_blk = &psq_cb->psq_error;
-    QEU_CB		*qeu_cb;	
+    QEU_CB		*qeu_cb;
     DMU_CB		*dmu_cb;
-    DMU_CHAR_ENTRY 	*chr;
     RDF_CB		rdf_cb;
-    i4			err_code;
-    PST_PROCEDURE 	*proc_node; 
-    PST_STATEMENT  	*rename_stmt; 
-    PST_RENAME		*pst_rename; 
+    PST_PROCEDURE 	*proc_node;
+    PST_STATEMENT  	*rename_stmt;
+    PST_RENAME		*pst_rename;
 
     proc_node = (PST_PROCEDURE *) sess_cb->pss_qsf_rcb.qsf_root;
     rename_stmt = proc_node->pst_stmts;
@@ -1441,7 +1423,7 @@ psl_alt_tbl_rename(
 **	15-nov-2006 (dougi)
 **	    Written to validate partitioned tables.
 */
-DB_STATUS
+static DB_STATUS
 psl_atbl_partcheck(
 	PSS_SESBLK    *sess_cb,
 	PSQ_CB        *psq_cb,

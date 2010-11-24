@@ -239,6 +239,8 @@
 **	17-nov-2008 (dougi)
 **	    Extricate sequence names from default expression of identity 
 **	    columns so identity sequences can be dropped, too.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Make sure DMU_CB is zeroed, drop dmu-char-array.
 */
 DB_STATUS
 psy_kview(
@@ -268,13 +270,12 @@ psy_kview(
     u_i4 		unorm_len, norm_len;
     PST_SEQOP_NODE	*seqp;
 
+    MEfill(sizeof(DMU_CB), 0, &dmu_cb);
     dmu_cb.type = DMU_UTILITY_CB;
     dmu_cb.length = sizeof(dmu_cb);
     dmu_cb.owner = (PTR)DB_PSF_ID;
     dmu_cb.ascii_id = DMU_ASCII_ID;
     dmu_cb.dmu_db_id = sess_cb->pss_dbid;
-    dmu_cb.dmu_char_array.data_address = (PTR) NULL;
-    dmu_cb.dmu_char_array.data_in_size = 0;
     dmu_cb.dmu_table_name = psy_cb->psy_tabname[0];
 
     qeu_cb->qeu_d_cb = (PTR) &dmu_cb;

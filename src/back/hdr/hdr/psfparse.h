@@ -3,6 +3,8 @@
 **
 */
 
+#include <dmucb.h>
+
 /**
 ** Name: PSFPARSE.H - Global parser definitions.
 **
@@ -1141,6 +1143,8 @@
 #define E_PS04D3_ALARM_TOO_MANY_OBJS        (E_PS_ERRORS + 0x4D3)
 #define E_PS04D4_ALARM_TOO_MANY_SUBJS       (E_PS_ERRORS + 0x4D4)
 #define E_PS04D5_ALARM_OBJ_OPER_MISMATCH    (E_PS_ERRORS + 0x4D5)
+
+#define E_PS04F0_NOWITH_X100		    (E_PS_ERRORS + 0x4F0)
 /*
 **	Errors having to do with shutting down the server.
 */
@@ -2527,11 +2531,13 @@ typedef struct _PST_OBJDEP
 **	    Add a place to pass in create-compression.
 **	12-aug-2010 (stephenb)
 **	    Resolve flag conflict in psq_flags2
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Pass result-structure to PSF startup.
 */
 typedef enum psq_mode_enum {
 #define PSQ_MODES_MACRO \
 _DEFINE(PSQ_RETRIEVE,            1,"RETRIEVE")\
-_DEFINE(PSQ_RETINTO,             2,"CREATE TABLE")\
+_DEFINE(PSQ_RETINTO,             2,"CREATE AS SELECT")\
 _DEFINE(PSQ_APPEND,              3,"APPEND")\
 _DEFINE(PSQ_REPLACE,             4,"REPLACE")\
 _DEFINE(PSQ_DELETE,              5,"DELETE")\
@@ -2676,7 +2682,7 @@ _DEFINE(PSQ_SON_ERROR,         143,"SET SESSION ON_ERROR")\
 _DEFINE(PSQ_UPD_ROWCNT,        144,"SET UPDATE_ROWCOUNT")\
 _DEFINE(PSQ_145_unused,        145,"PSQ_145_unused")\
 _DEFINE(PSQ_DGTT,              146,"DECLARE GLOBAL TEMPORARY TABLE")\
-_DEFINE(PSQ_DGTT_AS_SELECT,    147,"DECLARE GLOBAL TEMPORARY TABLE")\
+_DEFINE(PSQ_DGTT_AS_SELECT,    147,"DECLARE (temporary) AS SELECT")\
 _DEFINE(PSQ_GWFTRACE,          148,"SET TRACE POINT GWXXX")\
 _DEFINE(PSQ_CONS,              149,"ANSI CONSTRAINT declaration" /*MUST MATCH DB_CONS value in <dbdbms.h>*/ )\
 _DEFINE(PSQ_ALTERTABLE,        150,"ALTER TABLE")\
@@ -2719,10 +2725,13 @@ _DEFINE(PSQ_GCA_XA_PREPARE,    186,"PSQ_GCA_XA_PREPARE")\
 _DEFINE(PSQ_GCA_XA_COMMIT,     187,"PSQ_GCA_XA_COMMIT")\
 _DEFINE(PSQ_GCA_XA_ROLLBACK,   188,"PSQ_GCA_XA_ROLLBACK")\
 _DEFINE(PSQ_FREELOCATOR,       189,"FREE LOCATOR")\
-_DEFINE(PSQ_ATBL_RENAME_COLUMN,190,"PSQ_ATBL_RENAME_COLUMN")\
-_DEFINE(PSQ_ATBL_RENAME_TABLE, 191,"PSQ_ATBL_RENAME_TABLE")\
+_DEFINE(PSQ_ATBL_RENAME_COLUMN,190,"ALTER TABLE (rename column)")\
+_DEFINE(PSQ_ATBL_RENAME_TABLE, 191,"ALTER TABLE (rename table)")\
 _DEFINE(PSQ_SETBATCHCOPYOPTIM, 192, "SET BATCH_COPY_OPTIM")\
 _DEFINE(PSQ_CREATECOMP,        193,"SET CREATE_COMPRESSION")\
+_DEFINE(PSQ_X100_DGTT,         194,"VW DECLARE GLOBAL TEMPORARY TABLE")\
+_DEFINE(PSQ_X100_CRCONST,      195,"VW CREATE CONSTRAINT")\
+_DEFINE(PSQ_X100_CRINDEX,      196,"VW CREATE INDEX")\
 _ENDDEFINE
 #define _DEFINE(n,v,x) n=v,
 #define _ENDDEFINE PSQ_MODE_MAX
@@ -2829,6 +2838,9 @@ typedef struct _PSQ_CB
 					** startup config option: passed
 					** to parser facility CB.
 					*/
+    i2		    psq_result_struct;	/* Config result_structure for PSF */
+    bool	    psq_result_compression;  /* Config result_structure
+					** compression indicator for PSF */
     u_i4	    psq_flag;		/*
 					** holds assorted bitflag instructions,
 					** defined below:
@@ -3211,35 +3223,22 @@ typedef struct _PSQ_CB
                                         ** to psq_flag.
 					*/
 
-					/*
-					** set ==> disregard error condition
-					** when performing requested action
-					*/
 #define	    PSQ_RULE_UPD_PREFETCH	0x0001L
 #define     PSQ_DFLT_READONLY_CRSR	0x0002L
 #define	    PSQ_BATCH			0x0004L /* query is part of a batch */
 #define	    PSQ_LAST_BATCH		0x0008L /* end of batch */
 #define	    PSQ_COPY_OPTIM		0x0010L /* use copy optim */
-					 /*
-					 ** set ==> set if the default cursor 
-					 ** mode is readonly 
-					 */
-#define	    PSQ_LOCATOR			0x00020L
+#define	    PSQ_LOCATOR			0x0020L
 					/* 
 					** set ==> GCA_LOCATOR_MASK is on
 					*/
-#define     PSQ_MONEY_COMPAT		0x0008L
+#define     PSQ_MONEY_COMPAT		0x0040L
 					/*
                                         ** Set if constant strings are to be
                                         ** parsed for money.
                                         */
     bool	    psq_vch_prec;	/* varchar precedence */
  
-                                        /*
-                                        ** set ==> disregard error condition
-                                        ** when performing requested action
-                                        */
-#define     PSQ_RULE_UPD_PREFETCH       0x0001L
     i2                  psq_usub_stat;  /* Status of unicode substitution */
     char                psq_usub_char[4];  /* Unicode substitution character */
     DB_DATA_VALUE	psq_locator[10];   /* Array of locators for FREE LOCATOR */
@@ -4477,10 +4476,13 @@ typedef struct _PST_HINTENT
 ** History:
 **     01-oct-87 (stec)
 **          written
+**	11-Oct-2010 (kschendel) SIR 124544
+**	    Add key-order (for register as import).
 */
 typedef struct _PST_RSKEY
 {
     struct _PST_RSKEY  *pst_nxtkey;	/* pointer */
+    bool		pst_descending;	/* TRUE if descending key order */
     DB_ATT_NAME		pst_attname;	/* attribute name */
 } PST_RESKEY;
 
@@ -4488,7 +4490,18 @@ typedef struct _PST_RSKEY
 ** Name: PST_RESTAB - Result table info.
 **
 ** Description:
-**      This structure groups information about result table.
+**      This structure groups information about the result table.
+**
+**	This structure is somewhat of a stub, resulting from the
+**	transition over the years from simple QUEL retrieve-into,
+**	to the DMU_CB and all the SQL complications.  The most
+**	commonly used member is the result variable number, resvno.
+**	The table ID / name / owner  may be used to describe the
+**	"result" of a DML statement such as INSERT, UPDATE, or
+**	DELETE.  The location is at present only used by constraints,
+**	to store a location from a constraint-WITH clause.  (Constraint
+**	data structures presently contain a DMU_CHARACTERISTICS
+**	but not a complete DMU_CB.)
 **
 ** History:
 **    01-oct-87 (stec)
@@ -4530,112 +4543,20 @@ typedef struct _PST_RSKEY
 **	    Make things that are boolean, actually bool.
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Expand result-journaled to indicate NOW or AT NEXT CHECKPOINT.
+**	7-Oct-2010 (kschendel) SIR 124544
+**	    Delete off most of this, moved to DMU_CHARACTERISTICS.
 */
+
 typedef struct _PST_RESTAB
 {
     DB_TAB_ID	    pst_restabid;	/* result table id for this qry */
     DB_TAB_NAME	    pst_resname;	/* nm of res.tab.,if doesn't exist yet*/
     DB_OWN_NAME	    pst_resown;		/* owner of result table */
     DM_DATA	    pst_resloc;		/* location descriptor */
-    char	    pst_flr1[sizeof(DB_LOC_NAME) - sizeof(DM_DATA)];/*filler*/
     i4		    pst_resvno;		/* number of result range variable */
-    i4		    pst_fillfac;	/* fillfactor value */
-    i4		    pst_leaff;		/* leaffill (indexfill) value */
-    i4		    pst_nonleaff;	/* nonleaffill value */
-    i4	    pst_page_size;	/* requested page size for table */
-    i4	    pst_minpgs;		/* minpages value */
-    i4	    pst_maxpgs;		/* maxpages values */
-    i4	    pst_alloc;		/* allocation value. */
-    i4	    pst_extend;		/* extend value. */
-    i4	    pst_struct;		/* structure type */
-    i2	    pst_resjour;	/* Result rel. journaled? */
-#define	PST_RESJOUR_OFF		0	/* Not journaled */
-#define	PST_RESJOUR_ON		1	/* Journaled now (db is journaled) */
-#define	PST_RESJOUR_LATER	2	/* Journaled later; db not journaled */
+    bool	    pst_heapsort;	/* TRUE if CTAS result is heapsort */
+					/* DMU_CB will show "heap" */
 
-    i2	    pst_compress;	/* compression options, as follows: */
-					/* Data compression should be used. */
-#define			PST_DATA_COMP	    0x0001L
-
-					/* Data compression should NOT be used.
-					** This bit indicates that COMPRESSION=
-					** (NODATA) has been explicitly
-					** specified, and is thus used
-					** differently by the parser. Logically,
-					** this bit and PST_DATA_COMP are
-					** mutually exclusive, and are never
-					** both set, and setting this bit is
-					** equivalent to not setting the
-					** PST_DATA_COMP bit.
-					*/
-#define			PST_NO_DATA_COMP    0x0002L
-
-					/* Key compression should be used. */
-#define			PST_INDEX_COMP	    0x0004L
-
-					/* Key compression should NOT be used.
-					** This bit indicates that COMPRESSION=
-					** (NOKEY) has been explicitly
-					** specified, and is thus used
-					** differently by the parser. Logically,
-					** this bit and PST_INDEX_COMP are
-					** mutually exclusive, and are never
-					** both set, and setting this bit is
-					** equivalent to not setting the
-					** PST_INDEX_COMP bit.
-					*/
-#define			PST_NO_INDEX_COMP   0x0008L
-
-					/* Used only by the parser. This bit
-					** indicates that the compression
-					** semantics are currently deferred
-					** until the storage structure is
-					** known.
-					*/
-#define			PST_COMP_DEFERRED   0x0010L
-
-					/* Used only by the parser. This bit
-					** indicates that WITH NOCOMPRESSION
-					** was specified. At the completion
-					** of parsing the CREATE TABLE ...
-					** AS SELECT statement, the parser
-					** will clear this bit, and so OPF does
-					** not ever see it.
-					*/
-#define			PST_NO_COMPRESSION  0x0020L
-
-					/* HI Data compression should be used */
-#define			PST_HI_DATA_COMP    0x0040L
-
-    bool	    pst_resdup;		/* TRUE iff duplicates requested */
-    bool	    pst_clustered;	/* TRUE if Clustered Btree */
-    bool	    pst_temporary;	/* zero if table is permanent, non-zero
-					** if table is temporary.
-					*/
-    char	    pst_autostruct;	/* flag for auto structure options */
-#define			PST_AUTOSTRUCT	    0x01
-					/* autostruct is on */
-#define			PST_NO_AUTOSTRUCT   0x02
-					/* autostruct is off */
-    bool	    pst_recovery;	/* zero if temporary table was declared
-					** WITH NORECOVERY, non-zero otherwise.
-					** (always FALSE at present)
-					*/
-    i4	    pst_secaudit;	/* Security audit flags */
-#define			PST_SECAUDIT_ROW	0x01
-#define			PST_SECAUDIT_NOROW	0x02
-    i4 	    pst_flags;		/* General flags */
-					/* 
-					** Table is system_maintained
-					*/
-# define		PST_SYS_MAINTAINED	0x01						/*
-					** Table has row security auditing
-					*/
-# define		PST_ROW_SEC_AUDIT	0x04
-
-    PST_RESKEY	    *pst_reskey;	/* NULL terminated linked list
-					** of key entries */
-    DB_ATT_NAME	    *pst_secaudkey;	/* Security audit key */
 } PST_RESTAB;
 
 /*
@@ -6392,6 +6313,8 @@ typedef	struct	_PST_COL_ID
 **	    Fix define values. 
 **	28-Jul-2010 (kschendel) SIR 124104
 **	    Add compression so that auto structure can maintain compression.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Drop compression, opf can now dig it out of the DMU_CB.
 */
 typedef	struct	_PST_CREATE_TABLE
 {
@@ -6403,15 +6326,7 @@ typedef	struct	_PST_CREATE_TABLE
 #define       PST_ATBL_ALTER_COLUMN   5L     /* alter table alter column */
                                   /* may eventually allow temp tables,etc */
 
-    i2	pst_autostruct;		/* flag field for auto structure options */
-				/* Flags defined in PST_RESTAB */
-    i2	pst_compress;		/* Compression flags, same as PST_RESTAB */
-				/* OPF doesn't care much about this, it depends
-				** on the pst_restab or DMU char stuff, but
-				** it does pass this along to the create
-				** integrity action for use by auto-structure
-				*/
-    struct _QEU_CB	*pst_createTableQEUCB;	 
+    struct _QEU_CB	*pst_createTableQEUCB;
 				 /* the DMU_CB in this QEUCB describes table */
 }	PST_CREATE_TABLE;
 
@@ -6648,6 +6563,8 @@ typedef	struct	_PST_CREATE_PROCEDURE
 **	    columns.
 **	28-Jul-2010 (kschendel) SIR 124104
 **	    Add compression so that auto structure can maintain compression.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Add DMU_CHARACTERISTICS which is what holds index options now.
 */
 typedef	struct	_PST_CREATE_INTEGRITY
 {
@@ -6769,17 +6686,17 @@ typedef	struct	_PST_CREATE_INTEGRITY
 		*/
     i2		      pst_key_count;
 		/* count of columns in key column list */
-    i2		      pst_compress;
-		/* Compression indicator, same as PST_RESTAB.  The path to
-		** get here is sess_cb->pss_restab.pst_compress is copied
-		** to pst_createTable.pst_compress is copied (by opc) to
-		** pst_createIntegrity.pst_compress.  Goofy, but it's the
-		** simplest way to do it.
-		** Note that the compression indicator is only set when
-		** auto-structure is asked for.
+    i2		      pst_autocompress;
+		/* Only for use with table auto-structure.
+		** Compression indicator, DMU_COMP_xxx.  This shows the
+		** original (data) compression on the base table so that
+		** auto-structure can re-apply that compression after it
+		** auto-structures the base table (to btree).
+		** OPC digs this out of the create-table DMU_CB at entry,
+		** and then code gen puts it into the qci action header.
 		*/
-    PST_RESTAB	      pst_indexopts;
-		/* constraint index options */
+    PST_RESTAB	pst_indexres;	/* Constraint index name, location info */
+    DMU_CHARACTERISTICS pst_indexopts; /* constraint index options */
 
 }	PST_CREATE_INTEGRITY;
 

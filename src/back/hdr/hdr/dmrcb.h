@@ -340,6 +340,8 @@ typedef struct _DMR_CHAR_ENTRY
 **	    Define no-parallel-sort flag for load.
 **	19-Apr-2010 (kschendel) SIR 123485
 **	    Define a couple more flags for query-end.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    Comment update re dmr char array.
 */
 typedef struct _DMR_CB 
 {
@@ -597,7 +599,17 @@ typedef struct _DMR_CB
 					    ** eventually to the client which
 					    ** caused the insert.
 					    */
+
+    /* dmr_char_array is usually an array of DMR_CHAR_ENTRY's.
+    ** However, for bulk-load from COPY, it can also be a pointer to
+    ** a DMU_CHARACTERISTICS structure containing bulk-load options.
+    ** For that case, dmr_char_array.data_in_size is set to 1.
+    ** There's no intrinsic indicator in the DMR_CB showing when
+    ** dmr_char_array points to what, the caller and DMF just have
+    ** to agree!
+    */
     DM_DATA         dmr_char_array;         /* Record access characteristics */
+
     i4 	    dmr_agg_flags;	    /* bits indicating what types
 					    ** of aggregates are present in
 					    ** a DMR_AGGREGATE request. If no

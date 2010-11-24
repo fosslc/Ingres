@@ -226,13 +226,14 @@
 **	    Create MODIFY_BUCKET_PNO_TID8_SZ to centralize the definition of
 **	    size of the fields that may be tacked on to a record for MODIFY
 **	    processing: bucket, partition, tid8.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    Update some prototypes for DMU characteristics change.
 */
 
 /*
 **  Forward typedef references.
 */
 
-typedef struct  _DM2U_KEY_ENTRY DM2U_KEY_ENTRY;
 typedef struct  _DM2U_INDEX_CB  DM2U_INDEX_CB;
 typedef struct  _DM2U_RFP_ENTRY DM2U_RFP_ENTRY;
 typedef struct  _DM2U_FREEPG_CB	DM2U_FREEPG_CB;
@@ -382,13 +383,12 @@ struct _DM2U_RFP_ENTRY
 };
 
 /*}
-** Name:  DM2U_KEY_ENTRY - Description of key for a database table.
+** Name: DM2U_INDEX_CB -- Create-index control block
 **
 ** Description:
-**      This structure is used to describe the key attributes of
-**      the table being created, modified or indexed.
-**	This structure is the same as the logical interface(DMU_KEY_ENTRY),
-**	if either changes, need to apply to both places.
+**	This structure describes all the info needed to do a create
+**	index.  It probably shouldn't exist;  a more general modify
+**	structure can take its place.  Something to do eventually...
 **
 ** History:
 **      02-jun-85 (ac)
@@ -403,15 +403,11 @@ struct _DM2U_RFP_ENTRY
 **	    Must do this with any others which exceed 31 args in future.
 **	5-Nov-2009 (kschendel) SIR 122739
 **	    Fix outrageous name confusion viz. acount vs kcount.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Delete DM2U_KEY_ENTRY since it had to be identical to
+**	    DMU_KEY_ENTRY, yet had a separate definition.  The back
+**	    of my hand to the nitwit who thought that was a good idea.
 */
-
-struct _DM2U_KEY_ENTRY
-{
-    DB_ATT_NAME     key_attr_name;          /* Name of table attribute. */
-    i4         	    key_order;              /* Sort order of attribute. */
-#define                 DM2U_ASCENDING       1L
-#define                 DM2U_DESCENDING      2L
-};
 
 struct _DM2U_INDEX_CB
 {
@@ -446,29 +442,29 @@ struct _DM2U_INDEX_CB
     ** of them are keys, and _acount is all of them.  Neither includes
     ** tidp, as tidp is not user specified.
     */
-    i4             	indxcb_kcount;		/* # of keys (excl tidp) */
-    DM2U_KEY_ENTRY      **indxcb_key;		/* Pointer to user-listed atts */
-    i4             	indxcb_acount;		/* total columns (excl tidp) */
-    i4             	indxcb_db_lockmode;
-    i4             	indxcb_allocation;
-    i4             	indxcb_extend;
-    i4             	indxcb_page_type;
-    i4             	indxcb_page_size;
+    i4			indxcb_kcount;		/* # of keys (excl tidp) */
+    DMU_KEY_ENTRY       **indxcb_key;		/* Pointer to user-listed atts */
+    i4			indxcb_acount;		/* total columns (excl tidp) */
+    i4			indxcb_db_lockmode;
+    i4			indxcb_allocation;
+    i4			indxcb_extend;
+    i4			indxcb_page_type;
+    i4			indxcb_page_size;
     DB_TAB_ID           *indxcb_idx_id;
     f8			*indxcb_range;
-    i4             	indxcb_index_flags;
-    DM_PTR              *indxcb_gwattr_array;
-    DM_DATA             *indxcb_gwchar_array;
+    i4			indxcb_index_flags;
+    DM_PTR		*indxcb_gwattr_array;
+    DM_DATA		*indxcb_gwchar_array;
     DMU_FROM_PATH_ENTRY *indxcb_gwsource;
-    DB_QRY_ID           *indxcb_qry_id;
-    i4             	*indxcb_tup_info;
+    DB_QRY_ID		*indxcb_qry_id;
+    i4			*indxcb_tup_info;
     DB_TAB_NAME         *indxcb_tab_name;
     DB_OWN_NAME         *indxcb_tab_owner;
-    i4             	indxcb_reltups;
-    i4             	indxcb_gw_id;
-    DM_DATA             *indxcb_char_array;
+    i4			indxcb_reltups;
+    i4			indxcb_gw_id;
+    DMU_CHARACTERISTICS *indxcb_dmu_chars;
     u_i4                indxcb_relstat2;
-    i4             	indxcb_tbl_pri;
+    i4			indxcb_tbl_pri;
     DB_ERROR            *indxcb_errcb;
     i4			indxcb_maxklen; /* returned if btree klen error */
     DM2U_RFP_ENTRY      indxcb_rfp;
@@ -518,11 +514,11 @@ struct _DM2U_MOD_CB
     bool		mcb_clustered;
     i4			mcb_min_pages;
     i4			mcb_max_pages;
-    i4         		mcb_modoptions;
-    i4         		mcb_mod_options2;
-    i4         		mcb_kcount;
-    DM2U_KEY_ENTRY  	**mcb_key;
-    i4         		mcb_db_lockmode;
+    i4			mcb_modoptions;
+    i4			mcb_mod_options2;
+    i4			mcb_kcount;
+    DMU_KEY_ENTRY	**mcb_key;
+    i4			mcb_db_lockmode;
     i4			mcb_allocation;
     i4			mcb_extend;
     i4			mcb_page_type;
@@ -585,7 +581,7 @@ FUNC_EXTERN DB_STATUS	dm2u_create(
 		i4		    gw_id,
 		i4		    gwrowcount,
 		DMU_FROM_PATH_ENTRY *gwsource,
-		DM_DATA		    *char_array,
+		DMU_CHARACTERISTICS *dmu_chars,
 		i4		    dimension,
 		i4		    hilbertsize,
 		f8		    *range,
@@ -665,7 +661,7 @@ FUNC_EXTERN DB_STATUS	dm2u_sysmod(
 		i4		merge,
 		i4         truncate,
 		i4         kcount,
-		DM2U_KEY_ENTRY  **key,
+		DMU_KEY_ENTRY  **key,
 		i4         db_lockmode,
 		i4		allocation,
 		i4		extend,

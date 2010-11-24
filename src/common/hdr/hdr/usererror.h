@@ -204,6 +204,8 @@
 **          Add E_US18E8_6376_EXT_IIDBDB_LOC
 **      01-Jul-2010 (horda03) B123234
 **          Added new error E_US10F5_INTERVAL_IN_ABS_FUNC.
+**	11-Oct-2010 (kschendel) SIR 124544
+**	    DDL WITH-option code reworked, new messages here.
 **/
 
 /*
@@ -321,6 +323,9 @@
 #define			E_US008D_LOC_AREA_WORK_AND_AWORK    0x8D
 #define			E_US0090_CREATEDB_RONLY_NOTEXIST    0x90
 
+#define			E_US07D7_2007_UNKNOWN_WITHOPT (E_US_MASK + 0x07D7)
+#define			E_US07FE_2046_WITHOPT_USAGE (E_US_MASK + 0x07FE)
+#define			E_US07FF_2047_WITHOPT_VALUE (E_US_MASK + 0x07FF)
 #define			E_US0805_2053_SEQDEF_TYPE   (E_US_MASK + 0x0805)
 
 #define                 E_US082D_2093               (E_US_MASK + 0x082D)
@@ -512,8 +517,8 @@
 /*
 **	Miscellaneous 
 */
+#define			E_US14DC_5340_WITHOPT_TOOMANY (E_US_MASK + 0x14DC)
 #define			E_US14E4_5348_NON_FAST_COPY  (E_US_MASK + 0x14E4L)
-#define			E_US14E5_5349_MODIFY_NO_WITH (E_US_MASK + 0x14E5L)
 #define                 E_US14E6_5350_READONLY_TBL_ERR (E_US_MASK + 0x14E6L)
 #define 		E_US14E8_5352_DROP_READONLY  (E_US_MASK + 0x14E8L)
 #define			E_US1712_TRACE_PERM	     (E_US_MASK + 0x1712L)
@@ -658,6 +663,7 @@
 #define			E_US1950_6468_NO_PARTRULE_SPEC  (E_US_MASK + 0x1950)
 #define			E_US1951_6481_PART_ONEP		(E_US_MASK + 0x1951)
 /* **** End of the group that has bad E_USxxxx numbering. */
+#define			E_US1962_6498_X_REQUIRES_Y	(E_US_MASK + 0x1962)
 #define			E_US1963_6499_X_ONLYWITH_Y	(E_US_MASK + 0x1963)
 
 /* More USER/PRIVILEGE errors */
@@ -717,7 +723,6 @@
 #define                 E_US247E_9342_ROLE_RG_DBDB       (E_US_MASK + 0x247E)
 #define                 E_US247F_9343_ROLE_RG_NOT_AUTH   (E_US_MASK + 0x247F)
 
-#define 		E_US2481_9345_MODIFY_TO_NO_WITH  (E_US_MASK + 0x2481)
 #define                 E_US248A_9354_MODIFY_TO_TABLE_OPTION (E_US_MASK + 0x248A)
 /*[@group_of_defined_constants@]...*/
 

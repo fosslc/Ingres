@@ -8,6 +8,7 @@
 # include    <iicommon.h>
 # include    <dbdbms.h>
 # include    <dudbms.h>
+# include    <bt.h>
 # include    <me.h>
 # include    <cs.h>
 # include    <st.h>
@@ -115,6 +116,8 @@
 **	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	13-Oct-2010 (kschendel) SIR 134544
+**	    DMU char array replaced with indicator bitmap, fix here.
 */
 
 GLOBALREF	GW_FACILITY	*Gwf_facility;
@@ -269,7 +272,8 @@ gwsxa_stats(void)
 **		gwx_rcb.xrcb_gw_id	    Gateway ID
 **		gwx_rcb.xrcb_var_data1	    Gateway options
 **		gwx_rcb.xrcb_var_data2	    Gateway file (audit log)
-**		gwx_rcb.xrcb_var_data3	    Table options
+**		gwx_rcb.xrcb_var_data3	    GWSXA_XREL relation info
+**		gwx_rcb.xrcb_dmu_chars	    DMU characteristics info
 **		
 **	Outputs:
 **		gwx_rcb.xrcb_mtuple_buffs   Place for attribute info
@@ -307,12 +311,10 @@ gwsxa_tabf( GWX_RCB     *gwx_rcb )
     			gwx_rcb->xrcb_var_data3.data_address;
     GWSXA_XATT *xatt = (GWSXA_XATT*)
     			gwx_rcb->xrcb_mtuple_buffs.ptr_address;
-    DMU_CHAR_ENTRY    	*chr;
-    DMU_CHAR_ENTRY    	*charlim;
-    DM_DATA		*char_data;
     DB_STATUS 		status, local_status;
     i4		local_err;
     i4			regtime;
+    i4			indicator;
     char		*auditfile;
     i2			auditflen;
     i2			colnum;
@@ -435,51 +437,49 @@ gwsxa_tabf( GWX_RCB     *gwx_rcb )
 	**	We only check some, currently UPDATE and JOURNALING.
 	**	plus make sure its a HEAP structure.
 	*/
-	chr=(DMU_CHAR_ENTRY*) gwx_rcb->xrcb_var_data4.data_address;
-	/* Find the end of the characteristics array */
-	charlim = (DMU_CHAR_ENTRY *)
-		    ((char *) chr + gwx_rcb->xrcb_var_data4.data_in_size);
 
-	for(; chr<charlim; chr++)
+	indicator = -1;
+	while (gwx_rcb->xrcb_dmu_chars != NULL
+	  && (indicator = BTnext(indicator, gwx_rcb->xrcb_dmu_chars->dmu_indicators, DMU_CHARIND_LAST)) != -1)
 	{
-		switch(chr->char_id)
+	    switch(indicator)
+	    {
+	    case DMU_JOURNALED:
+		if (gwx_rcb->xrcb_dmu_chars->dmu_journaled != DMU_JOURNAL_OFF)
 		{
-		case DMU_JOURNALED:
-			if (chr->char_value==DMU_C_ON)
-			{
-				gwsxa_error(gwx_rcb,
-						E_GW4005_SXA_NO_REGISTER_JNL,
-						SXA_ERR_USER,
-						0);
-				*error= E_GW050E_ALREADY_REPORTED;
-				status=E_DB_ERROR;
-			}
-			break;
-		case DMU_STRUCTURE:
-			if (chr->char_value!=DB_HEAP_STORE)
-			{
-				gwsxa_error(gwx_rcb,E_GW4067_SXA_NO_REGISTER_KEYED,
+		    gwsxa_error(gwx_rcb,
+					E_GW4005_SXA_NO_REGISTER_JNL,
 					SXA_ERR_USER,
 					0);
-				*error= E_GW050E_ALREADY_REPORTED;
-				status=E_DB_ERROR;
-			}
-			break;
-		case DMU_GW_UPDT:
-			if (chr->char_value==DMU_C_ON)
-			{
-				gwsxa_error(gwx_rcb,E_GW4004_SXA_NO_REGISTER_UPDATE,
-						SXA_ERR_USER,
-						0);
-				*error= E_GW050E_ALREADY_REPORTED;
-				status=E_DB_ERROR;
-			}
-			break;
-		default:
-			break;
+		    *error= E_GW050E_ALREADY_REPORTED;
+		    status=E_DB_ERROR;
 		}
-		if( status==E_DB_ERROR)
-			break;
+		break;
+	    case DMU_STRUCTURE:
+		if (gwx_rcb->xrcb_dmu_chars->dmu_struct != DB_HEAP_STORE)
+		{
+		    gwsxa_error(gwx_rcb,E_GW4067_SXA_NO_REGISTER_KEYED,
+				SXA_ERR_USER,
+				0);
+		    *error= E_GW050E_ALREADY_REPORTED;
+		    status=E_DB_ERROR;
+		}
+		break;
+	    case DMU_GW_UPDT:
+		if (gwx_rcb->xrcb_dmu_chars->dmu_flags & DMU_FLAG_UPDATE)
+		{
+		    gwsxa_error(gwx_rcb,E_GW4004_SXA_NO_REGISTER_UPDATE,
+					SXA_ERR_USER,
+					0);
+		    *error= E_GW050E_ALREADY_REPORTED;
+		    status=E_DB_ERROR;
+		}
+		break;
+	    default:
+		break;
+	    }
+	    if( status==E_DB_ERROR)
+		break;
 	}
 	if(status==E_DB_ERROR)
 		break;

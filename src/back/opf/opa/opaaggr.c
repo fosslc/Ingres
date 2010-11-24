@@ -3273,6 +3273,11 @@ opa_tproc_nodeanal(
 **	    opa_aggregate. This is logically the same, but makes the display
 **	    fit better with trace point op170. Added trace point op214 call
 **	    to opu_qtprint.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Remove bizarre code that looked at session default result_structure
+**	    instead of actual result table structure!  Fortunately the test
+**	    was also looking for dups set to "don't care", which the parser
+**	    never allows to happen any more.
 */
 VOID
 opa_aggregate(
@@ -3300,32 +3305,7 @@ opa_aggregate(
 	))
 	/* default for a set statement should be DEFERRED */
 	qheader->pst_updtmode = PST_DEFER;
-    if (
-	    ((qheader->pst_mode == PSQ_RETINTO)
-	    ||
-	    (qheader->pst_mode == PSQ_DGTT_AS_SELECT))
-	&&
-	    (qheader->pst_qtree->pst_sym.pst_value.pst_s_root.pst_qlang
-	    ==
-	    DB_QUEL)
-	&&
-	    (qheader->pst_qtree->pst_sym.pst_value.pst_s_root.pst_dups
-	    ==
-	    PST_DNTCAREDUPS)
-	&&
-	(
-	    global->ops_cb->ops_alter.ops_storage == DB_SORT_STORE
-	)
-       )
-	qheader->pst_qtree->pst_sym.pst_value.pst_s_root.pst_dups 
-	    = PST_NODUPS;			/* the quel semantics are that
-						** duplicates are removed on a
-						** retrieve into heapsort
-                                                ** or cheapsort
-                                                ** this is done here since
-                                                ** the parser does not know
-                                                ** the default storage structure
-                                                */
+
     global->ops_astate.opa_funcagg = FALSE;     /* this variable will be set
                                                 ** TRUE if there is at least
                                                 ** one function aggregate in

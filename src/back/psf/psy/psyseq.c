@@ -391,6 +391,8 @@ psy_asequence(
 **          to prevent delete dba's sequence by non dba.  
 **          This allows non-dba to find sequence for 
 **          updating.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Update psl-command-string call.
 */
 DB_STATUS
 psy_gsequence(
@@ -521,7 +523,7 @@ psy_gsequence(
 		char        qry[PSL_MAX_COMM_STRING];
 		i4     qry_len;
 
-		psl_command_string(qmode, sess_cb->pss_lang, qry, &qry_len);
+		psl_command_string(qmode, sess_cb, qry, &qry_len);
 		_VOID_ psf_error(6420L, 0L,
 		    PSF_USERERR, &err_code, err_blk, 2,
 		    qry_len, qry,

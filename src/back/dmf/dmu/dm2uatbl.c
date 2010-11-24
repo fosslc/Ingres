@@ -50,6 +50,7 @@
 #include    <dm2u.h>
 #include    <dmftrace.h>
 #include    <dma.h>
+#include    <dmpecpn.h>
 #include    <cm.h>
 #include    <cui.h>
 
@@ -266,7 +267,7 @@ static DB_STATUS   si_rencol_adjust(
 **	xcb                             The transaction id.
 **	tbl_id                          The internal table id of the base table 
 **					to be altered.
-**	operation                       DMU_C_ADD_ALTER, DMU_C_DROP_ALTER.
+**	operation                       DMU_ALT_xxx operation
 **	cascade                         True if a drop operation and the
 **					"cascade" operation specified.
 **	attribute                       description of attribute to be added
@@ -377,6 +378,8 @@ static DB_STATUS   si_rencol_adjust(
 **	    indentation.
 **	25-Aug-2010 (miket) SIR 122403 SD 145781
 **	    Better msg for alter table not valid for encrypted tables.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    Operation code names changed, fix here.
 */
 
 DB_STATUS
@@ -571,8 +574,8 @@ DB_ERROR	*dberr)
 	** or in a secondary index. It should be left to the user to 
 	** drop and recreate the index.
 	*/
-	if ((operation == DMU_C_DROP_ALTER) || 
-	    (operation == DMU_C_ALTCOL_ALTER))
+	if ((operation == DMU_ALT_DROPCOL) || 
+	    (operation == DMU_ALT_ALTERCOL))
 	{
 	    status = si_drop_column_check(t, attr_entry, cascade, dberr);
 	    if (status)
@@ -589,7 +592,7 @@ DB_ERROR	*dberr)
 	** If this is ADD COLUMN, will the tuple now be too long, or have too
 	** many actual columns?
 	*/
-	if (operation == DMU_C_ADD_ALTER)
+	if (operation == DMU_ALT_ADDCOL)
 	{
 	   if (t->tcb_rel.relatts == DB_MAX_COLS)
 	   {
@@ -713,7 +716,7 @@ DB_ERROR	*dberr)
 	    break;
 	}
 
-	if (operation == DMU_C_ADD_ALTER)
+	if (operation == DMU_ALT_ADDCOL)
 	{
 	   status = dm2r_position(attr_rcb, DM2R_QUAL, att_key_desc, (i4)2,
 				  (DM_TID *)0,
@@ -841,7 +844,7 @@ DB_ERROR	*dberr)
 	    }
 	    incr_relversion = TRUE;
 	}
-	else if (operation == DMU_C_DROP_ALTER)   /* process DROP COLUMN */
+	else if (operation == DMU_ALT_DROPCOL)   /* process DROP COLUMN */
 	{
 	    for (i = 1; i <= t->tcb_rel.relatts; i++)
 	    {
@@ -951,7 +954,7 @@ DB_ERROR	*dberr)
 	    } /* for */
 	    incr_relversion = TRUE;
 	}
-	else if (operation == DMU_C_ALTCOL_ALTER)   /* ALTER TAB ALT COLUMN */
+	else if (operation == DMU_ALT_ALTERCOL)   /* ALTER TAB ALT COLUMN */
 	{
 	    /* search the attribute to alter */
 	    for (i = 1; i <= t->tcb_rel.relatts; i++)
@@ -1314,10 +1317,8 @@ DB_ERROR	*dberr)
 		} /* for (;;) */
 	    } /* if altered & indexed */
 	}
-	else if ( operation == DMU_C_ALTCOL_RENAME ) /* ALTER TABLE RENAME COLUMN */
+	else if ( operation == DMU_ALT_COL_RENAME ) /* ALTER TABLE RENAME COLUMN */
 	{
-	    DMP_TCB *it;
-
 	    for (i = 1; i <= t->tcb_rel.relatts; i++)
 	    {
 		MEmove(t->tcb_atts_ptr[i].attnmlen,
@@ -1415,7 +1416,7 @@ DB_ERROR	*dberr)
 	    } /* end for ;; */
 
 	}
-	else if ( operation == DMU_C_ALTTBL_RENAME ) /* ALTER TABLE RENAME TO ... */
+	else if ( operation == DMU_ALT_TBL_RENAME ) /* ALTER TABLE RENAME TO ... */
 	{
 	    /* Table rename operation, replace the table name with tnew table name */
 	    if (newtab_name)
@@ -1506,7 +1507,7 @@ DB_ERROR	*dberr)
 	/* If table is partitioned and operation is ADD or DROP,
 	** update partition iirelation rows and (for DROP) fix
 	** iidistcol att_number values. */
-	if (parttab && operation != DMU_C_ALTCOL_ALTER)
+	if (parttab && operation != DMU_ALT_ALTERCOL)
 	{
 	    status = pt_adddrop_adjust(xcb, dcb, rel_rcb, &rel_key_desc[0], 
 		    &relrecord, db_lockmode, dropped_col_attid, dberr);
@@ -1516,7 +1517,7 @@ DB_ERROR	*dberr)
 
 	/* If doing a column rename and the table has secondry indexes, 
 	** Fix the index entries in iirelation and iiattributes catalogs */
-	if (( operation == DMU_C_ALTCOL_RENAME ) && 
+	if (( operation == DMU_ALT_COL_RENAME ) &&
 	    (t->tcb_iq_next != (DMP_TCB*) &t->tcb_iq_next))
 	{
 	    status = si_rencol_adjust( t, attr_entry, rel_rcb, 
@@ -1798,7 +1799,6 @@ DB_ERROR	    *dberr)
     i4             error;
     DB_TAB_TIMESTAMP	timestamp;
     DM2R_KEY_DESC	qual_list[2];
-    i4			nofiles = 0;
     i4			found = 0;
     DB_ERROR		local_dberr;
     DB_ATT_NAME		tmpattnm;
@@ -2285,8 +2285,6 @@ pt_adddrop_adjust(
     DMP_RCB	*dcrcb;
     DM2R_KEY_DESC dckey_desc[2];
     DB_IIDISTCOL dcrow;
-    i4		local_error;
-    i4		error;
     DB_ERROR	local_dberr;
 
     CLRDBERR(dberr);

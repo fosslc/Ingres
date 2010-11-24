@@ -878,6 +878,8 @@ pst_showtab(
 **	    can cause all sorts of problems.  The observed symptom was a
 **	    bad error message from a table proc caused by the mask showing
 **	    DBP_ROW_PROC, but almost anything could happen.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Update psl-command-string call.
 */
 DB_STATUS
 pst_dbpshow(
@@ -891,15 +893,12 @@ pst_dbpshow(
 	i4		*ret_flags)
 {
     DB_STATUS           status, stat;
-    DB_STATUS	        local_status;
     RDF_CB		rdf_cb;
     PSS_DBPINFO		*dbpinfo;
     DB_ERROR		*err_blk = &psq_cb->psq_error;
     i4		err_code;
     bool		leave_loop = TRUE;
     DB_PROCEDURE	*dbp;
-    i4		msgid;
-    i4		access;
 
     *dbpinfop = (PSS_DBPINFO *) NULL;
     *ret_flags = 0;
@@ -1039,7 +1038,7 @@ pst_dbpshow(
 			** which he possesses no privileges
 			*/
 
-			psl_command_string(psq_cb->psq_mode, sess_cb->pss_lang,
+			psl_command_string(psq_cb->psq_mode, sess_cb,
 			    command, &length);
 
 			_VOID_ psf_error(E_US0890_2192_INACCESSIBLE_DBP,
@@ -1591,9 +1590,6 @@ pst_ldbtab_desc(
 				     
     register i4	    col_cnt;
     register DD_COLUMN_DESC **col_names;
-
-    i4			    *name_case =
-      &ldb_tab_info->dd_t9_ldb_p->dd_i2_ldb_plus.dd_p3_ldb_caps.dd_c6_name_case;
     bool		    duplicate_table = FALSE;
       
     /* populate the RDF request block */

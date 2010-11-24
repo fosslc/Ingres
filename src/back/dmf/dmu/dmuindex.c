@@ -1,9 +1,10 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
 #include    <gl.h>
+#include    <bt.h>
 #include    <tm.h>
 #include    <cs.h>
 #include    <me.h>
@@ -30,6 +31,7 @@
 #include    <dm1b.h>
 #include    <dmpp.h>
 #include    <dm1p.h>
+#include    <dm0s.h>
 #include    <di.h>
 #include    <sxf.h>
 #include    <dma.h>
@@ -241,12 +243,7 @@
 **					    of the keys listed in the key array.
 **          .dmu_attr_array.ptr_size        Size of an entry.
 **          .dmu_attr_array.ptr_in_count    Count of entries.
-**          .dmu_char_array.data_address    Pointer to an area used to input
-**                                          an array of entries of type
-**                                          DMU_CHAR_ENTRY.
-**                                          See below for description of 
-**                                          <dmu_char_array> entries.
-**          .dmu_char_array.data_in_size    Length of char_array in bytes.
+**	    .dmu_chars			    Various characteristics
 **	    .dmu_gwchar_array.data_address  Pointer to an array of gateway table
 **					    characteristics.  These are used
 **					    if the table is a DMU_GATEWAY type
@@ -268,26 +265,6 @@
 **          must have following format:
 **          key_attr_name                   Name of attribute.
 **          key_order                       Must be DMU_ASCENDING.
-**
-**          <dmu_char_array> entries are of type DMU_CHAR_ENTRY and
-**          must have following format:
-**          char_id                         Must be one of the dmu 
-**                                          characteristics like 
-**                                          DMU_STRUCTURE,
-**                                          DMU_IFILL,
-**					    DMU_DATAFILL,
-**					    DMU_LEAFILL,
-**                                          DMU_MINPAGES,
-**                                          DMU_MAXPAGES,
-**                                          DMU_UNIQUE,
-**					    DMU_COMPRESSED,
-**					    DMU_GATEWAY,
-**					    DMU_INDEX_COMP.
-**					    DMU_CONCURRENT_ACCESS
-**					    DMU_DIMENSION
-**					    DMU_TABLE_PRIORITY
-**          char_value                      The value to associate with above
-**                                          characteristic.
 **
 ** Output:
 **      dmu_cb 
@@ -496,7 +473,7 @@ dmu_index(DMU_CB    *dmu_cb)
     DB_OWN_NAME		table_owner;
     DB_TAB_NAME		table_name;
     DML_XCB		*xcb;
-    i4			error, local_error;
+    i4			local_error;
     DB_STATUS		status;
 
     CLRDBERR(&dmu->error);
@@ -619,12 +596,7 @@ dmu_index(DMU_CB    *dmu_cb)
 **					    of the keys listed in the key array.
 **          .dmu_attr_array.ptr_size        Size of an entry.
 **          .dmu_attr_array.ptr_in_count    Count of entries.
-**          .dmu_char_array.data_address    Pointer to an area used to input
-**                                          an array of entries of type
-**                                          DMU_CHAR_ENTRY.
-**                                          See below for description of 
-**                                          <dmu_char_array> entries.
-**          .dmu_char_array.data_in_size    Length of char_array in bytes.
+**	    .dmu_chars			    Various characteristics
 **	    .dmu_gwchar_array.data_address  Pointer to an array of gateway table
 **					    characteristics.  These are used
 **					    if the table is a DMU_GATEWAY type
@@ -646,26 +618,6 @@ dmu_index(DMU_CB    *dmu_cb)
 **          must have following format:
 **          key_attr_name                   Name of attribute.
 **          key_order                       Must be DMU_ASCENDING.
-**
-**          <dmu_char_array> entries are of type DMU_CHAR_ENTRY and
-**          must have following format:
-**          char_id                         Must be one of the dmu 
-**                                          characteristics like 
-**                                          DMU_STRUCTURE,
-**                                          DMU_IFILL,
-**					    DMU_DATAFILL,
-**					    DMU_LEAFILL,
-**                                          DMU_MINPAGES,
-**                                          DMU_MAXPAGES,
-**                                          DMU_UNIQUE,
-**					    DMU_COMPRESSED,
-**					    DMU_GATEWAY,
-**					    DMU_INDEX_COMP.
-**					    DMU_CONCURRENT_ACCESS
-**					    DMU_DIMENSION
-**					    DMU_TABLE_PRIORITY
-**          char_value                      The value to associate with above
-**                                          characteristic.
 **
 ** Output:
 **	indx_cb				    All filled in and ready to go.
@@ -742,6 +694,9 @@ dmu_index(DMU_CB    *dmu_cb)
 **	    Minor change to compression characteristic setting.
 **	5-Nov-2009 (kschendel) SIR 122739
 **	    Fix outrageous name confusion re acount vs kcount.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
+**	    Fix the operation preamble here.
 */
 DB_STATUS
 dmuIndexSetup(
@@ -752,7 +707,6 @@ PTR		ix_cb)
     DML_ODCB		*odcb;
     DML_XCB		*xcb;
     DMU_KEY_ENTRY	**att;
-    DMU_CHAR_ENTRY	*chr;
     bool		statementLevelUnique = FALSE;
     bool		persistsOverModifies = FALSE;
     bool		systemGenerated = FALSE;
@@ -763,8 +717,8 @@ PTR		ix_cb)
     bool		rowSecAudit = FALSE;
     bool		TempTable;
     i4			error;
-    i4			chr_count;
     i4			i,j;
+    i4			indicator;
     DB_STATUS		status;
 
     CLRDBERR(&dmu->error);
@@ -910,174 +864,156 @@ PTR		ix_cb)
 	/*  Check the characteristics. */
 
 	indx_cb->indxcb_structure = TCB_BTREE;
-	indx_cb->indxcb_i_fill = 80;
-	indx_cb->indxcb_l_fill = 70;
-	indx_cb->indxcb_d_fill = 80;
+	indx_cb->indxcb_i_fill = 0;
+	indx_cb->indxcb_l_fill = 0;
+	indx_cb->indxcb_d_fill = 0;
 	indx_cb->indxcb_compressed = TCB_C_NONE;
 	indx_cb->indxcb_index_compressed = 0;
 	indx_cb->indxcb_unique = 0;
 	indx_cb->indxcb_min_pages = 0;
 	indx_cb->indxcb_max_pages = 0;
 
-	chr = (DMU_CHAR_ENTRY*) dmu->dmu_char_array.data_address;
-	chr_count = dmu->dmu_char_array.data_in_size / sizeof(DMU_CHAR_ENTRY);
-	if (chr_count && chr == 0)
+	indicator = -1;
+	while ((indicator = BTnext(indicator, dmu->dmu_chars.dmu_indicators, DMU_CHARIND_LAST)) != -1)
 	{
-	    SETDBERR(&dmu->error, 0, E_DM002A_BAD_PARAMETER);
-	    break;
-	}
-
-	for (i = 0; i < chr_count; i++)
-	{
-	    switch (chr[i].char_id)
+	    switch (indicator)
 	    {
 	    case DMU_STRUCTURE:
-		indx_cb->indxcb_structure = chr[i].char_value;
-		switch (indx_cb->indxcb_structure)
-		{
-		    case TCB_ISAM:
-		        indx_cb->indxcb_i_fill = 100;
-		        indx_cb->indxcb_d_fill = 80;
-		        break;
-		    case TCB_HASH:
-		        indx_cb->indxcb_d_fill = 50;
-		        indx_cb->indxcb_min_pages = 2;
-		        indx_cb->indxcb_max_pages = 8388607;
-		        break;
-		    case TCB_BTREE:
-		        break;
-		    case TCB_RTREE:
-		        indx_cb->indxcb_i_fill = 95;
-		        indx_cb->indxcb_l_fill = 95;
-			break;
-		    default:
-			SETDBERR(&dmu->error, i, E_DM000E_BAD_CHAR_VALUE);
-		}
+		indx_cb->indxcb_structure = dmu->dmu_chars.dmu_struct;
 		break;
-    
+
 	    case DMU_IFILL:
-		indx_cb->indxcb_i_fill = chr[i].char_value;
+		indx_cb->indxcb_i_fill = dmu->dmu_chars.dmu_nonleaff;
 		if (indx_cb->indxcb_i_fill > 100)
 		    indx_cb->indxcb_i_fill = 100;
 		break;
 
 	    case DMU_LEAFFILL:
-		indx_cb->indxcb_l_fill = chr[i].char_value;
+		indx_cb->indxcb_l_fill = dmu->dmu_chars.dmu_leaff;
 		if (indx_cb->indxcb_l_fill > 100)
 		    indx_cb->indxcb_l_fill = 100;
 		break;
 
 	    case DMU_DATAFILL:
-		indx_cb->indxcb_d_fill = chr[i].char_value;
+		indx_cb->indxcb_d_fill = dmu->dmu_chars.dmu_fillfac;
 		if (indx_cb->indxcb_d_fill > 100)
 		    indx_cb->indxcb_d_fill = 100;
 		break;
 
 	    case DMU_PAGE_SIZE:
-		indx_cb->indxcb_page_size = chr[i].char_value;
-		if (indx_cb->indxcb_page_size != 2048  && 
+		indx_cb->indxcb_page_size = dmu->dmu_chars.dmu_page_size;
+		if (indx_cb->indxcb_page_size != 2048  &&
 		    indx_cb->indxcb_page_size != 4096  &&
-		    indx_cb->indxcb_page_size != 8192  && 
+		    indx_cb->indxcb_page_size != 8192  &&
 		    indx_cb->indxcb_page_size != 16384 &&
-		    indx_cb->indxcb_page_size != 32768 && 
+		    indx_cb->indxcb_page_size != 32768 &&
 		    indx_cb->indxcb_page_size != 65536)
 		{
-		    SETDBERR(&dmu->error, i, E_DM000E_BAD_CHAR_VALUE);
+		    SETDBERR(&dmu->error, indicator, E_DM000E_BAD_CHAR_VALUE);
 		}		    
 		else if (!dm0p_has_buffers(indx_cb->indxcb_page_size))
-		    SETDBERR(&dmu->error, i, E_DM0157_NO_BMCACHE_BUFFERS);
+		    SETDBERR(&dmu->error, 0, E_DM0157_NO_BMCACHE_BUFFERS);
 		break;
 
 	    case DMU_MINPAGES:
-		indx_cb->indxcb_min_pages = chr[i].char_value;
+		indx_cb->indxcb_min_pages = dmu->dmu_chars.dmu_minpgs;
 		break;
 
 	    case DMU_MAXPAGES:
-		indx_cb->indxcb_max_pages = chr[i].char_value;
+		indx_cb->indxcb_max_pages = dmu->dmu_chars.dmu_maxpgs;
 		break;
 
-	    case DMU_COMPRESSED:
+	    case DMU_DCOMPRESSION:
 		/* Hidata isn't allowed.  If we add new index compression
 		** types, pass the type here.
 		*/
-		if (chr[i].char_value != DMU_C_OFF)
+		if (dmu->dmu_chars.dmu_dcompress != DMU_COMP_OFF)
 		    indx_cb->indxcb_compressed = TCB_C_STANDARD;
 		break;
 
 	    case DMU_UNIQUE:
-		indx_cb->indxcb_unique = (chr[i].char_value == DMU_C_ON);
+		indx_cb->indxcb_unique = TRUE;
 		break;
 
 	    case DMU_GATEWAY:
 		indx_cb->indxcb_index_flags |= DM2U_GATEWAY;
-		indx_cb->indxcb_gwsource = 
+		indx_cb->indxcb_gwsource =
 		    (DMU_FROM_PATH_ENTRY *)dmu->dmu_olocation.data_address;
 		break;
 
 	    case DMU_ALLOCATION:
-		indx_cb->indxcb_allocation = chr[i].char_value;
+		indx_cb->indxcb_allocation = dmu->dmu_chars.dmu_alloc;
 		break;
 
 	    case DMU_EXTEND:
-		indx_cb->indxcb_extend = chr[i].char_value;
+		indx_cb->indxcb_extend = dmu->dmu_chars.dmu_extend;
 		break;
 
 	    case DMU_CONCURRENT_ACCESS:
-		if ( chr[i].char_value == DMU_C_ON )
+		if ( dmu->dmu_chars.dmu_flags & DMU_FLAG_CONCUR_A )
 		    indx_cb->indxcb_relstat2 |= TCB2_CONCURRENT_ACCESS;
 		break;
 
-	    case DMU_INDEX_COMP:
-		indx_cb->indxcb_index_compressed = (chr[i].char_value == DMU_C_ON);
+	    case DMU_KCOMPRESSION:
+		indx_cb->indxcb_index_compressed = (dmu->dmu_chars.dmu_kcompress != DMU_COMP_OFF);
 		break;
 
 	    case DMU_STATEMENT_LEVEL_UNIQUE:
-		statementLevelUnique = (chr[i].char_value == DMU_C_ON);
+		statementLevelUnique = (dmu->dmu_chars.dmu_flags & DMU_FLAG_UNIQUE_STMT) != 0;
 		break;
 
 	    case DMU_PERSISTS_OVER_MODIFIES:
-		persistsOverModifies = (chr[i].char_value == DMU_C_ON);
+		persistsOverModifies = (dmu->dmu_chars.dmu_flags & DMU_FLAG_PERSISTENCE) != 0;
 		break;
 
 	    case DMU_SYSTEM_GENERATED:
-		systemGenerated = (chr[i].char_value == DMU_C_ON);
+		systemGenerated = TRUE;
 		break;
 
 	    case DMU_SUPPORTS_CONSTRAINT:
-		supportsConstraint = (chr[i].char_value == DMU_C_ON);
+		supportsConstraint = TRUE;
 		break;
 
 	    case DMU_NOT_UNIQUE:
-		notUnique = (chr[i].char_value == DMU_C_ON);
+		notUnique = TRUE;
 		break;
 
 	    case DMU_ROW_SEC_AUDIT:
-		rowSecAudit = (chr[i].char_value == DMU_C_ON);
+		rowSecAudit = TRUE;
 		break;
-		
+
 	    case DMU_NOT_DROPPABLE:
-		notDroppable = (chr[i].char_value == DMU_C_ON);
+		notDroppable = TRUE;
 		break;
 
 	    case DMU_DIMENSION:
-		/* dimension = chr[i].char_value;   ignore value */
+		/* dimension = dmu->dmu_chars.dmu_dimension;   ignore value */
 		break;
 
 	    case DMU_TABLE_PRIORITY:
-		indx_cb->indxcb_tbl_pri = chr[i].char_value;
-		if (indx_cb->indxcb_tbl_pri < 0 || 
+		indx_cb->indxcb_tbl_pri = dmu->dmu_chars.dmu_cache_priority;
+		if (indx_cb->indxcb_tbl_pri < 0 ||
 		    indx_cb->indxcb_tbl_pri > DB_MAX_TABLEPRI)
 		{
-		    SETDBERR(&dmu->error, i, E_DM000E_BAD_CHAR_VALUE);
-		}		    
+		    SETDBERR(&dmu->error, indicator, E_DM000E_BAD_CHAR_VALUE);
+		}
 		break;
 
 	    case DMU_GLOBAL_INDEX:
-		GlobalIndex = (chr[i].char_value == DMU_C_ON);
+		GlobalIndex = TRUE;
+		break;
+
+	    case DMU_CONCURRENT_UPDATES:
+		if (dmu->dmu_chars.dmu_flags & DMU_FLAG_CONCUR_U)
+		{
+		    indx_cb->indxcb_index_flags |= DM2U_ONLINE_MODIFY;
+		    indx_cb->indxcb_dupchk_tabid = &dmu->dmu_dupchk_tabid;
+		}
 		break;
 
 	    default:
-		SETDBERR(&dmu->error, i, E_DM000D_BAD_CHAR_ID);
+		/* Just ignore stuff we don't understand */
+		break;
 	    }
 
 	    if ( dmu->error.err_code )
@@ -1086,6 +1022,51 @@ PTR		ix_cb)
 
 	if ( dmu->error.err_code )
 	    break;
+
+	/* Fill in structure defaults as needed.  indxcb members are zero
+	** if they haven't been set to something interesting.  (Obviously
+	** we could BTtest the dmu chars as well, but this works too.)
+	** FIXME stupid constants here, consolidate with dmu-modify later!
+	*/
+	if (indx_cb->indxcb_structure == TCB_ISAM)
+	{
+	    if (indx_cb->indxcb_i_fill == 0)
+		indx_cb->indxcb_i_fill = 100;
+	    if (indx_cb->indxcb_d_fill == 0)
+		indx_cb->indxcb_d_fill = 80;
+	}
+	else if (indx_cb->indxcb_structure == TCB_HASH)
+	{
+	    if (indx_cb->indxcb_d_fill == 0)
+		indx_cb->indxcb_d_fill = 50;
+	    if (indx_cb->indxcb_min_pages == 0)
+		indx_cb->indxcb_min_pages = 2;
+	    if (indx_cb->indxcb_max_pages == 0)
+		indx_cb->indxcb_max_pages = 8388607;
+	}
+	else if (indx_cb->indxcb_structure == TCB_BTREE)
+	{
+	    if (indx_cb->indxcb_i_fill == 0)
+		indx_cb->indxcb_i_fill = 80;
+	    if (indx_cb->indxcb_l_fill == 0)
+		indx_cb->indxcb_l_fill = 70;
+	    if (indx_cb->indxcb_d_fill == 0)
+		indx_cb->indxcb_d_fill = 80;
+	}
+	else if (indx_cb->indxcb_structure == TCB_RTREE)
+	{
+	    if (indx_cb->indxcb_i_fill == 0)
+		indx_cb->indxcb_i_fill = 95;
+	    if (indx_cb->indxcb_l_fill == 0)
+		indx_cb->indxcb_l_fill = 95;
+	}
+	/* Fill in unused/bogus fillfactors so SEP tests are happy */
+	if (indx_cb->indxcb_i_fill == 0)
+	    indx_cb->indxcb_i_fill = 80;
+	if (indx_cb->indxcb_l_fill == 0)
+	    indx_cb->indxcb_l_fill = 70;
+	if (indx_cb->indxcb_d_fill == 0)
+	    indx_cb->indxcb_d_fill = 80;
 
 	if ( TempTable )
 	    indx_cb->indxcb_relstat2 |= TCB_SESSION_TEMP;
@@ -1126,7 +1107,7 @@ PTR		ix_cb)
 	** never tidp nor any of the R-tree add-on's.)
 	*/
 
-	indx_cb->indxcb_key = (DM2U_KEY_ENTRY **)dmu->dmu_key_array.ptr_address;
+	indx_cb->indxcb_key = (DMU_KEY_ENTRY **)dmu->dmu_key_array.ptr_address;
 	indx_cb->indxcb_acount = dmu->dmu_key_array.ptr_in_count;
 	if ((indx_cb->indxcb_acount == 0) || (indx_cb->indxcb_key == NULL))
 	{
@@ -1220,7 +1201,7 @@ PTR		ix_cb)
 	indx_cb->indxcb_qry_id = &dmu->dmu_qry_id;
 	indx_cb->indxcb_tup_info = &dmu->dmu_tup_cnt;
 	indx_cb->indxcb_gw_id = dmu->dmu_gw_id;
-	indx_cb->indxcb_char_array = &dmu->dmu_char_array;
+	indx_cb->indxcb_dmu_chars = &dmu->dmu_chars;
 	indx_cb->indxcb_reltups = 0;
 	if (dmu->dmu_flags_mask & DMU_ONLINE_END)
 	{
@@ -1236,11 +1217,6 @@ PTR		ix_cb)
 	    indx_cb->indxcb_on_relpages = dmu->dmu_on_relpages;
 	    indx_cb->indxcb_on_relprim = dmu->dmu_on_relprim;
 	    indx_cb->indxcb_on_relmain = dmu->dmu_on_relmain;
-	}
-	if (dmu->dmu_flags_mask & DMU_ONLINE_START)
-	{
-	    indx_cb->indxcb_index_flags |= DM2U_ONLINE_MODIFY;
-	    indx_cb->indxcb_dupchk_tabid = &dmu->dmu_dupchk_tabid;
 	}
     } while (FALSE);
 

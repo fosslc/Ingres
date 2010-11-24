@@ -8472,6 +8472,8 @@ opt_pt_rulevar_node(PST_RL_NODE   *rnode,
 ** History:
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Update resjour display.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Bunch of stuff removed from pst-restab, fix here.
 */
 static VOID
 opt_pt_hddump(
@@ -8568,12 +8570,6 @@ opt_pt_hddump(
 	"\npst_resname: %32s\n", &header->pst_restab.pst_resname);
     TRformat(opt_scc, (i4 *)NULL, temp, OPT_PBLEN,
 	"\npst_resvno: %d\n", header->pst_restab.pst_resvno);
-    TRformat(opt_scc, (i4 *)NULL, temp, OPT_PBLEN,
-	"\npst_resjour: %w\n",
-	"OFF,ON,LATER",header->pst_restab.pst_resjour);
-    TRformat(opt_scc, (i4 *)NULL, temp, OPT_PBLEN,
-	"\npst_resdup: %s\n",
-	 header->pst_restab.pst_resdup ? "TRUE" : "FALSE");
     TRformat(opt_scc, (i4 *)NULL, temp, OPT_PBLEN,
 	"\npst_cursid: (%d,%d) %32s\n",
 	 header->pst_cursid.db_cursor_id[0],header->pst_cursid.db_cursor_id[1],

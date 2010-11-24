@@ -172,6 +172,8 @@ typedef	struct	_GW_RCB	GW_RCB;
 **	    Correctly cast gwr_session_id to PTR, not CS_SID.
 **	12-Apr-2008 (kschendel)
 **	    Expand qualification function stuff to match new DMF style.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    gwr_char_array replaced with DMU_CHARACTERISTICS.
 **/
 
 #define	GWF_VERSION	1
@@ -233,7 +235,7 @@ struct _GW_RCB
 */
     DM_PTR          gwr_key_array;	/* Array of key attributes. */
     DM_PTR          gwr_attr_array;	/* Array of attributes. */
-    DM_DATA         gwr_char_array;	/* Array of characteristics. */
+    struct _DMU_CHARACTERISTICS *gwr_dmf_chars;  /* DMF table attributes */
     DM_DATA         gwr_conf_array;	/* Array of configuration 
 					** variables.
 					*/

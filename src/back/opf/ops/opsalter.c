@@ -115,7 +115,8 @@
 **      17-Aug-2010 (horda03) b124274
 **          IF SET QEP and opf_value set then enable Segmented QEP
 **          displays. disable otherwise.
-[@history_line@]...
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Delete ret-into function, not needed any more.
 */
 static DB_STATUS
 ops_change(
@@ -172,15 +173,6 @@ ops_change(
 	{
 	    altercb->ops_qep = FALSE;	        /* print qep */
             altercb->ops_qep_flag = ULD_FLAG_NONE;
-	    break;
-	}
-	case OPF_RET_INTO:
-	{
-	    altercb->ops_storage = opf_cb->opf_value;	/* default storage 
-						** structure for temps */
-	    altercb->ops_compressed = opf_cb->opf_compressed;	/* default
-						** compressed mode structure
-						** for temps */
 	    break;
 	}
 	case OPF_SUBSELECT:
@@ -411,7 +403,6 @@ ops_unlock(
 **      SET [[SESSION] | SERVER] TIMEOUT   <value>
 **      SET [[SESSION] | SERVER] QEP
 **      SET [[SESSION] | SERVER] NOQEP
-**      SET [[SESSION] | SERVER] RET_INTO <storage_structure>
 **
 **      FIXME need to use semaphores to access global structures.
 **

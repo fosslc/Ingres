@@ -74,6 +74,7 @@ NO_OPTIM =
 
 #include    <scserver.h>
 
+#include    <uld.h>
 #include    <cut.h>
 #include    <cui.h>
 
@@ -1371,6 +1372,9 @@ GLOBALREF DU_DATABASE	      dbdb_dbtuple;
 **      26-Nov-2009 (hanal04) Bug 122938
 **          Different GCA protocol levels can handle different levels
 **          of decimal precision.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Session startup result-structure goes to PSF now, not OPF.
+**	    Use generic structure looker-upper instead of hand coding.
 */
 i4
 scs_initiate(SCD_SCB *scb )
@@ -1378,7 +1382,7 @@ scs_initiate(SCD_SCB *scb )
     i4			i;
     i4			dash_u = 0;
     i4			tbl_structure = 0;
-    i4			index_structure = 0;
+    i4			result_structure = 0;
     i4			flag_value;
     GCA_USER_DATA	*flag;
     DB_STATUS		status = E_DB_OK;
@@ -1413,8 +1417,6 @@ scs_initiate(SCD_SCB *scb )
     char		sem_name[ CS_SEM_NAME_LEN ];
     u_i4		idmode;
     bool		want_updsyscat=FALSE;
-    char                *env = 0;
-    char		*pmvalue;
 #ifdef xDEBUG
     char		*cp;
 #endif
@@ -1946,7 +1948,8 @@ scs_initiate(SCD_SCB *scb )
 		case    GCA_IDX_STRUCT:
 		case    GCA_RES_STRUCT:
 		{
-		    char	value[16];
+		    char	*sname;
+		    char	value[30];
 
 		    if (l_value >= sizeof(value))
 		    {
@@ -1975,31 +1978,21 @@ scs_initiate(SCD_SCB *scb )
 			}
 		    }
 
-		    MECOPY_VAR_MACRO(flag->gca_p_value.gca_value, l_value, value);
+		    MEcopy(flag->gca_p_value.gca_value, l_value, value);
 		    value[l_value] = '\0';
 		    CVlower(value);
-		    if (STcompare("isam", value) == 0)
-			tbl_structure = DB_ISAM_STORE;
-		    else if (STcompare("cisam", value) == 0)
-			tbl_structure = -DB_ISAM_STORE;
-		    else if (STcompare("hash", value) == 0)
-			tbl_structure = DB_HASH_STORE;
-		    else if (STcompare("chash", value) == 0)
-			tbl_structure = -DB_HASH_STORE;
-		    else if (STcompare("btree", value) == 0)
-			tbl_structure = DB_BTRE_STORE;
-		    else if (STcompare("cbtree", value) == 0)
-			tbl_structure = -DB_BTRE_STORE;
-		    else if (STcompare("heap", value) == 0)
-			tbl_structure = DB_HEAP_STORE;
-		    else if (STcompare("cheap", value) == 0)
-			tbl_structure = -DB_HEAP_STORE;
-		    else
+		    sname = &value[0];
+		    if (value[0] == 'c')
+			++sname;
+		    tbl_structure = uld_struct_xlate(sname);
+		    if (tbl_structure == 0)
 		    {
 			status = E_DB_ERROR;
 			error.err_code = E_US0022_FLAG_FORMAT;
 			break;
 		    }
+		    if (value[0] == 'c')
+			tbl_structure = -tbl_structure;
 		    if (p_index == GCA_IDX_STRUCT)
 		    {
 			if (abs(tbl_structure) == DB_HEAP_STORE)
@@ -2013,7 +2006,7 @@ scs_initiate(SCD_SCB *scb )
 		    }
 		    else
 		    {
-			index_structure = tbl_structure;
+			result_structure = tbl_structure;
 		    }
 		    break;
 		}
@@ -4164,6 +4157,15 @@ scs_initiate(SCD_SCB *scb )
             if(Sc_main_cb->sc_money_compat)
                 psq_cb->psq_flag2 |= PSQ_MONEY_COMPAT;
 
+	    psq_cb->psq_result_struct = 0;
+	    if (result_structure != 0)
+	    {
+		psq_cb->psq_result_struct = abs(result_structure);
+		psq_cb->psq_result_compression = FALSE;
+		if (result_structure < 0)
+		    psq_cb->psq_result_compression = FALSE;
+	    }
+
 	    status = psq_call(PSQ_BGN_SESSION, psq_cb,
 				scb->scb_sscb.sscb_psscb);
 	    if (status)
@@ -4217,19 +4219,6 @@ scs_initiate(SCD_SCB *scb )
 	    {
 		STRUCT_ASSIGN_MACRO(opf_cb->opf_errorblock, error);
 		break;
-	    }
-	    if (index_structure)
-	    {
-		opf_cb->opf_compressed = (index_structure < 0);
-		opf_cb->opf_value = abs(index_structure);
-		opf_cb->opf_alter = OPF_RET_INTO;
-		opf_cb->opf_level = OPF_SESSION;
-		status = opf_call(OPF_ALTER, opf_cb);
-		if (status != E_DB_OK)
-		{
-		    STRUCT_ASSIGN_MACRO(opf_cb->opf_errorblock, error);
-		    break;
-		}
 	    }
 	    scb->scb_sscb.sscb_facility |= (1 << DB_OPF_ID);
 	}
@@ -7679,7 +7668,7 @@ scs_dbdb_info(SCD_SCB *scb ,
 	error->err_code = E_US0002_NO_FLAG_PERM;
 	return(E_DB_ERROR);
     }
-    /* for DESTROYDB with '-u' flag, make sure user has security priv first *
+    /* for DESTROYDB with '-u' flag, make sure user has security priv first */
 
     if ( scb->scb_sscb.sscb_ics.ics_appl_code == DBA_DESTROYDB
         &&

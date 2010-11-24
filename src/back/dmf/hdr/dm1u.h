@@ -51,6 +51,10 @@
 **	    Try to cut down on massive flag confusion some.
 **	04-Dec-2008 (jonj)
 **	    SIR 120874: dm1u_? functions converted to DB_ERROR *
+**	15-Oct-2010 (kschendel)
+**	    Grrrr ... another instance of two names for the same thing,
+**	    in this case the VERBOSE flag.  Define in terms of the
+**	    definition in dmucb.h.
 **/
 
 /*
@@ -60,7 +64,7 @@
 /*  Operation codes for dm1u_verify(). */
 /*  It makes sense to use the same flag and type definitions as the
 **  original DMU caller, with the one exception that the DMU caller
-**  will pass a separate option dmu-char entry for modifiers;  while
+**  will pass a separate dmu-characteristics entry for modifiers;  while
 **  dm1u (and indeed everything below the dmumodify logical level)
 **  wants everything in a single operator word.
 */
@@ -74,7 +78,7 @@
 #define	    DM1U_OPMASK	    0x07	/* Ideally would be in dmucb.h */
 
 /* This modifier is actually part of the "verify" characteristics entry */
-#define	    DM1U_VERBOSE_FL 0x08   /* if set, display informative msgs */
+#define	    DM1U_VERBOSE_FL DMU_V_VERBOSE  /* if set, display informative msgs */
 
 /*  Operation modifiers for dm1u_verify(). */
 /*  These originate with DMU_VOPTION;  just shift things over a bit. */

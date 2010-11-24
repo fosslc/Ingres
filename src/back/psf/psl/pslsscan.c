@@ -1767,6 +1767,9 @@ i2		idt);
 **	    error (bug 121953).
 **	26-Aug-2009 (kschendel) b121804
 **	    Fix compiler warnings with new prototypes in cm.h.
+**	5-Oct-2010 (kschendel) SIR 124544
+**	    Don't need separate decimal-comma flag for DGTT, PSS_CREATE_STMT
+**	    is good enough.
 */
 i4
 psl_sscan(
@@ -2256,8 +2259,7 @@ common_datetime_lit:
 	    if (pss_cb->pss_decimal != ',' || next_char >= qry_end ||
 		!CMdigit(next_char + 1) || ret_val == NAME ||
                ( pss_cb->pss_decimal == ',' && 
-		 ((pss_cb->pss_stmt_flags & PSS_CREATE_STMT) ||
-		 ( pss_cb->pss_stmt_flags & PSS_CREATE_DGTT)) ))
+		 (pss_cb->pss_stmt_flags & PSS_CREATE_STMT)) )
 	    {
 		CMnext(next_char);
 		pss_cb->pss_nxtchar = next_char;
@@ -2339,8 +2341,8 @@ digits:
 	    ** any.  If there isn't any, it will leave next_char pointing
 	    ** to the place after the integer part of the number.
 	    */
-	    dot_or_comma = !( ((pss_cb->pss_stmt_flags & PSS_CREATE_STMT) || 
-		(pss_cb->pss_stmt_flags & PSS_CREATE_DGTT)) && decimal == ',' )
+	    dot_or_comma = !( (pss_cb->pss_stmt_flags & PSS_CREATE_STMT)
+				&& decimal == ',' )
 		|| (pss_cb->pss_stmt_flags & PSS_DEFAULT_VALUE)
 		|| (pss_cb->pss_stmt_flags & PSS_DBPROC_LHSVAR);
 	    if (dot_or_comma &&  c == decimal
@@ -3954,7 +3956,6 @@ tokreturn:
     if (ret_val == SELECT)
     {
 	pss_cb->pss_stmt_flags &= ~PSS_CREATE_STMT;
-	pss_cb->pss_stmt_flags &= ~PSS_CREATE_DGTT;
     }
 
     if (ret_val == UCONST || ret_val == QDATA || (utf8 && ret_val == SCONST))

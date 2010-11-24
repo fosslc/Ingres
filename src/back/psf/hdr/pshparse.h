@@ -565,6 +565,10 @@
 **	    Add trace point PS152 to trace some cache-dynamic decisions.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	5-Oct-2010 (kschendel) SIR 124544
+**	    Change some with-parsing prototypes for structure= cleanup.
+**	    Massive rework of WITH-parsing data structures, many PSS_WC_xxx
+**	    bits moved to dmu indicators..
 */
 
 /*
@@ -1827,6 +1831,8 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **          Used to disable cache dynamic on a statement level basis. 
 **          Currently only used with prepared statements with VLUPs in 
 **          the target list.
+**	11-Oct-2010 (kschendel) SIR 124544
+**	    Add result-structure and compression.
 */
 typedef struct _PSS_SESBLK
 {
@@ -1894,7 +1900,23 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					** PSQ_50DEFQRY	    - 5.0 repeat query
 					*/
     i2		    pss_rsdmno;		/* result domain number */
-    i2		    pss_create_compression;  /* Default table compression */
+    i2		    pss_create_compression;  /* Default table compression,
+					** stored as DMU_COMP_OFF/ON/HI.
+					*/
+    i2		    pss_result_struct;	/* Session result_structure */
+/* Note: at present (10.1), result_compression does not apply to simple
+** create table, but create_compression does.  The opposite is true for
+** create table as select (RETINTO).
+*/
+    bool	    pss_result_compression; /* TRUE if result_structure is
+					** compressed (e.g. cbtree)
+					*/
+    i4		    pss_idxstruct;	/* Default structure for secondary
+					** indexes.  Guaranteed to not be
+					** heap;  negative means "compression".
+					** Does not apply to Vectorwise
+					** indexes.
+					*/
     PSF_MSTREAM	    pss_ostream;	/* Mem. stream to alloc output object */
     PST_QNODE	    *pss_tlist;		/* Pointer to current target list */
     PTR		    pss_dbid;		/* Database id for this session */
@@ -1916,7 +1938,6 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
     PSF_MSTREAM	    pss_tstream;	/* Memory stream for text allocation */
     PSF_MSTREAM	    pss_cbstream;	/* Memory stream for cb allocation */
     struct _ADF_CB  *pss_adfcb;		/* ADF session control block */
-    i4		    pss_idxstruct;	/* Structure for new indexes */
     i4		    pss_udbid;		/* Unique database id */
     PST_PROTO	    *pss_proto;		/* ptr to list of prototype objects */
     PTR		    pss_pstream;	/* memory stream for prototypes */
@@ -2100,6 +2121,8 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					**   an existing one
 					*/
 
+/* notused			0x0001 */
+
 					/* set ==> found aggr in the tree */
 #define     PSS_AGINTREE		0x0002L
 
@@ -2260,12 +2283,8 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					** to flag presence of global temp table
 					** in repeated query
 					*/
-#define		PSS_CREATE_DGTT		0x200000L
-					/*
-					** to flag creation of global temp table
-					** to allow correct parsing of decimal columns
-					** if II_DECIMAL=","
-					*/
+/*	notused		    0x200000L */
+
 #define	 PSS_XTABLE_UPDATE		0x400000L
 					/*
 					** flag up xtable update
@@ -2322,10 +2341,8 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					/* This is a keyset scrollable cursor
 					*/
     i4	pss_stmt_flags2;		/* yet more statement-level flags */
-#define		PSS_2_ENCRYPTION	0x0001L
-					/* table-level ENCRYPTION= parsed */
-#define		PSS_2_PASSPHRASE	0x0002L
-					/* table-level PASSPHRASE= parsed */
+/* Flags 0x01, 0x02 not used, available */
+
 #define     PSS_STMT_NO_CACHEDYN        0x0004L
                                         /* indicates this is query must not
                                         ** be cached */
@@ -2886,9 +2903,11 @@ typedef struct _PSF_SERVBLK
 					*/
 #define     PSF_NOCHK_SINGLETON_CARD	   0x0080L
 
-    i2		    psf_create_compression;  /* DMU_C_xxx default create table
-					** compression from config.
+    i2		    psf_create_compression;  /* DMU_COMP_xxx default create
+					** table compression from config.
 					*/
+    i2		    psf_result_struct;	/* Default result_structure */
+    bool	    psf_result_compression; /* result structure is compressed */
     bool	    psf_vch_prec;	/* varchar precedence */
     char           *psf_server_class;   /* server_class of server */
 } PSF_SERVBLK;
@@ -4144,14 +4163,6 @@ typedef struct _PSY_VIEWINFO
 #define PSS_ENCRYPT_CRC		    0x004
 
 /*
-** size of the characteristic array for [CREATE] INDEX
-*/
-#define	PSS_MAX_INDEX_CHARS	    16
-/*
-** size of the characteristic arrsy for MODIFY
-*/
-#define	PSS_MAX_MODIFY_CHARS	    16
-/*
 ** maximum number of concurrent indexes that can be built 
 */
 #define	PSS_MAX_CONCURRENT_IDX	    32
@@ -4621,7 +4632,8 @@ typedef struct _PSS_LTBL_INFO {
 **      3-Sep-2007 (kibro01) b119050
 **          It should not be possible to specify NOINDEX or INDEX = BASE TABLE
 **          STRUCTURE with any other options.
-
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Add DMU characteristics for index options.
 */
 typedef struct _PSS_CONS {
     struct _PSS_CONS   *pss_next_cons;
@@ -4670,37 +4682,51 @@ typedef struct _PSS_CONS {
 #define PSS_CONS_UPD_SETNULL	0x2000	/* ON UPDATE SET NULL */
 #define PSS_CONS_UPD_RESTRICT	0x4000	/* ON UPDATE RESTRICT */
 #define PSS_CONS_UPD_NOACT	0x8000	/* ON UPDATE NO ACTION */
-    PST_RESTAB	       pss_restab;	/* contains constraint index options */
+    PST_RESTAB	       pss_restab;	/* constraint index name, locn */
+    DMU_CHARACTERISTICS pss_dmu_chars;	/* constraint index options! */
 } PSS_CONS;
 
-#define PSS_WC_MAX_OPTIONS		35
+
+/* WITH-option parsing definitions.  WITH-parsing uses the same notion
+** of indicator and value that the DMU_CHARACTERISTICS structure uses,
+** but at parse time we need more indicators.  To avoid messy context
+** sensitivity and copying back and forth, we use the DMU_CHARACTERISTICS
+** indicator map, which has extra space in it to allow for our bits.
+** A quick runtime check ensures that there is enough space.
+**
+** Define the additional "option seen" indicators needed:
+*/
 
-#ifdef xxx
-typedef struct _PSS_WITH_CLAUSE
-{
-    char	pss_wc[((PSS_WC_MAX_OPTIONS+1)/BITS_IN(char)) + 1];
-} PSS_WITH_CLAUSE;
-#define PSS_WC_SET_MACRO(option, wc) BTset((char *)option, wc);
-#define PSS_WC_CLR_MACRO(option, wc) BTclear((char *)option, wc);
-#define PSS_WC_TST_MACRO(option, wc) BTtest((char *)option, wc);
-#define PSS_WC_ANY_MACRO(wc)\
-    (BTcount((char *)wc, sizeof(PSS_WITH_CLAUSE)) != 0 ? TRUE : FALSE)
-#endif
+enum pss_with_enum {
+	PSS_WC_AESKEY = DMU_CHARIND_LAST + 1,
+	PSS_WC_COMPRESSION,
+	PSS_WC_CONS_INDEX,
+	PSS_WC_ENCRYPT,
+	PSS_WC_EXTONLY,
+	PSS_WC_KEY,
+	PSS_WC_LOCATION,
+	PSS_WC_NEWLOCATION,
+	PSS_WC_NODEP_CHECK,
+	PSS_WC_NOJNL_CHECK,
+	PSS_WC_NPASSPHRASE,
+	PSS_WC_OLDLOCATION,
+	PSS_WC_PARTITION,
+	PSS_WC_PASSPHRASE,
+	PSS_WC_RANGE,
+	PSS_WC_ROW_SEC_AUDIT,
+	PSS_WC_ROW_SEC_KEY,
+	PSS_WC_SEC_AUDIT,
 
-typedef struct _PSS_WITH_CLAUSE
-{
-    char	pss_wc[PSS_WC_MAX_OPTIONS + 1]; /* element 0 not used */
-} PSS_WITH_CLAUSE;
+	PSS_WC_LAST	/* For sizing, BTcount */
+};
 
-#define PSS_WC_SET_MACRO(option, wc) *((char *)wc + option) = 1;
-#define PSS_WC_CLR_MACRO(option, wc) *((char *)wc + option) = 0;
-#define PSS_WC_TST_MACRO(option, wc) (*((char *)wc + option) ? TRUE : FALSE)
-#define PSS_WC_ANY_MACRO(wc)\
-(BTcount((char *)wc, sizeof(PSS_WITH_CLAUSE)*BITS_IN(char)) != 0 ? TRUE : FALSE)
 
 /* size used for string to pass into psl_command_string()
+** Long enough for DECLARE GLOBAL TEMPORARY TABLE AS SELECT
+** (which isn't actually used as a query name but might be).
+** Long enough for MODIFY (to TABLE_RECOVERY_DISALLOWED).
  */
-#define  PSL_MAX_COMM_STRING	40
+#define  PSL_MAX_COMM_STRING	50
 
 /*
 **  THE FOLLOWING STRUCTURE HAS BEEN MOVED INTO PSHPARSE.H FROM YYVARS.H (RIP)
@@ -4977,6 +5003,10 @@ typedef struct _PSS_WITH_CLAUSE
 **	    it has to be declared i2 here (or, a real DB_ANYTYPE union used),
 **	    or we pick up the wrong half on big-endian machines.
 **	    Causes cast(thing as varchar(30)) to be wrong.
+**	7-Oct-2010 (kschendel) SIR 124544
+**	    Add more with-clause flags and some stuff for WITH-option
+**	    semantics unification.  Delete with_clauses bitmap, we're
+**	    going to use the DMU_CHARACTERISTICS directly.
 **/
 
 /* For passing opflags to arg_stack users */
@@ -4993,10 +5023,7 @@ typedef struct PSS_YYVARS_ {
 				    ** processing subselect in FROM clause */
 #define	    MAX_NESTING	    100
     YYAGG_NODE_PTR  *agg_list_stack[MAX_NESTING]; /* same depth as from list */
-    i4	    with_journaling;
-    i4	    with_location;
     i2	    with_dups;		    /* pst_alldups,pst_nodups,pst_dntcaredups */
-    i4	    is_heapsort;
     i4	    in_from_clause;
     i4	    in_where_clause;
     i4	    in_target_clause;
@@ -5005,7 +5032,7 @@ typedef struct PSS_YYVARS_ {
     i4	    in_update_set_clause;
     i4	    groupby_quantifier;	    /* new GROUP BY can have ALL/DISTINCT */
     i4	    in_rule;		    /* in rule statement */
-    i4            in_case_function;
+    i4      in_case_function;
 
     PST_J_MASK flists[MAX_NESTING];    /* assume no more that a nesting
 				    ** of 100 subselects.
@@ -5112,56 +5139,24 @@ typedef struct PSS_YYVARS_ {
 #define	PSS_RANGE_CLAUSE		9
 #define PSS_PARTITION_CLAUSE		10
 
-   PSS_WITH_CLAUSE	    with_clauses;
-				/*
-				** with_clauses keeps track of which WITH
-				** clauses have been seen by a particular
-				** statement. When a particular clause is
-				** parsed, the appropriate bit is set in the
-				** field. If the bit is already set, then
-				** this WITH clause has been given twice and
-				** the statement is rejected.
+    u_i4    qmode_bits;		/* Query mode expressed as a bit or bit-mask,
+				** see pslwithopt for values.  Set by
+				** psl-withopt-init.
 				*/
 
-#define PSS_WC_STRUCTURE		1
-#define PSS_WC_FILLFACTOR   		2
-#define PSS_WC_MINPAGES	    		3
-#define PSS_WC_MAXPAGES	    		4
-#define PSS_WC_LEAFFILL	    		5
-#define PSS_WC_NONLEAFFILL  		6
-#define PSS_WC_KEY	    		7
-#define PSS_WC_LOCATION	    		8
-#define PSS_WC_COMPRESSION  		9
-#define PSS_WC_NEWLOCATION  		10
-#define PSS_WC_OLDLOCATION  		11
-#define PSS_WC_DUPLICATES   		12
-#define PSS_WC_JOURNALING   		13
-#define	PSS_WC_ALLOCATION   		14
-#define PSS_WC_EXTEND	    		15
-#define PSS_WC_TABLE_OPTION 		16
-#define	PSS_WC_MAXINDEXFILL 		17
-#define	PSS_WC_RECOVERY	    		18
-#define	PSS_WC_UNIQUE_SCOPE 		19
-#define	PSS_WC_UNIQUE	    		20
-#define	PSS_WC_PERSISTENCE  		21
-#define	PSS_WC_CONCURRENT_ACCESS	22
-#define	PSS_WC_PAGE_SIZE		23
-#define	PSS_WC_PRIORITY			24
-#define	PSS_WC_CLUSTERED		25
-#define PSS_WC_ROW_SEC_AUDIT		26
-#define PSS_WC_ROW_SEC_KEY		27
-#define PSS_WC_ROW_NO_SEC_KEY		28
-#define PSS_WC_PARTITION		29
-#define	PSS_WC_DIMENSION		30
-#define PSS_WC_RANGE			31
-#define PSS_WC_CONS_INDEX		32
-#define PSS_WC_BLOBEXTEND		33
-#define PSS_WC_CONCURRENT_UPDATES	34
-#define	PSS_WC_AUTOSTRUCT		35
-#define PSS_WC_MAX			35
-#if PSS_WC_MAX > PSS_WC_MAX_OPTIONS
-blow chunks now!
-#endif
+    bool	secaudit;	/* TRUE if security_audit=(row) */
+    bool	extonly;	/* TRUE for extensions_only option */
+    i2		withkey_count;	/* Count of KEY= entries */
+
+    DMU_CHARACTERISTICS *cur_chars; /* WITH-option holder for whatever is
+				** being parsed.
+				** Either dmu_cb->dmu_chars, or in a
+				** constraint block, or a COPY dmu-chars.
+				** The WITH-option-seen indicator bit map
+				** is in this dmu-char.
+				*/
+    DB_ATT_NAME	    *secaudkey;	/* Security audit key if any (WITH-options) */
+    PST_RESKEY	    *withkey;	/* WITH KEY=() list */
 
     PSS_EXLIST	*exprlist;	/* points to the head of an expression list
 				** used in "... where select_expr (not) in
@@ -5174,7 +5169,7 @@ blow chunks now!
     bool	    named_parm;		/* TRUE if at least one named parm has*/
 					/* been processed for proc invocation */
     bool	    in_from_tproc;	/* TRUE if were parsing tproc */
-    i4		    isdbp;		/* TRUE for CREATE PROCEDURE stmt.    */
+    bool	    isdbp;		/* TRUE for CREATE PROCEDURE stmt.    */
     PSS_DBPINFO	    *dbpinfo;		/* holds info about current dbproc    */
     PST_QNODE	    *updcollst;		/* root of update column list	      */
 
@@ -5381,7 +5376,7 @@ blow chunks now!
 				** address of the range variable representing
 				** the view's simply underlying table
 				*/
-    PSS_RNGTAB		    *underlying_rel;
+    PSS_RNGTAB	    *underlying_rel;
     bool            bypass_actions;
                                 /*
                                 ** Bypass subsequent semantic actions
@@ -5450,9 +5445,6 @@ blow chunks now!
     bool	    inconstraint; /* TRUE - if compiling constraint def */
     bool	    in_orderby; /* TRUE - compiling order by clause */
     bool	    seq_ops;	/* TRUE - next/currval sequence operators have been issued */
-    bool	    create_with_key; /* TRUE: KEY=() WITH option in a
-				** CREATE TABLE-type context ??TEMP??
-				*/
     bool	    groupby_cube_rollup; /* TRUE - if we've already got 
 				** one of these */
     bool	    first_n_ok_depth; /* Trigger depth for first n */
@@ -5538,10 +5530,12 @@ blow chunks now!
     i4		    save_list_clause;  /* Saved $Ylist_clause during partition
 				** WITH (recursive WITH).
 				*/
-    PSS_WITH_CLAUSE save_with_clauses;  /* Saved $Ywith_clauses during
-				** partition WITH parsing, so that we don't
-				** confuse the partition WITH and the outer
-				** WITH.
+    char	    save_indicators[(DMU_ALLIND_LAST+BITSPERBYTE)/BITSPERBYTE];
+				/* Place to save cur_chars->dmu_indicators
+				** while recursively parsing a WITH-clause
+				** for a partition.  Partition-with is very
+				** limited and nothing else in the dmu chars
+				** is touched, just the indicators
 				*/
     DM_DATA	    part_locs;	/* Holding tank for a partition WITH-clause.
 				** When the with-clause is done, this gets
@@ -5561,15 +5555,8 @@ blow chunks now!
     char	    qry_name[PSL_MAX_COMM_STRING];  /* Current query name */
     i4		    qry_len;	/* length of the above string */
 
-    /* "create table as select" has the result column names in the select's
-    ** query tree.  The tree isn't hooked on to anything until the statement
-    ** is all done.  This doesn't help partition definition much, because
-    ** it's part of the WITH clause, which is part of the statement!  So
-    ** just prior to diving into the WITH clause, create-table-as-select will
-    ** jam a copy of the select query-tree pointer here, so that partition
-    ** definition can find column names.
-    */
-    PST_QNODE	    *part_crtas_qtree;  /* RETINTO select query expr */
+    /* Help quel retrieve parsing jump a gap... */
+    PST_QNODE	    *retinto_root;	/* RETINTO select query expr */
 
     /* The MODIFY statement has a variant for partitioned tables:
     ** modify master-table PARTITION logpart.logpart...
@@ -5582,7 +5569,12 @@ blow chunks now!
     i4		    md_part_logpart[DBDS_MAX_LEVELS];  /* Logical partitions
 					** for the MODIFY, -1 if not specified
 					*/
+    enum dmu_action_enum md_action;	/* MODIFY action, used by psl-
+					** command-string to generate a
+					** spiffier string if MODIFY
+					*/
     bool	    md_reconstruct;	/* TRUE if modify to reconstruct */
+    bool	    is_heapsort;	/* TRUE if modify to heapsort */
     i2		    save_pss_rsdmno[MAX_NESTING];	/* across derived table processing */
     i2		    cast_length;	/* N in cast(x to varchar(N)) */
     i4		    save_psq_mode;	/* ditto */
@@ -5613,7 +5605,8 @@ blow chunks now!
 typedef DB_STATUS (*PSS_CONS_QUAL_FUNC)(
                                         PTR             *qual_args,
                                         DB_INTEGRITY    *integ,
-                                        i4             *satisfies);
+                                        i4             *satisfies,
+					PSS_SESBLK	*sess_cb);
 FUNC_EXTERN STATUS
 psf_scctrace(
 	PTR	    arg1,
@@ -5732,13 +5725,11 @@ psl_cp1_copy(
 	PSQ_CB		*psq_cb,
 	PSS_Q_XLATE	*xlated_qry,
 	PTR		scanbuf_ptr,
-	PSS_WITH_CLAUSE *with_clauses,
 	DB_ERROR	*err_blk);
 FUNC_EXTERN DB_STATUS
 psl_cp2_copstmnt(
 	PSS_SESBLK	*sess_cb,
 	PSQ_MODE	*qmode,
-	PSS_WITH_CLAUSE *with_clauses,
 	DB_ERROR	*err_blk);
 FUNC_EXTERN DB_STATUS
 psl_cp3_copytable(
@@ -5795,10 +5786,10 @@ psl_cp10_nm_eq_str(
 FUNC_EXTERN DB_STATUS
 psl_cp11_nm_eq_no(
 	PSS_SESBLK	*sess_cb,
+	PSQ_CB		*psq_cb,
 	char		*name,
-	i4		value,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk);
+	i4		value);
+
 FUNC_EXTERN DB_STATUS
 psl_cp12_nm_eq_qdata(
 	PSS_SESBLK	*sess_cb,
@@ -5819,7 +5810,6 @@ FUNC_EXTERN DB_STATUS
 psl_ct1_create_table(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
-	PSS_WITH_CLAUSE *with_clauses,
 	PSS_CONS	*cons_list);
 
 FUNC_EXTERN DB_STATUS
@@ -5840,83 +5830,78 @@ psl_ct2s_crt_tbl_as_select(
 	PST_QNODE	*sort_list,
 	PST_QNODE	*first_n,
 	PST_QNODE	*offset_n);
+
 FUNC_EXTERN DB_STATUS
 psl_ct3_crwith(
 	PSS_SESBLK	*sess_cb,
-	i4		qmode,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk);
+	PSQ_CB		*psq_cb);
+
+FUNC_EXTERN void
+psl_withopt_init(
+	PSS_SESBLK	*sess_cb,
+	PSQ_CB		*psq_cb);
+
+FUNC_EXTERN DB_STATUS
+psl_withopt_post(
+	PSS_SESBLK	*sess_cb,
+	PSQ_CB		*psq_cb);
+
 FUNC_EXTERN DB_STATUS
 psl_nm_eq_nm(
 	PSS_SESBLK	*sess_cb,
+	PSQ_CB		*psq_cb,
 	char		*name,
-	char		*value,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk);
+	char		*value);
 FUNC_EXTERN DB_STATUS
 psl_nm_eq_hexconst(
 	PSS_SESBLK	*sess_cb,
+	PSQ_CB		*psq_cb,
 	char		*name,
 	u_i2		hexlen,
-	char		*hexvalue,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk);
+	char		*hexvalue);
 FUNC_EXTERN DB_STATUS
 psl_nm_eq_no(
 	PSS_SESBLK	*sess_cb,
+	PSQ_CB		*psq_cb,
 	char		*name,
 	i4		value,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk,
 	PSS_Q_XLATE	*xlated_qry);
 FUNC_EXTERN DB_STATUS
-psl_nm_eq_dec(
+psl_with_kwd(
 	PSS_SESBLK	*sess_cb,
+	PSQ_CB		*psq_cb,
 	char		*name,
-	f8		*value,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk,
 	PSS_Q_XLATE	*xlated_qry);
 FUNC_EXTERN DB_STATUS
-psl_ct6_cr_single_kwd(
-	PSS_SESBLK	*sess_cb,
-	char		*keyword,
-	PSS_WITH_CLAUSE	*with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk,
-	PSS_Q_XLATE	*xlated_qry);
-FUNC_EXTERN DB_STATUS
-psl_lst_prefix(
+psl_withlist_prefix(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
 	char		*prefix,
-	PSS_YYVARS	*yyvarsp);
+	PSS_Q_XLATE	*xlated_qry);
 FUNC_EXTERN DB_STATUS
-psl_ct8_cr_lst_elem(
+psl_withlist_elem(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
-	PSS_YYVARS	*yyvarsp,
-	char		*element,
-	PST_RESKEY	**reskey,
+	char		*value,
 	PSS_Q_XLATE	*xlated_qry);
+FUNC_EXTERN DB_STATUS
+psl_withlist_relem(
+	PSS_SESBLK	*sess_cb,
+	PSQ_CB		*psq_cb,
+	f8		*element);
+
 FUNC_EXTERN DB_STATUS
 psl_ct9_new_loc_name(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
 	char		*loc_name,
-	char		*table_name,
-	PSS_WITH_CLAUSE *with_clauses,
-	PSS_Q_XLATE     *xlated_qry);
+	char		*table_name);
+
 FUNC_EXTERN DB_STATUS
 psl_ct10_crt_tbl_kwd(
 	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_WITH_CLAUSE *with_clauses,
-	bool		temporary);
+	PSQ_CB		*psq_cb);
+
 FUNC_EXTERN DB_STATUS
 psl_ct11_tname_name_name(
 	PSS_SESBLK	*sess_cb,
@@ -6067,7 +6052,7 @@ psl_gen_alter_text(
 FUNC_EXTERN VOID 
 psl_command_string(
 	i4  	    qmode, 
-	DB_LANG     language,
+	PSS_SESBLK  *sess_cb,
 	char 	    *command,
 	i4     *length);
 FUNC_EXTERN DB_STATUS
@@ -6157,21 +6142,17 @@ psl_rptqry_tblids(
 FUNC_EXTERN DB_STATUS
 psl_ci1_create_index(
 	PSS_SESBLK	*sess_cb,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		unique,
 	DB_ERROR	*err_blk);
 FUNC_EXTERN DB_STATUS
 psl_ci2_index_prefix(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
-	PSS_WITH_CLAUSE *with_clauses,
 	i4		unique);
 FUNC_EXTERN DB_STATUS
 psl_ci3_indexrel(
 	PSS_SESBLK	*sess_cb,
-	PSS_OBJ_NAME	*tbl_spec,
-	DB_ERROR	*err_blk,
-	i4		qmode);
+	PSQ_CB		*psq_cb,
+	PSS_OBJ_NAME	*tbl_spec);
 FUNC_EXTERN DB_STATUS
 psl_ci4_indexcol(
 	PSS_SESBLK	*sess_cb,
@@ -6183,28 +6164,7 @@ psl_ci5_indexlocname(
 	PSS_SESBLK	*sess_cb,
 	char		*loc_name,
 	PSS_OBJ_NAME	*index_spec,
-	PSS_WITH_CLAUSE *with_clauses,
 	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_lst_elem(
-	PSS_SESBLK	*sess_cb,
-	PSS_YYVARS	*yyvarsp,
-	char		*element,
-	i4		qmode,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_lst_relem(
-	PSS_SESBLK	*sess_cb,
-	i4		list_clause,
-	f8		*element,
-	i4		qmode,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_ci7_index_woword(
-	PSS_SESBLK	*sess_cb,
-	char		*word,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk);
 FUNC_EXTERN DB_STATUS
 psl_cv1_create_view(
 	PSS_SESBLK          *sess_cb,
@@ -6218,18 +6178,6 @@ psl_cv2_viewstmnt(
 	PSS_SESBLK      *sess_cb,
 	PSQ_CB          *psq_cb,
 	PSS_YYVARS      *yyvarsp);
-FUNC_EXTERN DB_STATUS
-psl_validate_options(
-	PSS_SESBLK	*sess_cb,
-	i4		qmode,
-	PSS_WITH_CLAUSE	*options,
-	i4		sstruct,
-	i4		minp,
-	i4		maxp,
-	i4		dcomp,
-	i4		icomp,
-	i4		sliced_alloc,
-	DB_ERROR	*err_blk);
 FUNC_EXTERN DB_STATUS
 psl_lm1_setlockstmnt(
 	PSS_SESBLK	*sess_cb,
@@ -6275,16 +6223,15 @@ psl_md2_modstmnt(
 	PSQ_CB		*psq_cb,
 	PSS_YYVARS	*yyvarsp);
 FUNC_EXTERN DB_STATUS
-psl_md3_modstorage(
+psl_md3_modunique(
 	PSS_SESBLK	*sess_cb,
 	PSS_YYVARS	*yyvarsp,
 	DB_ERROR	*err_blk);
 FUNC_EXTERN DB_STATUS
 psl_md4_modstorname(
 	PSS_SESBLK	*sess_cb,
-	char		*storname,
-	PSS_YYVARS	*yyvarsp,
-	DB_ERROR	*err_blk);
+	PSQ_CB		*psq_cb,
+	char		*storname);
 FUNC_EXTERN DB_STATUS
 psl_md5_modkeys(
 	PSS_SESBLK	*sess_cb,
@@ -6293,8 +6240,7 @@ psl_md5_modkeys(
 FUNC_EXTERN DB_STATUS
 psl_md6_modbasekey(
 	PSS_SESBLK	*sess_cb,
-	i4		ascending,
-	i4		heapsort,
+	bool		ascending,
 	DB_ERROR	*err_blk);
 FUNC_EXTERN DB_STATUS
 psl_md7_modkeyname(
@@ -6306,12 +6252,6 @@ FUNC_EXTERN DB_STATUS
 psl_md8_modtable(
 	PSS_SESBLK	*sess_cb,
 	PSS_OBJ_NAME	*tblspec,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_md9_modopt_word(
-	PSS_SESBLK	*sess_cb,
-	char		*word,
-	PSS_WITH_CLAUSE *with_clauses,
 	DB_ERROR	*err_blk);
 
 FUNC_EXTERN DB_STATUS
@@ -6326,6 +6266,16 @@ psl_md_modpart(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
 	PSS_YYVARS	*yyvarsp);
+
+FUNC_EXTERN DB_STATUS psl_md_reconstruct(
+	PSS_SESBLK *sess_cb,
+	DMU_CB *dmucb,
+	DB_ERROR *err_blk);
+
+FUNC_EXTERN void psl_md_action_string(
+	PSS_SESBLK *sess_cb,
+	char *command,
+	i4 *length);
 
 FUNC_EXTERN DB_STATUS
 psl_rngent(
@@ -6487,20 +6437,6 @@ psl_crsopen(
 	bool		nonupdt,
 	PST_J_ID	num_joins,
 	bool		dynqp_comp);
-FUNC_EXTERN DB_STATUS
-psl_do_insert(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PST_QNODE	*root_node,
-	bool		*shareable_qp,
-	PST_QTREE	**tree,
-	i4		isdbp,
-	PST_J_ID	num_joins,
-	PSS_Q_XLATE	*xlated_qry,
-	DB_SHR_RPTQRY_INFO	**qry_info,
-	PST_QNODE	*sort_list,
-	PST_QNODE	*first_n,
-	PST_QNODE	*offset_n);
 FUNC_EXTERN DB_STATUS
 psl_p_tlist(
 	PST_QNODE	**tlist,
@@ -8383,7 +8319,8 @@ FUNC_EXTERN DB_STATUS
 psl_qual_ref_cons(
                   PTR           *qual_args,
                   DB_INTEGRITY  *integ,
-                  i4            *satisfies);
+                  i4            *satisfies,
+		  PSS_SESBLK	*sess_cb);
 
 FUNC_EXTERN bool
 psf_retry(

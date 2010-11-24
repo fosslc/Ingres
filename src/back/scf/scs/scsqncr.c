@@ -2669,6 +2669,9 @@ static char execproc_syntax2[] = " = session.";
 **      04-oct-2010 (maspa05) Bug 124534
 **          Rowcounts for batched queries were incorrect. Need to check the
 **          list of GCA response messages to find the latest.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Change "set result-structure" to a do-nothing.  PSF handles
+**	    result-structure now, not OPF.
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -6688,7 +6691,6 @@ scs_sequencer(i4 op_code,
 			&& sscb->sscb_thandle)
 		{
 		    PSQ_QDESC	*qdesc = (PSQ_QDESC *)sscb->sscb_troot;
-		    DB_DATA_VALUE *dbvp;
 		    PTR		*parmp;
 
 		    if (qdesc && qdesc->psq_dnum > 3)
@@ -8525,7 +8527,6 @@ scs_sequencer(i4 op_code,
 	      }
 
 	    case PSQ_SCPUFACT:
-	    case PSQ_SRINTO:
 	    case PSQ_SQEP:
 	    case PSQ_JTIMEOUT:
 		if ((sscb->sscb_flags & SCS_STAR) &&
@@ -8859,6 +8860,7 @@ scs_sequencer(i4 op_code,
 	    case PSQ_SCARDCHK:
 	    case PSQ_SNOCARDCHK:
 	    case PSQ_CREATECOMP:
+	    case PSQ_SRINTO:
 
 	    /* the following qmodes are obsolete */
 	    case PSQ_OBSOLETE:
@@ -16168,16 +16170,13 @@ scs_desc_send(SCD_SCB	  *scb,
 # endif
     i4			size = (sizeof (GCA_TD_DATA) - sizeof (GCA_COL_ATT));
     DB_STATUS		status;
-    DB_ERROR		error;
     GCA_COL_ATT		*cur_att;
     SCC_GCMSG		*message;
     PTR			darea;
     GCA_TD_DATA		*tdesc;
     PTR			block;
     bool                check_comp;
-    i4			total_dif=0;
     DB_DT_ID 		datatype;
-    bool		badtype = FALSE;
 
 
     status = E_DB_OK;
@@ -16940,7 +16939,6 @@ scs_allocate_byref_tdesc(
     QEF_RCB		*qef_rcb = scb->scb_sscb.sscb_qeccb;
     GCA_TD_DATA		*desc_area;
     DB_STATUS		status;
-    DB_ERROR		error;
     SCC_GCMSG		*desc_message;
     GCA_COL_ATT		*next_descriptor;
     PTR			block;
@@ -17078,7 +17076,6 @@ scs_allocate_tdata(
 {
     i4			tuple_size = desc_area->gca_tsize;
     DB_STATUS		status;
-    DB_ERROR		error;
     SCC_GCMSG		*data_message;
     PTR			block;
 
@@ -17764,7 +17761,6 @@ scs_def_curs(
 
 	{
 	    GCA_ID	    *gca_id = (GCA_ID *) scb->scb_cscb.cscb_tuples;
-	    i4		    i;
 
 	    *message = scb->scb_cscb.cscb_outbuffer;
 
@@ -19465,7 +19461,6 @@ SCD_SCB		*scb)
     SCC_GCMSG		*save_msg_ptr;
     SIZE_TYPE		size;
     DB_STATUS		status;
-    DB_ERROR		error;
 
     save_msg_ptr = scb->scb_cscb.cscb_outbuffer;
     STRUCT_ASSIGN_MACRO(*scb->scb_cscb.cscb_outbuffer, save_msg);
@@ -19631,7 +19626,6 @@ scs_emit_rows(i4 qmode, bool rowproc, SCD_SCB *scb, QEF_RCB *qe_ccb, SCC_GCMSG *
     if (cquery->cur_rdesc.rd_modifier & GCA_COMP_MASK)
     {
 	GCA_TD_DATA	*tdesc;
-	GCA_COL_ATT	*errcol = NULL;
 	tdesc = (GCA_TD_DATA *) cquery->cur_rdesc.rd_tdesc;
 	if (tdesc)
 	{
@@ -19778,7 +19772,6 @@ LK_LKID		*lkid)
     CL_SYS_ERR		sys_err;
     i4			local_error;
     DMC_CB		*dm_ccb;
-    LK_LOCK_KEY		lockkey;
     LK_LLID		lock_list_id;
 
     dm_ccb = scb->scb_sscb.sscb_dmccb;

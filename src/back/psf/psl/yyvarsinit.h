@@ -121,6 +121,8 @@
 **	    Point cb to yyvars variable, remove some indirection.
 **	    Note: if setting up recursive parser for derived tables, caller
 **	    will need to repair the cb->pss_yyvars pointer ASAP.
+**	11-Oct-2010 (kschendel) SIR 124544
+**	    YYvars changes for consolidated with-option parsing, fixes here.
 **     
 **/
 
@@ -135,10 +137,8 @@ cb->pss_yyvars = &yyvars;
 cb->pss_yacc->yy_partalt_kwds = FALSE;
 
 yyvars.prev_yyvarsp = (PSS_YYVARS *) NULL;
-yyvars.with_journaling 	= 0;
-yyvars.with_location	= 0;
 yyvars.with_dups	= PST_DNTCAREDUPS;
-yyvars.is_heapsort	= 0;
+yyvars.is_heapsort	= FALSE;
 yyvars.in_from_clause	= 0;
 yyvars.in_where_clause	= 0;
 yyvars.in_target_clause = 0;
@@ -153,6 +153,14 @@ yyvars.aggr_allowed	= (PSS_AGG_ALLOWED | PSS_STMT_AGG_ALLOWED);
 yyvars.list_clause	= 0;
 (VOID)MEfill(sizeof(yyvars.fe_cursor_id), (u_char)0, (PTR)&yyvars.fe_cursor_id);
 yyvars.qp_shareable	= TRUE;
+yyvars.cur_chars	= NULL;
+yyvars.withkey		= NULL;
+yyvars.withkey_count	= 0;
+yyvars.secaudit		= FALSE;
+yyvars.extonly		= FALSE;
+yyvars.secaudkey	= NULL;
+yyvars.md_action	= DMU_ACT_NONE;
+yyvars.md_reconstruct	= FALSE;
 yyvars.exprlist         = (PSS_EXLIST *) NULL;
 yyvars.isdbp		= FALSE;
 yyvars.dbpinfo		= (PSS_DBPINFO *) NULL;

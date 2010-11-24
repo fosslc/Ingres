@@ -38,6 +38,7 @@
 #include    <dm1p.h>
 #include    <dm0l.h>
 #include    <dm0p.h>
+#include    <dm0s.h>
 #include    <dmse.h>
 #include    <dm2umct.h>
 #include    <dm2umxcb.h>
@@ -828,6 +829,8 @@
 **	    Cast new i8 reltups back to i4
 **	16-Jul-2010 (kschendel) SIR 123450
 **	    Really pass the compression type(s) in the log record.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Replace dmu char array with dmu characteristics.
 */
 DB_STATUS
 dm2u_index(
@@ -841,12 +844,12 @@ DM2U_INDEX_CB   *index_cb)
     DM2U_MXCB	    *mxcb_cb = (DM2U_MXCB *)NULL;
     DMP_RCB	    *r = (DMP_RCB *)NULL;
     DMP_TCB	    *t;
-    i4	     	    i, j, k;
+    i4	     	    i;
     i4	     	    NumCreAtts;
     DB_TAB_TIMESTAMP timestamp;
     DMF_ATTR_ENTRY  att_entry[DB_MAXIXATTS + 1];
     DMF_ATTR_ENTRY  *att_list[DB_MAXIXATTS + 1];
-    i4	     	    error, local_error;
+    i4	     	    local_error;
     DB_STATUS	    status;
     i4              ref_count;
     DB_TAB_NAME	    table_name;
@@ -1255,10 +1258,10 @@ DM2U_INDEX_CB   *index_cb)
 	      att_list, index_cb->indxcb_db_lockmode,
 	      DM_TBL_DEFAULT_ALLOCATION, DM_TBL_DEFAULT_EXTEND, 
 	      m->mx_page_type, m->mx_page_size, index_cb->indxcb_qry_id, 
-	      index_cb->indxcb_gwattr_array, index_cb->indxcb_gwchar_array, 
+	      index_cb->indxcb_gwattr_array, index_cb->indxcb_gwchar_array,
 	      index_cb->indxcb_gw_id, (i4)0,
-	      index_cb->indxcb_gwsource, index_cb->indxcb_char_array, 
-	      m->mx_dimension, m->mx_hilbertsize, 
+	      index_cb->indxcb_gwsource, index_cb->indxcb_dmu_chars,
+	      m->mx_dimension, m->mx_hilbertsize,
 	      m->mx_range, m->mx_tbl_pri, NULL, 0,
 	      NULL /* DMU_CB */, &local_dberr);
 	    if (status != E_DB_OK)
@@ -1389,7 +1392,6 @@ DM2U_INDEX_CB   *index_cb)
 		    i4		nofiles = 0;
 		    DML_XCCB 	*xccb;
 		    bool  	found_xccb;
-		    i4    	logging, dm0l_flag;
 
 		    /* Need to do those file renames first.
 		    ** This is really a for-loop on k...
@@ -2679,6 +2681,7 @@ DB_ERROR	*dberr)
             if (m->mx_structure == TCB_RTREE)
 	    {
               collength = m->mx_hilbertsize * 2;
+              colencwid = 0;
 	      coltype = m->mx_acc_klv->nbr_dt_id;
 	    }
             else
@@ -3278,9 +3281,7 @@ DB_ERROR	*dberr)
     DM2T_KEY_ENTRY	DM2TKey[DB_MAXIXATTS];
     DM2T_KEY_ENTRY	*DM2TKeys[DB_MAXIXATTS];
     i4			i;
-    DB_TAB_TIMESTAMP	timestamp;
     DM_OBJECT		*locs_mem;
-    i4			error;
     i4			alen;
     i4			attnmsz = 0;
 

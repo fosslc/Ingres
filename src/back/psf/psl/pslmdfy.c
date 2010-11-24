@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -37,6 +37,7 @@
 #include    <psftrmwh.h>
 #include    <psyaudit.h>
 #include    <usererror.h>
+#include    <uld.h>
 
 /*
 ** Name: PSLMDFY.C:	this file contains functions used by both SQL and/or
@@ -67,7 +68,6 @@
 **	psl_md6_modbasekey()	    - semantic action for MODBASEKEY production
 **	psl_md7_modkeyname()	    - semantic action for MODKEYNAME production
 **	psl_md8_modtable()	    - semantic action for MODTABLE production
-**	psl_md9_modopt_word()	    - semantic action for MODOPT_WORD production
 **
 ** History:
 **	11-feb-91 (andre)
@@ -202,19 +202,14 @@
 **	    table structure, so set PSL_MDF_NO_OP.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_template@]...
+**	11-Oct-2010 (kschendel) SIR 124544
+**	    Changes for consolidated WITH-clause parsing.
+**	    Put MODIFY action in dmu_action.
 */
 
 /* Module local definitions and storage. */
 
 /* Forward procedure declarations */
-
-static DB_STATUS psl_md_reconstruct(
-	PSS_SESBLK *sess_cb,
-	DMU_CB *dmucb,
-	PSS_YYVARS *yyvarsp,
-	DB_ERROR *err_blk);
-
 
 static DB_STATUS psl_md_part_unique(
 	PSS_SESBLK *sess_cb,
@@ -222,8 +217,8 @@ static DB_STATUS psl_md_part_unique(
 	PSS_YYVARS *yyvarsp,
 	DB_ERROR *err_blk);
 
-/* Since there are so many MODIFY action variants, and many of them
-** just set the (first) DMU characteristics array entry, let's table
+
+/* Since there are so many MODIFY action variants, let's table
 ** drive this thing.
 ** Some of the actions need a wee bit of extra checking or work beyond
 ** the norm;  define the flags needed for the special cases.
@@ -233,8 +228,7 @@ static DB_STATUS psl_md_part_unique(
 #define PSL_MDF_COMPRESSED	0x0002		/* Compressed e.g. cbtree */
 #define PSL_MDF_RECONSTRUCT	0x0004		/* Reconstruct is handled out-of-line */
 #define PSL_MDF_MERGE		0x0008		/* MERGE, needs btree */
-#define PSL_MDF_UNIQUESCOPE	0x0010		/* Unique-scope, needs unique */
-#define PSL_MDF_ERROR		0x0020		/* Obsolete keyword, error */
+#define PSL_MDF_ERROR		0x0010		/* Obsolete keyword, error */
 
 /* Some actions are restricted against partitioned tables.
 ** In some cases the action must be against the entire table;
@@ -242,25 +236,31 @@ static DB_STATUS psl_md_part_unique(
 ** Just to make the table easier to read, use a "partial OK" flag instead of
 ** "master only", since there are more of the latter.
 */
-#define PSL_MDF_LPART_OK	0x0040		/* Partial table is OK */
-#define PSL_MDF_PPART_ONLY	0x0080		/* One partition only */
+#define PSL_MDF_LPART_OK	0x0020		/* Partial table is OK */
+#define PSL_MDF_PPART_ONLY	0x0040		/* One partition only */
 
 /* For clustered btree */
-#define PSL_MDF_CLUSTERED	0x0100		/* Clustered Btree */
+#define PSL_MDF_CLUSTERED	0x0080		/* Clustered Btree */
 
-#define PSL_MDF_NOINDEX         0x0200          /* Don't allow on 2ary index */
+#define PSL_MDF_NOINDEX         0x0100          /* Don't allow on 2ary index */
 
 /* Some operations are unnecessarily blocked because an actual modify would
 ** break constraints defined on the table. If the operation is guaranteed
 ** NOT to break any dependencies it can be defined as a no-op in which
 ** dependency checking can be safely skipped. Use with CAUTION.
 */
-#define PSL_MDF_NO_OP 		0x0400		/* Table is NOT modified */
+#define PSL_MDF_NO_OP		0x0200		/* Table is NOT modified */
 
 /* Here's the action name table itself.
-** Every action generates a DMU characteristics entry unless the char-id
-** is -1.  If the pss_wc_to_set isn't -1, it's a with-option number to
-** set.  The special-flags are defined above.
+** Every action has an action code that is put into the DMU CB.
+** Most if not all actions also set a specific DMU char indicator
+** and DMU_CHARACTERISTICS value:
+**    if the indicator is DMU_STRUCTURE, the value is a structure type;
+**    if the indicator is DMU_ACTION_ONOFF or DMU_PERSISTS_OVER_MODIFIES,
+**    the value is the flag to store into dmu_flags if ON, and zero if OFF;
+**    if the indicator is DMU_VACTION, the value goes into dmu_vaction;
+**    if the indicator is -1, don't set any indicator or value.
+** The special-flags are defined above.
 ** The table is checked sequentially, so the more common options are at
 ** the top.  (Not that it's a big deal.)  A null entry ends the list.
 **
@@ -272,52 +272,64 @@ static DB_STATUS psl_md_part_unique(
 static const struct _MODIFY_STORNAMES
 {
     char	*name_string;	/* The modify action name */
-    i4		char_id;	/* DMU characteristics ID */
-    i4		char_value;	/* DMU characteristics value */
-    i2		pss_wc_to_set;	/* PSS_WC_xxx with-option flag number to set */
+    enum dmu_action_enum action; /* The dmu-action to store in the DMU CB */
+    i4		indicator;	/* dmu-chars indicator or -1 */
+    i4		value;		/* DMU characteristics value */
     i2		special_flags;	/* PSL_MDF_xxx special flags */
 } modify_stornames[] = {
 	{"btree",
-	 DMU_STRUCTURE, DB_BTRE_STORE, PSS_WC_STRUCTURE, 0
+	 DMU_ACT_STORAGE,
+	 DMU_STRUCTURE, DB_BTRE_STORE, 0
 	},
 	{"heap",
-	 DMU_STRUCTURE, DB_HEAP_STORE, PSS_WC_STRUCTURE, PSL_MDF_NOINDEX
+	 DMU_ACT_STORAGE,
+	 DMU_STRUCTURE, DB_HEAP_STORE, PSL_MDF_NOINDEX
 	},
 	{"hash",
-	 DMU_STRUCTURE, DB_HASH_STORE, PSS_WC_STRUCTURE, 0
+	 DMU_ACT_STORAGE,
+	 DMU_STRUCTURE, DB_HASH_STORE, 0
 	},
 	{"isam",
-	 DMU_STRUCTURE, DB_ISAM_STORE, PSS_WC_STRUCTURE, 0
+	 DMU_ACT_STORAGE,
+	 DMU_STRUCTURE, DB_ISAM_STORE, 0
 	},
 /* --> comment out structure "clustered"
 	{"clustered",
-	 DMU_STRUCTURE, DB_BTRE_STORE, PSS_WC_STRUCTURE, PSL_MDF_CLUSTERED | PSL_MDF_NOINDEX
+	 DMU_STRUCTURE, DB_BTRE_STORE, PSL_MDF_CLUSTERED | PSL_MDF_NOINDEX
 	},
 */
 	{"heapsort",
-	 DMU_STRUCTURE, DB_HEAP_STORE, PSS_WC_STRUCTURE, PSL_MDF_HEAPSORT | PSL_MDF_NOINDEX
+	 DMU_ACT_STORAGE,
+	 DMU_STRUCTURE, DB_HEAP_STORE, PSL_MDF_HEAPSORT | PSL_MDF_NOINDEX
 	},
 	{"cbtree",
-	 DMU_STRUCTURE, DB_BTRE_STORE, PSS_WC_STRUCTURE, PSL_MDF_COMPRESSED
+	 DMU_ACT_STORAGE,
+	 DMU_STRUCTURE, DB_BTRE_STORE, PSL_MDF_COMPRESSED
 	},
 	{"cheap",
-	 DMU_STRUCTURE, DB_HEAP_STORE, PSS_WC_STRUCTURE, PSL_MDF_COMPRESSED | PSL_MDF_NOINDEX
+	 DMU_ACT_STORAGE,
+	 DMU_STRUCTURE, DB_HEAP_STORE, PSL_MDF_COMPRESSED | PSL_MDF_NOINDEX
 	},
 	{"chash",
-	 DMU_STRUCTURE, DB_HASH_STORE, PSS_WC_STRUCTURE, PSL_MDF_COMPRESSED
+	 DMU_ACT_STORAGE,
+	 DMU_STRUCTURE, DB_HASH_STORE, PSL_MDF_COMPRESSED
 	},
 	{"cisam",
-	 DMU_STRUCTURE, DB_ISAM_STORE, PSS_WC_STRUCTURE, PSL_MDF_COMPRESSED
+	 DMU_ACT_STORAGE,
+	 DMU_STRUCTURE, DB_ISAM_STORE, PSL_MDF_COMPRESSED
 	},
 	{"cheapsort",
-	 DMU_STRUCTURE, DB_HEAP_STORE, PSS_WC_STRUCTURE,
+	 DMU_ACT_STORAGE,
+	 DMU_STRUCTURE, DB_HEAP_STORE,
 			PSL_MDF_HEAPSORT | PSL_MDF_COMPRESSED | PSL_MDF_NOINDEX
 	},
 	{"reconstruct",
-	 -1, 0, PSS_WC_STRUCTURE, PSL_MDF_RECONSTRUCT | PSL_MDF_LPART_OK
+	 DMU_ACT_STORAGE,
+	 -1, 0, PSL_MDF_RECONSTRUCT | PSL_MDF_LPART_OK
 	},
 	{"merge",
-	 DMU_MERGE, DMU_C_ON, -1, PSL_MDF_MERGE | PSL_MDF_LPART_OK
+	 DMU_ACT_MERGE,
+	 -1, 0, PSL_MDF_MERGE | PSL_MDF_LPART_OK
 	},
 	/* FIXME **** note: modify foo partition bar to truncated
 	** needs to be allowed, but we need some kind of semantics that
@@ -326,68 +338,80 @@ static const struct _MODIFY_STORNAMES
 	** add back lpart-ok when this is fixed somehow.
 	*/
 	{"truncated",
-	 DMU_TRUNCATE, DMU_C_ON, -1, PSL_MDF_NOINDEX
+	 DMU_ACT_TRUNC,
+	 -1, 0, PSL_MDF_NOINDEX
 	},
 	{"reorganize",
-	 DMU_REORG, DMU_C_ON, -1, PSL_MDF_LPART_OK
+	 DMU_ACT_REORG,
+	 -1, 0, PSL_MDF_LPART_OK
 	},
 	{"reorganise",		/* Across-the-water spelling */
-	 DMU_REORG, DMU_C_ON, -1, PSL_MDF_LPART_OK
+	 DMU_ACT_REORG,
+	 -1, 0, PSL_MDF_LPART_OK
 	},
 	{"add_extend",
-	 DMU_ADD_EXTEND, DMU_C_ON, -1, PSL_MDF_LPART_OK
+	 DMU_ACT_ADDEXTEND,
+	 -1, 0, PSL_MDF_LPART_OK
 	},
 	{"readonly",
-	 DMU_READONLY, DMU_C_ON, -1, 0
+	 DMU_ACT_READONLY,
+	 DMU_ACTION_ONOFF, DMU_FLAG_ACTON, 0
 	},
 	{"noreadonly",
-	 DMU_READONLY, DMU_C_OFF, -1, 0
+	 DMU_ACT_READONLY,
+	 DMU_ACTION_ONOFF, 0, 0
 	},
 	{"phys_consistent",
-	 DMU_PHYS_INCONSISTENT, DMU_C_OFF, -1, 0
+	 DMU_ACT_PHYS_CONSISTENT,
+	 DMU_ACTION_ONOFF, DMU_FLAG_ACTON, 0
 	},
 	{"phys_inconsistent",
-	 DMU_PHYS_INCONSISTENT, DMU_C_ON, -1, 0
+	 DMU_ACT_PHYS_CONSISTENT,
+	 DMU_ACTION_ONOFF, 0, 0
 	},
 	{"log_consistent",
-	 DMU_LOG_INCONSISTENT, DMU_C_OFF, -1, 0
+	 DMU_ACT_LOG_CONSISTENT,
+	 DMU_ACTION_ONOFF, DMU_FLAG_ACTON, 0
 	},
 	{"log_inconsistent",
-	 DMU_LOG_INCONSISTENT, DMU_C_ON, -1, 0
+	 DMU_ACT_LOG_CONSISTENT,
+	 DMU_ACTION_ONOFF, 0, 0
 	},
 	{"table_recovery_allowed",
-	 DMU_TABLE_RECOVERY_DISALLOWED, DMU_C_OFF, -1, 0
+	 DMU_ACT_TABLE_RECOVERY,
+	 DMU_ACTION_ONOFF, DMU_FLAG_ACTON, 0
 	},
 	{"table_recovery_disallowed",
-	 DMU_TABLE_RECOVERY_DISALLOWED, DMU_C_ON, -1, 0
+	 DMU_ACT_TABLE_RECOVERY,
+	 DMU_ACTION_ONOFF, 0, 0
 	},
 	{"persistence",
-	 DMU_TO_PERSISTS_OVER_MODIFIES, DMU_C_ON, PSS_WC_PERSISTENCE, 0
+	 DMU_ACT_PERSISTENCE,
+	 DMU_PERSISTS_OVER_MODIFIES, DMU_FLAG_PERSISTENCE, 0
 	},
 	{"nopersistence",
-	 DMU_TO_PERSISTS_OVER_MODIFIES, DMU_C_OFF, PSS_WC_PERSISTENCE, 0
-	},
-	/* Note for unique-scope, the grammar only allows
-	** "unique_scope = statement".  Probably ought to allow
-	** unique_scope = row" as well and have it adjust the on/offness.
-	*/
-	{"unique_scope",
-	 DMU_TO_STATEMENT_LEVEL_UNIQUE, DMU_C_ON, PSS_WC_UNIQUE_SCOPE, PSL_MDF_UNIQUESCOPE
+	 DMU_ACT_PERSISTENCE,
+	 DMU_PERSISTS_OVER_MODIFIES, 0, 0
 	},
 	{"encrypt",
-	 DMU_ENCRYPT, DMU_C_OFF, -1, PSL_MDF_NO_OP
+	 DMU_ACT_ENCRYPT,
+	 -1, 0, PSL_MDF_NOINDEX | PSL_MDF_NO_OP
 	},
 	{"table_verify",
-	 DMU_VERIFY, DMU_V_VERIFY, -1, PSL_MDF_PPART_ONLY
+	 DMU_ACT_VERIFY,
+	 DMU_VACTION, DMU_V_VERIFY, PSL_MDF_PPART_ONLY | PSL_MDF_NO_OP
 	},
 	{"table_repair",
-	 DMU_VERIFY, DMU_V_REPAIR, -1, PSL_MDF_PPART_ONLY
+	 DMU_ACT_VERIFY,
+	 DMU_VACTION, DMU_V_REPAIR, PSL_MDF_PPART_ONLY | PSL_MDF_NO_OP
 	},
 	{"table_patch",
-	 DMU_VERIFY, DMU_V_PATCH, -1, PSL_MDF_PPART_ONLY
+	 DMU_ACT_VERIFY,
+	 DMU_VACTION, DMU_V_PATCH, PSL_MDF_PPART_ONLY | PSL_MDF_NO_OP
 	},
 	{"table_debug",
-	 DMU_VERIFY, DMU_V_DEBUG, -1, PSL_MDF_PPART_ONLY | PSL_MDF_NO_OP
+	 DMU_ACT_VERIFY,
+	 DMU_VACTION, DMU_V_DEBUG, PSL_MDF_PPART_ONLY | PSL_MDF_NO_OP
 	},
 	{"checklink",
 	 0, 0, 0, PSL_MDF_ERROR
@@ -400,100 +424,6 @@ static const struct _MODIFY_STORNAMES
 };
 
 
-/*
-** Define a table similar to the one used by pslctbl.c for single-word
-** MODIFY with-clause keywords.  There aren't as many of these as
-** there are for create table, but there are enough...
-**
-** The table holds:
-** - the keyword
-** - the with-clauses flag to test / set to prevent duplicate clauses;
-** - the keyword string to use in the error if there is a duplicate clause;
-** - Some flags indicating what sort of modify actions are valid;
-** - the DMU characteristics ID to add to the DMU CB characteristics
-**   array, or -1 if nothing gets added;
-** - the DMU characteristics value to add, if any.  (In some cases when the
-**   id is -1, this might be a DMU_C_OFF to indicate NOsomething instead
-**   of SOMETHING without an extra action code!)
-** - an action code to allow a quick dispatch to additional syntax checking
-**   or actions.  Almost everything will need this, but a switch that does
-**   a few simple tests or flag settings is still better than the giant
-**   if-elseif full of duplicated code.
-**
-** (If you don't see a table like this in pslctbl.c, it's because that one
-** hasn't been integrated yet.  It will be, if/when enhancements like
-** pseudotemporary and change_tracking come in.)
-*/
-
-/* Action codes for use by modify keywords only, for ad-hoc actions */
-#define PSL_ACT_NONE	0		/* No action */
-#define PSL_ACT_CMP	1		/* [NO]COMPRESSION */
-#define PSL_ACT_EXT	2		/* [NO]EXTENSIONS_ONLY */
-#define PSL_ACT_NOPART	3		/* NOPARTITION */
-#define PSL_ACT_CONCUR	4		/* CONCURRENT_UPDATE */
-#define PSL_ACT_NODEP	5		/* NODEPENDENCY_CHECK */
-
-/* Some flags for semi-generic error checking */
-#define PSL_ACTF_STRUCT		0x0001	/* Structure modify only */
-#define PSL_ACTF_REWRITE	0x0002	/* Rewriting modify only, meaning
-					** structure, reorganize, truncate */
-					/* Will be used with attribute changing
-					** modifies not yet implemented, e.g.
-					** modify with encryption */
-#define PSL_ACTF_INDEX		0x0004	/* Only allowed for 2ary index */
-#define PSL_ACTF_NOINDEX	0x0008	/* NOT allowed on 2ary index */
-
-/* Local structure for the lookup table: */
-typedef struct {
-	char	*keyword;	/* The keyword in the syntax */
-	char	*dupword;	/* Error string for duplicate clause error */
-	i2	dmu_char_id;	/* DMU characteristics ID, -1 if not used */
-	i2	dmu_char_value;	/* DMU char value if any */
-	i2	with_id;	/* Flag value for with-clauses */
-	i2	action;		/* PSL_ACT_xxx ad-hoc dispatch */
-	u_i2	flags;		/* PSL_ACTF_xxx extra flags */
-} MODIFY_WORDS;
-
-/* This table is searched sequentially, so the really obscure options
-** can be placed at the end.  It doesn't matter all that much, though.
-*/
-static const MODIFY_WORDS mod_keywords[] =
-{
-	{"compression", "COMPRESSION",
-		-1, DMU_C_ON, PSS_WC_COMPRESSION,
-		PSL_ACT_CMP, PSL_ACTF_STRUCT},
-	{"nocompression", "COMPRESSION",
-		-1, DMU_C_OFF, PSS_WC_COMPRESSION,
-		PSL_ACT_CMP, PSL_ACTF_STRUCT},
-	{"persistence", "PERSISTENCE",
-		DMU_PERSISTS_OVER_MODIFIES, DMU_C_ON, PSS_WC_PERSISTENCE,
-		PSL_ACT_NONE, PSL_ACTF_INDEX},
-	{"nopersistence", "PERSISTENCE",
-		DMU_PERSISTS_OVER_MODIFIES, DMU_C_OFF, PSS_WC_PERSISTENCE,
-		PSL_ACT_NONE, PSL_ACTF_INDEX},
-	{"extensions_only", NULL,
-		-1, DMU_C_ON, -1,
-		PSL_ACT_EXT, PSL_ACTF_NOINDEX},
-	{"noextensions", NULL,
-		-1, DMU_C_OFF, -1,
-		PSL_ACT_EXT, PSL_ACTF_NOINDEX},
-	{"nopartition", "PARTITION",
-		-1, -1, PSS_WC_PARTITION,
-		PSL_ACT_NOPART, PSL_ACTF_STRUCT},
-	{"concurrent_updates", "CONCURRENT_UPDATES",
-		-1, -1, PSS_WC_CONCURRENT_UPDATES,
-		PSL_ACT_CONCUR, PSL_ACTF_STRUCT},
-	{"nodependency_check", NULL,
-		-1, -1, -1,
-		PSL_ACT_NODEP, 0},
-
-	/* pseudotemporary, change_tracking, encryption could go here... */
-
-	/* NULL keyword terminates */
-
-	{NULL, NULL, -1, -1, 0, 0, 0}
-};
-
 /*{
 ** Name: psl_md1_modify - semantic action for MODIFY production
 **
@@ -501,11 +431,12 @@ static const MODIFY_WORDS mod_keywords[] =
 **  This is a semantic action for MODIFY production used by both SQL and
 **  QUEL grammars.
 **
+**	Wrap up MODIFY parsing, make any final checks, and finalize
+**	the DMU_CB that was created.
+**
 ** Inputs:
 **	sess_cb		    ptr to a PSF session CB
 **	yyvarsp		    Parser state variables
-**	    with_clauses    map describing options which have been specified
-**			    with this statement
 **
 ** Outputs:
 **     err_blk		    will be filled in if an error occurs
@@ -581,6 +512,8 @@ static const MODIFY_WORDS mod_keywords[] =
 **      17-Dec-2009 (hanal04) Bug 123070
 **          Allocation values should not be divided by nparts when checking
 **          for validity.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Generate/finalize DMU_CHARACTERISTICS, not dmu char array.
 */
 DB_STATUS
 psl_md1_modify(
@@ -590,19 +523,12 @@ psl_md1_modify(
 {
     QEU_CB		*qeu_cb;
     DMU_CB		*dmu_cb;
-    DMU_CHAR_ENTRY	*chr;
     RDF_CB		 rdf_cb;
     i4		err_code;
     DB_STATUS		status = E_DB_OK;
-    i4			i;
-    DMT_ATT_ENTRY	*attribute;
-    DMU_KEY_ENTRY	**key;
-    i4			keylen;
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-
-    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
 
     if (qeu_cb->qeu_d_op == DMU_RELOCATE_TABLE)
     {
@@ -620,163 +546,24 @@ psl_md1_modify(
 	    return(E_DB_ERROR);
 	}
     }
-    else if (chr->char_id == DMU_STRUCTURE)   /* qeu_d_op == DMU_MODIFY_TABLE */
+    else if (dmu_cb->dmu_action == DMU_ACT_STORAGE)   /* qeu_d_op == DMU_MODIFY_TABLE */
     {
-	i4			err_code;
-	DMU_CHAR_ENTRY		*charlim;
-	DB_PART_DEF		*part_def;
-	i4			storage_struct = chr->char_value;
-	i4			dcomp = FALSE;
-	i4			icomp = FALSE;
-	i4                     minp = 0;
-	i4			maxp = 0;
-	i4			alloc = 0;
-	i4			nparts;
-	bool			is_index;
-
-	is_index = (sess_cb->pss_resrng->pss_tabdesc->tbl_status_mask & DMT_IDX) != 0;
-
-	/* Don't allow modify "with partition=" for a secondary index.
-	** We don't yet support partitioned (global) indexes.
-	** Note: this also disallows "with nopartition", but I think
-	** that's OK -- best to disallow any partitioning reference.
-	*/
-	if (is_index && PSS_WC_TST_MACRO(PSS_WC_PARTITION, &yyvarsp->with_clauses))
-	{
-	    (void) psf_error(E_US1932_6450_PARTITION_NOTALLOWED,
-		0L, PSF_USERERR, &err_code, err_blk,
-		2, 0, "MODIFY", 0, "a secondary index");
-	    return (E_DB_ERROR);
-	}
-	/* Don't allow partitions on temporary tables yet (kibro01) b121249 */
-	if ((dmu_cb->dmu_tbl_id.db_tab_base < 0) && 
-	    PSS_WC_TST_MACRO(PSS_WC_PARTITION, &yyvarsp->with_clauses))
-	{
-	    (void) psf_error(E_US1932_6450_PARTITION_NOTALLOWED,
-		0L, PSF_USERERR, &err_code, err_blk,
-		2, 0, "MODIFY", 0, "a temporary table");
-	    return (E_DB_ERROR);
-	}
-
-	/* If this was RECONSTRUCT, supply any storage attributes that
-	** weren't overridden, and would get reset by DMF.
-	** Also build key lists, etc.
-	** Do this here before we fiddle with the with-clauses bit settings
-	** later on.
-	*/
-	if (yyvarsp->md_reconstruct)
-	{
-	    status = psl_md_reconstruct(sess_cb, dmu_cb, yyvarsp, err_blk);
-	    if (DB_FAILURE_MACRO(status))
-		return (status);
-	}
-
 	/*
 	** check for legal characteristics if storage structure was defined
-	** (recall that if it were defined, it would be the first entry in the
-	** characteristic array)
 	*/
 
 	/* If user is modifying to a UNIQUE storage structure, check for
 	** compatibility with any partitioning.
 	*/
-	if (PSS_WC_TST_MACRO(PSS_WC_UNIQUE, &yyvarsp->with_clauses))
+	if (BTtest(DMU_UNIQUE, dmu_cb->dmu_chars.dmu_indicators))
 	    if (psl_md_part_unique(sess_cb, dmu_cb, yyvarsp, err_blk) != E_DB_OK)
 		return (E_DB_ERROR);
 
-	/* Find the end of the characteristics array */
-	charlim = (DMU_CHAR_ENTRY *)
-	    ((char *) chr + dmu_cb->dmu_char_array.data_in_size);
-
-	/*
-	** walk the characteristics array looking for entries whose validity
-	** must be verified; we are interested in minpages, maxpages,
-	** structure, data and index compression,
-	** and also unique_scope and persistence.
-	** 
-	** recall that chr already points at the first entry in the
-	** characteristic array (chr->char_id == DMU_STRUCTURE)
-	*/
-	for (chr++; chr < charlim; chr++)
-	{
-	    switch (chr->char_id)
-	    {
-		case DMU_ALLOCATION:
-		    alloc = chr->char_value;
-		    break;
-		case DMU_MINPAGES:
-		    minp = chr->char_value;
-		    break;
-		case DMU_MAXPAGES:
-		    maxp = chr->char_value;
-		    break;
-		case DMU_COMPRESSED:
-		    if (chr->char_value == DMU_C_ON)
-			dcomp = TRUE;
-		    break;
-		case DMU_INDEX_COMP:
-		    if (chr->char_value == DMU_C_ON)
-			icomp = TRUE;
-		    break;
-		case DMU_STATEMENT_LEVEL_UNIQUE:
-		    /* if turning it off, turn off its bit
-		    ** (because psl_validate_options needs to know if it's ON)
-		    */
-		    if (chr->char_value != DMU_C_ON)
-			PSS_WC_CLR_MACRO(PSS_WC_UNIQUE_SCOPE, &yyvarsp->with_clauses);
-		    break;
-		case DMU_PERSISTS_OVER_MODIFIES:
-		    /* if turning it off, turn off its bit
-		    ** (because psl_validate_options needs to know if it's ON)
-		    */
-		    if (chr->char_value != DMU_C_ON)
-			PSS_WC_CLR_MACRO(PSS_WC_PERSISTENCE, &yyvarsp->with_clauses);
-		    break;
-		default:
-		    break;
-	    }
-	}
-
-	/*
-	** Since maximum key length varies by page size and page type and
-	** server configuration...  comparing att_width > DB_MAXBTREE_KEY
-	** will not consistently generate errors here.
-	** (and the maximum size printed may be incorrect).
-	** The code to validate btree key length has been moved from here to DMF
-	*/
-
-	/* Get # of partitions for checking allocation= */
-
-	nparts = 1;
-	if (PSS_WC_TST_MACRO(PSS_WC_PARTITION, &yyvarsp->with_clauses))
-	{
-	    /* We have either WITH PARTITION= or WITH NOPARTITION */
-	    part_def = dmu_cb->dmu_part_def;
-	    if (part_def != NULL)
-		nparts = part_def->nphys_parts;
-	}
-
 	if (sess_cb->pss_resrng->pss_tabdesc->tbl_temporary)
-	{
-	    chr = (DMU_CHAR_ENTRY *)
-			    ((char *) dmu_cb->dmu_char_array.data_address
-				       + dmu_cb->dmu_char_array.data_in_size);
-	    
-	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    chr->char_id = DMU_TEMP_TABLE;
-	    chr->char_value = DMU_C_ON;
-	}
-	
-	/* verify that the specified combination of options was legal */
-	status = psl_validate_options(sess_cb, PSQ_MODIFY, &yyvarsp->with_clauses,
-	    storage_struct, minp, maxp, dcomp, icomp,
-	    alloc, err_blk);
-
-	if (DB_FAILURE_MACRO(status))
-	    return(status);
+	    BTset(DMU_TEMP_TABLE,dmu_cb->dmu_chars.dmu_indicators);
 
     } /* if (structure was defined) */
-    else if (chr->char_id == DMU_REORG)
+    else if (dmu_cb->dmu_action == DMU_ACT_REORG)
     {
 	/* MODIFY TO REORGANIZE was specified */
 	if (!dmu_cb->dmu_location.data_in_size)
@@ -792,81 +579,11 @@ psl_md1_modify(
 	/* MODIFY TO MERGE/TRUNCATED/ADD_EXTEND/READONLY/PHYS_CONSISTENT/
 	**     LOG_CONSISTENT/TABLE_RECOVERY_ALLOWED  was specified */
 
-	i4                     minp = 0;
-	i4			maxp = 0;
-	DMU_CHAR_ENTRY          *charlim;
-
-	/*
-	** Readonly option is not allowed any with clauses
-	*/
-	if (( chr->char_id == DMU_READONLY ) && 
-		PSS_WC_ANY_MACRO(&yyvarsp->with_clauses))
-	{
-	    _VOID_ psf_error( E_US14E5_5349_MODIFY_NO_WITH, 0L, 
-			      PSF_USERERR, &err_code, err_blk, 0);
-	    return (E_DB_ERROR);	
-	}
-	/*
-	** Partial recovery bit flipping options are not allowed any with
-	** clauses.
-	*/
-	if ((( chr->char_id == DMU_PHYS_INCONSISTENT ) ||
-	     ( chr->char_id == DMU_LOG_INCONSISTENT ) ||
-	     ( chr->char_id == DMU_TABLE_RECOVERY_DISALLOWED )
-	    ) && PSS_WC_ANY_MACRO(&yyvarsp->with_clauses) )
-	{
-	    _VOID_ psf_error( E_US2481_9345_MODIFY_TO_NO_WITH, 0L, 
-			      PSF_USERERR, &err_code, err_blk, 0);
-	    return (E_DB_ERROR);	
-	}
-
-	/* Find the end of the characteristics array */
-	charlim = (DMU_CHAR_ENTRY *)
-	    ((char *) chr + dmu_cb->dmu_char_array.data_in_size);
-
-	/*
-	** recall that chr already points at the first entry in the
-	** characteristic array (chr->char_id == DMU_MERGE or DMU_TRUNCATE)
-	** ensure that if both MINPAGES and MAXPAGES were specified, then
-	** MINPAGES <= MAXPAGES
-	*/
-	for (chr++; chr < charlim; chr++)
-	{
-	    if (chr->char_id == DMU_MINPAGES)
-	    {
-		minp = chr->char_value;
-		if (maxp)
-		    break;
-	    }
-	    else if (chr->char_id == DMU_MAXPAGES)
-	    {
-		maxp = chr->char_value;
-		if (minp)
-		    break;
-	    }
-	}
-
-	/* check for legal minpages */
-	if (minp && maxp && minp > maxp)
-	{
-	    _VOID_ psf_error(5517L, 0L, PSF_USERERR, &err_code,
-		err_blk, 1, (i4) sizeof(minp), &minp);
-	    return (E_DB_ERROR);	/* non-zero return means error */
-	}
-
 	/*
 	** If a temporary table then set a char array accordingly
 	*/
 	if (sess_cb->pss_resrng->pss_tabdesc->tbl_temporary)
-	{
-	    chr = (DMU_CHAR_ENTRY *)
-			    ((char *) dmu_cb->dmu_char_array.data_address
-				       + dmu_cb->dmu_char_array.data_in_size);
-	    
-	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    chr->char_id = DMU_TEMP_TABLE;
-	    chr->char_value = DMU_C_ON;
-	}
+	    BTset(DMU_TEMP_TABLE,dmu_cb->dmu_chars.dmu_indicators);
     }
 
     /*
@@ -908,7 +625,6 @@ psl_md1_modify(
 **	psq_cb
 **	    psq_mode	    set to PSQ_MODIFY
 **	    psq_error	    will be filled in if an error occurs
-**	with_clauses        Set to 0 to indicate no with clauses yet
 **
 ** Returns:
 **	E_DB_{OK, ERROR}
@@ -946,7 +662,7 @@ psl_md2_modstmnt(
     DMU_CB	    *dmu_cb;
 
     psq_cb->psq_mode = PSQ_MODIFY;
-    psl_command_string(PSQ_MODIFY, sess_cb->pss_lang,
+    psl_command_string(PSQ_MODIFY, sess_cb,
 		&yyvarsp->qry_name[0], &yyvarsp->qry_len);
 
     /* "modify" is not allowed in distributed yet */
@@ -975,15 +691,15 @@ psl_md2_modstmnt(
 
     qeu_cb->qeu_d_cb = (PTR) dmu_cb;
 
+    /* Zero everything in the new dmu cb */
+    MEfill(sizeof(DMU_CB), 0, dmu_cb);
+
     /* Fill in the DMU control block header */
     dmu_cb->type	    = DMU_UTILITY_CB;
     dmu_cb->length	    = sizeof(DMU_CB);
     dmu_cb->dmu_flags_mask  = 0;
     dmu_cb->dmu_db_id	    = (char*) sess_cb->pss_dbid;
     STRUCT_ASSIGN_MACRO(sess_cb->pss_user, dmu_cb->dmu_owner);
-
-    dmu_cb->dmu_enc_flags   = 0;
-    dmu_cb->dmu_enc_flags2  = 0;
 
     /*
     ** Allocate the key entries.  Allocate enough space for DB_MAX_COLS
@@ -1002,24 +718,6 @@ psl_md2_modstmnt(
     dmu_cb->dmu_key_array.ptr_in_count	= 0;	    /* Start with 0 keys */
 
     /*
-    ** Allocate the characteristics array.  Leave enough room for the
-    ** storage structure, uniqueness flag, fillfactor, minpages,
-    ** maxpages, compression, leaffill, indexfill, nonleaffill
-    ** and maxindexfill flag.
-    */
-    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, 
-	PSS_MAX_MODIFY_CHARS * sizeof(DMU_CHAR_ENTRY),
-	(PTR *) &dmu_cb->dmu_char_array.data_address, &psq_cb->psq_error);
-    if (status != E_DB_OK)
-	return (status);
-
-    /* Start with 0 characteristics */
-    dmu_cb->dmu_char_array.data_in_size = 0;
-
-    /* indicate no with clauses seen yet */
-    MEfill(sizeof(PSS_WITH_CLAUSE), 0, &yyvarsp->with_clauses);
-
-    /*
     ** Allocate the location entries.  Assume DM_LOC_MAX, although it's
     ** probably fewer.  This is because we don't know how many locations
     ** we have at this point, and it would be a big pain to allocate
@@ -1032,24 +730,20 @@ psl_md2_modstmnt(
 
     dmu_cb->dmu_location.data_in_size = 0;    /* Start with 0 locations */
 
-    dmu_cb->dmu_part_def = NULL;
-    dmu_cb->dmu_partno = 0;
-    dmu_cb->dmu_partdef_size = 0;
-    dmu_cb->dmu_ppchar_array.data_in_size = 0;
-    dmu_cb->dmu_ppchar_array.data_address = NULL;
+    /* partition, other stuff zeroed by mefill */
 
     /* No logical partitions yet (modify pmast PARTITION logpart. ... ) */
     yyvarsp->md_part_lastdim = -1;
     for (i = 0; i < DBDS_MAX_LEVELS; ++i)
 	yyvarsp->md_part_logpart[i] = -1;
     yyvarsp->md_reconstruct = FALSE;
-    yyvarsp->is_heapsort = 0;
+    yyvarsp->is_heapsort = FALSE;
 
     return(E_DB_OK);
 }
 
 /*{
-** Name: psl_md3_modstorage - semantic action for MODSTORAGE production
+** Name: psl_md3_modunique - semantic action for MODSTORAGE production
 **
 ** Description:
 **  This is a semantic action for MODSTORAGE production used by both SQL
@@ -1080,38 +774,36 @@ psl_md2_modstmnt(
 **	    check for modify to reconstruct.
 **	4-may-2007 (dougi)
 **	    Make room for possible "unique_scope = statement".
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Rename for clarity; changes for dmu characteristics.
 */
 DB_STATUS
-psl_md3_modstorage(
+psl_md3_modunique(
 	PSS_SESBLK	*sess_cb,
 	PSS_YYVARS	*yyvarsp,
 	DB_ERROR	*err_blk)
 {
     QEU_CB		*qeu_cb;
     DMU_CB		*dmu_cb;
-    DMU_CHAR_ENTRY	*entr;
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
 
     /*
-    ** recall that storage, if specified, would be found in the first entry in
-    ** the characteristics array;
     ** Unique cannot be specified with MODIFY TO RELOCATE
     ** or MODIFY TO RECONSTRUCT.  (The latter looks like a regular modify to
     ** storage structure once it gets here, so there's a separate flag.)
     */
-    entr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
 
     if (qeu_cb->qeu_d_op != DMU_MODIFY_TABLE
 	||
-	entr->char_id != DMU_STRUCTURE
+	dmu_cb->dmu_action != DMU_ACT_STORAGE
 	||
 	yyvarsp->md_reconstruct
 	||
-	(entr->char_value != DB_ISAM_STORE &&
-	 entr->char_value != DB_HASH_STORE &&
-	 entr->char_value != DB_BTRE_STORE
+	(dmu_cb->dmu_chars.dmu_struct != DB_ISAM_STORE &&
+	 dmu_cb->dmu_chars.dmu_struct != DB_HASH_STORE &&
+	 dmu_cb->dmu_chars.dmu_struct != DB_BTRE_STORE
 	)
        )
     {
@@ -1127,28 +819,8 @@ psl_md3_modstorage(
 	return (E_DB_ERROR);
     }
 
-    /* Indicate uniqueness in control block */
-    /* recall that entr already points at the first entry in the char array */
-    entr = (DMU_CHAR_ENTRY *)
-	((char *) entr + dmu_cb->dmu_char_array.data_in_size);
-
-    if (entr->char_id == DMU_TO_STATEMENT_LEVEL_UNIQUE)
-    {
-	/* "MODIFY ... TO ... UNIQUE UNIQUE_SCOPE = STATEMENT ... - change
-	** the DMU char to the with-option form of unique_scope and move
-	** to next entry. */
-	entr->char_id = DMU_STATEMENT_LEVEL_UNIQUE;
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	entr = (DMU_CHAR_ENTRY *) ((char *)entr + sizeof(DMU_CHAR_ENTRY));
-    }
-
-    entr->char_id = DMU_UNIQUE;
-    entr->char_value = DMU_C_ON;
-    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-
-    /* store UNIQUE in with clause; used later for UNIQUE_SCOPE processing
-     */
-    PSS_WC_SET_MACRO(PSS_WC_UNIQUE, &yyvarsp->with_clauses);
+    /* Indicate uniqueness by setting WITH-option flag */
+    BTset(DMU_UNIQUE, dmu_cb->dmu_chars.dmu_indicators);
 
     return(E_DB_OK);
 }
@@ -1166,13 +838,12 @@ psl_md3_modstorage(
 **	special things.  MODIFY is a good place to dump physical table
 **	alterations of one sort or another.
 **
-**	NOTE: There is one class of MODIFY action names that does not
-**	go through here, and that's the
-**		name = number
-**	variants.  At present (Feb 2004) the only allowed one is the
-**	modify to priority=n variant.  It is handled with all the other
-**	name = number things (which are usually WITH options), in
-**	psl_nm_eq_no in the pslctbl.c module.
+**	NOTE: There are two classes of MODIFY action names that does not
+**	go through here, and that's the two that look like WITH-options:
+**		modify tab to PRIORITY=n
+**		modify tab to UNIQUE_SCOPE=[row|statement]
+**	These are handled by the grammar rules for WITH-options, and so
+**	the DMU action is set by psl-withopt-post.
 **
 **	For RECONSTRUCT, the storage structure and uniqueness DMU
 **	indicators are set, but nothing else.  The structure key
@@ -1182,14 +853,14 @@ psl_md3_modstorage(
 ** Inputs:
 **	sess_cb		    ptr to a PSF session CB
 **	    pss_ostream	    stream to use for memory allocation
+**	psq_cb		    query parse state cb
 **	storname	    value specified by the user
-**	yyvarsp		    Parser state variables
 **
 ** Outputs:
 **	yyvarsp
 **	    .is_heapsort    set to 1 if [C]HEAPSORT was specified
-**	    .with_clauses   updated to indicate with clauses specified.
 **	err_blk		    will be filled in if an error occurs
+**	DMU-chars indicators, DMU cb action code updated
 **
 ** Returns:
 **	E_DB_{OK, ERROR}
@@ -1243,22 +914,27 @@ psl_md3_modstorage(
 **	    it with a funky key-sequence error msg.
 **	07-Apr-2009 (thaju02)
 **	    Check if modify action is for a single partition. (B121893)
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Revise the table, new dmu-action and dmu indicators.
 */
 DB_STATUS
 psl_md4_modstorname(
 	PSS_SESBLK	*sess_cb,
-	char		*storname,
-	PSS_YYVARS	*yyvarsp,
-	DB_ERROR	*err_blk)
+	PSQ_CB		*psq_cb,
+	char		*storname)
 {
+    DB_ERROR		*err_blk;
     i4			err_code;
     QEU_CB		*qeu_cb;
     DMU_CB		*dmu_cb;
     DMT_TBL_ENTRY	*showptr;
     const struct _MODIFY_STORNAMES *stornames_ptr;
+    PSS_YYVARS		*yyvarsp;
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
+    err_blk = &psq_cb->psq_error;
+    yyvarsp = sess_cb->pss_yyvars;
     /* Table info frequently needed: */
     showptr = sess_cb->pss_resrng->pss_tabdesc;
 
@@ -1297,16 +973,15 @@ psl_md4_modstorname(
 	if (status != E_DB_OK)
 	    return (status);
 
+	/* This is bogus, but set it anyway in case someone looks */
+	dmu_cb->dmu_action = DMU_ACT_RELOC;
+
 	dmu_cb->dmu_olocation.data_in_size = 0; /* Start with 0 locations */
 	dmu_cb->dmu_flags_mask = DMU_EXTTOO_MASK;  /* The default */
 
     }
     else
     {
-	DMU_CHAR_ENTRY	*entr;
-
-	/* pointer to the beginning of the characteristics array */
-	entr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
 
 	/* Search the action names table for our action */
 	stornames_ptr = &modify_stornames[0];
@@ -1354,27 +1029,19 @@ psl_md4_modstorname(
 	    ** and preserve storage structure options later, so remember
 	    ** that this is reconstruct.
 	    */
-	    dmu_cb->dmu_char_array.data_in_size = sizeof(DMU_CHAR_ENTRY);
-	    entr->char_id = DMU_STRUCTURE;
-	    entr->char_value = showptr->tbl_storage_type;
+	    BTset(DMU_STRUCTURE, dmu_cb->dmu_chars.dmu_indicators);
+	    dmu_cb->dmu_chars.dmu_struct = showptr->tbl_storage_type;
 	    yyvarsp->md_reconstruct = TRUE;
 	    /* If the storage structure was UNIQUE, say so now.  Some
 	    ** of the with-clause validations need to know about UNIQUE.
 	    */
 	    if (showptr->tbl_status_mask & DMT_UNIQUEKEYS)
-	    {
-		++ entr;
-		dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-		entr->char_id = DMU_UNIQUE;
-		entr->char_value = DMU_C_ON;
-		PSS_WC_SET_MACRO(PSS_WC_UNIQUE, &yyvarsp->with_clauses);
-	    }
+		BTset(DMU_UNIQUE, dmu_cb->dmu_chars.dmu_indicators);
 	}
 	if (stornames_ptr->special_flags & PSL_MDF_MERGE)
 	{
 	    /* Modify to merge requires BTREE table */
-	    if (showptr->tbl_storage_type
-		!= DB_BTRE_STORE)
+	    if (showptr->tbl_storage_type != DB_BTRE_STORE)
 	    {
 		(VOID) psf_error(5525L, 0L, PSF_USERERR, &err_code,
 		    err_blk, 1,
@@ -1382,21 +1049,6 @@ psl_md4_modstorname(
 			(char *) &showptr->tbl_name),
 		    &showptr->tbl_name);
 		return (E_DB_ERROR);
-	    }
-	}
-	if (stornames_ptr->special_flags & PSL_MDF_UNIQUESCOPE)
-	{
-	    /* If "modify" includes structure, skip over the CHAR_ENTRY
-	    ** already set. Otherwise, verify table is UNIQUE. */
-	    if (PSS_WC_TST_MACRO(PSS_WC_STRUCTURE, &yyvarsp->with_clauses))
-		entr = (DMU_CHAR_ENTRY *) (dmu_cb->dmu_char_array.data_address
-				+ dmu_cb->dmu_char_array.data_in_size);
-	    else if (!(showptr->tbl_status_mask & 
-						DMT_UNIQUEKEYS))
-	    {
-		_VOID_ psf_error(E_PS0BB2_UNIQUE_REQUIRED, 0L, 
-		    PSF_USERERR, &err_code, err_blk, 1, 0, "MODIFY");
-		return (E_DB_ERROR);    /* non-zero return means error */
 	    }
 	}
 	if (showptr->tbl_status_mask & DMT_IS_PARTITIONED)
@@ -1445,27 +1097,42 @@ psl_md4_modstorname(
             /* Table will NOT be modified so skip dependency checking 
             ** this serves as an optimisation and also prevents
             ** operations from failing when there is no need to
-            ** block the operation.
+            ** block the operation.  Do not set the "nodependency_check"
+	    ** indicator, user can explicitly say "with nodependency_check"
+	    ** if they so choose.
             */
             dmu_cb->dmu_flags_mask |= DMU_NODEPENDENCY_CHECK;
         }
 
-	/* Action passes tests, begin the dmu characteristics array
-	** with the specified ID and value.
+	/* Action passes tests, set the DMU action, and maybe a DMU
+	** characteristics indicator and value.
 	*/
-	if (stornames_ptr->char_id != -1)
+	dmu_cb->dmu_action = stornames_ptr->action;
+	yyvarsp->md_action = stornames_ptr->action;
+	if (stornames_ptr->indicator != -1)
 	{
-	    dmu_cb->dmu_char_array.data_in_size = sizeof(DMU_CHAR_ENTRY);
-	    entr->char_id = stornames_ptr->char_id;
-	    entr->char_value = stornames_ptr->char_value;
+	    BTset(stornames_ptr->indicator, dmu_cb->dmu_chars.dmu_indicators);
+	    switch (stornames_ptr->indicator)
+	    {
+	    case DMU_STRUCTURE:
+		dmu_cb->dmu_chars.dmu_struct = stornames_ptr->value;
+		break;
+
+	    case DMU_ACTION_ONOFF:
+	    case DMU_PERSISTS_OVER_MODIFIES:
+		dmu_cb->dmu_chars.dmu_flags |= stornames_ptr->value;
+		break;
+
+	    case DMU_VACTION:
+		dmu_cb->dmu_chars.dmu_vaction = stornames_ptr->value;
+		break;
+	    }
 	}
 	if (stornames_ptr->special_flags & PSL_MDF_COMPRESSED)
 	{
-	    entr++;
-	    entr->char_id = DMU_COMPRESSED;
-	    entr->char_value = DMU_C_ON;
-	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    PSS_WC_SET_MACRO(PSS_WC_COMPRESSION, &yyvarsp->with_clauses);
+	    dmu_cb->dmu_chars.dmu_dcompress = DMU_COMP_DFLT;
+	    dmu_cb->dmu_chars.dmu_kcompress = DMU_COMP_DFLT;
+	    BTset(PSS_WC_COMPRESSION, dmu_cb->dmu_chars.dmu_indicators);
 	}
 
 	/*
@@ -1475,29 +1142,23 @@ psl_md4_modstorname(
 	*/
 	if ( stornames_ptr->special_flags & PSL_MDF_CLUSTERED ||
 	    (showptr->tbl_status_mask & DMT_CLUSTERED &&
-	     stornames_ptr->char_id != DMU_STRUCTURE) )
+	     stornames_ptr->action != DMU_ACT_STORAGE) )
 	{
-	    entr++;
-	    entr->char_id = DMU_CLUSTERED;
-	    entr->char_value = DMU_C_ON;
-	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    PSS_WC_SET_MACRO(PSS_WC_CLUSTERED, &yyvarsp->with_clauses);
-	    PSS_WC_SET_MACRO(PSS_WC_UNIQUE, &yyvarsp->with_clauses);
-	}
-
-	/* Turn on with-option flag if desired.  This is to prevent
-	** a conflicting with-option later.
-	*/
-	if (stornames_ptr->pss_wc_to_set != -1)
-	{
-	    PSS_WC_SET_MACRO(stornames_ptr->pss_wc_to_set, &yyvarsp->with_clauses);
+	    BTset(DMU_UNIQUE, dmu_cb->dmu_chars.dmu_indicators);
+	    BTset(DMU_CLUSTERED, dmu_cb->dmu_chars.dmu_indicators);
+	    dmu_cb->dmu_chars.dmu_flags |= DMU_FLAG_CLUSTERED;
 	}
 
 	/* One last special, heapsort has a special flag */
 	if (stornames_ptr->special_flags & PSL_MDF_HEAPSORT)
-	    yyvarsp->is_heapsort = 1;
+	    yyvarsp->is_heapsort = TRUE;
 
     } /* not relocate */
+
+    /* Since modify establishes the WITH-option context early on,
+    ** we need to re-establish it now that the modify action is known.
+    */
+    psl_withopt_init(sess_cb, psq_cb);
 
     return(E_DB_OK);
 }
@@ -1547,18 +1208,11 @@ psl_md5_modkeys(
 {
     DMU_CB		*dmu_cb;
     QEU_CB		*qeu_cb;
-    DMU_CHAR_ENTRY	*entr;
 
     /* LOAD DEFAULT MODIFY KEY */
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-
-    /*
-    ** If structure was specified, it is in the first entry in
-    ** characteristics array
-    */ 
-    entr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
 
     /*
     ** no need to specify a key if structure was not specified or if heap
@@ -1568,11 +1222,11 @@ psl_md5_modkeys(
     */
     if (qeu_cb->qeu_d_op == DMU_MODIFY_TABLE
 	&&
-	entr->char_id == DMU_STRUCTURE
+	dmu_cb->dmu_action == DMU_ACT_STORAGE
 	&&
 	! yyvarsp->md_reconstruct
 	&&
-	(entr->char_value != DB_HEAP_STORE || yyvarsp->is_heapsort)
+	(dmu_cb->dmu_chars.dmu_struct != DB_HEAP_STORE || yyvarsp->is_heapsort)
        )
     {
 	DB_STATUS	status;
@@ -1618,7 +1272,9 @@ psl_md5_modkeys(
 **  QUEL grammars.
 **
 **	This production is the sort direction, ASC or DESC.  For
-**	now this can only be specified for HEAPSORT.
+**	now this can only be specified for HEAPSORT.  The grammar
+**	assures that a key column name was already seen (md7) and
+**	we're assured that this is a structure modify.
 **
 ** Inputs:
 **	sess_cb		    ptr to a PSF session CB
@@ -1646,13 +1302,11 @@ psl_md5_modkeys(
 DB_STATUS
 psl_md6_modbasekey(
 	PSS_SESBLK	*sess_cb,
-	i4		ascending,
-	i4		heapsort,
+	bool		ascending,
 	DB_ERROR	*err_blk)
 {
     QEU_CB		*qeu_cb;
     DMU_CB		*dmu_cb;
-    DMU_CHAR_ENTRY	*chr;
     DMU_KEY_ENTRY	**keys;
     DMU_KEY_ENTRY	*key;
 
@@ -1662,9 +1316,8 @@ psl_md6_modbasekey(
     keys = (DMU_KEY_ENTRY**) dmu_cb->dmu_key_array.ptr_address;
     key = keys[sess_cb->pss_rsdmno - 1];
 
-    /* First entry in characteristics array is storage structure */
-    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-    if (chr->char_value != DB_HEAP_STORE || !heapsort)
+    if (dmu_cb->dmu_chars.dmu_struct != DB_HEAP_STORE
+      || ! sess_cb->pss_yyvars->is_heapsort)
     {
 	i4         err_code;
 	char		*sortword;
@@ -1763,21 +1416,16 @@ psl_md7_modkeyname(
     DMU_CB		    *dmu_cb;
     DMT_ATT_ENTRY	    *attribute;
     DB_ATT_NAME		    attname;
-    DMU_CHAR_ENTRY	    *chr;
     register DMU_KEY_ENTRY  **key;
     register i4	    i;
     i4			    colno;
-    i4			    storage_struct;
     i4			    key_nmlen;
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
 
-    /* First entry in characteristics array is storage structure */
-    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-
     if (qeu_cb->qeu_d_op != DMU_MODIFY_TABLE ||
-	chr->char_id != DMU_STRUCTURE)
+	dmu_cb->dmu_action != DMU_ACT_STORAGE)
     {
 	/* Not allowed unless storage structure present. */
 	(VOID) psf_error(5515L, 0L, PSF_USERERR, &err_code,
@@ -1785,13 +1433,11 @@ psl_md7_modkeyname(
 	return (E_DB_ERROR);
     }
 
-    storage_struct = chr->char_value;
-    
     /* no keys on heap or RECONSTRUCT */
     err_string = NULL;
     if (yyvarsp->md_reconstruct)
 	err_string = ERx("with the RECONSTRUCT operation");
-    else if (storage_struct == DB_HEAP_STORE && !yyvarsp->is_heapsort)
+    else if (dmu_cb->dmu_chars.dmu_struct == DB_HEAP_STORE && !yyvarsp->is_heapsort)
 	err_string = ERx("for the HEAP structure");
     if (err_string != NULL)
     {
@@ -2085,332 +1731,6 @@ psl_md8_modtable(
     return(E_DB_OK);
 }
 
-/*{
-** Name: psl_md9_modopt_word - semantic action for MODOPT_WORD production
-**
-** Description:
-**  This is a semantic action for the MODOPT_WORD production used by both SQL
-**  and QUEL grammars (modopt_word:	    NAME)
-**
-**	The allowable keywords are:
-**	    [no]compression
-**	    extensions_only
-**	    noextensions
-**	    nopartition
-**	    [no]persistence
-**
-** Inputs:
-**	sess_cb		    ptr to a PSF session CB
-**	word		    The word which was provided on the statement.
-**	with_clauses	    mask word of currently specified WITH clauses
-**
-** Outputs:
-**	with_clauses	    Updated to indicate new WITH clauses specified.
-**	err_blk		    will be filled in if an error occurs
-**
-** Returns:
-**	E_DB_{OK, ERROR}
-**
-** Side effects:
-**	N/A
-**
-** History:
-**	05-mar-1991 (bryanp)
-**	    Created for support for Btree Index Compression.
-**	24-may-1991 (bryanp/rog)
-**	    B37737: MODIFY index TO BTREE WITH COMPRESSION fails. We were
-**	    leaving uninitialized DMU_CHAR_ENTRY blocks in the DMU_MODIFY_TABLE
-**	    characteristics array.
-**	06-apr-1993 (rblumer)
-**	    added [no]persistence with-clause option.
-**	    changed CMcmpcase to CMcmpnocase, since case doesn't matter.
-**	16-jan-2004 (thaju02)
-**	    added concurrent_updates with-clause option.
-**	03-jun-2004 (thaju02)
-**	    added check for duplicate "concurrent_updates" and 
-**	    allow online modify only on restructuring modify. 
-**	20-mar-2006 (toumi01)
-**	    Add "with nodependency_check" to the modify command to flag
-**	    that constraint dependency checking should not be performed.
-**	28-May-2009 (kschendel) b122118
-**	    Table drive (sort of) to make future additions easier.
-*/
-DB_STATUS
-psl_md9_modopt_word(
-	PSS_SESBLK	*sess_cb,
-	char		*word,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk)
-{
-    DB_STATUS	status;
-    i4		err_code;
-    QEU_CB		*qeu_cb;
-    DMU_CB		*dmu_cb;
-    DMU_CHAR_ENTRY	*dcomp_chr, *kcomp_chr, *chr;
-    DMU_PHYPART_CHAR	*ppc_ptr;
-    DMT_TBL_ENTRY	*showptr;
-    const MODIFY_WORDS	*act;
-
-    qeu_cb = (QEU_CB *) sess_cb->pss_object;
-    dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-
-    /* Find the option in the lookup table */
-    act = &mod_keywords[0];
-    while (act->keyword != NULL)
-    {
-	if (STcasecmp(word, act->keyword) == 0)
-	    break;
-	++act;
-    }
-    if (act->keyword == NULL)
-    {
-	/* Unknown parameter */
-	_VOID_ psf_error(E_PS0BC6_BAD_COMP_CLAUSE,
-			0L, PSF_USERERR, &err_code, err_blk, 3,
-			0, "MODIFY",
-			sizeof (sess_cb->pss_lineno), &sess_cb->pss_lineno,
-			(i4) STtrmwhite(word), word);
-	return (E_DB_ERROR);
-    }
-
-    showptr = sess_cb->pss_resrng->pss_tabdesc;
-
-    /* Check the statement type, relocate vs modify.  Only [no]extensions
-    ** permits (indeed, requires) relocate, all the others work with modify.
-    ** (This is a quel relic, quel has separate statements for modify
-    ** vs relocate.  Quel does not have "modify to relocate".)
-    */
-    if (act->action == PSL_ACT_EXT)
-    {
-	if (qeu_cb->qeu_d_op != DMU_RELOCATE_TABLE)
-	{
-	    (void) psf_error(E_US1963_6499_X_ONLYWITH_Y, 0, PSF_USERERR,
-		&err_code, err_blk, 3,
-		0, "MODIFY",
-		0, word,
-		0, "RELOCATE");
-	    return (E_DB_ERROR);
-	}
-    }
-    else
-    {
-	if (qeu_cb->qeu_d_op == DMU_RELOCATE_TABLE)
-	{
-	    (void) psf_error(E_US1947_6465_X_NOTWITH_Y, 0, PSF_USERERR,
-		&err_code, err_blk, 3,
-		0, "MODIFY",
-		0, word,
-		0, "RELOCATE");
-	    return (E_DB_ERROR);
-	}
-    }
-
-    /* Check whether a restructuring modify is needed, or a reorg or
-    ** truncate.  The first DMU characteristics opcode indicates what
-    ** kind of modify this is.
-    */
-    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-    if (act->flags & PSL_ACTF_STRUCT
-      && chr->char_id != DMU_STRUCTURE)
-    {
-	(void) psf_error(E_US1944_6462_STRUCTURE_REQ, 0, PSF_USERERR,
-		&err_code, err_blk, 2,
-		0, "MODIFY",
-		0, word);
-	return (E_DB_ERROR);
-    }
-    if (act->flags & PSL_ACTF_REWRITE
-      && chr->char_id != DMU_STRUCTURE && chr->char_id != DMU_TRUNCATE
-      && chr->char_id != DMU_REORG)
-    {
-	(void) psf_error(E_US1963_6499_X_ONLYWITH_Y, 0, PSF_USERERR,
-		&err_code, err_blk, 3,
-		0, "MODIFY",
-		0, word,
-		0, "a storage structure, TRUNCATED, or REORGANIZE");
-	return (E_DB_ERROR);
-    }
-    /* Disallow any single-word WITH-options on the verifydb patch variants */
-    if (chr->char_id == DMU_VERIFY)
-    {
-	(void) psf_error(E_US1947_6465_X_NOTWITH_Y, 0, PSF_USERERR,
-		&err_code, err_blk, 3,
-		0, "MODIFY",
-		0, word,
-		0, "table-patching");
-	return (E_DB_ERROR);
-    }
- 
-    if (act->flags & PSL_ACTF_INDEX
-     && (showptr->tbl_status_mask & DMT_IDX) == 0)
-    {
-	(void) psf_error(E_US1963_6499_X_ONLYWITH_Y, 0, PSF_USERERR,
-		&err_code, err_blk, 3,
-		0, "MODIFY",
-		0, word,
-		0, "a secondary index");
-	return (E_DB_ERROR);
-    }
-    else if (act->flags & PSL_ACTF_NOINDEX
-      && showptr->tbl_status_mask & DMT_IDX)
-    {
-	(void) psf_error(E_US1947_6465_X_NOTWITH_Y, 0, PSF_USERERR,
-		&err_code, err_blk, 3,
-		0, "MODIFY",
-		0, word,
-		0, "a secondary index");
-	return (E_DB_ERROR);
-    }
-
-    /* Check for duplicate clause */
-    if (act->with_id != -1 && PSS_WC_TST_MACRO(act->with_id, with_clauses))
-    {
-	_VOID_ psf_error(E_PS0BC9_DUPLICATE_WITH_CLAUSE,
-			0L, PSF_USERERR, &err_code, err_blk, 3,
-			0, "MODIFY",
-			sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-			0, act->dupword);
-	return (E_DB_ERROR);
-    }
-
-    /* Do keyword specific stuff if any */
-    switch (act->action)
-    {
-      case PSL_ACT_CMP:
-	/* Need to add two DMU chars... */
-	if (dmu_cb->dmu_char_array.data_in_size >= 
-	    (PSS_MAX_MODIFY_CHARS - 2) * sizeof (DMU_CHAR_ENTRY))
-	{
-	    _VOID_ psf_error(2924L, 0L, PSF_USERERR, &err_code,
-		err_blk, 1, sizeof (sess_cb->pss_lineno), &sess_cb->pss_lineno);
-	    return (E_DB_ERROR);
-	}
-	dcomp_chr =
-	 (DMU_CHAR_ENTRY *) ((char *) dmu_cb->dmu_char_array.data_address
-	    + dmu_cb->dmu_char_array.data_in_size);
-	kcomp_chr = dcomp_chr + 1;
-
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY) * 2;
-
-	dcomp_chr->char_id = DMU_COMPRESSED;
-	kcomp_chr->char_id = DMU_INDEX_COMP;
-
-	if (act->dmu_char_value == DMU_C_ON)
-	{
-	    /* Non-btree case: data compression, but no index compression */
-	    if (chr->char_value != DB_BTRE_STORE)
-	    {
-		dcomp_chr->char_value = DMU_C_ON;
-		kcomp_chr->char_value = DMU_C_OFF;
-	    }
-	    else
-	    {
-		/*
-		** Btree case: always get index compression; no data compression
-		** on btree indices
-		*/
-		kcomp_chr->char_value = DMU_C_ON;
-		dcomp_chr->char_value =
-		  (showptr->tbl_status_mask & DMT_IDX)
-			? DMU_C_OFF : DMU_C_ON;
-	    }
-	}
-	else
-	{
-	    dcomp_chr->char_value = kcomp_chr->char_value = DMU_C_OFF;
-	}
-	break;
-
-      case PSL_ACT_EXT:
-	/* Normal is EXTTOO.  Extensions-only sets extonly.
-	** both extonly and noext clear exttoo.
-	*/
-	if (act->dmu_char_value == DMU_C_ON)
-	    dmu_cb->dmu_flags_mask ^= (DMU_EXTONLY_MASK | DMU_EXTTOO_MASK);
-	else
-	    dmu_cb->dmu_flags_mask &= ~(DMU_EXTONLY_MASK | DMU_EXTTOO_MASK);
-	break;
-
-      case PSL_ACT_NOPART:
-	/* See if the table is partitioned;  if it isn't, there's nothing
-	** further to do.
-	*/
-	if (showptr->tbl_status_mask & DMT_IS_PARTITIONED)
-	{
-	    /* Make sure that the entire table was listed for the modify,
-	    ** and not just some partitions.
-	    ** If just one partition was listed the DMU block will show
-	    ** the partition table ID;  if some but not all were listed
-	    ** there will be a ppchar array.
-	    */
-	    if (dmu_cb->dmu_tbl_id.db_tab_index < 0
-	      || dmu_cb->dmu_ppchar_array.data_in_size > 0)
-	    {
-		(void) psf_error(E_US1945_6463_LPART_NOTALLOWED, 0, PSF_USERERR,
-			&err_code, err_blk, 2,
-			0, "MODIFY",
-			0, "NOPARTITION");
-		return (E_DB_ERROR);
-	    }
-	    /* Ok, we are doing a repartitioning modify, repartitioning to
-	    ** no partitions.  Set up some special stuff so that QEF and DMF
-	    ** can figure out what's going on:  we need a partition def
-	    ** with one physical partition and no dimensions.
-	    */
-	    status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-			sizeof(DB_PART_DEF), &dmu_cb->dmu_part_def, err_blk);
-	    if (DB_FAILURE_MACRO(status))
-		return (status);
-	    dmu_cb->dmu_partdef_size = sizeof(DB_PART_DEF);
-	    dmu_cb->dmu_part_def->nphys_parts = 1;
-	    dmu_cb->dmu_part_def->ndims = 0;
-	}
-	break;
-
-      case PSL_ACT_CONCUR:
-	dmu_cb->dmu_flags_mask |= DMU_ONLINE_START;
-	break;
-
-      case PSL_ACT_NODEP:
-	/* This is really a flag for QEF, but whatever.
-	** Also note that "no dependency check" is somewhat foolish for
-	** non-rewriting modifies, but since QEF doesn't check before
-	** before it hares off after constraint dependencies, we can't either.
-	*/
-	dmu_cb->dmu_flags_mask |= DMU_NODEPENDENCY_CHECK;
-	break;
-
-    } /* switch */
-
-
-    /* If we need to add a DMU char, make sure there's room, then add it */
-    if (act->dmu_char_id != -1)
-    {
-	if (dmu_cb->dmu_char_array.data_in_size >= 
-	    (PSS_MAX_MODIFY_CHARS - 1) * sizeof (DMU_CHAR_ENTRY))
-	{
-	    _VOID_ psf_error(2924L, 0L, PSF_USERERR, &err_code,
-		err_blk, 1, sizeof (sess_cb->pss_lineno), &sess_cb->pss_lineno);
-	    return (E_DB_ERROR);
-	}
-	chr =
-	 (DMU_CHAR_ENTRY *) ((char *) dmu_cb->dmu_char_array.data_address
-	    + dmu_cb->dmu_char_array.data_in_size);
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	chr->char_id = act->dmu_char_id;
-	chr->char_value = act->dmu_char_value;
-    }
-
-    /* Note that we've seen this kind of clause */
-
-    if (act->with_id != -1)
-    {
-	PSS_WC_SET_MACRO(act->with_id, with_clauses);
-    }
-
-    return (E_DB_OK);
-} /* end psl_md9_modopt_word */
-
 /*
 ** Name: psl_md_logpartname -- Handle logical partition name
 **
@@ -2667,11 +1987,11 @@ psl_md_modpart(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
 **	this release Feb '04, all partitions must have identical storage
 **	structures.)
 **
-**	This routine is called after the MODIFY statement is
-**	completely parsed.  We'll add DMU characteristics for the
+**	This routine is called after the MODIFY statement is completely
+**	parsed.  We'll update the DMU_CHARACTERISTICS with-option info with
 **	various storage structure attributes to be preserved, unless
 **	the modify already specified overrides.  The RECONSTRUCT keyword
-**	has already stored the DMU_STRUCTURE and the unique-key
+**	has already set the DMU_STRUCTURE and the unique-key
 **	request if needed;  we'll fill in everything else.  Specifically:
 **
 **	compression, fillfactor, leaffill, nonleaffill, minpages, maxpages,
@@ -2696,13 +2016,12 @@ psl_md_modpart(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
 ** Inputs:
 **	sess_cb		Parser session control block
 **	dmucb		The DMU_CB being constructed for the modify
-**	yyvarsp		Parser state variables
 **	err_blk		An output
 **
 ** Outputs:
 **	Returns E_DB_xxx status
 **	err_blk		Any error information placed here
-**	Additional entries made to dmu_char_array if needed.
+**	Additional DMU_CHARACTERISTICS values may be set
 **
 ** History:
 **	25-Feb-2004 (schka24)
@@ -2711,24 +2030,28 @@ psl_md_modpart(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
 **	    Don't include tidp for secondary indexes, DMF includes
 **	    tidp implicitly;  if we include it here, DMF complains.
 **	    Preserve persistence for indexes.
+**	11-Oct-2010 (kschendel) SIR 124544
+**	    Make global, now called from with-option handler.  WITH-option
+**	    checking now looks in the DMU_CHARACTERISTICS, so put stuff there.
 */
 
-static DB_STATUS
-psl_md_reconstruct(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
-	PSS_YYVARS *yyvarsp, DB_ERROR *err_blk)
+DB_STATUS
+psl_md_reconstruct(PSS_SESBLK *sess_cb, DMU_CB *dmucb, DB_ERROR *err_blk)
 {
+    char local_indicators[(DMU_ALLIND_LAST+BITSPERBYTE)/BITSPERBYTE];
     DB_STATUS status;			/* Called routine status */
     DMT_ATT_ENTRY **table_atts;		/* Table's attribute pointer array */
     DMT_TBL_ENTRY *tblinfo;		/* Table information area */
-    DMU_CHAR_ENTRY *chr;		/* DMU char array pointer */
     DMU_KEY_ENTRY *key_array;		/* Base of key column array */
     DMU_KEY_ENTRY **keyptr_ptr;		/* Pointer to DMU key column pointer array */
     i4 *keycol_ptr;			/* Pointer to RDF's key column #'s */
     i4 keycount;			/* Key count excluding tidp */
     i4 psize;				/* Memory piece size needed */
     i4 toss_err;
-    PSS_WITH_CLAUSE local_with_clauses;	/* Copy of WITH-option bits */
+    PSS_YYVARS *yyvarsp;
     RDD_KEY_ARRAY *keybase;		/* RDF key info header */
+
+    yyvarsp = sess_cb->pss_yyvars;
 
     /* If doing a partial partition modify, check for any options.
     ** Disallow anything other than what RECONSTRUCT itself sets, namely
@@ -2738,12 +2061,12 @@ psl_md_reconstruct(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
     if (dmucb->dmu_ppchar_array.data_in_size > 0
       || dmucb->dmu_tbl_id.db_tab_index < 0)
     {
-	MEcopy(&yyvarsp->with_clauses, sizeof(PSS_WITH_CLAUSE),
-		&local_with_clauses);
-	PSS_WC_CLR_MACRO(PSS_WC_STRUCTURE, &local_with_clauses);
-	PSS_WC_CLR_MACRO(PSS_WC_UNIQUE, &local_with_clauses);
-	PSS_WC_CLR_MACRO(PSS_WC_LOCATION, &local_with_clauses);
-	if (PSS_WC_ANY_MACRO(&local_with_clauses))
+	MEcopy(dmucb->dmu_chars.dmu_indicators, sizeof(local_indicators),
+		local_indicators);
+	BTclear(DMU_STRUCTURE, local_indicators);
+	BTclear(DMU_UNIQUE, local_indicators);
+	BTclear(PSS_WC_LOCATION, local_indicators);
+	if (BTcount(local_indicators, PSS_WC_LAST) > 0)
 	{
 	    /* Slightly bogus error message but should be OK */
 	    (void) psf_error(E_US1945_6463_LPART_NOTALLOWED, 0, PSF_USERERR,
@@ -2770,7 +2093,10 @@ psl_md_reconstruct(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
 	return (E_DB_ERROR);
     }
 
-    /* Start by generating key info */
+    /* Start by generating key info.  Since MODIFY does not
+    ** allow the WITH KEY=() option, no need to interface with WITH-options,
+    ** just generate the DMU style key entries.
+    */
     keybase = sess_cb->pss_resrng->pss_rdrinfo->rdr_keys;
     if (keybase != NULL && keybase->key_count > 0)
     {
@@ -2818,98 +2144,69 @@ psl_md_reconstruct(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
     ** query.  This is relatively unexciting.
     */
 
-    chr = (DMU_CHAR_ENTRY *) ((PTR) dmucb->dmu_char_array.data_address + dmucb->dmu_char_array.data_in_size);
-    /* "chr" points to the next entry available for use */
-    if (! PSS_WC_TST_MACRO(PSS_WC_COMPRESSION, &yyvarsp->with_clauses))
+    if (! BTtest(PSS_WC_COMPRESSION, dmucb->dmu_chars.dmu_indicators))
     {
 	if (tblinfo->tbl_status_mask & DMT_INDEX_COMP)
-	{
-	    chr->char_id = DMU_INDEX_COMP;
-	    chr->char_value = DMU_C_ON;
-	    ++ chr;
-	    dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	}
+	    dmucb->dmu_chars.dmu_kcompress = DMU_COMP_ON;
 	if (tblinfo->tbl_status_mask & DMT_COMPRESSED)
 	{
-	    chr->char_id = DMU_COMPRESSED;
-	    chr->char_value = DMU_C_ON;
+	    dmucb->dmu_chars.dmu_dcompress = DMU_COMP_ON;
 	    if (tblinfo->tbl_comp_type == DMT_C_HICOMPRESS)
-		chr->char_value = DMU_C_HIGH;
-	    ++ chr;
-	    dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+		dmucb->dmu_chars.dmu_dcompress = DMU_COMP_HI;
 	}
-	if (tblinfo->tbl_status_mask & (DMT_COMPRESSED | DMT_INDEX_COMP))
-	{
-	    PSS_WC_SET_MACRO(PSS_WC_COMPRESSION, &yyvarsp->with_clauses);
-	}
+	BTset(PSS_WC_COMPRESSION, dmucb->dmu_chars.dmu_indicators);
+	BTset(DMU_DCOMPRESSION, dmucb->dmu_chars.dmu_indicators);
+	BTset(DMU_KCOMPRESSION, dmucb->dmu_chars.dmu_indicators);
     }
 
-    if (! PSS_WC_TST_MACRO(PSS_WC_UNIQUE_SCOPE, &yyvarsp->with_clauses))
+    if (! BTtest(DMU_STATEMENT_LEVEL_UNIQUE, dmucb->dmu_chars.dmu_indicators))
     {
 	if (tblinfo->tbl_2_status_mask & DMT_STATEMENT_LEVEL_UNIQUE)
 	{
-	    chr->char_id = DMU_STATEMENT_LEVEL_UNIQUE;
-	    chr->char_value = DMU_C_ON;
-	    ++ chr;
-	    dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    PSS_WC_SET_MACRO(PSS_WC_UNIQUE_SCOPE, &yyvarsp->with_clauses);
+	    dmucb->dmu_chars.dmu_flags |= DMU_FLAG_UNIQUE_STMT;
+	    BTset(DMU_STATEMENT_LEVEL_UNIQUE, dmucb->dmu_chars.dmu_indicators);
 	}
     }
 
     /* Fillfactor for non-heap */
     if (tblinfo->tbl_storage_type != DB_HEAP_STORE)
     {
-	if (! PSS_WC_TST_MACRO(PSS_WC_FILLFACTOR, &yyvarsp->with_clauses))
+	if (! BTtest(DMU_DATAFILL, dmucb->dmu_chars.dmu_indicators))
 	{
-	    chr->char_id = DMU_DATAFILL;
-	    chr->char_value = tblinfo->tbl_d_fill_factor;
-	    ++ chr;
-	    dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    PSS_WC_SET_MACRO(PSS_WC_FILLFACTOR, &yyvarsp->with_clauses);
+	    dmucb->dmu_chars.dmu_fillfac = tblinfo->tbl_d_fill_factor;
+	    BTset(DMU_DATAFILL, dmucb->dmu_chars.dmu_indicators);
 	}
     }
 
     /* Leaffill and/or nonleaffill for btree or rtree */
     if (tblinfo->tbl_storage_type == DB_BTRE_STORE)
     {
-	if (! PSS_WC_TST_MACRO(PSS_WC_NONLEAFFILL, &yyvarsp->with_clauses))
+	if (! BTtest(DMU_IFILL, dmucb->dmu_chars.dmu_indicators))
 	{
-	    chr->char_id = DMU_IFILL;
-	    chr->char_value = tblinfo->tbl_i_fill_factor;
-	    ++ chr;
-	    dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    PSS_WC_SET_MACRO(PSS_WC_NONLEAFFILL, &yyvarsp->with_clauses);
+	    dmucb->dmu_chars.dmu_nonleaff = tblinfo->tbl_i_fill_factor;
+	    BTset(DMU_IFILL, dmucb->dmu_chars.dmu_indicators);
 	}
 
-	if (! PSS_WC_TST_MACRO(PSS_WC_LEAFFILL, &yyvarsp->with_clauses))
+	if (! BTtest(DMU_LEAFFILL, dmucb->dmu_chars.dmu_indicators))
 	{
-	    chr->char_id = DMU_LEAFFILL;
-	    chr->char_value = tblinfo->tbl_l_fill_factor;
-	    ++ chr;
-	    dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    PSS_WC_SET_MACRO(PSS_WC_LEAFFILL, &yyvarsp->with_clauses);
+	    dmucb->dmu_chars.dmu_leaff = tblinfo->tbl_l_fill_factor;
+	    BTset(DMU_LEAFFILL, dmucb->dmu_chars.dmu_indicators);
 	}
     }
 
     /* Minpages and/or maxpages for hash */
     if (tblinfo->tbl_storage_type == DB_HASH_STORE)
     {
-	if (! PSS_WC_TST_MACRO(PSS_WC_MINPAGES, &yyvarsp->with_clauses))
+	if (! BTtest(DMU_MINPAGES, dmucb->dmu_chars.dmu_indicators))
 	{
-	    chr->char_id = DMU_MINPAGES;
-	    chr->char_value = tblinfo->tbl_min_page;
-	    ++ chr;
-	    dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    PSS_WC_SET_MACRO(PSS_WC_MINPAGES, &yyvarsp->with_clauses);
+	    dmucb->dmu_chars.dmu_minpgs = tblinfo->tbl_min_page;
+	    BTset(DMU_MINPAGES, dmucb->dmu_chars.dmu_indicators);
 	}
 
-	if (! PSS_WC_TST_MACRO(PSS_WC_MAXPAGES, &yyvarsp->with_clauses))
+	if (! BTtest(DMU_MAXPAGES, dmucb->dmu_chars.dmu_indicators))
 	{
-	    chr->char_id = DMU_MAXPAGES;
-	    chr->char_value = tblinfo->tbl_max_page;
-	    ++ chr;
-	    dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    PSS_WC_SET_MACRO(PSS_WC_MAXPAGES, &yyvarsp->with_clauses);
+	    dmucb->dmu_chars.dmu_maxpgs = tblinfo->tbl_max_page;
+	    BTset(DMU_MAXPAGES, dmucb->dmu_chars.dmu_indicators);
 	}
     }
 
@@ -2917,13 +2214,10 @@ psl_md_reconstruct(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
     if (tblinfo->tbl_status_mask & DMT_IDX
       && tblinfo->tbl_2_status_mask & DMT_PERSISTS_OVER_MODIFIES)
     {
-	if (! PSS_WC_TST_MACRO(PSS_WC_PERSISTENCE, &yyvarsp->with_clauses))
+	if (! BTtest(DMU_PERSISTS_OVER_MODIFIES, dmucb->dmu_chars.dmu_indicators))
 	{
-	    chr->char_id = DMU_PERSISTS_OVER_MODIFIES;
-	    chr->char_value = DMU_C_ON;
-	    ++ chr;
-	    dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    PSS_WC_SET_MACRO(PSS_WC_PERSISTENCE, &yyvarsp->with_clauses);
+	    dmucb->dmu_chars.dmu_flags |= DMU_FLAG_PERSISTENCE;
+	    BTset(DMU_PERSISTS_OVER_MODIFIES, dmucb->dmu_chars.dmu_indicators);
 	}
     }
 
@@ -3001,7 +2295,6 @@ psl_md_part_unique(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
     DB_PART_DEF *part_def;		/* Partition definition pointer */
     DB_STATUS status;			/* Usual status thing */
     DMT_ATT_ENTRY *attribute;		/* Column info */
-    DMU_CHAR_ENTRY *chr;		/* DMU char array pointer */
     DMU_KEY_ENTRY **keyptr_ptr;		/* Pointer to DMU key pointer array */
     i4 i;
     i4 key_attno[DB_MAXKEYS];		/* Attribute numbers of keys */
@@ -3014,7 +2307,7 @@ psl_md_part_unique(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
     /* Decide whether to look at existing partitioning, or new
     ** (re)-partitioning.
     */
-    if (PSS_WC_TST_MACRO(PSS_WC_PARTITION, &yyvarsp->with_clauses))
+    if (BTtest(PSS_WC_PARTITION, dmucb->dmu_chars.dmu_indicators))
     {
 	/* We have either WITH PARTITION= or WITH NOPARTITION */
 	part_def = dmucb->dmu_part_def;
@@ -3083,9 +2376,7 @@ psl_md_part_unique(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
     rdfcb.rdf_rb.rdr_fcb = Psf_srvblk->psf_rdfid;
     rdfcb.rdf_rb.rdr_session_id = sess_cb->pss_sessid;
     rdfcb.rdf_rb.rdr_newpart = part_def;
-    /* Storage structure is ALWAYS first dmu characteristic */
-    chr = (DMU_CHAR_ENTRY *) dmucb->dmu_char_array.data_address;
-    rdfcb.rdf_rb.rdr_storage_type = chr->char_value;
+    rdfcb.rdf_rb.rdr_storage_type = dmucb->dmu_chars.dmu_struct;
     rdfcb.rdf_rb.rdr_keys = &key_header;
     status = rdf_call(RDF_PART_COMPAT, &rdfcb);
     /* Release memory if we allocated,  *Don't hurt "status" */
@@ -3111,3 +2402,122 @@ psl_md_part_unique(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
 
     return (E_DB_OK);
 } /* psl_md_part_unique */
+
+/*
+** Name: psl_md_action_string -- Generate MODIFY action string
+**
+** Description:
+**	The work to unify WITH-parsing has also led to more generic
+**	error messages.  For instance, we might have:
+**	   %0c: %1c is not a valid WITH-option for this statement
+**	While there's nothing wrong with that per se, in a MODIFY
+**	context it can be unclear.  For instance:
+**	   MODIFY: LOCATION is not a valid WITH-option...
+**	may be baffling, because it certainly is a valid option in
+**	a general sense.  But if we add more MODIFY context, it's
+**	better:
+**	   MODIFY (to RELOCATE): LOCATION is not a valid ...
+**
+**	In order to generate the addendum, it makes sense to work
+**	from the same table that parses the MODIFY action in the
+**	first place, which is why this routine exists here.
+**
+**	We're called if psl_command_string detects that it's a
+**	MODIFY statement.  The string "MODIFY" is already in the
+**	result buffer;  we'll append to it if we have a modify action.
+**
+** Inputs:
+**	sess_cb			PSS_SESBLK parser session CB
+**	str			Where to put result
+**	length			Pointer to length-so-far
+**
+** Outputs:
+**	str, length		Updated with new string, string length
+**
+** History:
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Consolidated WITH-parsing needs better messages.
+*/
+
+void
+psl_md_action_string(PSS_SESBLK *sess_cb, char *str, i4 *length)
+{
+    char *name;
+    enum dmu_action_enum action;
+    DMU_CB *dmucb;
+    PSS_YYVARS *yyvars = sess_cb->pss_yyvars;
+    QEU_CB *qeucb;
+    const struct _MODIFY_STORNAMES *stornames_ptr;
+
+    action = yyvars->md_action;
+    if (action == DMU_ACT_NONE)
+	return;
+
+    name = NULL;
+    qeucb = (QEU_CB *) sess_cb->pss_object;
+    dmucb = (DMU_CB *) qeucb->qeu_d_cb;
+    if (qeucb->qeu_d_op == DMU_RELOCATE_TABLE)
+	name = "relocate";
+    else if (action == DMU_ACT_STORAGE)
+    {
+	i4 sstruct = dmucb->dmu_chars.dmu_struct;
+
+	if (yyvars->md_reconstruct)
+	    name = "reconstruct";
+	else if (sstruct == DB_HEAP_STORE && yyvars->is_heapsort)
+	    name = "heapsort";
+	else
+	    name = uld_struct_name(sstruct);
+    }
+    else if (action == DMU_ACT_PRIORITY)
+	name = "priority";		/* Not in the stornames table */
+    else if (action == DMU_ACT_USCOPE)
+	name = "unique_scope";		/* Not in the stornames table */
+    else
+    {
+	/* Look up action in the "stornames" table. */
+	for (stornames_ptr = &modify_stornames[0];
+	     stornames_ptr->name_string != NULL;
+	     ++ stornames_ptr)
+	{
+	    if (action == stornames_ptr->action)
+	    {
+		/* Might be the right one;  match up indicator and value too */
+		if (stornames_ptr->indicator == -1)
+		{
+		    name = stornames_ptr->name_string;
+		    break;
+		}
+		switch (stornames_ptr->indicator)
+		{
+		/* Don't need STRUCTURE case, just the other 3 */
+		  case DMU_ACTION_ONOFF:
+		    if ((dmucb->dmu_chars.dmu_flags & DMU_FLAG_ACTON) == stornames_ptr->value)
+			name = stornames_ptr->name_string;
+		    break;
+		  case DMU_ACT_PERSISTENCE:
+		    if ((dmucb->dmu_chars.dmu_flags & DMU_FLAG_PERSISTENCE) == stornames_ptr->value)
+			name = stornames_ptr->name_string;
+		    break;
+		  case DMU_ACT_VERIFY:
+		    if (dmucb->dmu_chars.dmu_vaction == stornames_ptr->value)
+			name = stornames_ptr->name_string;
+		    break;
+		}
+		if (name != NULL)
+		    break;
+	    }
+	}
+    }
+
+    if (name != NULL)
+    {
+	/* MODIFY + "(to " + name + ")" + trailing null */
+	if (STlength(str) + 4 + STlength(name) + 1 + 1 > PSL_MAX_COMM_STRING)
+	    return;		/* arrgh */
+	STcat(str, "(to ");
+	STcat(str, name);
+	STcat(str, ")");
+	*length = STlength(str);
+    }
+} /* psl_md_action_string */

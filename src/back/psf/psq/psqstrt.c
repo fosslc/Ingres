@@ -17,6 +17,7 @@
 #include    <ddb.h>
 #include    <dmf.h>
 #include    <dmtcb.h>
+#include    <dmucb.h>
 #include    <ulf.h>
 #include    <ulm.h>
 #include    <qsf.h>
@@ -195,6 +196,8 @@ GLOBALREF	PSF_SERVBLK	*Psf_srvblk;
 **	    Set cardinality check flag into server block
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Pass create-compression to server block
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Pass result_structure to server block
 */
 DB_STATUS
 psq_startup(
@@ -205,6 +208,20 @@ psq_startup(
     RDF_CCB		rdf_cb;
     DB_STATUS		status;
     SIZE_TYPE		memleft;
+
+    /* Quick check that the DMU_CHARACTERISTICS indicator map is large
+    ** enough for all of the extra PSS_WC_xxx bits.  I don't think this
+    ** can be tested at compile time without making these #define's,
+    ** and then you have to keep track of all the darn bit numbers.
+    */
+    if (DMU_ALLIND_LAST < PSS_WC_LAST)
+    {
+	TRdisplay("DMU_CHARACTERISTICS indicators too small!  Add more to DMU_ALLIND_LAST in dmucb.h!\n");
+	/* This is a build time / developer error, crash hard to get
+	** the culprit's attention.
+	*/
+	*(i4 *)0 = 1;
+    }
 
     /* Start out with no error */
     psq_cb->psq_error.err_code = E_PS0000_OK;
@@ -354,6 +371,8 @@ psq_startup(
 
     Psf_srvblk->psf_vch_prec = psq_cb->psq_vch_prec;
     Psf_srvblk->psf_create_compression = psq_cb->psq_create_compression;
+    Psf_srvblk->psf_result_struct = psq_cb->psq_result_struct;
+    Psf_srvblk->psf_result_compression = psq_cb->psq_result_compression;
     /*
     ** Return the size needed for the session control block.
     */

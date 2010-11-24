@@ -34,6 +34,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    Update some prototypes for DMU characteristics change.
 */
 
 /* Function prototype definitions. */
@@ -62,7 +64,7 @@ FUNC_EXTERN DB_STATUS dmf_gwt_register(
     i4		    gw_id,
     i4		    *tuple_count,
     i4		    *page_count,
-    DM_DATA		    *char_array,
+    DMU_CHARACTERISTICS    *dmu_chars,
     DB_ERROR	*dberr);
 
 FUNC_EXTERN DB_STATUS dmf_gwt_remove(

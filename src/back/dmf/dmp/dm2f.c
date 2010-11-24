@@ -4812,6 +4812,8 @@ dm2f_force_list(VOID)
 **	    Tell DIopen to bypass pagesize validation checks -
 **	    pass DI_RAW_MASK flag.
 **	    Add more diagnostics if DIopen fails.
+**	15-Oct-2010 (kschendel)
+**	    Fix error message typo from above.
 */
 DB_STATUS
 dm2f_sense_raw(
@@ -4876,7 +4878,7 @@ DB_ERROR	*dberr)
 	    STmove("unknown (raw)", ' ', sizeof(db), db.db_db_name);
 	    STmove("unknown (raw)", ' ', sizeof(tab), tab.db_tab_name);
 	    uleFormat(&local_dberr, E_DM9004_BAD_FILE_OPEN, &sys_err, ULE_LOG,
-		NULL, 0, NULL, NULL, &local_err_code, 5,
+		NULL, NULL, 0, NULL, &local_err_code, 5,
 		sizeof(DB_DB_NAME), db_name, sizeof(DB_TAB_NAME), tbl_name,
 		l_path, path, sizeof(DM2F_RAW_BLKSNAME), DM2F_RAW_BLKSNAME,
 		0, 0);

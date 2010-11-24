@@ -1641,6 +1641,8 @@ cleanup:
 **	21-dec-92 (andre)
 **	    extracted previously modified semantic action of viewstmnt:
 **	    production from pslsgram.yi to form this function
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    No dmu char array any more, now dmu characteristics.
 */
 DB_STATUS
 psl_cv2_viewstmnt(
@@ -1731,7 +1733,7 @@ psl_cv2_viewstmnt(
 
     dmu_cb = (DMU_CB *) qeuq_cb->qeuq_dmf_cb;
     
-    MEfill(sizeof(DMU_CB), (u_char) 0, (PTR) dmu_cb);
+    MEfill(sizeof(DMU_CB), 0, (PTR) dmu_cb);
 
     /* Fill in the control block header */
     dmu_cb->type = DMU_UTILITY_CB;
@@ -1760,17 +1762,7 @@ psl_cv2_viewstmnt(
     dmu_cb->dmu_key_array.ptr_in_count  = 0;
     dmu_cb->dmu_key_array.ptr_size	= 0;
 
-    /* Allocate and fill in description entries */
-    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(DMU_CHAR_ENTRY),
-	(PTR *) &dmu_cb->dmu_char_array.data_address, &psq_cb->psq_error);
-    if (DB_FAILURE_MACRO(status))
-	return(status);
-
-    ((DMU_CHAR_ENTRY *)dmu_cb->dmu_char_array.data_address)->char_id 
-						    = DMU_VIEW_CREATE;
-    ((DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address)->char_value 
-						    = DMU_C_ON;
-    dmu_cb->dmu_char_array.data_in_size = sizeof(DMU_CHAR_ENTRY);
+    BTset(DMU_VIEW_CREATE, dmu_cb->dmu_chars.dmu_indicators);
 
     /*
     ** When processing CREATE VIEW, we want to replace all references to

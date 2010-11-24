@@ -1705,6 +1705,8 @@ GLOBALREF const char	Version[];
 **          DB_MAXROWSIZE
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Initialize create-compression to NONE.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Result-structure is handled by PSF now, not OPF.
 */
 DB_STATUS
 scd_initiate( CS_INFO_CB  *csib )
@@ -1992,8 +1994,6 @@ scd_initiate( CS_INFO_CB  *csib )
 					    ** query compile */
     opf_cb.opf_pq_partthreads = 8;	    /* threads for each partitioned
 					    ** table/join */
-    opf_cb.opf_value = DB_HEAP_STORE;	    /* Tradition: compressed heap */
-    opf_cb.opf_compressed = TRUE;	    /* for the result structure */
     opf_cb.opf_autostruct = FALSE;
     opf_cb.opf_greedy_factor = 1.0;	    /* OPF.GREEDY_FACTOR */
     opf_cb.opf_inlist_thresh = 18000;	    /* OPF_INLIST_THRESH *
@@ -2062,7 +2062,9 @@ scd_initiate( CS_INFO_CB  *csib )
 	psq_cb.psq_flag2 = 0L;
     psq_cb.psq_maxmemf = 0.5;	/* default memory proportion */
     psq_cb.psq_cp_qefrcb = NULL;
-    psq_cb.psq_create_compression = DMU_C_OFF;
+    psq_cb.psq_create_compression = DMU_COMP_OFF;
+    psq_cb.psq_result_struct = DB_HEAP_STORE;
+    psq_cb.psq_result_compression = FALSE;
 
     /* server_class gets passed to PSF so it can output it in SC930 trace */
     psq_cb.psq_server_class = Sc_main_cb->sc_server_class;

@@ -271,6 +271,8 @@ opg_getfunc(
 **	    opn_corput() for greedy enum only. This change fixes bug 121159.
 **      11-jan-2010 (hanal04) bug 120482
 **          Set ops_parallel based on opf_pq_dop which now defaults to 0 (OFF).
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Remove default storage structure passing, goes to PSF now.
 */
 DB_STATUS
 ops_startup(
@@ -550,9 +552,6 @@ ops_startup(
                                         */
     opg_cbp->opg_alter.ops_noproject = OPG_NOPROJECT; /* default is to project
                                         ** aggregates */
-    /* The result_structure comes from the config now */
-    opg_cbp->opg_alter.ops_storage = opf_cb->opf_value;
-    opg_cbp->opg_alter.ops_compressed = opf_cb->opf_compressed;
     opg_cbp->opg_alter.ops_autostruct = opf_cb->opf_autostruct;
     if (1.0 / (float)opf_cb->opf_mxsess < opf_cb->opf_maxmemf)
 	opg_cbp->opg_alter.ops_maxmemory = opf_memory * opf_cb->opf_maxmemf;

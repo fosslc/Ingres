@@ -5,6 +5,7 @@
 
 #include    <compat.h>
 #include    <gl.h>
+#include    <bt.h>
 #include    <me.h>
 #include    <pc.h>
 #include    <st.h>
@@ -328,8 +329,7 @@ static void qea_mk_dmmcb(
 static void qea_make_dmucb(
     QEE_DSH		*dsh,
     DMU_CB		*dmu_cb,
-    DMU_KEY_ENTRY	**key,
-    DMU_CHAR_ENTRY	*char_entry );
+    DMU_KEY_ENTRY	**key);
 
 
 static DB_STATUS
@@ -777,7 +777,6 @@ static const struct
     QEE_DSH		*dsh=(QEE_DSH *)qef_cb->qef_dsh;
     QEF_QP_CB		*qp=dsh->dsh_qp_ptr;
     QEF_DBP_PARAM	*params;
-    DMM_CB		dmm_cb;
     DB_DBP_NAME		upcase_dbpname, *dbpname_p;
     DB_OWN_NAME		upcase_ownname, *ownname_p;
     DB_ATT_NAME		upcase_attname, *attname_p;
@@ -1599,13 +1598,10 @@ QEE_DSH			*dsh )
     DB_STATUS		status  = E_DB_OK;
     DMM_CB		dmm;
     DB_DATA_VALUE	row_dbv;
-    i4			real_length;    
     DMR_ATTR_ENTRY	key;
     QEF_DATA		qef_data;
     DMR_ATTR_ENTRY	*key_ptr = &key;
     QEF_CB		*qef_cb = dsh->dsh_qefcb;
-    DB_ERROR		error;
-    i4		err_code;
     struct
     {
 	i2		l_location_name;
@@ -1619,7 +1615,6 @@ QEE_DSH			*dsh )
     PTR			loc_ptr[4];
     QEU_CB		qeu;
     DU_LOCATIONS	location;
-    DU_DBACCESS		dbaccess;
     DU_EXTEND		dbextend;
     DU_DATABASE		database;
     int			private_db;
@@ -1629,8 +1624,6 @@ QEE_DSH			*dsh )
     DB_STATUS		local_status;
     char		tempstr[TEMPLEN];
     GLOBALREF           QEF_S_CB	*Qef_s_cb;
-    SXF_RCB	    	sxfrcb;
-    i4		local_error;
 
 
     /*	Initialize location information. */
@@ -2164,14 +2157,10 @@ QEF_DBP_PARAM		*db_parm,
 QEE_DSH			*dsh )
 {
     DB_STATUS		status  = E_DB_OK;
-    DB_ERROR		error;
     DMM_CB		dmm_cb;
     DB_DATA_VALUE	row_dbv;
-    i4			real_length;    
     STATUS		local_status;
     DU_DATABASE		database;
-    DU_EXTEND		extend;
-    DU_LOCATIONS	location;
     DU_LOCATIONS        root_loc;
     DB_PRIVILEGES	dbpriv;
     DB_SECALARM		dbalarm;
@@ -2183,7 +2172,6 @@ QEE_DSH			*dsh )
     DMR_ATTR_ENTRY	qkey_array[2];
     DMR_ATTR_ENTRY	*qkey_ptr_array[2];
     QEU_CB		qeu;
-    DB_ERROR		err;
     QEF_CB		*qef_cb = dsh->dsh_qefcb;
     char		tempstr[TEMPLEN];
     GLOBALREF           QEF_S_CB	*Qef_s_cb;
@@ -2286,8 +2274,6 @@ QEE_DSH			*dsh )
     /*	Check privilege to destroy database. */
    
     {
-	char	obj_name[sizeof(DB_OWN_NAME) * 2];
-
 	if (MEcmp( ( PTR ) &database.du_own, ( PTR ) &qef_cb->qef_user,
 		   sizeof(DB_OWN_NAME)))
 	{
@@ -2865,7 +2851,6 @@ QEE_DSH			*dsh )
     DB_STATUS		status  = E_DB_OK;
     DMM_CB		dmm_cb;
     DB_DATA_VALUE	row_dbv;
-    i4			real_length;    
     DU_DATABASE		database;
     DU_LOCATIONS	location;
     DB_DB_NAME		db_name;
@@ -2879,7 +2864,7 @@ QEE_DSH			*dsh )
     int			access_on, access_off;
     int			service_on, service_off;
     char		tempstr[TEMPLEN];
-    i4             err;
+    i4			err;
 
     GLOBALREF           QEF_S_CB	*Qef_s_cb;
     struct
@@ -3269,11 +3254,7 @@ QEE_DSH			*dsh )
     DB_ERROR		e_error;
     DMM_CB		dmm_cb;
     DB_DATA_VALUE	row_dbv;
-    i4			real_length;    
-    ER_ARGUMENT         er_args[1];
-    DB_ERROR		error;
     i4		loc_type = 0;
-    i4		local_error;
     struct
     {
 	i2		lname;		    /* length of ... */
@@ -3290,10 +3271,8 @@ QEE_DSH			*dsh )
     DMR_ATTR_ENTRY	key;
     DMR_ATTR_ENTRY	*key_ptr = &key;
     char		tempstr[TEMPLEN];
-    int			need_dbdir_flg;
     i4		du_extend_type;
     GLOBALREF           QEF_S_CB	*Qef_s_cb;
-    SXF_RCB	    	sxfrcb;
     i4			qeu_opened, xlqeu_opened, wlqeu_opened;
 
     qef_cb = dsh->dsh_qefcb;
@@ -3969,17 +3948,13 @@ qea_5del_location(
     DB_ERROR		e_error;
     DMM_CB		dmm_cb;
     DB_DATA_VALUE	row_dbv;
-    i4			real_length;    
-    ER_ARGUMENT         er_args[1];
-    DB_ERROR		error;
     i4			loc_type = 0;
-    i4			local_error;
     struct
     {
 	i2		lname;		    /* length of ... */
 	char		name[DB_LOC_MAXNAME];   /* A location name. */
-    }			d_name, loc_name, xloc_name;
-    DU_LOCATIONS	location, xlocation;
+    }			d_name, loc_name;
+    DU_LOCATIONS	location;
     DU_LOCATIONS	db_location;
     DU_EXTEND		dbextend;
     DU_DATABASE		database;
@@ -3990,10 +3965,8 @@ qea_5del_location(
     DMR_ATTR_ENTRY	key;
     DMR_ATTR_ENTRY	*key_ptr = &key;
     char		tempstr[DB_MAXNAME+1];
-    int			need_dbdir_flg;
     i4			du_extend_type;
     GLOBALREF           QEF_S_CB	*Qef_s_cb;
-    SXF_RCB	    	sxfrcb;
     i4			qeu_opened, xlqeu_opened;
 
     qef_cb = dsh->dsh_qefcb;
@@ -4567,7 +4540,8 @@ qea_5del_location(
 **	    Pass the BITMAP option to verify routines.
 **	27-apr-99 (stephenb)
 **	    Add DMU_T_PERIPHERAL attribute for both check and patch operations
-[@history_template@]...
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS, dmu_action.
 */
 DB_STATUS
 qea_67_check_patch(
@@ -4587,14 +4561,12 @@ i4			patch_flag )
     char		*verbose;
     DMU_KEY_ENTRY	key_entry[1];
     DMU_KEY_ENTRY	*key;
-    DMU_CHAR_ENTRY	char_entry[2];
 
     /* 
     **  set up initialized DMM_CB 
     */
     key = &key_entry[0];
-    qea_make_dmucb(dsh, &dmu_cb, &key, &char_entry[0] );
-    dmu_cb.dmu_char_array.data_in_size = sizeof(char_entry);
+    qea_make_dmucb(dsh, &dmu_cb, &key);
 
     /*  fill in list specific parameters from procedure arguments:
     **		dmu_flags_mask	=   DMU_PATCH (if patch_flag=TRUE),
@@ -4603,12 +4575,13 @@ i4			patch_flag )
     **		dmu_tbl_id	=   table id parameter, possibly index_id
     */
 
+    dmu_cb.dmu_action = DMU_ACT_VERIFY;
+    BTset(DMU_VACTION, dmu_cb.dmu_chars.dmu_indicators);
+    BTset(DMU_VOPTION, dmu_cb.dmu_chars.dmu_indicators);
     if (patch_flag)
     {
-	char_entry[0].char_id = DMU_VERIFY;
-	char_entry[0].char_value = DMU_V_PATCH;
-	char_entry[1].char_id = DMU_VOPTION;
-	char_entry[1].char_value = DMU_T_LINK | DMU_T_RECORD | 
+	dmu_cb.dmu_chars.dmu_vaction = DMU_V_PATCH;
+	dmu_cb.dmu_chars.dmu_voption = DMU_T_LINK | DMU_T_RECORD | 
 		DMU_T_ATTRIBUTE | DMU_T_PERIPHERAL;
 
 	/* 
@@ -4621,7 +4594,7 @@ i4			patch_flag )
 	real_length = qea_findlen( mode, row_dbv.db_length);    
 	if ( MEcmp( (PTR)mode, (PTR) "force", real_length) == 0)
 	{
-	    char_entry[0].char_value = DMU_V_FPATCH;
+	    dmu_cb.dmu_chars.dmu_vaction = DMU_V_FPATCH;
 	}
 	dmu_cb.dmu_tbl_id.db_tab_index = 0;
     }
@@ -4629,11 +4602,9 @@ i4			patch_flag )
     {
 	/* the 2nd parameter is the index table id */
 
-	char_entry[0].char_id = DMU_VERIFY;
-	char_entry[0].char_value = DMU_V_VERIFY;
-	char_entry[1].char_id = DMU_VOPTION;
-	char_entry[1].char_value = DMU_T_BITMAP | DMU_T_LINK | DMU_T_RECORD | 
-		DMU_T_ATTRIBUTE | DMU_T_PERIPHERAL;
+	dmu_cb.dmu_chars.dmu_vaction = DMU_V_VERIFY;
+	dmu_cb.dmu_chars.dmu_voption = DMU_T_BITMAP | DMU_T_LINK |
+		DMU_T_RECORD | DMU_T_ATTRIBUTE | DMU_T_PERIPHERAL;
 
 	STRUCT_ASSIGN_MACRO(db_parm[1].dbp_dbv, row_dbv);
 	index_id = (u_i4 *)((char *)dsh->dsh_row[db_parm[1].dbp_rowno] +
@@ -4650,8 +4621,7 @@ i4			patch_flag )
     /* 
     **  Third parameter is the verbose flag.  If this is set, then indicate that
     **  the operation should display informative messages.  This is accomplished
-    **	by adding DMU_V_VERBOSE to the value of the DMU_VERIFY's char_value
-    **  entry.
+    **	by OR'ing DMU_V_VERBOSE to the dmu_vaction value.
     */
     STRUCT_ASSIGN_MACRO(db_parm[2].dbp_dbv, row_dbv);
     verbose = (char *) dsh->dsh_row[db_parm[2].dbp_rowno] + 
@@ -4659,7 +4629,7 @@ i4			patch_flag )
     real_length = qea_findlen( verbose, row_dbv.db_length);    
     if ( MEcmp( (PTR)verbose, (PTR) "verbose", real_length) == 0)
     {
-	char_entry[0].char_value += DMU_V_VERBOSE;
+	dmu_cb.dmu_chars.dmu_vaction |= DMU_V_VERBOSE;
     }
 
     /*
@@ -4922,7 +4892,6 @@ QEE_DSH			*dsh )
     DB_STATUS		local_status;
     DMM_CB		dmm_cb;
     DB_DATA_VALUE	row_dbv;
-    i4             error;
     i4		du_add_type;
     i4		du_drop_type;
     i4		dmm_add_type;
@@ -5333,20 +5302,19 @@ QEE_DSH			*dsh )
 **	23-Dec-2005 (kschendel)
 **	    Don't know why we insist on asking SCF, the qefcb knows the DB id.
 **	    (As does the qef RCB.)
-[@history_template@]...
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array gone, fix here.
 */
 static void
 qea_make_dmucb(
 QEE_DSH		   *dsh,
 DMU_CB		   *dmu_cb,
-DMU_KEY_ENTRY	   **key,
-DMU_CHAR_ENTRY	   *char_entry )
+DMU_KEY_ENTRY	   **key)
 {
 
     /* start by zero filling the whole structure */
 
     MEfill ( sizeof(DMU_CB), '\0', (PTR) dmu_cb);
-    MEfill ( sizeof(DMU_CHAR_ENTRY), '\0', (PTR) char_entry);
     MEfill ( sizeof(DMU_KEY_ENTRY), '\0', (PTR) *key);
 
     /* fill in some standard values */
@@ -5358,7 +5326,6 @@ DMU_CHAR_ENTRY	   *char_entry )
     dmu_cb -> dmu_db_id			= dsh->dsh_qefcb->qef_dbid;
     dmu_cb -> dmu_key_array.ptr_size	= sizeof(DMU_KEY_ENTRY);
     dmu_cb -> dmu_key_array.ptr_address	= (PTR) key;
-    dmu_cb -> dmu_char_array.data_address = (PTR) char_entry;
 
 }
 
@@ -5993,7 +5960,8 @@ qea_11_deldmp_config(	QEF_RCB		*qef_rcb,
 **          Initial creation.
 **	30-Dec-92 (jhahn)
 **	    Fixed dsh_row casting.
-[@history_template@]...
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
 */
 DB_STATUS
 qea_13_convert_table(
@@ -6005,20 +5973,16 @@ QEE_DSH			*dsh )
     DB_STATUS		status  = E_DB_OK;
     DMU_CB		dmu_cb;
     DB_DATA_VALUE	row_dbv;
-    i4			real_length;
     u_i4		*table_id;
     u_i4		*index_id;
-    char		*mode;
     DMU_KEY_ENTRY	key_entry[1];
     DMU_KEY_ENTRY	*key;
-    DMU_CHAR_ENTRY	char_entry[2];
 
     /* 
     **  set up initialized DMM_CB 
     */
     key = &key_entry[0];
-    qea_make_dmucb(dsh, &dmu_cb, &key, &char_entry[0] );
-    dmu_cb.dmu_char_array.data_in_size = sizeof(char_entry);
+    qea_make_dmucb(dsh, &dmu_cb, &key);
 
     /* Copy the table_id into the dmu_cb */
 
@@ -6124,7 +6088,6 @@ qea_14_error(
 {
 #define MAX_PARAMS 5
 
-    DB_STATUS           status  = E_DB_OK;
     i4             err_no, detail, param_count;
     i4             err;
     int                 i;
@@ -6573,14 +6536,11 @@ constructUDTdefaultTuple(
 )
 {
     DB_STATUS		status = E_DB_OK;
-    QEF_CB		*qef_cb = dsh->dsh_qefcb;
     ADF_CB	   	*adf_scb = dsh->dsh_adf_cb;
     ADI_FI_ID	   	conv_func_id;
     ADF_FN_BLK	   	conv_func_blk;
     DB_DATA_VALUE  	db_data;
-    char	   	*defaultString;
     u_i4		quotedStringLength, unquotedStringLength;
-    i4			i;
     i4	   	error;
     i4		maxDefaultSize = DB_MAX_COLUMN_DEFAULT_LENGTH;
 
@@ -6723,7 +6683,6 @@ DU_LOCATIONS            *loctup)
 {
     DMR_ATTR_ENTRY      key;
     DMR_ATTR_ENTRY      *key_ptr = &key;
-    DU_LOCATIONS        location;
     DB_STATUS           status  = E_DB_OK;
     DB_STATUS           local_status;
     QEF_CB		*qefcb = dsh->dsh_qefcb;

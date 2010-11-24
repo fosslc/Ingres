@@ -164,6 +164,8 @@ typedef DB_STATUS (*GWX_VECTOR[GWX_VMAX])();
 **          specific gateway
 **      24-jul-97 (stial01)
 **          Add xrcb_gchdr_size to GWX_RCB.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    Replace "data4" with dmu characteristics.
 **/
 typedef struct
 {
@@ -193,7 +195,7 @@ typedef struct
     DM_DATA	    xrcb_var_data1;	/* a variable length data */
     DM_DATA	    xrcb_var_data2;	/* a variable length data */
     DM_DATA	    xrcb_var_data3;	/* a variable length data */
-    DM_DATA	    xrcb_var_data4;	/* a variable length data */
+    struct _DMU_CHARACTERISTICS *xrcb_dmu_chars;  /* DMF-ish table info */
     DM_PTR	    xrcb_var_data_list;	/* a list of variable length data */
     DM_PTR	    xrcb_mtuple_buffs;	/* multiple tuple bufferss, same size */
     i4	    xrcb_page_cnt;	/* number of "pages" in gateway file */

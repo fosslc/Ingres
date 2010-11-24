@@ -2811,12 +2811,13 @@ pst_1ftype(
 **	    to a flag word.
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Update resjour display.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Most of restab is gone, moved to DMU_CB.
 */
 DB_STATUS
 pst_dmpres(
 	PST_RESTAB  *restab)
 {
-    register PST_RESKEY	*key;
     i4		i;
     DB_LOC_NAME *name, *lim;
 
@@ -2840,52 +2841,7 @@ pst_dmpres(
 	TRdisplay("\tresloc[%d]:\t%#s\n", i, sizeof(DB_LOC_NAME), name);
     }
 
-    TRdisplay("\tpst_resjour: %w\n", "OFF,ON,LATER", restab->pst_resjour);
-
     TRdisplay("\tpst_resvno:\t%d\n", restab->pst_resvno);
-
-    TRdisplay("\tpst_fillfac:\t%d\n", restab->pst_fillfac);
-
-    TRdisplay("\tpst_leaff:\t%d\n", restab->pst_leaff);
-
-    TRdisplay("\tpst_nonleaff:\t%d\n", restab->pst_nonleaff);
-
-    TRdisplay("\tpst_minpgs:\t%d\n", restab->pst_minpgs);
-
-    TRdisplay("\tpst_maxpgs:\t%d\n", restab->pst_maxpgs);
-
-    TRdisplay("\tpst_struct:\t");
-    switch (restab->pst_struct)
-    {
-	case DB_HEAP_STORE: TRdisplay("heap");
-			    break;
-	case DB_ISAM_STORE: TRdisplay("isam");
-			    break;
-	case DB_HASH_STORE: TRdisplay("hash");
-			    break;
-	case DB_BTRE_STORE: TRdisplay("btree");
-			    break;
-	case DB_SORT_STORE: TRdisplay("sort");
-			    break;
-	default:	    TRdisplay("unknown");
-    }
-    TRdisplay("\n");
-
-    TRdisplay("\tpst_compress:\t%v\n",
-	    "DATA_COMP,NO_DATA_COMP,INDEX_COMP,NO_INDEX_COMP,DEFERRED,NO_COMP",
-	    restab->pst_compress);
-
-    TRdisplay("\tpst_resdup:\t");
-    if (psq_booldmp(restab->pst_resdup) != E_DB_OK)
-	return (E_DB_ERROR);
-    TRdisplay("\n");
-
-    TRdisplay("\tpst_reskey:\t%d\n", restab->pst_reskey);
-    for (key = restab->pst_reskey; key; key = key->pst_nxtkey)
-    {
-	TRdisplay("\tkey->pst_attname:\t%#s\n", sizeof(key->pst_attname),
-	    &key->pst_attname);
-    }
 
     return (E_DB_OK);
 }

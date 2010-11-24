@@ -42,6 +42,7 @@
 #include    <dm2umct.h>
 #include    <dm2umxcb.h>
 #include    <dm2u.h>
+#include    <dm2up.h>
 #include    <dmftrace.h>
 #include    <dma.h>
 #include    <cm.h>
@@ -347,6 +348,8 @@
 **	    Log the actual compression types.
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Pass no-compression to create table, will fix when index loaded.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    DMU char array replaced with dmu characteristics.
 */
 STATUS
 dm2u_pindex(
@@ -363,7 +366,7 @@ DM2U_INDEX_CB   *index_cbs)
     DM2U_MXCB	     *mxcb_cb = (DM2U_MXCB *)0;
     DMP_RCB	     *r = (DMP_RCB *)0;
     DMP_TCB	     *t;
-    i4	     	     i, j, k, ind;
+    i4	     	     i, k, ind;
     i4	     	     NumCreAtts;
     DB_TAB_TIMESTAMP timestamp;
     DMF_ATTR_ENTRY  att_entry[DB_MAXIXATTS + 1];
@@ -383,7 +386,6 @@ DM2U_INDEX_CB   *index_cbs)
     i4	     	     tbl_access_mode = DM2T_A_READ_NOCPN;
     i4               timeout = 0, numberOfIndices;
     u_i4	     db_sync_flag;
-    ADF_CB	     *adf_cb;
     LG_LSN	     lsn;
     bool             syscat;
     bool             sconcur;
@@ -712,19 +714,19 @@ DM2U_INDEX_CB   *index_cbs)
         if (t->tcb_rel.relstat & TCB_EXTCATALOG)
             setrelstat |= TCB_EXTCATALOG;
 
-        status = dm2u_create(dcb, xcb, 
-	  index_cb->indxcb_index_name, &owner, index_cb->indxcb_location, 
+        status = dm2u_create(dcb, xcb,
+	  index_cb->indxcb_index_name, &owner, index_cb->indxcb_location,
 	  index_cb->indxcb_l_count,
-          index_cb->indxcb_tbl_id, index_cb->indxcb_idx_id, 
+          index_cb->indxcb_tbl_id, index_cb->indxcb_idx_id,
 	  (i4)1, (i4)0, setrelstat, m->mx_new_relstat2,
           index_cb->indxcb_structure, TCB_C_NONE, m->mx_width, m->mx_width, NumCreAtts,
           att_list, index_cb->indxcb_db_lockmode,
-          DM_TBL_DEFAULT_ALLOCATION, DM_TBL_DEFAULT_EXTEND, 
-	  m->mx_page_type, m->mx_page_size, index_cb->indxcb_qry_id, 
-	  index_cb->indxcb_gwattr_array, index_cb->indxcb_gwchar_array, 
+          DM_TBL_DEFAULT_ALLOCATION, DM_TBL_DEFAULT_EXTEND,
+	  m->mx_page_type, m->mx_page_size, index_cb->indxcb_qry_id,
+	  index_cb->indxcb_gwattr_array, index_cb->indxcb_gwchar_array,
 	  index_cb->indxcb_gw_id, (i4)0,
-          index_cb->indxcb_gwsource, index_cb->indxcb_char_array, 
-	  m->mx_dimension, m->mx_hilbertsize, 
+          index_cb->indxcb_gwsource, index_cb->indxcb_dmu_chars,
+	  m->mx_dimension, m->mx_hilbertsize,
 	  m->mx_range, index_cb->indxcb_tbl_pri, NULL, 0, NULL /* DMU_CB */,
 	  &local_dberr);
         if (status != E_DB_OK)
@@ -832,7 +834,6 @@ DM2U_INDEX_CB   *index_cbs)
 	      i4	nofiles = 0;
 	      DML_XCCB *xccb;
 	      bool  	found_xccb;
-	      i4    	logging, dm0l_flag;
 
 	      /* Need to do those file renames first */
 	      while ( !nofiles)
@@ -949,7 +950,6 @@ DM2U_INDEX_CB   *index_cbs)
             DB_TAB_NAME         newtab_name;
 	    i4			mem_needed;
 	    DMP_MISC		*misc_cb = (DMP_MISC *)0;
-	    i4			err_code;
 	    DMF_ATTR_ENTRY	*attr_entry;
 	    DMF_ATTR_ENTRY	**attr_ptrs;
 

@@ -4,6 +4,7 @@
 
 # include   <compat.h>
 # include   <gl.h>
+# include   <bt.h>
 # include   <cm.h>
 # include   <cs.h>
 # include   <st.h>
@@ -526,6 +527,8 @@
 **          dmpe_buffered_put() Allocate LONGTERM memory for rcb_bulk_misc
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    DMU characteristics structure changed, fix here.
 **      13-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Minor fix to 01-oct-2010 change
 **/
@@ -2229,10 +2232,7 @@ dmpe_delete(ADP_POP_CB     *pop_cb )
     ADP_PERIPHERAL	*p = (ADP_PERIPHERAL *) pop_cb->pop_coupon->db_data;
     DMPE_COUPON		*cpn;
     i4			last_etab_base, cur_etab_base;
-    bool                first_seg = TRUE;
     DMP_TCB             *t;
-    DMP_TCB		*base_tcb;
-    DMP_RCB		*etab_rcb;
 
 #ifdef xDEBUG
     if (DMZ_SES_MACRO(11))
@@ -2738,14 +2738,12 @@ dmpe_destroy(DMU_CB	  *base_dmu ,
     pop_cb.pop_coupon = NULL;
     pop_cb.pop_info = NULL;
 
+    MEfill(sizeof(DMU_CB), 0, &dmu_cb);
     dmu_cb.type = DMU_UTILITY_CB;
     dmu_cb.length = sizeof(dmu_cb);
     dmu_cb.dmu_tran_id = base_dmu->dmu_tran_id;
     dmu_cb.dmu_db_id = base_dmu->dmu_db_id;
     dmu_cb.dmu_flags_mask = 0;
-    dmu_cb.dmu_char_array.data_address = (PTR) 0;
-    dmu_cb.dmu_char_array.data_in_size = 0;
-    dmu_cb.dmu_char_array.data_out_size = 0;
 
     status = dmpe_allocate(&pop_cb, &pcb);
     if (status)
@@ -2870,13 +2868,10 @@ dmpe_modify(DMU_CB	  *base_dmu ,
     DMU_CB		dmu_cb;
     DMU_KEY_ENTRY	key_ents[DMPE_KEY_COUNT];
     DMU_KEY_ENTRY	*keys[DMPE_KEY_COUNT];
-    DMU_CHAR_ENTRY	char_entry[5];
     i4			i;
-    i4		ind = 0;
     DMP_RCB		*rcb = (DMP_RCB *)0;
     DMP_TCB		*t;
     DMP_ET_LIST		*etlist_ptr = (DMP_ET_LIST *)0;
-    i4		local_error;
     bool		base_open = FALSE;
     DB_ERROR		local_dberr;
 
@@ -2901,12 +2896,9 @@ dmpe_modify(DMU_CB	  *base_dmu ,
 
     if (blob_add_extend)
     {
-	char_entry[0].char_id = DMU_ADD_EXTEND;
-	char_entry[0].char_value = DMU_C_ON;
-	char_entry[1].char_id = DMU_EXTEND;
-	char_entry[1].char_value = blob_add_extend;
-	dmu_cb.dmu_char_array.data_address = (char *) char_entry;
-	dmu_cb.dmu_char_array.data_in_size = sizeof(DMU_CHAR_ENTRY)*2;
+	dmu_cb.dmu_action = DMU_ACT_ADDEXTEND;
+	BTset(DMU_EXTEND, dmu_cb.dmu_chars.dmu_indicators);
+	dmu_cb.dmu_chars.dmu_extend = blob_add_extend;
 	dmu_cb.dmu_key_array.ptr_address = NULL;
 	dmu_cb.dmu_key_array.ptr_size = 0;
 	dmu_cb.dmu_key_array.ptr_in_count = 0;
@@ -2937,36 +2929,26 @@ dmpe_modify(DMU_CB	  *base_dmu ,
 	dmu_cb.dmu_location.data_address = base_dmu->dmu_location.data_address;
 	dmu_cb.dmu_location.data_in_size = base_dmu->dmu_location.data_in_size;
 
-	char_entry[0].char_id = DMU_STRUCTURE;
-	char_entry[0].char_value = dmf_svcb->svcb_blob_etab_struct;
-	char_entry[1].char_id = DMU_EXTEND;
-	char_entry[1].char_value = DMPE_DEF_TBL_EXTEND;
-	ind = 1;
-
-	switch (dmf_svcb->svcb_blob_etab_struct) {
-	    case DB_HASH_STORE :
-		    char_entry[++ind].char_id = DMU_MINPAGES;
-		    char_entry[ind].char_value = DMPE_DEF_TBL_SIZE;
-		    break;
-	    case DB_BTRE_STORE :
-	    case DB_ISAM_STORE :
-		    break;
+	dmu_cb.dmu_action = DMU_ACT_STORAGE;
+	BTset(DMU_STRUCTURE, dmu_cb.dmu_chars.dmu_indicators);
+	dmu_cb.dmu_chars.dmu_struct = dmf_svcb->svcb_blob_etab_struct;
+	/* FIXME some way to default compression ! */
+	BTset(DMU_EXTEND, dmu_cb.dmu_chars.dmu_indicators);
+	dmu_cb.dmu_chars.dmu_extend = DMPE_DEF_TBL_EXTEND;
+	if (dmf_svcb->svcb_blob_etab_struct == DB_HASH_STORE)
+	{
+	    BTset(DMU_MINPAGES, dmu_cb.dmu_chars.dmu_indicators);
+	    dmu_cb.dmu_chars.dmu_minpgs = DMPE_DEF_TBL_EXTEND;
 	}
 
 	if (temporary)
-	{
-	    char_entry[++ind].char_id = DMU_TEMP_TABLE;
-	    char_entry[ind].char_value = DMU_C_ON;
-	}
+	    BTset(DMU_TEMP_TABLE, dmu_cb.dmu_chars.dmu_indicators);
 
 	if (base_page_size)
 	{
-	    char_entry[++ind].char_id = DMU_PAGE_SIZE;
-	    char_entry[ind].char_value = base_page_size;
+	    BTset(DMU_PAGE_SIZE, dmu_cb.dmu_chars.dmu_indicators);
+	    dmu_cb.dmu_chars.dmu_page_size = base_page_size;
 	}
-
-	dmu_cb.dmu_char_array.data_address = (char *) char_entry;
-	dmu_cb.dmu_char_array.data_in_size = sizeof(DMU_CHAR_ENTRY)*(ind+1);
 
 	dmu_cb.dmu_key_array.ptr_address = (PTR) keys;
 	dmu_cb.dmu_key_array.ptr_size = sizeof(DMU_KEY_ENTRY);
@@ -3041,9 +3023,9 @@ dmpe_modify(DMU_CB	  *base_dmu ,
 
 	    if (truncated)
 	    {
-		char_entry[0].char_id = DMU_TRUNCATE;
+		dmu_cb.dmu_action = DMU_ACT_TRUNC;
 		status = dmu_modify(&dmu_cb);
-		char_entry[0].char_id = DMU_STRUCTURE;
+		dmu_cb.dmu_action = DMU_ACT_STORAGE;
 	    }
 
 	    if (status == E_DB_OK)
@@ -3675,10 +3657,12 @@ dmpe_deallocate(DMPE_PCB      *pcb )
 		pcb1 = pcb1->pcb_xq_next;
 	    }
 	    if (pcb1 == pcb)
+	    {
 		if (pcb2 != NULL)
 		    pcb2->pcb_xq_next = pcb->pcb_xq_next;
 		else
 		    pcb->pcb_xcb->xcb_pcb_list = pcb->pcb_xq_next;
+	    }
 	}
 	if (pcb->pcb_tcb != NULL)
 	{
@@ -4023,7 +4007,6 @@ dmpe_begin_dml(ADP_POP_CB *pop_cb, DMPE_PCB **pcbp, bool is_put)
 	    {
 		DMT_ATT_ENTRY *att, *base_att, **ptrs, **base;
 		DMT_SHW_CB dmt_shw;
-		DMT_TBL_ENTRY dmt_tbl_entry;
 		i4 i, size;
 		STATUS clstat;
 
@@ -4892,7 +4875,6 @@ dmpe_tcb_populate(ADP_POP_CB   *pop_cb )
     DMP_TCB		*tcb = pcb->pcb_tcb;
     DMP_ET_LIST		*list;
     DMP_ETAB_CATALOG	etab_record;
-    i4			error;
 
     CLRDBERR(&pop_cb->pop_error);
 
@@ -5225,13 +5207,11 @@ dmpe_create_extension(
     DB_STATUS           status, local_status;
     i4                  local_error;
     i4			i;
-    i4		        ind = 0;
     DMP_MISC		*misc_cb = NULL;
     DMU_CB		*dmucb;
     DMR_CB              dmrcb;
     DMT_CB              dmtcb;
     DMT_CB		jon_dmt_cb;
-    DMU_CHAR_ENTRY	char_entry[7];
     DB_LOC_NAME		*locs;
     DB_DATA_VALUE       underdv;
     ADF_CB              adf_cb;
@@ -5243,7 +5223,6 @@ dmpe_create_extension(
     i4                  create_pagesize = 0;
     i4			perm_etab_struct;
     i4			etab_tbl_status;
-    i4			error;
 
     /*
     ** Number of attributes in an extended table:
@@ -5409,30 +5388,27 @@ dmpe_create_extension(
 	dmucb->dmu_key_array.ptr_size = 0;
 	dmucb->dmu_key_array.ptr_in_count = 0;
 
-	dmucb->dmu_char_array.data_address = (char *) char_entry;
-	dmucb->dmu_char_array.data_in_size = 4 * sizeof(char_entry[0]);
+	MEfill(sizeof(DMU_CHARACTERISTICS), 0, &dmucb->dmu_chars);
 
 	/*
 	** If creating first etab, create using journaling status of base table
 	** Otherwise create this etab using journaling status of other etabs
 	*/
-	char_entry[0].char_id = DMU_JOURNALED;
-	char_entry[0].char_value = (etab_tbl_status & TCB_JOURNAL)
-					? DMU_C_ON : DMU_C_OFF;
-
-	char_entry[1].char_id = DMU_EXT_CREATE;
-	char_entry[1].char_value = DMU_C_ON;
+	BTset(DMU_JOURNALED, dmucb->dmu_chars.dmu_indicators);
+	dmucb->dmu_chars.dmu_journaled = (etab_tbl_status & TCB_JOURNAL)
+				? DMU_JOURNAL_ON : DMU_JOURNAL_OFF;
+	BTset(DMU_EXT_CREATE, dmucb->dmu_chars.dmu_indicators);
 
 	/*
 	** For VPS etab support use the same page size as base table
 	** Or override with config parameter (like dmf_svcb->svcb_etab_pgsize)
 	*/
-	char_entry[2].char_id = DMU_PAGE_SIZE;
-	char_entry[2].char_value = create_pagesize;
+	BTset(DMU_PAGE_SIZE, dmucb->dmu_chars.dmu_indicators);
+	dmucb->dmu_chars.dmu_page_size = create_pagesize;
 
 	/* allow duplicates */
-	char_entry[3].char_id = DMU_DUPLICATES;
-	char_entry[3].char_value = DMU_C_ON;
+	BTset(DMU_DUPLICATES, dmucb->dmu_chars.dmu_indicators);
+	dmucb->dmu_chars.dmu_flags |= DMU_FLAG_DUPS;
 
 	for (i = 0; i < loc_count; i++)
 	{
@@ -5543,28 +5519,22 @@ dmpe_create_extension(
 	/*
 	** Now modify the table to hash on the logical key
 	*/
+	MEfill(sizeof(DMU_CHARACTERISTICS), 0, &dmucb->dmu_chars);
+	dmucb->dmu_action = DMU_ACT_STORAGE;
+	BTset(DMU_STRUCTURE, dmucb->dmu_chars.dmu_indicators);
+	dmucb->dmu_chars.dmu_struct = perm_etab_struct;
+	BTset(DMU_PAGE_SIZE, dmucb->dmu_chars.dmu_indicators);
+	dmucb->dmu_chars.dmu_page_size = create_pagesize;
+	BTset(DMU_EXTEND, dmucb->dmu_chars.dmu_indicators);
+	dmucb->dmu_chars.dmu_extend = DMPE_DEF_TBL_EXTEND;
+	if (perm_etab_struct == DB_HASH_STORE)
+	{
+	    BTset(DMU_MINPAGES, dmucb->dmu_chars.dmu_indicators);
+	    dmucb->dmu_chars.dmu_extend = DMPE_DEF_TBL_SIZE;
+	}
 	dmucb->dmu_location.data_address = 0;
 	dmucb->dmu_location.data_in_size = 0;
 
-    	char_entry[0].char_id = DMU_STRUCTURE;
-    	char_entry[0].char_value = perm_etab_struct;
-	char_entry[1].char_id = DMU_PAGE_SIZE;
-	char_entry[1].char_value = create_pagesize;
-	char_entry[2].char_id = DMU_EXTEND;
-	char_entry[2].char_value = DMPE_DEF_TBL_EXTEND;
-	ind = 2;
-
-    	switch (perm_etab_struct) {
-            case DB_HASH_STORE :
-		char_entry[++ind].char_id = DMU_MINPAGES;
-		char_entry[ind].char_value = DMPE_DEF_TBL_SIZE;
-		break;
-            case DB_BTRE_STORE :
-            case DB_ISAM_STORE :
-		break;
-        }
-
-	dmucb->dmu_char_array.data_in_size = sizeof(DMU_CHAR_ENTRY)*(ind+1);
 	dmucb->dmu_key_array.ptr_address = (PTR) keys;
 	dmucb->dmu_key_array.ptr_size = sizeof(DMU_KEY_ENTRY);
 	dmucb->dmu_key_array.ptr_in_count = DMPE_KEY_COUNT;
@@ -5585,6 +5555,8 @@ dmpe_create_extension(
 	*/
 	if (etab_tbl_status & TCB_JON)
 	{
+	    DMT_CHAR_ENTRY char_entry[1];
+
 	    MEfill(sizeof(DMT_CB), 0, &jon_dmt_cb);
 	    jon_dmt_cb.length = sizeof(DMT_CB);
 	    jon_dmt_cb.type = DMT_TABLE_CB;
@@ -5814,18 +5786,15 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
     DB_STATUS           status;
     DMPE_PCB            *pcb = (DMPE_PCB *) pop_cb->pop_user_arg;
     i4			i;
-    i4		err_code, ind = 0;
+    i4		err_code;
     DMT_CB		*dmtcb;
     DB_LOC_NAME		loc_name;
-    DMT_CB  	    	*dup_dmt_cb;
     DML_SCB         	*parent_scb;
-    i4                 session_temp = 0;
     DMT_CHAR_ENTRY	characteristics[3];
     DMP_ETAB_CATALOG    etab_record;
     DMP_ET_LIST         *list;
     DMP_TCB             *tcb;
     DMU_CB		dmucb;
-    DMU_CHAR_ENTRY	char_entry[5];
 
     /*
     ** Number of attributes in an extended table:
@@ -5993,6 +5962,7 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	    ** Etab for session temporary table.
 	    ** Now modify the table to the appropriate structure.
 	    */
+	    MEfill(sizeof(DMU_CB), 0, &dmucb);
 	    dmucb.length = sizeof(DMU_CB);
 	    dmucb.type = DMU_UTILITY_CB;
 	    dmucb.dmu_flags_mask = DMU_INTERNAL_REQ;
@@ -6010,30 +5980,20 @@ dmpe_temp( ADP_POP_CB         *pop_cb, i4 att_id, u_i4 *new_temp_etab)
 	    dmucb.dmu_enc_flags = 0;
 	    dmucb.dmu_enc_flags2 = 0;
 
-	    char_entry[0].char_id = DMU_STRUCTURE;
-	    char_entry[0].char_value = dmf_svcb->svcb_blob_etab_struct;
-	    char_entry[1].char_id = DMU_PAGE_SIZE;
-	    char_entry[1].char_value = dmf_svcb->svcb_etab_tmpsz;
-	    char_entry[2].char_id = DMU_EXTEND;
-	    char_entry[2].char_value = DMPE_DEF_TBL_EXTEND;
-	    char_entry[3].char_id = DMU_TEMP_TABLE;
-	    char_entry[3].char_value = DMU_C_ON;
-	    ind = 3;
-
-	    /* Note svcb_blob_etab_struct == DB_HEAP_STORE is invalid */
-	    switch (dmf_svcb->svcb_blob_etab_struct)
+	    dmucb.dmu_action = DMU_ACT_STORAGE;
+	    BTset(DMU_STRUCTURE, dmucb.dmu_chars.dmu_indicators);
+	    dmucb.dmu_chars.dmu_struct = dmf_svcb->svcb_blob_etab_struct;
+	    BTset(DMU_PAGE_SIZE, dmucb.dmu_chars.dmu_indicators);
+	    dmucb.dmu_chars.dmu_page_size = dmf_svcb->svcb_etab_tmpsz;
+	    BTset(DMU_EXTEND, dmucb.dmu_chars.dmu_indicators);
+	    dmucb.dmu_chars.dmu_extend = DMPE_DEF_TBL_EXTEND;
+	    BTset(DMU_TEMP_TABLE, dmucb.dmu_chars.dmu_indicators);
+	    if (dmf_svcb->svcb_blob_etab_struct == DB_HASH_STORE)
 	    {
-		case DB_HASH_STORE :
-		    char_entry[++ind].char_id = DMU_MINPAGES;
-		    char_entry[ind].char_value = DMPE_DEF_TBL_SIZE;
-		    break;
-		case DB_BTRE_STORE :
-		case DB_ISAM_STORE :
-		    break;
+		BTset(DMU_MINPAGES, dmucb.dmu_chars.dmu_indicators);
+		dmucb.dmu_chars.dmu_minpgs = DMPE_DEF_TBL_SIZE;
 	    }
 
-	    dmucb.dmu_char_array.data_address = (char *) char_entry;
-	    dmucb.dmu_char_array.data_in_size = sizeof(DMU_CHAR_ENTRY)*(ind+1);
 	    dmucb.dmu_key_array.ptr_address = (PTR) keys;
 	    dmucb.dmu_key_array.ptr_size = sizeof(DMU_KEY_ENTRY);
 	    dmucb.dmu_key_array.ptr_in_count = DMPE_KEY_COUNT;
@@ -6282,7 +6242,6 @@ dmpe_nextchain_fixup(ADP_POP_CB     *pop_cb )
     u_i4		segment0;
     u_i4		segment1;
     DMP_RCB		*r;
-    i4			error;
 
     CLRDBERR(&pop_cb->pop_error);
 
@@ -6737,8 +6696,6 @@ dmpe_free_temps(DML_ODCB *odcb, DB_ERROR *dberr)
     DML_SCB		*parent_scb;
     DML_SCB		*thread_scb;
     DML_XCCB		*xccb, *next_xccb;
-    DM_OBJECT           *object;
-    i4			error;
     i4			local_error;
 
     CLRDBERR(dberr);
@@ -6851,8 +6808,6 @@ DB_ERROR	*error)
     i4		row_count;
     i4		row_estimate;
     DM2R_BUILD_TBL_INFO  build_tbl_info;
-    i4		min_pages, max_pages;
-    i4		local_error;
 
     /* Get the tuple buffer from the rcb */
     if ( rcb->rcb_tupbuf == NULL )
@@ -7430,11 +7385,8 @@ DB_ERROR	*dberr)
     ADP_POP_CB		pop_cb;
     DMPE_PCB		*pcb;
     DMP_ETAB_CATALOG	etab_record;
-    DMU_CHAR_ENTRY	char_entry[1];
-    i4			i;
-    DMP_ET_LIST		*etlist_ptr = (DMP_ET_LIST *)0;
+    DMT_CHAR_ENTRY	char_entry[1];
     DMT_CB		dmt_cb;
-    i4		local_error;
 
     CLRDBERR(&pop_cb.pop_error);
 
@@ -7540,7 +7492,6 @@ etab_open(DMT_CB *dmtcb, ADP_POP_CB *pop_cb)
     DMPE_BQCB *bqcb;			/* May be NULL if holding temp */
     DMPE_PCB *pcb;
     DMP_RCB *r;				/* Possible RCB from wksp */
-    DMP_TCB *t;
     LG_CRIB *crib;
     i4 lockmode;
     i4	seq_number;
@@ -7767,9 +7718,7 @@ static DB_STATUS
 dmpe_cpn_to_locator(ADP_POP_CB	*pop_cb)
 {
     DB_STATUS		status;
-    i4			err_code;
     DB_STATUS		loc_stat;
-    i4			loc_err;
     DML_SCB		*parent_scb, *thread_scb;
     DML_SCB		*scb;
     DML_XCB		*xcb = NULL;
@@ -7988,8 +7937,6 @@ DB_ERROR	*error)
     DMT_CB		dmtcb;
     DB_LOC_NAME		loc;
     DMT_CHAR_ENTRY	characteristics[3];
-    DMP_TCB             *tcb;
-    DMU_CB		dmucb;
     DB_TAB_ID		loc_tab_id;
     DML_XCB		*xcb;
     DMPE_LLOC_CXT	*lloc_cxt;
@@ -7999,7 +7946,6 @@ DB_ERROR	*error)
 
     DMF_ATTR_ENTRY	*atts[DMPE_LOC_ATTS];
     DMF_ATTR_ENTRY	att_ents[DMPE_LOC_ATTS];
-    DB_TAB_TIMESTAMP	timestamp;
     DMP_RCB		*loc_rcb;
 
     do
@@ -8150,7 +8096,6 @@ static DB_STATUS
 dmpe_locator_to_cpn(ADP_POP_CB	*pop_cb)
 {
     DB_STATUS           status;
-    i4			err_code;
     DML_ODCB		*odcb;
     DML_SCB		*parent_scb, *thread_scb;
     DML_SCB		*scb;
@@ -8158,7 +8103,6 @@ dmpe_locator_to_cpn(ADP_POP_CB	*pop_cb)
     CS_SID		sid;
     ADP_PERIPHERAL	*loc_p = (ADP_PERIPHERAL *)pop_cb->pop_segment->db_data;
     ADP_PERIPHERAL	*cpn_p = (ADP_PERIPHERAL *) pop_cb->pop_coupon->db_data;
-    DMPE_PCB		*pcb = (DMPE_PCB *) 0;
     DMP_RCB		*loc_rcb;
     DM_TID		loc_tid;
     ADP_LOCATOR		locator;
@@ -8320,11 +8264,8 @@ dmpe_free_locator(ADP_POP_CB *pop_cb)
     CS_SID		sid;
     DB_STATUS		status = E_DB_OK;
     DML_SCB		*thread_scb;
-    DML_SCB		*input_scb;
     DML_XCCB		*xccb, *next_xccb;
     DMPE_LLOC_CXT	*lloc_cxt;
-    DM_OBJECT           *object;
-    i4			error;
     i4			local_error;
     DMP_RCB		*loc_rcb = NULL;
     DMT_CB              dmtcb;

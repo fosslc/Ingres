@@ -453,6 +453,8 @@ psy_kevent(
 **	30-dec-93 (robf)
 **          Audit Grant/Revoke on Dbevent as CONTROL operations, not
 **	    CREATE/DROP, which are for creating/dropping the actual event.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Update psl-command-string call.
 */
 DB_STATUS
 psy_gevent(
@@ -585,7 +587,7 @@ psy_gevent(
 	    char        qry[PSL_MAX_COMM_STRING];
 	    i4     qry_len;
 
-	    psl_command_string(qmode, sess_cb->pss_lang, qry, &qry_len);
+	    psl_command_string(qmode, sess_cb, qry, &qry_len);
 
 	    if (ev_mask & PSS_EV_BY_OWNER)
 	    {

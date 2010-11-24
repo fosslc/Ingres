@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1991, 2009 Ingres Corporation
+** Copyright (c) 1991, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -26,6 +26,7 @@
 #include    <dmrcb.h>
 #include    <dmucb.h>
 #include    <adf.h>
+#include    <ade.h>
 #include    <ulf.h>
 #include    <ulm.h>
 #include    <qsf.h>
@@ -80,18 +81,6 @@
 **	    psl_ct3_crwith		- actions following the parsing of
 **					  a WITH clause (tbl_with_clause) 
 **					  (both QUEL and SQL)
-**	    psl_nm_eq_nm		- semantic actions for processing a
-**					  WITH clause of form NAME=NAME
-**	    psl_nm_eq_no		- Semantic actions for a WITH clause
-**					  of the form NAME = number
-**	    psl_ct6_cr_single_kwd	- actions for single word WITH options
-**					  (for CREATE TABLE variants only) 
-**	    psl_lst_prefix		- actions for WITH clause of the form
-**					  name = (list);  called after the
-**					  name= prefix is parsed.
-**	    psl_ct8_cr_lst_elem		- actions for a list element of a
-**					  WITH name=(list) clause; for
-**					  CREATE TABLE variants only.
 **	    psl_ct9_new_loc_name	- actions for the new_loc_name
 **					  production
 **	    psl_ct10_crt_tbl_kwd	- actions for the crt_tbl_kwd: and
@@ -431,57 +420,19 @@
 **          Fixed length used when copying name
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Massive changes all over for centralized WITH-option handling:
+**	    move the WITH-option scanners to pslwithopt.c;
+**	    replace dmu char array with DMU_CHARACTERISTICS;
+**	    teach quel to use pslctbl routines even for RETINTO;
+**	    teach gateway register to use pslctbl close-out routines.
 */
 
 /* static functions and constants declaration */
-static bool psl_gw_option(
-			  register char	    *name);
-
 
 static char * psl_seckey_attr_name(
 	PSS_SESBLK	*sess_cb
 );
-
-/*
-** the following table describes characteristics which may be recorded in the
-** characteristics array for CREATE TABLE, CREATE TABLE AS SELECT, DGTT,
-** DGTT AS SELECT and CREATE (quel).
-** This table should help you determine whether you need to increase the size of
-** characteristics array when  defining a new characteristic.
-**
-** Please update this table as you define new characteristics that need to be
-** stored in characteristics array.
-**
-**	26-may-92 (andre)
-**	    written
-**	    
-**
-**		    CRT TBL   CRT TBL   DGTT   DGTT     CREATE
-**			      AS SEL	       AS SEL	(QUEL)
-**		    -------   -------   ----   ------   ------
-**
-** DMU_STRUCT	       x         x        x       x        x
-** DMU_DUPL	       x	 x	  x	  x	   x
-** DMU_JOURN	       x	 x                         x
-** DMU_RECOVERY				  x	  x
-** DMU_ALLOC           x	          x		   x
-** DMU_EXTEND	       x                  x		   x
-** DMU_SYS_MAINT       x         x        x       x
-** DMU_TEMP_TABLE		          x	  x
-** DMU_COMPRESSED                x                x
-*/
-#define SQL_MAX_CREATE_CHARS	    10
-#define QUEL_MAX_CREATE_CHARS	    6
-
-/* Gateway import characteristics that have to go to the RMS gateway.
-** The gateway type (DBMS name) isn't known up front, so historically
-** we initialize to the set needed by the RMS gateway.
-** The WITH-option parsing assumes this exact order of pre-initialized
-** DMU characteristics:
-** STRUCTURE=;  UNIQUE;  DUPLICATES; JOURNALED; GATEWAY (set ON);  GW_UPDT.
-** IngresStream gateway will add TEMPORARY.
-*/
-#define	SQL_GW_MAX_REGISTER_CHARS  10 
 
 
 /*
@@ -549,44 +500,36 @@ static char * psl_seckey_attr_name(
 **	28-Jul-2010 (kschendel) SIR 124104
 **	    Also set pst_compress in the create table header so that it
 **	    can be passed along to auto-structure.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Replace dmu-char-array with dmu characteristics.
 */
 DB_STATUS
 psl_ct1_create_table(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
-	PSS_WITH_CLAUSE	*with_clauses,
 	PSS_CONS	*cons_list)
 {
-    DB_ERROR			*err_blk= &psq_cb->psq_error;
+    DB_ERROR		*err_blk = &psq_cb->psq_error;
     i4			err_code;
-    i4				colno, num_cols;
-    QEU_CB			*qeu_cb;
-    DMU_CB			*dmu_cb;
-    register DMF_ATTR_ENTRY	**attrs;
-    register i4		length;
-    bool			logical_key_specified = FALSE;
-    bool			encrypted_columns = FALSE;
-    DMU_CHAR_ENTRY		*chr;
-    PST_STATEMENT	        *stmt_list;
-    DB_STATUS			status;
+    i4			colno, num_cols;
+    QEU_CB		*qeu_cb;
+    DMU_CB		*dmu_cb;
+    DMF_ATTR_ENTRY	**attrs;
+    bool		logical_key_specified = FALSE;
+    bool		encrypted_columns = FALSE;
+    PSS_YYVARS		*yyvars;
+    PST_STATEMENT	*stmt_list;
+    DB_STATUS		status;
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-
-    /* Make sure there is a location */
-    if (!dmu_cb->dmu_location.data_in_size)
-    {
-	/* Default location for 'normal' & 'subselect' versions */
-	STmove("$default", ' ', sizeof(DB_LOC_NAME),
-	    (char*) dmu_cb->dmu_location.data_address);
-	dmu_cb->dmu_location.data_in_size = sizeof(DB_LOC_NAME);
-    }
+    yyvars = sess_cb->pss_yyvars;
 
     /* return an error if no columns were specified;
     ** SQL syntax no longer prevents this, due to addition of ANSI constraints.
     */
     num_cols = dmu_cb->dmu_attr_array.ptr_in_count;
-    
+
     if (num_cols == 0)
     {
 	(void) psf_error(E_PS04A5_NO_COLUMNS, 0L, PSF_USERERR,
@@ -597,21 +540,14 @@ psl_ct1_create_table(
 	return(E_DB_ERROR);
     }
 
-    /* check for tuple too wide */
-    /* we must have checked for tuple width here at some point, but now
-    ** we make a pass through the attributes checking things like attribute
-    ** level flag settings, saving info we will need later in this function
+    /* Make a pass through the attributes checking things like attribute
+    ** level flag settings, saving info we will need later in this function.
     */
-    for (colno = 0, length = 0,
+    for (colno = 0,
 	 attrs = (DMF_ATTR_ENTRY **) dmu_cb->dmu_attr_array.ptr_address;
-
-	 /*(colno < num_cols && (length += (*attrs)->attr_size) <= DB_MAXTUP);*/
 	 (colno < num_cols);
-
 	 colno++, attrs++)
     {
-	length += (*attrs)->attr_size;
-	/* (schka24) FIXME nothing is done with the length?? !! */
 	if (!logical_key_specified &&
 	    (*attrs)->attr_flags_mask & DMU_F_SYS_MAINTAINED)
 	{
@@ -621,39 +557,9 @@ psl_ct1_create_table(
 	    encrypted_columns = TRUE;
     }
 
-    if (colno < num_cols)
+    if (logical_key_specified)
     {
-	if (sess_cb->pss_lang == DB_SQL)
-	{
-	    /* loop was exited because the tuple size got too large */
-	    (VOID) psf_error(2008L, 0L, PSF_USERERR, &err_code,
-		err_blk, 1,
-		psf_trmwhite(sizeof((*attrs)->attr_name), 
-		    (char *) &(*attrs)->attr_name),
-		(PTR) &(*attrs)->attr_name);
-	}
-	else
-	{
-	    (VOID) psf_error(5108L, 0L, PSF_USERERR, &err_code, err_blk, 2,
-		sizeof (dmu_cb->dmu_table_name),
-		(PTR) &dmu_cb->dmu_table_name, 
-		sizeof (attrs[colno]->attr_name),
-		(PTR) &attrs[colno]->attr_name);
-	}
-	return (E_DB_ERROR);    /* non-zero return means error */
-    }
-
-    if (sess_cb->pss_lang == DB_SQL)
-    {
-	if (logical_key_specified)
-	{
-	    chr = (DMU_CHAR_ENTRY *)
-		(((char *) dmu_cb->dmu_char_array.data_address)
-		+ dmu_cb->dmu_char_array.data_in_size);
-	    chr->char_id = DMU_SYS_MAINTAINED;
-	    chr->char_value = DMU_C_ON;   /* has sys maintained attribute(s) */
-	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	}
+	BTset(DMU_SYS_MAINTAINED, dmu_cb->dmu_chars.dmu_indicators);
     }
 
     /* process list of constraints, if any
@@ -677,17 +583,6 @@ psl_ct1_create_table(
 	    return(status);
     }
     
-    /* Check for "autostruct" with options. */
-    if (sess_cb->pss_crt_tbl_stmt)
-    {
-	if (sess_cb->pss_restab.pst_autostruct == PST_AUTOSTRUCT)
-	    sess_cb->pss_crt_tbl_stmt->pst_specific.pst_createTable.
-			pst_autostruct = PST_AUTOSTRUCT;
-	else if (sess_cb->pss_restab.pst_autostruct == PST_NO_AUTOSTRUCT)
-	    sess_cb->pss_crt_tbl_stmt->pst_specific.pst_createTable.
-			pst_autostruct = PST_NO_AUTOSTRUCT;
-    }
-
     /* check if doing a Distributed CREATE;
     ** we must reset the root of the query object to point to the QEU_CB
     ** structure (like for 6.4 local CREATE TABLEs), instead of to the
@@ -711,7 +606,7 @@ psl_ct1_create_table(
     /* sanity check encryption */
     /* encrypted columns but no record-level encryption specified */
     if (encrypted_columns  &&
-	!(sess_cb->pss_stmt_flags2 & PSS_2_ENCRYPTION))
+	! BTtest(PSS_WC_ENCRYPT, dmu_cb->dmu_chars.dmu_indicators))
     {
 	(void) psf_error(E_PS0C86_ENCRYPT_NOTABLVL, 0L, PSF_USERERR,
 		&err_code, err_blk, 1,
@@ -722,7 +617,7 @@ psl_ct1_create_table(
     }
     /* record-level encryption specified but no encrypted columns */
     if (!encrypted_columns &&
-	(sess_cb->pss_stmt_flags2 & PSS_2_ENCRYPTION))
+	BTtest(PSS_WC_ENCRYPT, dmu_cb->dmu_chars.dmu_indicators))
     {
 	(void) psf_error(E_PS0C87_ENCRYPT_NOCOLS, 0L, PSF_USERERR,
 		&err_code, err_blk, 1,
@@ -730,48 +625,6 @@ psl_ct1_create_table(
 			dmu_cb->dmu_table_name.db_tab_name),
 		dmu_cb->dmu_table_name.db_tab_name);
 	return(E_DB_ERROR);
-    }
-    /* ENCRYPTION= specified but no PASSPHRASE= */
-    if ((sess_cb->pss_stmt_flags2 & PSS_2_ENCRYPTION) &&
-	!(sess_cb->pss_stmt_flags2 & PSS_2_PASSPHRASE))
-    {
-	(void) psf_error(E_PS0C88_ENCRYPT_NOPASS, 0L, PSF_USERERR,
-		&err_code, err_blk, 1,
-		psf_trmwhite(DB_TAB_MAXNAME,
-			dmu_cb->dmu_table_name.db_tab_name),
-		dmu_cb->dmu_table_name.db_tab_name);
-	return(E_DB_ERROR);
-    }
-    /* PASSPHRASE= specified but no ENCRYPTION= is checked in psl_nm_eq_nm */
-
-    /* Default the COMPRESSION if not specified and not $ingres (don't
-    ** want to change how catalogs are compressed!).
-    */
-    if (MEcmp((PTR) &dmu_cb->dmu_owner, (PTR) sess_cb->pss_cat_owner, sizeof(DB_OWN_NAME)) != 0
-      && ! PSS_WC_TST_MACRO(PSS_WC_COMPRESSION, with_clauses))
-    {
-	chr = (DMU_CHAR_ENTRY *)
-		(((char *) dmu_cb->dmu_char_array.data_address)
-		+ dmu_cb->dmu_char_array.data_in_size);
-	chr->char_id = DMU_COMPRESSED;
-	chr->char_value = sess_cb->pss_create_compression;
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	if (sess_cb->pss_create_compression == DMU_C_ON)
-	    sess_cb->pss_restab.pst_compress = PST_DATA_COMP;
-	else if (sess_cb->pss_create_compression == DMU_C_HIGH)
-	    sess_cb->pss_restab.pst_compress = PST_HI_DATA_COMP;
-	else
-	    sess_cb->pss_restab.pst_compress = 0;
-    }
-
-    /* Stuff compression into create-table node header too, makes it easy
-    ** for opc to find and pass to QEF.
-    */
-
-    if (sess_cb->pss_crt_tbl_stmt)
-    {
-	sess_cb->pss_crt_tbl_stmt->pst_specific.pst_createTable.pst_compress =
-		sess_cb->pss_restab.pst_compress;
     }
 
 #ifdef	xDEBUG
@@ -830,33 +683,44 @@ psl_ct1_create_table(
 **	the new table's column names from the SELECT result list.
 **	If the user specified a column-name list on the create, though,
 **	we want to substitute those names into the select list.
-**	This way there's only one place to look for table column names.
-**	(i.e., in the SELECT query tree resdoms.)
 **
 **	If there is a discrepancy between the column-name-list and the
-**	SELECT query, an error will be issued.
+**	SELECT query, an error will be issued.  If there are any
+**	duplicate column names, or "tid" as a column name, it's an
+**	error.
 **
-**	Another fixup done here is to correct zero length columns.  The
-**	SELECT query can result in a column like '', which is perfectly
-**	legal, except that zero length columns shouldn't be part of
-**	tables.  We will search for zero length columns, and make them
-**	length one.  (Because union queries are represented with multiple
+**	We'll go through and decide on defaultability, and fix zero
+**	length columns.  A SELECT query can result in a column like '',
+**	which is perfectly legal, except that zero length columns shouldn't
+**	be part of tables.  We will search for zero length columns, and make
+**	them length one.  (Because union queries are represented with multiple
 **	resdoms, one for each select-expr, we have to do some fancy stuff
 **	to get it all right for unions.)
-**	
-**	This routine makes no claim to be performing all of the column
-**	fixups needed for create table as select.  It just does the ones
-**	that partition definition needs.  In particular, B1 security may
-**	need to create columns, and that's done later, not here.
 **
-**	FIXME: I bet it would be simpler, and probably useful, to build
-**	a dmu-attr-array here, at least for column names.  OPC is going
-**	to end up making one anyway, and it would simplify partition def.
+**	After doing all of these fixups to the resdom list (ie SELECT
+**	result list), we'll generate a standard or garden variety
+**	DMF_ATTR_ENTRY list for the DMU_CB being built.  Please note
+**	that non-printing resdoms don't go on the DMU attribute list,
+**	because they don't appear in the result table.  (Non-printing
+**	resdoms are generated only to do grouping or sorting, and aren't
+**	really part of the output.)  Don't confuse non-printing resdoms
+**	and hidden attributes / resdoms!  A hidden attribute is a security
+**	audit key, and it IS part of the result table.  It's hidden
+**	only in the sense that select * and tm help doesn't show it.
+**
+**	Attention:  The generated dmu-attr-array cannot be
+**	relied on for exact length or nullability information!
+**	In particular, when the SELECT query involves outer joins,
+**	the parser can get the gross type correct but it can't
+**	figure out nullability for sure, because the optimizer
+**	OJ analysis can change it!  What we generate here is a
+**	good start, and OPF can fix it up quickly enough;  but
+**	it's not necessarily the exact end product.
 **
 ** Inputs:
 **	sess_cb		Parser session control block
 **	newcolspec	PST_QNODE points to column name list
-**	query_expr	PST_QNODE points to select query resdoms
+**	query_expr	PST_QNODE points to query-expr ROOT node
 **	psq_cb		Query parse control block
 **
 ** Outputs:
@@ -870,6 +734,12 @@ psl_ct1_create_table(
 **	    Refer the typeless NULL check to the RESDOM node type and
 **	    not the CONST node as only the former will have been fixed up
 **	    by pst_union_resolve.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Move most of the post-CTAS resdom processing here, so that
+**	    we can generate a DMU_CB attribute list.  Someone has to do
+**	    it eventually, and being able to do it here helps out the
+**	    WITH-clause parser and everyone downstream.
+**	    Fix up loops to handle (ie skip) nonprinting resdoms.
 */
 
 DB_STATUS
@@ -880,11 +750,22 @@ psl_crtas_fixup_columns(
 	PSQ_CB		*psq_cb)
 {
     bool	unions, rsdm_len_reset = FALSE;
+    char	tid[3+1];		/* "tid" or "TID" */
+    char	*name;
+    DB_ERROR	*err_blk = &psq_cb->psq_error;
+    DB_STATUS	status;
+    DMF_ATTR_ENTRY *attr;
+    DMF_ATTR_ENTRY **ptrs;
+    DMT_ATT_ENTRY *attribute;
+    DMU_CB	*dmucb;
+    i4		attr_count;
     i4		ntype, sstype;
     i4		rsdm_cnt;
     i4		toss_err;
-    PST_QNODE	*node, *ssnode;
+    PSS_RNGTAB	*rngtabp;
+    PST_QNODE	*node, *ssnode, *right;
     PSY_ATTMAP	rsdm_map;
+    QEU_CB	*qeucb;
 
     /*
     ** Update RESDOMs in subselect with info from 'newcolspec'.
@@ -893,10 +774,9 @@ psl_crtas_fixup_columns(
     */
     if (newcolspec != (PST_QNODE *) NULL)
     {
-	for (node = newcolspec, ssnode = query_expr->pst_left;
-	     ;
-	     node = node->pst_left, ssnode = ssnode->pst_left
-	    )
+	node = newcolspec;
+	ssnode = query_expr->pst_left;
+	for (;;)
 	{
 	    ntype  = node->pst_sym.pst_type;
 	    sstype = ssnode->pst_sym.pst_type;
@@ -906,10 +786,18 @@ psl_crtas_fixup_columns(
 		/* equal # of nodes */
 		break;
 	    }
-	    else if (ntype != PST_RESDOM || sstype != PST_RESDOM)
+	    if (sstype == PST_RESDOM
+	      && (ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsflags & PST_RS_PRINT) == 0)
+	    {
+		/* Ignore non-printing resdoms entirely */
+		ssnode = ssnode->pst_left;
+		continue;
+	    }
+
+	    if (ntype != PST_RESDOM || sstype != PST_RESDOM)
 	    {   /* not equal # of nodes */
 		(VOID) psf_error(2001L, 0L, PSF_USERERR, &toss_err,
-		    &psq_cb->psq_error, 0);
+		    err_blk, 0);
 		return (E_DB_ERROR);
 	    }
 
@@ -917,6 +805,9 @@ psl_crtas_fixup_columns(
 	    MEcopy((char *) node->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
 		sizeof(DB_ATT_NAME),
 		(char *) ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
+
+	    node = node->pst_left;
+	    ssnode = ssnode->pst_left;
 	}
     }
 
@@ -929,8 +820,8 @@ psl_crtas_fixup_columns(
     ** the SELECT involved UNIONs and if so, initialize the map of RESDOMs 
     ** whose lengths have changed
     */
-    if (unions = 
-           (query_expr->pst_sym.pst_value.pst_s_root.pst_union.pst_next != 
+    if ((unions = 
+           (query_expr->pst_sym.pst_value.pst_s_root.pst_union.pst_next) != 
 		(PST_QNODE *) NULL))
     {
 	psy_fill_attmap(rsdm_map.map, (i4) 0);
@@ -938,6 +829,17 @@ psl_crtas_fixup_columns(
 	rsdm_cnt = 0;
     }
 
+    /* Normalize the `tid' attribute name */
+    STcopy(((*sess_cb->pss_dbxlate & CUI_ID_REG_U) ? "TID" : "tid"), tid);
+
+    /* Big resdom loop to:
+    ** - check that no result-column is named "tid"
+    ** - check for duplicate result column names
+    ** - fix USER resdoms to ATTNO
+    ** - set up target defaultability
+    ** - check for LONG TEXT columns
+    ** - check for zero-length columns and make them length 1
+    */
     for (ssnode = query_expr->pst_left, sess_cb->pss_rsdmno=0;
 	 ssnode->pst_sym.pst_type != PST_TREE;
 	 ssnode = ssnode->pst_left, sess_cb->pss_rsdmno++
@@ -951,21 +853,148 @@ psl_crtas_fixup_columns(
 	if (unions)
 	    rsdm_cnt++;
 
+	name = ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname;
+
+	/* Is the name equal to "tid" */
+	if (cui_compare(DB_ATT_MAXNAME, name, STlength(tid), tid) == 0)
+	{
+	    (VOID) psf_error(2012L, 0L, PSF_USERERR, &toss_err,
+		err_blk, 1, psf_trmwhite(DB_ATT_MAXNAME, name), name);
+	    return (E_DB_ERROR);
+	}
+
+	/* Check for duplicates */
+	for (node = ssnode->pst_left;
+	     node->pst_sym.pst_type != PST_TREE;
+	     node = node->pst_left
+	    )
+	{
+	    if (MEcmp(node->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
+		name, DB_ATT_MAXNAME) == 0
+	       )
+	    {
+		(VOID) psf_error(2013L, 0L, PSF_USERERR, &toss_err,
+		    err_blk, 1, psf_trmwhite(DB_ATT_MAXNAME, name), name);
+		return (E_DB_ERROR);
+	    }
+	}
+
+	/* Convert resdoms with pst_ttargtype PST_USER so that they are
+	** PST_ATTNO instead.  (The resdom is going to an attribute in
+	** the result relation, not to the user.)
+	*/
+	if (ssnode->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype == PST_USER)
+	{
+	    ssnode->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype = PST_ATTNO;
+	}
+
 	/* To avoid creation of columns of LONG TEXT type in case of
 	** create table as select NULL following check is performed.
 	** NOTE that it will have been the RESDOM that had been type
 	** adjusted in pst_union_resolve to counter typeless NULL
 	** columns and not the CONST data itself.
 	*/
-	if ((ssnode->pst_right->pst_sym.pst_type == PST_CONST) &&
+	right = ssnode->pst_right;
+	if ((right->pst_sym.pst_type == PST_CONST) &&
 	    (abs(ssnode->pst_sym.pst_dataval.db_datatype)
 						    == DB_LTXT_TYPE))
 	{
 	    (VOID) psf_error(2016L, 0L, PSF_USERERR,
-		&toss_err, &psq_cb->psq_error, 0);
+		&toss_err, err_blk, 0);
 	    return (E_DB_ERROR);
 	}
 
+	/*
+	** Set up defaultability.
+	**
+	** If the resdom is based directly on a column (i.e. is a PST_VAR),
+	** we copy that column's default value;
+	** otherwise the resdom must be based on a calculated column or
+	** expression, so set up the 'default' SQL default.
+	*/
+	if (right->pst_sym.pst_type != PST_VAR)
+	{
+	    DB_DATA_VALUE *dbdata;
+
+	    dbdata = &right->pst_sym.pst_dataval;
+
+	    /* Resdom based on expression.  The SQL default is
+	    ** "not specified";  the QUEL default is "not specified" for
+	    ** nullable, or ingres default for not nullable.
+	    */
+	    if (sess_cb->pss_lang == DB_SQL || dbdata->db_datatype < 0)
+	    {
+		SET_CANON_DEF_ID(ssnode->pst_sym.pst_value.pst_s_rsdm.pst_defid,
+			     DB_DEF_NOT_SPECIFIED);
+	    }
+	    else
+	    {
+		DMF_ATTR_ENTRY attr;
+
+		/* datatype is non-nullable;
+		** set up attribute descriptor and get ingres default
+		** id for this tuple
+		*/
+		MEfill(sizeof(attr), 0, (PTR) &attr);
+
+		attr.attr_type      = dbdata->db_datatype;
+		attr.attr_size      = dbdata->db_length;
+		attr.attr_precision = dbdata->db_prec;
+
+		status = psl_2col_ingres_default(sess_cb, &attr, err_blk);
+		if (DB_FAILURE_MACRO(status))
+		    return(status);
+
+		COPY_DEFAULT_ID(attr.attr_defaultID,
+			ssnode->pst_sym.pst_value.pst_s_rsdm.pst_defid);
+	    }
+	}
+	else	/* resdom is based on a column of underlying table */
+	{
+	    /* find range table entry
+	     */
+	    status = pst_rgfind(
+			sess_cb->pss_lang == DB_SQL
+			    ? &sess_cb->pss_auxrng : &sess_cb->pss_usrrange,
+			&rngtabp,
+			right->pst_sym.pst_value.pst_s_var.pst_vno, err_blk);
+	    if (status != E_DB_OK)
+	    {
+		(VOID) psf_error(E_PS0909_NO_RANGE_ENTRY, 0L, PSF_INTERR,
+		    &toss_err, err_blk, 1,
+		    psf_trmwhite(DB_ATT_MAXNAME, name), name);
+		return (E_DB_ERROR);
+	    }
+
+	    /* Look up the attribute
+	     */
+	    attribute = pst_coldesc(rngtabp,
+		right->pst_sym.pst_value.pst_s_var.pst_atname.db_att_name,
+		DB_ATT_MAXNAME);
+
+	    /* Check for attribute not found
+	     */
+	    if (attribute == (DMT_ATT_ENTRY *) NULL)
+	    {
+		(VOID) psf_error(E_PS090A_NO_ATTR_ENTRY, 0L, PSF_INTERR,
+		    &toss_err, err_blk, 1,
+		    psf_trmwhite(DB_ATT_MAXNAME, name), name);
+		return (E_DB_ERROR);
+	    }
+	    if (attribute->att_flags & (DMU_F_IDENTITY_ALWAYS |
+			DMU_F_IDENTITY_BY_DEFAULT))
+	    {
+		/* Skip identities - they're not part of CTAS. */
+		SET_CANON_DEF_ID(ssnode->pst_sym.pst_value.pst_s_rsdm.
+			pst_defid, DB_DEF_NOT_SPECIFIED);
+	    }
+	    else
+	    {
+		COPY_DEFAULT_ID(attribute->att_defaultID,
+			    ssnode->pst_sym.pst_value.pst_s_rsdm.pst_defid);
+	    }
+
+	}  /* end else resdom is based on a column of underlying table */
 	/*
 	** fix bug 8931: if user tried to create a table with a 0-length
 	** TEXT or VARCHAR column, change it to 1.
@@ -1031,6 +1060,119 @@ psl_crtas_fixup_columns(
 		ssnode->pst_sym.pst_dataval.db_length++;
 	    }
 	}
+    }
+
+    /* Now we'll get serious about generating that attribute array for
+    ** the DMU_CB.  First, count how many we need (ignoring non-printing's),
+    ** Then, allocate the entry array, and fill in pointers and entries
+    ** from the resdom tree.
+    ** (The pointer array was allocated at DB_MAX_COLS when the statement
+    ** started, in psl-ct10-crt-tbl-kwd, but the CTAS flavor never adds
+    ** array entries, nor does it count anything in the DMU_CB.)
+    ** Also note that the DMU attr array, unlike some, counts from zero
+    ** and not from 1.
+    */
+    qeucb = (QEU_CB *) sess_cb->pss_object;
+    dmucb = (DMU_CB *) qeucb->qeu_d_cb;
+
+    attr_count = 0;
+    for (ssnode = query_expr->pst_left;
+	 ssnode->pst_sym.pst_type != PST_TREE;
+	 ssnode = ssnode->pst_left
+	)
+    {
+	if (ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsflags & PST_RS_PRINT)
+	    ++ attr_count;
+    }
+    dmucb->dmu_attr_array.ptr_in_count = attr_count;
+    status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
+		attr_count * sizeof(DMF_ATTR_ENTRY),
+		&attr, err_blk);
+    if (status != E_DB_OK)
+	return (status);
+
+    /* We actually see the resdom list in reverse, so fill in backwards */
+    attr = attr + (attr_count - 1);
+    ptrs = (DMF_ATTR_ENTRY **) dmucb->dmu_attr_array.ptr_address;
+    ptrs = ptrs + (attr_count - 1);
+    for (ssnode = query_expr->pst_left;
+	 ssnode->pst_sym.pst_type != PST_TREE;
+	 ssnode = ssnode->pst_left
+	)
+    {
+	/* Ignore non-printing's entirely */
+	if ((ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsflags & PST_RS_PRINT) == 0)
+	    continue;
+
+	*ptrs-- = attr;
+	MEcopy(ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
+		sizeof(attr->attr_name.db_att_name),
+		attr->attr_name.db_att_name);
+	attr->attr_type = ssnode->pst_sym.pst_dataval.db_datatype;
+	attr->attr_size = ssnode->pst_sym.pst_dataval.db_length;
+	attr->attr_precision = ssnode->pst_sym.pst_dataval.db_prec;
+	attr->attr_collID = ssnode->pst_sym.pst_dataval.db_collID;
+	attr->attr_flags_mask = 0;
+	attr->attr_defaultTuple = NULL;
+	attr->attr_seqTuple = NULL;
+	attr->attr_encflags = 0;
+	attr->attr_encwid = 0;
+	attr->attr_geomtype = -1;
+	attr->attr_srid = 0;
+
+	/* copy default id from resdom
+	 */
+	COPY_DEFAULT_ID(ssnode->pst_sym.pst_value.pst_s_rsdm.pst_defid,
+			attr->attr_defaultID);
+
+	if (EQUAL_CANON_DEF_ID(attr->attr_defaultID, DB_DEF_NOT_DEFAULT))
+	    attr->attr_flags_mask |= DMU_F_NDEFAULT;
+
+	/* Don't set "known not nullable" until OPF is done with things */
+
+	/*
+	** Copy over any special flags for the resdom, mainly
+	** for hidden or system maintained
+	*/
+	if (ssnode->pst_sym.pst_value.pst_s_rsdm.pst_dmuflags != 0)
+	{
+	    /*
+	    ** The dmuflags should match exactly with the DMF attribute
+	    ** flags required. 
+	    ** The DMU_F_LEGAL_ATTR_BITS mask is a hack to remove
+	    ** excess bits, really code should be cleaned up to
+	    ** ensure only legal bits get set
+	    */
+	    attr->attr_flags_mask |= 
+		    (ssnode->pst_sym.pst_value.pst_s_rsdm.pst_dmuflags &
+			    DMU_F_LEGAL_ATTR_BITS);
+	}
+	if ((attr->attr_size == ADE_LEN_UNKNOWN) ||
+	    (attr->attr_size == ADE_LEN_LONG))
+	{
+	    DB_STATUS	status;
+	    i4		bits;
+	    DB_DATA_VALUE pdv;
+	    DB_DATA_VALUE rdv;
+
+	    status = adi_dtinfo(sess_cb->pss_adfcb, attr->attr_type,
+				&bits);
+	    if (bits & AD_PERIPHERAL)
+	    {
+		pdv.db_datatype = attr->attr_type;
+		pdv.db_length = 0;
+		pdv.db_prec = 0;
+		STRUCT_ASSIGN_MACRO(pdv, rdv);
+
+		status = adc_lenchk(sess_cb->pss_adfcb,
+				    TRUE, &pdv, &rdv);
+		attr->attr_size = rdv.db_length;
+		attr->attr_precision = rdv.db_prec;
+		attr->attr_flags_mask |= DMU_F_PERIPHERAL;
+	    }
+	}
+
+	-- attr;
     }
 
     return (E_DB_OK);
@@ -1177,6 +1319,11 @@ psl_crtas_fixup_columns(
 **	30-april-2009 (dougi) bug 122013
 **	    Prevent ctas from copying identity attributes - they don't go
 **	    with column.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Delete unused decades-old code to do "with not null" as a
+**	    check constraint.  Move a bunch of stuff into crtas-fixup
+**	    so that it happens soon enough that we can generate a
+**	    dmucb attr array before WITH-options happen.
 */
 DB_STATUS
 psl_ct2s_crt_tbl_as_select(
@@ -1190,118 +1337,40 @@ psl_ct2s_crt_tbl_as_select(
 	PST_QNODE	*first_n,
 	PST_QNODE	*offset_n)
 {
-    PST_QNODE	    *node, *ssnode;
     DB_STATUS	    status;
     PST_QTREE	    *tree;
-    PST_RESKEY	    *reskey, *rkey;
-    i4	    err_code;
-    i4	    err_num;
-    char	    tid[DB_ATT_MAXNAME];
-    char	    secattname[DB_ATT_MAXNAME];
     i4         qrymod_resp_mask;
-    char	    *name;
-    bool	    found;
     QEU_CB	    *qeu_cb;
     DMU_CB	    *dmu_cb;
     PST_PROCEDURE   *pnode;
-    PSS_RNGTAB	    *rngtabp;
-    DMT_ATT_ENTRY   *attribute;
-    i4		    not_null_column;
-    i4	    val1, val2;
-    PSY_COL	    cur_col;
-    PSS_CONS	    *cur_cons, *cons_list = (PSS_CONS *) NULL;
+    PSS_CONS	    *cons_list = (PSS_CONS *) NULL;
     PST_STATEMENT   *stmt_list = (PST_STATEMENT *) NULL;
-    DB_ERROR	    err_blk;
-    char    		command[PSL_MAX_COMM_STRING];
-    i4 		length;
-    ADI_DT_NAME		type_name;
-    ADF_CB		*adf_scb = (ADF_CB*) sess_cb->pss_adfcb;
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
 
-    /* Make sure there is a location */
-    if (!dmu_cb->dmu_location.data_in_size)
-    {
-	/* Default location for 'normal' & 'subselect' versions */
-	STmove("$default", ' ', sizeof(DB_LOC_NAME),
-	    (char*) dmu_cb->dmu_location.data_address);
-	dmu_cb->dmu_location.data_in_size = sizeof(DB_LOC_NAME);
-    }
-
-    /* Copy location descriptor from dmu_cb to pst_resloc */
-    STRUCT_ASSIGN_MACRO(dmu_cb->dmu_location, sess_cb->pss_restab.pst_resloc);
-
+    /* Neither encryption nor system-maintained columns are possible
+    ** with CTAS, only CREATE.  So, we don't need a checking pass like
+    ** ordinary create table does.  (exception:  a system maintained security
+    ** audit key is possible with CTAS, but that's a special case, handled
+    ** in psl-ct3-crwith.)
+    */
 
     if(sess_cb->pss_stmt_flags&PSS_NEED_ROW_SEC_KEY)
     {
 	/*
-	** Need to add a row security audit key attribute
+	** Need to add a row security audit key attribute.
+	** We already checked for existing or duplicate attribute.
+	** psl-ct3-crwith already added the attribute to the dmu-attr-array,
+	** and bumped up the attr count and pss_rsdmno,
+	** but it also has to become part of the query result.
 	*/
 	PST_CNST_NODE		cconst;
 	PST_RSDM_NODE		tresdom;
 	PST_QNODE		*newnode;
 	DB_DATA_VALUE		db_data;
 	DB_TAB_LOGKEY_INTERNAL  logkey;
-	bool			got_seckey_attr=FALSE;
 
-
-	/*
-	** Check if we have a security key attribute already
-	*/
-	if(sess_cb->pss_restab.pst_secaudkey) 
-		STmove((PTR)sess_cb->pss_restab.pst_secaudkey,
-			' ', sizeof(secattname),
-			(char *) secattname);
-	else
-		STmove(psl_seckey_attr_name(sess_cb), 
-			' ', sizeof(secattname),
-			(char *) secattname);
-
-        for (ssnode = query_expr->pst_left;
-	    ssnode->pst_sym.pst_type != PST_TREE;
-	    ssnode = ssnode->pst_left
-	    )
-        {
-		name = ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname;
-
-		/* Is the name equal to _ii_sec_tabkey */
-		if (!MEcmp(name, secattname, DB_ATT_MAXNAME))
-		{
-			got_seckey_attr=TRUE;
-			break;
-		}
-	}
-	if(sess_cb->pss_restab.pst_secaudkey 
-	   && got_seckey_attr==FALSE)
-	{
-		/*
-		** User specified invalid attribute for the audit key,
-		** so error.
-		*/
-		(VOID) psf_error(2024L, 0L, PSF_USERERR, &err_code,
-		    &psq_cb->psq_error, 1,
-		    psf_trmwhite(sizeof(DB_ATT_NAME),
-			(char *) secattname),
-		    (char *) secattname);
-		return (E_DB_ERROR);		    
-	}
-	if(got_seckey_attr==FALSE)
-	{
-	    /*
-	    ** Need to add new attribute for audit key
-	    */
-	    if( ++sess_cb->pss_rsdmno > DB_MAX_COLS)
-	    {
-
-		if (sess_cb->pss_lang == DB_QUEL)
-		    err_num = 5107L;
-		else
-		    err_num = 2011L;
-
-		(VOID) psf_error(err_num, 0L, PSF_USERERR, &err_code, &err_blk, 0);
-		return (E_DB_ERROR);
-	    }
 	    db_data.db_datatype  = DB_TABKEY_TYPE;
 	    db_data.db_prec	     = 0;
 	    db_data.db_length    = DB_LEN_TAB_LOGKEY;
@@ -1343,314 +1412,8 @@ psl_ct2s_crt_tbl_as_select(
 	    {
 	        return (status);
 	    }
-    	    sess_cb->pss_restab.pst_flags |= 
-	    		(PST_SYS_MAINTAINED|
-	    		 PST_ROW_SEC_AUDIT);
-	}
-	else
-	{
-	    /*
-	    ** Found, so mark the attribute as the row audit key
-	    */
-    	    sess_cb->pss_restab.pst_flags |= PST_ROW_SEC_AUDIT;
-	    ssnode->pst_sym.pst_value.pst_s_rsdm.pst_dmuflags |= (
-	    	DMU_F_SEC_KEY );
-	}
     }
 
-    /*
-    ** Check for "tid" column names and duplicate column names.
-    */
-
-    /* Normalize the `tid' attribute name */
-    STmove(((*sess_cb->pss_dbxlate & CUI_ID_REG_U) ? "TID" : "tid"),
-	   ' ', DB_ATT_MAXNAME, tid);
-
-    for (ssnode = query_expr->pst_left, sess_cb->pss_rsdmno=0;
-	 ssnode->pst_sym.pst_type != PST_TREE;
-	 ssnode = ssnode->pst_left, sess_cb->pss_rsdmno++
-	)
-    {
-	name = ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname;
-
-	/* Is the name equal to "tid" */
-	if (!MEcmp(name, tid, DB_ATT_MAXNAME))
-	{
-	    (VOID) psf_error(2012L, 0L, PSF_USERERR, &err_code,
-		&psq_cb->psq_error, 1, psf_trmwhite(DB_ATT_MAXNAME, name), name);
-	    return (E_DB_ERROR);
-	}
-
-	/* Check for duplicates */
-	for (node = ssnode->pst_left;
-	     node->pst_sym.pst_type != PST_TREE;
-	     node = node->pst_left
-	    )
-	{
-	    if (MEcmp(node->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-		name, DB_ATT_MAXNAME) == 0
-	       )
-	    {
-		(VOID) psf_error(2013L, 0L, PSF_USERERR, &err_code,
-		    &psq_cb->psq_error, 1, psf_trmwhite(DB_ATT_MAXNAME, name),
-		    name);
-		return (E_DB_ERROR);
-	    }
-	}
-
-	/*
-	** Now check the target list to see if there are any
-	** resdoms with pst_ttargtype of PST_USER, if so
-	** convert them to PST_ATTNO.
-	*/
-	if (ssnode->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype == PST_USER)
-	{
-	    ssnode->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype = PST_ATTNO;
-	}
-
-	/*
-	** Set up defaultability.
-	** Also decide record whether column is NOT NULL.
-	**
-	** If the resdom is based directly on a column (i.e. is a PST_VAR),
-	** we copy that column's default value;
-	** otherwise the resdom must be based on a calculated column or
-	** expression, so set up the 'default' SQL default.
-	*/
-	not_null_column = FALSE;
-	if (ssnode->pst_right->pst_sym.pst_type != PST_VAR)
-	{
-	    /* resdom based on expression--set up the 'default' SQL default,
-	    ** which is 'not specified' for both null and not null columns
-	    */ 
-	    SET_CANON_DEF_ID(ssnode->pst_sym.pst_value.pst_s_rsdm.pst_defid, 
-			     DB_DEF_NOT_SPECIFIED);
-	    if (ssnode->pst_sym.pst_dataval.db_datatype > 0)
-		not_null_column = TRUE;
-	}
-	else	/* resdom is based on a column of underlying table */
-	{
-	    /* find range table entry 
-	     */
-	    status = pst_rgfind(
-			&sess_cb->pss_auxrng, &rngtabp,
-			ssnode->pst_right->pst_sym.pst_value.pst_s_var.pst_vno,
-			&psq_cb->psq_error);
-	    if (status != E_DB_OK)
-	    {
-		(VOID) psf_error(E_PS0909_NO_RANGE_ENTRY, 0L, PSF_INTERR,
-		    &err_code, &psq_cb->psq_error, 1,
-		    psf_trmwhite(DB_ATT_MAXNAME, name), name);
-		return (E_DB_ERROR);
-	    }
-
-	    /* Look up the attribute 
-	     */
-	    attribute = pst_coldesc(rngtabp,
-	    ssnode->pst_right->pst_sym.pst_value.pst_s_var.pst_atname.db_att_name,
-		DB_ATT_MAXNAME);
-
-	    /* Check for attribute not found 
-	     */
-	    if (attribute == (DMT_ATT_ENTRY *) NULL)
-	    {
-		(VOID) psf_error(E_PS090A_NO_ATTR_ENTRY, 0L, PSF_INTERR,
-		    &err_code, &psq_cb->psq_error, 1,
-		    psf_trmwhite(DB_ATT_MAXNAME, name), name);
-		return (E_DB_ERROR);
-	    }
-	    if (attribute->att_flags & (DMU_F_IDENTITY_ALWAYS |
-			DMU_F_IDENTITY_BY_DEFAULT))
-	    {
-		/* Skip identities - they're not part of CTAS. */
-		SET_CANON_DEF_ID(ssnode->pst_sym.pst_value.pst_s_rsdm.
-			pst_defid, DB_DEF_NOT_SPECIFIED);
-	    }
-	    else
-	    {
-		COPY_DEFAULT_ID(attribute->att_defaultID,
-			    ssnode->pst_sym.pst_value.pst_s_rsdm.pst_defid);
-	    }
-
-	    if (attribute->att_type > 0)
-		not_null_column = TRUE;
-
-	}  /* end else resdom is based on a column of underlying table */
-
-	/* if column will be created as a NOT NULL column,
-	** we need to build constraint info for this column
-	** 
-	** (this allows us to be consistent: for all NOT NULL columns
-	**  created via SQL, dummy constraints will be entered in the catalogs;
-	**  but we only do this for regular tables, not temp tables
-	**  [as no info is stored in the catalogs for temp tables],
-	**  and then only if the correct trace point is set (see below).
-	**  Also, constraints are not implemented for STAR (yet).)
-	**  
-	** Due to performance problems caused by generating the dummy NOT NULL
-	** constraints, we are not generating these constraints in 6.5.
-	** These constraints are only needed for Intermediate SQL92
-	** catalogs, and we don't need to be compliant with that yet.
-	**
-	** But a trace point has been added to turn on the dummy-constraint
-	** generation so that it can continue to be tested (so that future
-	** changes will not break this feature).   B58442
-	** 				-roger blumer   01/04/94
-	*/
-	if (   not_null_column
-	    && (psq_cb->psq_mode == PSQ_RETINTO)
-	    && (~sess_cb->pss_distrib & DB_3_DDB_SESS)
-	    && (ult_check_macro(&sess_cb->pss_trace,	
-				PSS_GENERATE_NOT_NULL_CONS, &val1, &val2)))
-	{
-	    MEcopy(ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-		   DB_ATT_MAXNAME, cur_col.psy_colnm.db_att_name);
-
-	    status = psl_ct19s_constraint(sess_cb, 
-		       (i4) PSS_CONS_CHECK|PSS_CONS_COL|PSS_CONS_NOT_NULL,
-				  &cur_col,  (PSS_OBJ_NAME *) NULL,
-				  (PSY_COL *) NULL, (PSS_TREEINFO *) NULL,
-				  &cur_cons, &psq_cb->psq_error);
-	    if (DB_FAILURE_MACRO(status))
-		return(status);
-
-	    /* allocate a column bitmap,
-	    ** and set the appropriate bit for this column.
-	    **
-	    ** need to set up a bitmap here, because psl_verify_cons can't
-	    ** find the column number from the dmu_cb (since we don't set up
-	    ** the attribute array for CREATE TABLE AS SELECT).
-	    */
-	    status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-				sizeof(DB_COLUMN_BITMAP),
-				(PTR *) &cur_cons->pss_check_cons_cols,
-				&psq_cb->psq_error);
-	    if (DB_FAILURE_MACRO(status))
-		return(status);
-
-	    MEfill(sizeof(DB_COLUMN_BITMAP), 
-		   (u_char) 0, (PTR) cur_cons->pss_check_cons_cols);
-
-	    BTset(ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsno,
-		  (char *) cur_cons->pss_check_cons_cols);
-
-	    /* attach new constraint to the list (order is not important)
-	     */
-	    cur_cons->pss_next_cons = cons_list;
-	    cons_list = cur_cons;
-	}
-
-    }  /* end for ssnode->pst_sym.pst_type != PST_TREE */
-
-    /*
-    ** Check whether KEY clause has been specified, if so validate it.
-    */
-    if (sess_cb->pss_restab.pst_reskey != (PST_RESKEY *) NULL)
-    {
-	for (reskey = sess_cb->pss_restab.pst_reskey;
-	     reskey;
-	     reskey = reskey->pst_nxtkey)
-	{
-	    found = FALSE;
-
-	    for (ssnode = query_expr->pst_left;
-		 ssnode->pst_sym.pst_type != PST_TREE;
-		 ssnode = ssnode->pst_left
-		)
-	    {
-		/* compare domain names */
-		if (MEcmp((PTR) &reskey->pst_attname,
-		    (PTR) ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-		    sizeof (reskey->pst_attname)) == 0)
-		{
-		    found = TRUE;
-		    break;
-		}
-	    }
-
-	    if (!found)
-	    {   /* bogus column name */
-		(VOID) psf_error(2024L, 0L, PSF_USERERR, &err_code,
-		    &psq_cb->psq_error, 1,
-		    psf_trmwhite(sizeof(DB_ATT_NAME),
-			(char *) &reskey->pst_attname),
-		    (char *) &reskey->pst_attname);
-		return (E_DB_ERROR);		    
-	    }
-
-	    status = psl_check_key(sess_cb, &psq_cb->psq_error,
-			(DB_DT_ID) ssnode->pst_sym.pst_dataval.db_datatype);
-	    if (status)
-	    {
-		(VOID) psf_error(2179L, 0L, PSF_USERERR, &err_code,
-		    &psq_cb->psq_error, 2,
-		    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-		    psf_trmwhite(sizeof(DB_ATT_NAME),
-			(char *) &reskey->pst_attname),
-		    (char *) &reskey->pst_attname);
-		return (E_DB_ERROR);
-	    }
-	}
-
-	/* Check for duplicates among keys */
-	for (reskey = sess_cb->pss_restab.pst_reskey, found = FALSE;
-	     reskey;
-	     reskey = reskey->pst_nxtkey)
-	{
-	    for (rkey = reskey->pst_nxtkey; rkey; rkey = rkey->pst_nxtkey)
-	    {
-		/* compare domain names */
-		if (MEcmp((PTR) &reskey->pst_attname,
-		    (PTR) &rkey->pst_attname,
-		    sizeof (reskey->pst_attname)) == 0)
-		{
-		    found = TRUE;
-		    break;
-		}
-	    }
-
-	    if (found)
-	    {   /* duplicate key */
-		(VOID) psf_error(2025L, 0L, PSF_USERERR, &err_code,
-		    &psq_cb->psq_error, 1,
-		    psf_trmwhite(sizeof(DB_ATT_NAME),
-			(char*) &reskey->pst_attname),
-		    (char *) &reskey->pst_attname);
-		return (E_DB_ERROR);
-	    }
-	}
-    }
-    else if (sess_cb->pss_restab.pst_struct &&
-		(sess_cb->pss_restab.pst_struct != DB_HEAP_STORE))
-    {
-	/* Must check that implicit key is keyable */
-
-	/* First, find it */
-	
-	for (ssnode = query_expr->pst_left;
-	     ssnode->pst_sym.pst_type != PST_TREE;
-	     ssnode = ssnode->pst_left
-	    )
-	{
-	    if (   ssnode->pst_sym.pst_type == PST_RESDOM
-		&& ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsno == 1)
-	    {
-		status = psl_check_key(sess_cb, &psq_cb->psq_error,
-			    (DB_DT_ID) ssnode->pst_sym.pst_dataval.db_datatype);
-		if (status)
-		{
-		    (VOID) psf_error(2179L, 0L, PSF_USERERR, &err_code,
-			&psq_cb->psq_error, 2,
-			sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-			psf_trmwhite(sizeof(DB_ATT_NAME),
-		            ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname),
-			ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
-		    return (E_DB_ERROR);
-		}
-		break;
-	    }
-	}
-    }
 
     /*
     ** Change object type for the memory stream. For CREATE TABLE stmnt
@@ -1801,7 +1564,16 @@ psl_ct2s_crt_tbl_as_select(
 ** Description:
 **	This routine performs the semantic actions for the crwith (QUEL)
 **	and tbl_with_clause (SQL) productions.  The WITH clause, if any,
-**	has been parsed to completion, so this is all post-processing.
+**	has been parsed to completion and post-processed.  This routine
+**	does additional create-table-like semantic checking.
+**	(We get here whether there was actually a WITH clause or not,
+**	so this is a good place to do generic defaulting.)
+**
+**	It's desirable to put actions here that are a) specific to
+**	create-table-like statements, including REGISTER, but not index or
+**	modify;  and b) common to CREATE and CTAS.  Both CREATE and
+**	CTAS (RETINTO) come here, but they have different close-out
+**	semantic routines.
 **
 **	This semantic action is bypassed during CREATE SCHEMA.
 **
@@ -1809,24 +1581,16 @@ psl_ct2s_crt_tbl_as_select(
 **	sess_cb			    ptr to a PSF session CB
 **	    pss_lang		    query language
 **	    pss_restab		    characteristics of the new table
-**	qmode			    query mode
-**	    PSQ_CREATE		    processing CREATE TABLE (not the AS SELECT
-**				    version) or CREATE
+**	psq_cb			    Query parse control block
+**	  .qmode		    query mode
+**	    PSQ_CREATE		    processing CREATE TABLE
 **	    PSQ_RETINTO		    processing CREATE AS SELECT
-**				    (sess_cb->pss_lang should be DB_SQL)
 **	    PSQ_DGTT		    processing DECLARE GLOBAL TEMPORARY TABLE
 **	    PSQ_DGTT_AS_SELECT	    processing DECLARE GLOBAL TEMPORARY TABLE
 **				    AS SELECT.
 **	    PSQ_MODIFY		    processing MODIFY
 **	    PSQ_INDEX		    processing CREATE INDEX
 **	    PSQ_CONS		    processing constraint-WITH
-**	with_clauses		    mask indicating which WITH options have been
-**				    specified
-**	    PSS_WC_DUPLICATES	    WITH [NO]DUPLICATES has been specified
-**	    PSS_WC_JOURNALING	    WITH [NO]JOURNALING or
-**				    (QUEL only) WITH [NO]LOGGING has been
-**				    specified
-**	    PSS_WC_RECOVERY	    WITH NORECOVERY has been specified
 **
 ** Outputs:
 **     err_blk		    will be filled in if an error occurs
@@ -1863,219 +1627,158 @@ psl_ct2s_crt_tbl_as_select(
 **	07-apr-2010 (thaju02) Bug 123518
 **	    Initialize attr->attr_seqTuple to 0 for system_maintained keys 
 **	    table attribute "_ii_sec_tabkey".
+**	5-Oct-2010 (kschendel) SIR 124554
+**	    Centralize most create-table (including dgtt) and register-as-
+**	    import specific checking here.  Grammar has changed to call
+**	    this after a with-clause from both sql and quel.
 */
 DB_STATUS
 psl_ct3_crwith(
 	PSS_SESBLK	*sess_cb,
-    	i4		qmode,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk)
+	PSQ_CB		*psq_cb)
 {
-    i4		err_code;
+    char		*dmu_indicators;
+    i4			err_code;
+    DB_ERROR		*err_blk;
     QEU_CB		*qeu_cb;
     DMU_CB		*dmu_cb;
-    DB_PART_DEF		*part_def;
-    DMU_CHAR_ENTRY	*charentry;
-    i4			max_create_chars;
+    DMU_KEY_ENTRY	**keyptrs;
+    DMU_KEY_ENTRY	*keyentry;
+    PSS_YYVARS		*yyvars;
     DB_STATUS	        status;
-    i4 		err_num;
-    char    		command[PSL_MAX_COMM_STRING];
-    i4 		length;
-    i4		nparts;
-    ADI_DT_NAME		type_name;
-    ADF_CB		*adf_scb = (ADF_CB*) sess_cb->pss_adfcb;
-    bool		need_audit_key=FALSE;
+    char		command[PSL_MAX_COMM_STRING];
+    i4			qmode;
+    i4			length;
+    bool		need_audit_key;
+
+    yyvars = sess_cb->pss_yyvars;
+    qmode = psq_cb->psq_mode;
+    err_blk = &psq_cb->psq_error;
 
     /* If this is MODIFY, CREATE INDEX, or a constraint WITH, there's
-    ** no post-WITH semantics to do here.
+    ** no post-WITH semantics to do here.  These only get here by an
+    ** accident of the grammar.  (Indeed, at present, only create-index
+    ** and create-table-like things can get here, but be safe and
+    ** spit out anything not create-table-like.)
     */
-    if (qmode == PSQ_MODIFY || qmode == PSQ_INDEX || qmode == PSQ_CONS)
+    if (qmode == PSQ_MODIFY || qmode == PSQ_INDEX || qmode == PSQ_CONS
+      || qmode == PSQ_COPY || qmode == PSQ_X100_CRINDEX)
 	return (E_DB_OK);
-
-    /* if creating a DGTT, WITH NORECOVERY must have been specified */
-    if ((qmode == PSQ_DGTT || qmode == PSQ_DGTT_AS_SELECT) && 
-		!PSS_WC_TST_MACRO(PSS_WC_RECOVERY, with_clauses))
-    {
-	(VOID) psf_error(E_PS0BD0_MUST_USE_NORECOV, 0L, PSF_USERERR,
-	    &err_code, err_blk, 1,
-	    sizeof("DECLARE GLOBAL TEMPORARY TABLE")-1,
-	    "DECLARE GLOBAL TEMPORARY TABLE");
-	return (E_DB_ERROR);
-    }
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
+    dmu_indicators = dmu_cb->dmu_chars.dmu_indicators;
+    psl_command_string(qmode, sess_cb, command, &length);
 
-    if (PSS_WC_ANY_MACRO(with_clauses) &&
-	(qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT))
+    /* REGISTER?  turn on gateway now.  Also, default structure to heap,
+    ** and UPDATE to NOUPDATE.
+    */
+    if (qmode == PSQ_REG_IMPORT)
     {
-	DB_STATUS		status;
-
-	/*
-	** if both COMPRESSION and STRUCTURE were given, resolve any
-	** deferred semantics of WITH COMPRESSION clause.
-	*/
-	if (sess_cb->pss_restab.pst_struct)
+	BTset(DMU_GATEWAY, dmu_indicators);
+	if (! BTtest(DMU_STRUCTURE, dmu_indicators))
 	{
-	    if (sess_cb->pss_restab.pst_compress & PST_COMP_DEFERRED)
-	    {
-		/* WITH COMPRESSION meaning depends on structure */
-		sess_cb->pss_restab.pst_compress = PST_DATA_COMP;
-		if (sess_cb->pss_restab.pst_struct == DB_BTRE_STORE)
-		    sess_cb->pss_restab.pst_compress |= PST_INDEX_COMP;
-	    }
-	    else if (sess_cb->pss_restab.pst_compress & PST_NO_COMPRESSION)
-	    {
-		/*
-		** WITH NOCOMPRESSION specified. Send no compression to
-		** OPC
-		*/
-		sess_cb->pss_restab.pst_compress = 0;
-	    }
+	    BTset(DMU_STRUCTURE, dmu_indicators);
+	    dmu_cb->dmu_chars.dmu_struct = DB_HEAP_STORE;
 	}
-
-	/* Get # of partitions for checking allocation= */
-
-	nparts = 1;
-	if (PSS_WC_TST_MACRO(PSS_WC_PARTITION, with_clauses))
-	{
-	    /* We have either WITH PARTITION= or WITH NOPARTITION */
-	    part_def = dmu_cb->dmu_part_def;
-	    if (part_def != NULL)
-		nparts = part_def->nphys_parts;
-	}
-
-	status = psl_validate_options(sess_cb, qmode, with_clauses,
-	    sess_cb->pss_restab.pst_struct, sess_cb->pss_restab.pst_minpgs,
-	    sess_cb->pss_restab.pst_maxpgs,
-	    (i4) ((sess_cb->pss_restab.pst_compress & PST_DATA_COMP) != 0),
-	    (i4) ((sess_cb->pss_restab.pst_compress & PST_INDEX_COMP)!= 0),
-	    sess_cb->pss_restab.pst_alloc / nparts,
-	    err_blk);
-	if (DB_FAILURE_MACRO(status))
-	    return(status);
+	if (! BTtest(DMU_GW_UPDT, dmu_indicators))
+	    BTset(DMU_GW_UPDT, dmu_indicators);  /* leaving flag off */
     }
 
-    /* maximum number of characteristics is different between QUEL and SQL */
-    max_create_chars = (sess_cb->pss_lang == DB_SQL) ? SQL_MAX_CREATE_CHARS
-						     : QUEL_MAX_CREATE_CHARS;
+    /* Make sure there is a location */
+    if (!dmu_cb->dmu_location.data_in_size)
+    {
+	/* Default location for 'normal' & 'subselect' versions */
+	STmove("$default", ' ', sizeof(DB_LOC_NAME),
+	    (char*) dmu_cb->dmu_location.data_address);
+	dmu_cb->dmu_location.data_in_size = sizeof(DB_LOC_NAME);
+    }
+
     /*
     ** If user has not specified [NO]JOURNALING clause session default should be
-    ** used, unless this is DGTT, in which case journaling can't be done.
+    ** used, unless this is DGTT or REGISTER, in which case journaling
+    ** can't be done.
     */
-    if (   !PSS_WC_TST_MACRO(PSS_WC_JOURNALING, with_clauses)
-        && !sess_cb->pss_restab.pst_temporary
+    if (!BTtest(DMU_JOURNALED, dmu_indicators)
+	&& (qmode == PSQ_CREATE || qmode == PSQ_RETINTO)
 	&& sess_cb->pss_ses_flag & PSS_JOURNALING)
     {
-	if (dmu_cb->dmu_char_array.data_in_size >= 
-		max_create_chars * sizeof (DMU_CHAR_ENTRY))
-	{
-	    (VOID) psf_error(2924L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-		sizeof (sess_cb->pss_lineno), &sess_cb->pss_lineno);
-	    return (E_DB_ERROR);    /* non-zero return means error */
-	}
-
-	charentry = (DMU_CHAR_ENTRY *) 
-	    ((char *) dmu_cb->dmu_char_array.data_address
-	    + dmu_cb->dmu_char_array.data_in_size);
-	charentry->char_id = DMU_JOURNALED;
-	charentry->char_value = DMU_C_ON;
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	BTset(DMU_JOURNALED, dmu_indicators);
 	if (sess_cb->pss_ses_flag & PSS_JOURNALED_DB)
-	    sess_cb->pss_restab.pst_resjour = PST_RESJOUR_ON;
+	    dmu_cb->dmu_chars.dmu_journaled = DMU_JOURNAL_ON;
 	else
-	    sess_cb->pss_restab.pst_resjour = PST_RESJOUR_LATER;
+	    dmu_cb->dmu_chars.dmu_journaled = DMU_JOURNAL_LATER;
     }
 
     /*
-    ** If user has not specified WITH SECURITY_AUDIT=(ROW|NOROW) clause 
-    ** session  default should be used, unless this is DGTT or distributed, 
-    ** in which case security row auditing isn't done. 
+    ** If user has not specified WITH SECURITY_AUDIT=(ROW|NOROW) clause
+    ** session  default should be used, unless this is DGTT or distributed,
+    ** in which case security row auditing isn't done.
     */
-    if( ( !sess_cb->pss_restab.pst_temporary 
-            && !(sess_cb->pss_distrib & DB_3_DDB_SESS)
-        ) && ( (!PSS_WC_TST_MACRO(PSS_WC_ROW_SEC_AUDIT, with_clauses)
-		&& (sess_cb->pss_ses_flag & PSS_ROW_SEC_AUDIT)
-	) || ( ((PSS_WC_TST_MACRO(PSS_WC_ROW_SEC_AUDIT, with_clauses)) && 
-	        (sess_cb->pss_restab.pst_secaudit & PST_SECAUDIT_ROW)
-	       ))))
+    if ((qmode == PSQ_CREATE || qmode == PSQ_RETINTO)
+      && (sess_cb->pss_distrib & DB_3_DDB_SESS) == 0)
     {
-	need_audit_key=TRUE;
-	/*
-	** Mark the table has having row security auditing
-	*/
-	if (dmu_cb->dmu_char_array.data_in_size >= 
-		max_create_chars * sizeof (DMU_CHAR_ENTRY))
+	need_audit_key = FALSE;
+	if ((!BTtest(PSS_WC_ROW_SEC_AUDIT, dmu_indicators)
+		&& (sess_cb->pss_ses_flag & PSS_ROW_SEC_AUDIT) )
+	   || ( BTtest(PSS_WC_ROW_SEC_AUDIT, dmu_indicators) &&
+		yyvars->secaudit) )
 	{
-	    (VOID) psf_error(2924L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-		sizeof (sess_cb->pss_lineno), &sess_cb->pss_lineno);
+	    need_audit_key=TRUE;
+	    /*
+	    ** Mark the table has having row security auditing
+	    */
+	    BTset(DMU_ROW_SEC_AUDIT, dmu_indicators);
+	}
+
+	/* The combination of explicit NOSECURITY_AUDIT_KEY and explicit
+	** or session security_audit=(row) is invalid, error.
+	*/
+	if (need_audit_key
+	  && BTtest(PSS_WC_ROW_SEC_KEY, dmu_indicators)
+	  && yyvars->secaudkey == NULL)
+	{
+	    /*
+	    ** We need a row audit key but the user explictly stated that
+	    ** there should be no row audit key, so generate an error
+	    */
+	    (VOID) psf_error(6662, 0L, PSF_USERERR, &err_code, err_blk, 0);
 	    return (E_DB_ERROR);    /* non-zero return means error */
 	}
 
-	charentry = (DMU_CHAR_ENTRY *) 
-	    ((char *) dmu_cb->dmu_char_array.data_address
-	    + dmu_cb->dmu_char_array.data_in_size);
-	charentry->char_id = DMU_ROW_SEC_AUDIT;
-	charentry->char_value = DMU_C_ON;
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
 	/*
-	** Default to row security audit for CREATE TABLE AS SELECT
+	** If user has not specified SECURITY_AUDIT_KEY= clause session
+	** default should be used.  Note that the session default may be
+	** to create an audit key even when row auditing is disabled, to allow
+	** for auditing to be enabled later on.
+	** First check for explicit NOSECURITY_AUDIT_KEY.
 	*/
-	if(qmode==PSQ_RETINTO)
-		sess_cb->pss_restab.pst_flags |= PST_ROW_SEC_AUDIT;
-    }
-    if (need_audit_key && 
-	    PSS_WC_TST_MACRO(PSS_WC_ROW_NO_SEC_KEY, with_clauses))
-    {
-	/*
-	** We need a row audit key but the user explictly stated that
-	** there should be no row audit key, so generate an error
-	*/
-        (VOID) psf_error(6662, 0L, PSF_USERERR, &err_code, err_blk, 0);
-        return (E_DB_ERROR);    /* non-zero return means error */
-    }
-
-    /*
-    ** If user has not specified SECURITY_AUDIT_KEY= clause session 
-    ** default should be used, unless this is DGTT, in which case security 
-    ** row auditing isn't done. Note that the session default may be
-    ** to create an audit key even when row auditing is disabled, to allow
-    ** for auditing to be enabled later on.
-    */
-    if(( !sess_cb->pss_restab.pst_temporary 
-            && !(sess_cb->pss_distrib & DB_3_DDB_SESS)
-        ) && 
-	! (PSS_WC_TST_MACRO(PSS_WC_ROW_NO_SEC_KEY, with_clauses))
-	&&
-	(  (!PSS_WC_TST_MACRO(PSS_WC_ROW_SEC_KEY, with_clauses) &&
-	     (sess_cb->pss_ses_flag & PSS_ROW_SEC_KEY)
-	   ) 
-	   ||  (PSS_WC_TST_MACRO(PSS_WC_ROW_SEC_KEY, with_clauses)) 
-	   ||  need_audit_key 
-       ))
-    {
-	i4 		colno;
-	DMF_ATTR_ENTRY	**attrs;
-	DMF_ATTR_ENTRY	*cur_attr;
-	i4	    	err_num;
-	char		*seckeyname;
-	/*
-	** For CREATE TABLE AS SELECT we need to add resdom nodes
-	** later.
-	*/
-	if(qmode==PSQ_RETINTO)
-		sess_cb->pss_stmt_flags|= PSS_NEED_ROW_SEC_KEY;
-	else
+	if(! (BTtest(PSS_WC_ROW_SEC_KEY, dmu_indicators)
+		&& yyvars->secaudkey == NULL)
+	  &&
+	    (  (!BTtest(PSS_WC_ROW_SEC_KEY, dmu_indicators) &&
+		 (sess_cb->pss_ses_flag & PSS_ROW_SEC_KEY)
+	       )
+	       ||  BTtest(PSS_WC_ROW_SEC_KEY, dmu_indicators)
+	       ||  need_audit_key
+	   ))
 	{
+	    i4	colno;
 	    i4  len=0;
+	    i4	attr_count;
+	    DMF_ATTR_ENTRY	**attrs;
+	    DMF_ATTR_ENTRY	*cur_attr;
+	    i4		err_num;
+	    char	*seckeyname;
 	    /*
 	    ** Search to see if the user already added a column called
 	    ** _ii_sec_tabkey, or a requested key column
 	    */
 	    attrs=(DMF_ATTR_ENTRY**) dmu_cb->dmu_attr_array.ptr_address;
-	    if (PSS_WC_TST_MACRO(PSS_WC_ROW_SEC_KEY, with_clauses)) 
+	    attr_count = dmu_cb->dmu_attr_array.ptr_in_count;
+	    if (BTtest(PSS_WC_ROW_SEC_KEY, dmu_indicators))
 	    {
-		seckeyname= (char*)sess_cb->pss_restab.pst_secaudkey;
+		seckeyname= yyvars->secaudkey->db_att_name;
 		len=sizeof(DB_ATT_NAME);
 	    }
 	    else
@@ -2083,7 +1786,7 @@ psl_ct3_crwith(
 		seckeyname=psl_seckey_attr_name(sess_cb);
 		len=STlength(seckeyname);
 	    }
-	    for(colno=0;colno<sess_cb->pss_rsdmno; colno++)
+	    for(colno=0;colno<attr_count; colno++)
 	    {
 		cur_attr=attrs[colno];
 		if(MEcmp(seckeyname,
@@ -2093,8 +1796,8 @@ psl_ct3_crwith(
 			break;
 		}
 	    }
-	    if ((PSS_WC_TST_MACRO(PSS_WC_ROW_SEC_KEY, with_clauses))  &&
-		colno==sess_cb->pss_rsdmno)
+	    if ((BTtest(PSS_WC_ROW_SEC_KEY, dmu_indicators))  &&
+		colno == attr_count)
 	    {
 		/*
 		** Error, invalid column specified
@@ -2104,36 +1807,27 @@ psl_ct3_crwith(
 		    psf_trmwhite(sizeof(DB_ATT_NAME),
 			(char *) seckeyname),
 		    (char *) seckeyname);
-		return (E_DB_ERROR);		    
+		return (E_DB_ERROR);
 
 	    }
-	    if(colno==sess_cb->pss_rsdmno)
+	    if(colno == attr_count)
 	    {
+		/* We have to add an audit key column */
+		/* If CTAS, remember to add the resdom too (later) */
+		if(qmode==PSQ_RETINTO)
+		    sess_cb->pss_stmt_flags|= PSS_NEED_ROW_SEC_KEY;
 		/*
 		** Set system_maintained keys table attribute
 		*/
-		if (dmu_cb->dmu_char_array.data_in_size >= 
-			max_create_chars * sizeof (DMU_CHAR_ENTRY))
-		{
-		    (VOID) psf_error(2924L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-			sizeof (sess_cb->pss_lineno), &sess_cb->pss_lineno);
-		    return (E_DB_ERROR);    /* non-zero return means error */
-		}
-
-		charentry = (DMU_CHAR_ENTRY *) 
-		    ((char *) dmu_cb->dmu_char_array.data_address
-		    + dmu_cb->dmu_char_array.data_in_size);
-		charentry->char_id = DMU_SYS_MAINTAINED;
-		charentry->char_value = DMU_C_ON;
-		dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+		BTset(DMU_SYS_MAINTAINED, dmu_indicators);
 
 		/*
 		** The default attribute is a hidden system_maintained
 		** table_key with name "_ii_sec_tabkey"
 		*/
-		colno=sess_cb->pss_rsdmno;
+		colno = attr_count;
 
-		if( ++sess_cb->pss_rsdmno > DB_MAX_COLS)
+		if( ++attr_count > DB_MAX_COLS)
 		{
 
 			if (sess_cb->pss_lang == DB_QUEL)
@@ -2148,17 +1842,20 @@ psl_ct3_crwith(
 
 		status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(DMF_ATTR_ENTRY),
 			(PTR*) &attrs[colno], err_blk);
-		
+
 		if(status!=E_DB_OK)
 			return status;
-		
+
+		++ dmu_cb->dmu_attr_array.ptr_in_count;
+		++ sess_cb->pss_rsdmno;
 		cur_attr=attrs[colno];
 		STmove(psl_seckey_attr_name(sess_cb)
-			, ' ',sizeof(DB_ATT_NAME), 
+			, ' ',sizeof(DB_ATT_NAME),
 			(char*) &(cur_attr->attr_name));
 		cur_attr->attr_defaultTuple=0;
 		cur_attr->attr_seqTuple=0;
 		cur_attr->attr_precision=0;
+		cur_attr->attr_collID=0;
 		cur_attr->attr_size=DB_LEN_TAB_LOGKEY;
 		cur_attr->attr_type=DB_TABKEY_TYPE;
 		cur_attr->attr_flags_mask=(
@@ -2171,7 +1868,8 @@ psl_ct3_crwith(
 		status=psl_2col_ingres_default(sess_cb, cur_attr, err_blk);
 		if(status!=E_DB_OK)
 			return status;
-		dmu_cb->dmu_attr_array.ptr_in_count++;
+		cur_attr->attr_encflags = 0;
+		cur_attr->attr_encwid = 0;
 	    }
 	    else
 	    {
@@ -2180,3167 +1878,109 @@ psl_ct3_crwith(
 		** Note: this is regular user attribute so do NOT override
 		** the default visibility/hidden attribute here.
 		*/
-	        cur_attr->attr_flags_mask|= DMU_F_SEC_KEY;
+		cur_attr->attr_flags_mask|= DMU_F_SEC_KEY;
 	    }
-	}	
-    }
-    /*
-    ** If DUPLICATES was not specified, processing is different for QUEL and
-    ** SQL queries: the DMF default is NODUPLICATES, which is what QUEL
-    ** requires, so DUPLICATES characteristics entry need not be added if
-    ** processing CREATE; for SQL WITH DUPLICATES is the default, so a
-    ** DUPLICATES characteristics entry will be added
-    */
-    if (!PSS_WC_TST_MACRO(PSS_WC_DUPLICATES, with_clauses) && sess_cb->pss_lang == DB_SQL)
+	}
+    } /* security audit checks */
+
+    if (! BTtest(DMU_DUPLICATES, dmu_indicators))
     {
-	if (dmu_cb->dmu_char_array.data_in_size >=
-		max_create_chars * sizeof (DMU_CHAR_ENTRY))
+	/* The DUPLICATES default depends on query and query language.
+	** The SQL default is DUPLICATES.
+	** The QUEL default is NODUPLICATES, and if the target storage
+	** structure is [c]heapsort, do something so that the query plan
+	** removes duplicates too.
+	** The REGISTER default is duplicates, unless the storage structure
+	** is nonheap and unique, in which case it's NODUPLICATES.
+	** (I don't know if it really matters, but that's what the
+	** original code did.)
+	*/
+	BTset(DMU_DUPLICATES, dmu_indicators);
+	/* Set flag if DUPLICATES, do nothing if NODUPLICATES */
+	if (qmode == PSQ_REG_IMPORT)
 	{
-	    /* Invalid with clause - too many options */
-	    (VOID) psf_error(2015L, 0L, PSF_USERERR, &err_code, err_blk, 0);
+	    if (! BTtest(DMU_UNIQUE, dmu_indicators)
+	      || dmu_cb->dmu_chars.dmu_struct == DB_HEAP_STORE)
+		dmu_cb->dmu_chars.dmu_flags |= DMU_FLAG_DUPS;
+	}
+	else if (sess_cb->pss_lang == DB_SQL)
+	    dmu_cb->dmu_chars.dmu_flags |= DMU_FLAG_DUPS;
+	else if (dmu_cb->dmu_chars.dmu_struct == DB_HEAP_STORE
+	  && sess_cb->pss_restab.pst_heapsort)
+	    yyvars->with_dups = PST_NODUPS;
+    }
+
+    /* Transform KEY= list into a dmu_key_array.  I suppose we could work
+    ** with DMU key entries directly, but this way we know how big the
+    ** array needs to be.
+    ** If there is no KEY= list, and it's CTAS, and we have a keyed
+    ** storage structure or HEAPSORT, use the first column as the key.
+    */
+    if (yyvars->withkey_count > 0)
+    {
+	PST_RESKEY *key;
+
+	/* Allocate pointers, entries */
+	dmu_cb->dmu_key_array.ptr_in_count = yyvars->withkey_count;
+	status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
+		yyvars->withkey_count * (sizeof(DMU_KEY_ENTRY *) + sizeof(DMU_KEY_ENTRY)),
+		&dmu_cb->dmu_key_array.ptr_address, err_blk);
+	if (status != E_DB_OK)
+	    return (status);
+	dmu_cb->dmu_key_array.ptr_size = sizeof(DMU_KEY_ENTRY);
+	keyptrs = (DMU_KEY_ENTRY **) dmu_cb->dmu_key_array.ptr_address;
+	keyentry = (DMU_KEY_ENTRY *) (keyptrs + yyvars->withkey_count);
+	key = yyvars->withkey;
+	do
+	{
+	    MEcopy(key->pst_attname.db_att_name,
+		sizeof(keyentry->key_attr_name.db_att_name),
+		keyentry->key_attr_name.db_att_name);
+	    keyentry->key_order = DMU_ASCENDING;
+	    if (key->pst_descending)
+		keyentry->key_order = DMU_DESCENDING;
+	    *keyptrs++ = keyentry;
+	    ++keyentry;
+	    key = key->pst_nxtkey;
+	} while (key != NULL);
+    }
+    else if ((qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT)
+      && ((dmu_cb->dmu_chars.dmu_struct != DB_HEAP_STORE
+		&& dmu_cb->dmu_chars.dmu_struct <= DB_STDING_STORE_MAX)
+	  || (dmu_cb->dmu_chars.dmu_struct == DB_HEAP_STORE
+		&& sess_cb->pss_restab.pst_heapsort) ) )
+    {
+	DMF_ATTR_ENTRY *attr;
+
+	attr = ((DMF_ATTR_ENTRY **)(dmu_cb->dmu_attr_array.ptr_address))[0];
+	status = psl_check_key(sess_cb, err_blk, attr->attr_type);
+	if (status != E_DB_OK)
+	{
+	    (VOID) psf_error(2179L, 0L, PSF_USERERR, &err_code,
+		&psq_cb->psq_error, 2,
+		sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
+		psf_trmwhite(sizeof(DB_ATT_NAME), attr->attr_name.db_att_name),
+		attr->attr_name);
 	    return (E_DB_ERROR);
 	}
-
-	/* Add DUPLICATES entry to DMU_CHAR_ARRAY */
-	charentry = (DMU_CHAR_ENTRY *)
-	    ((char *) dmu_cb->dmu_char_array.data_address
-	    + dmu_cb->dmu_char_array.data_in_size);
-	charentry->char_id = DMU_DUPLICATES;
-	charentry->char_value = DMU_C_ON;	/* allow duplicates */
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	sess_cb->pss_restab.pst_resdup = TRUE;
+	dmu_cb->dmu_key_array.ptr_in_count = 1;
+	status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
+		sizeof(DMU_KEY_ENTRY *) + sizeof(DMU_KEY_ENTRY),
+		&dmu_cb->dmu_key_array.ptr_address, err_blk);
+	if (status != E_DB_OK)
+	    return (status);
+	dmu_cb->dmu_key_array.ptr_size = sizeof(DMU_KEY_ENTRY);
+	keyptrs = (DMU_KEY_ENTRY **) dmu_cb->dmu_key_array.ptr_address;
+	keyentry = (DMU_KEY_ENTRY *) (keyptrs + 1);
+	MEcopy(attr->attr_name.db_att_name, DB_ATT_MAXNAME,
+		keyentry->key_attr_name.db_att_name);
+	keyentry->key_order = DMU_ASCENDING;
+	*keyptrs = keyentry;
     }
 
     return(E_DB_OK);
-}
-
-/*
-** Name: psl_nm_eq_nm    - semantic actions for processing a WITH clause of form
-**			   NAME=NAME;
-**
-** Description:
-**	This routine performs the semantic actions for WITH clauses of the
-**	general form NAME = NAME.  There are several productions that
-**	can get here, with the most general being twith_name.
-**
-**	This semantic action is bypassed during CREATE SCHEMA.
-**
-** Inputs:
-**	sess_cb		    ptr to a PSF session CB
-**	    pss_lang	    query language
-**	name		    NAME given on the LHS 
-**	value		    value given on the RHS
-**	with_clauses	    mask representing WITH options specified so far
-**	qmode		    query mode
-**	    PSQ_RETINTO	    CREATE TABLE AS SELECT
-**	    PSQ_CREATE	    CREATE TABLE
-**	    PSQ_CONS	    ANSI constraint definition
-**	    PSQ_DGTT	    DECLARE GLOBAL TEMPORARY TABLE
-**	    PSQ_DGTT_AS_SELECT
-**			    DECLARE GLOBAL TEMPORARY TABLE AS SELECT
-**	    PSQ_INDEX	    [CREATE] INDEX
-**	    PSQ_MODIFY	    MODIFY
-**
-** Outputs:
-**	with_clauses	    Updated to indicate the newly specified WITH option.
-**	err_blk		    will be filled in if an error occurs
-**
-** Returns:
-**	E_DB_{OK, ERROR}
-**
-** History:
-**	5-mar-1991 (bryanp)
-**	    Created.
-**	13-nov-91 (andre)
-**	    merged 02-jul-91 (andre) change:
-**		fix bug 37706.  In SQL, unsupported options which look like a
-**		gateway-specific option will result in an informational message
-**		instead of a syntax error message
-**	15-nov-91 (andre)
-**	    renamed to psl_nm_eq_nm() and adapted for use by [CREATE] INDEX as
-**	    well as CREATE TABLE AS SELECT
-**	10-dec-92 (rblumer)
-**	    added new WITH UNIQUE_SCOPE clause for CREATE INDEX
-**	06-apr-93 (rblumer)
-**	    made this function handle the MODIFY command, too,
-**	    so that we can share the UNIQUE_SCOPE code.
-**	12-aug-93 (robf)
-**	    Add handling for LABEL_GRANULARITY=TABLE|ROW|SYSTEM_DEFAULT
-**	04-may-1995 (shero03)
-**	    Added RTREE
-**	14-Aug-1997 (shero03)
-**	    B84393: give a better error message when rtree used in CREATE TABLE
-**	30-mar-98 (inkdo01)
-**	    Added support for constraint index options.
-**	29-jan-99 (inkdo01)
-**	    Patched up error test for unique/structure & unique_scope.
-**	26-Jan-2004 (schka24)
-**	    Consolidate all the table-ish with clauses.
-**	28-Nov-2005 (kschendel)
-**	    Use structure name lookup utility.
-**	13-Apr-2006 (jenjo02)
-**	    Add special structure "clustered" (Btree under the covers).
-**	22-Mar-2010 (toumi01) SIR 122403
-**	    Process WITH ENCRYPTION=<spec>, PASSPHRASE=<secret>
-**	04-may-2010 (miket) SIR 122403
-**	    Set PSS_2_ENCRYPTION and PSS_2_PASSPHRASE for later syntax
-**	    checking.
-*/
-DB_STATUS
-psl_nm_eq_nm(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	char		*value,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk)
-{
-    i4	    err_code;
-    i4		    storestruct;
-    i4		    compressed;
-    char    	    qry[PSL_MAX_COMM_STRING];
-    i4	    qry_len;
-    QEU_CB	    *qeu_cb;
-    DMU_CB	    *dmu_cb;
-    DMU_CHAR_ENTRY  *chr;
-    char    	    command[PSL_MAX_COMM_STRING];
-    i4		length;
-    bool	in_partition_def;
 
-    in_partition_def = (sess_cb->pss_stmt_flags & PSS_PARTITION_DEF) != 0;
-
-    psl_command_string(qmode, sess_cb->pss_lang, qry, &qry_len);
-
-    /* At present, there aren't any name = name options allowed inside a
-    ** partition definition, so trap it off right away:
-    */
-    if (in_partition_def)
-    {
-	(void) psf_error(E_US1931_6449_PARTITION_BADOPT, 0, PSF_USERERR,
-		&err_code, err_blk, 2,
-		qry_len, qry, STlength(name), name);
-	return (E_DB_ERROR);
-    }
-
-    if (STcasecmp(name, ERx("structure") ) == 0)
-    {
-	char    *ssname = value;
-
-	/* WITH STRUCTURE not allowed with simple CREATE TABLE */
-	if (qmode == PSQ_CREATE || qmode == PSQ_DGTT)
-	{
-	    _VOID_ psf_error(2026L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-			(i4) STlength(name), name);
-	    return (E_DB_ERROR);
-	}
-
-	/* WITH STRUCTURE not allowed for MODIFY either */
-	if (qmode == PSQ_MODIFY)
-	{
-	    _VOID_ psf_error(5558L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-			(i4) STlength(name), name);
-	    return (E_DB_ERROR);
-	}
-
-	/*
-	** Reject multiple structure specifications:
-	*/
-	if (PSS_WC_TST_MACRO(PSS_WC_STRUCTURE, with_clauses))
-	{
-	    _VOID_ psf_error(E_PS0BC9_DUPLICATE_WITH_CLAUSE,
-			0L, PSF_USERERR, &err_code, err_blk, 3,
-			qry_len, qry,
-			sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-			sizeof("STRUCTURE") - 1, "STRUCTURE");
-	    return (E_DB_ERROR);    
-	}
-	PSS_WC_SET_MACRO(PSS_WC_STRUCTURE, with_clauses);
-
-	/* Check "clustered" explicitly before all others */
-/* --> comment out test for "clustered"
-	if ((qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT) &&
-		 !(STcasecmp(ssname, "clustered")) )
-	{
-	    storestruct = DB_BTRE_STORE;
-	    compressed = FALSE;
-	    sess_cb->pss_restab.pst_clustered = TRUE;
-	    PSS_WC_SET_MACRO(PSS_WC_CLUSTERED, with_clauses);
-	}
-	else
-*/
-	{
-	    sess_cb->pss_restab.pst_clustered = FALSE;
-
-	    /* Decode storage structure */
-	    if (compressed = !CMcmpcase(ssname, "c"))
-	    {
-		if (PSS_WC_TST_MACRO(PSS_WC_COMPRESSION, with_clauses))
-		{
-		    (VOID) psf_error(E_PS0BC4_COMPRESSION_TWICE,
-			    0L, PSF_USERERR, &err_code, err_blk, 2,
-			    qry_len, qry,
-			    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno);
-		    return (E_DB_ERROR);
-		}
-
-		PSS_WC_SET_MACRO(PSS_WC_COMPRESSION, with_clauses);
-		CMnext(ssname);
-	    }
-
-	    storestruct = uld_struct_xlate(ssname);
-	}
-
-	/* Disallow heapsort;  rtree only for index;  heap not allowed
-	** for index.
-	*/
-	if (storestruct == 0 || storestruct == DB_SORT_STORE
-	  || (qmode != PSQ_INDEX && storestruct == DB_RTRE_STORE)
-	  || (qmode == PSQ_INDEX && storestruct == DB_HEAP_STORE) )
-	{
-	    _VOID_ psf_error((qmode == PSQ_INDEX) ? 5313L : 2002L, 0L,
-		PSF_USERERR, &err_code, err_blk, 1,
-		(i4) STtrmwhite(value), value);
-	    return (E_DB_ERROR);    
-	}
-
-	/*
-	** information is stored differently for CREATE TABLE AS SELECT,
-	** ANSI constraints and [CREATE] INDEX
-	*/
-	if (qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT)
-	{
-	    sess_cb->pss_restab.pst_struct = storestruct;
-	    if (compressed)
-		sess_cb->pss_restab.pst_compress = PST_DATA_COMP;
-	}
-	else if (qmode == PSQ_CONS)
-	    sess_cb->pss_curcons->pss_restab.pst_struct = storestruct;
-	else	    /* qmode == PSQ_INDEX */
-	{
-	    qeu_cb = (QEU_CB *) sess_cb->pss_object;
-	    dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-
-	    /* [CREATE] INDEX disallows cbtree */
-	    if (compressed && storestruct == DB_BTRE_STORE)
-	    {
-		(VOID) psf_error(E_PS0BC0_BTREE_INDEX_NO_DCOMP, 
-		    0L, PSF_USERERR, &err_code, err_blk, 2,
-		    qry_len, qry,
-		    psf_trmwhite(sizeof(DB_TAB_NAME), 
-			(char *) &dmu_cb->dmu_table_name),
-		    &dmu_cb->dmu_table_name);
-		return (E_DB_ERROR);
-	    }
-
-	    /* [CREATE] INDEX disallows crtree */
-	    if (storestruct == DB_RTRE_STORE)
-	    {
-	      if (compressed)
-	      {
-		(VOID) psf_error(E_PS0BCA_RTREE_INDEX_NO_COMP,
-		0L, PSF_USERERR, &err_code, err_blk, 2,
-		qry_len, qry,
-		psf_trmwhite(sizeof(DB_TAB_NAME),
-		    (char *) &dmu_cb->dmu_table_name),
-		    &dmu_cb->dmu_table_name);
-	        return (E_DB_ERROR);
-	      }
-   	    }  /* RTREE */ 
-
-	    /* Put the storage structure info in the characteristics array. */
-
-	    chr = (DMU_CHAR_ENTRY *) 
-		((char *) dmu_cb->dmu_char_array.data_address
-		+ dmu_cb->dmu_char_array.data_in_size);
-
-	    if (dmu_cb->dmu_char_array.data_in_size >=
-		PSS_MAX_INDEX_CHARS * sizeof (DMU_CHAR_ENTRY))
-	    {
-		/* Invalid with clause - too many options */
-		(VOID) psf_error(5327L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-		return (E_DB_ERROR);
-	    }
-
-	    chr->char_id = DMU_STRUCTURE;
-	    chr->char_value = storestruct;
-	    chr++;
-	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-
-	    /* Tell DMF if the structure should be compressed */
-	    if (compressed)
-	    {
-		if (dmu_cb->dmu_char_array.data_in_size >=
-		    PSS_MAX_INDEX_CHARS * sizeof (DMU_CHAR_ENTRY))
-		{
-		    /* Invalid with clause - too many options */
-		    (VOID) psf_error(5327L, 0L, PSF_USERERR, 
-			&err_code, err_blk, 0);
-		    return (E_DB_ERROR);
-		}
-
-		chr->char_id = DMU_COMPRESSED;
-		chr->char_value = DMU_C_ON;
-		dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    }
-	} /* end else PSQ_INDEX */
-    } /* end if structure */
-    else 
-	if (STcasecmp(name, ERx("unique_scope") ) == 0)
-    {
-	char    *scope = value;
-	i4	statement_level;
-	i4	max_chars;
-
-	/* WITH UNIQUE_SCOPE only allowed for INDEX and MODIFY 
-	 */
-	if (qmode != PSQ_INDEX && qmode != PSQ_MODIFY)
-	{
-	    (void) psf_error(E_PS0BB0_UNIQ_SCOPE_NOT_ALLOWED, 
-			     0L, PSF_USERERR, &err_code, err_blk, 1,
-			     qry_len, qry);
-	    return (E_DB_ERROR);
-	}
-
-	/* WITH UNIQUE_SCOPE only allowed in SQL
-	 */
-	if (sess_cb->pss_lang != DB_SQL)
-	{
-	    (void) psf_error(E_PS0BB1_UNIQ_SCOPE_SQL_ONLY, 
-			     0L, PSF_USERERR, &err_code, err_blk, 1,
-			     qry_len, qry);
-	    return (E_DB_ERROR);
-	}
-
-	/*
-	** Must specify UNIQUE in order to supply a scope
-	*/
-	if (!(PSS_WC_TST_MACRO(PSS_WC_UNIQUE, with_clauses)) && 
-		PSS_WC_TST_MACRO(PSS_WC_STRUCTURE, with_clauses))
-	{
-	    (void) psf_error(E_PS0BB2_UNIQUE_REQUIRED, 0L, PSF_USERERR,
-			     &err_code, err_blk, 1,
-			     qry_len, qry);
-	    return (E_DB_ERROR);
-	}
-
-	/*
-	** Reject multiple unique_scope specifications:
-	*/
-	if (PSS_WC_TST_MACRO(PSS_WC_UNIQUE_SCOPE, with_clauses))
-	{
-	    _VOID_ psf_error(E_PS0BC9_DUPLICATE_WITH_CLAUSE,
-			0L, PSF_USERERR, &err_code, err_blk, 3,
-			qry_len, qry,
-			sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-			sizeof(ERx("UNIQUE_SCOPE")) - 1, ERx("UNIQUE_SCOPE"));
-	    return (E_DB_ERROR);    
-	}
-	PSS_WC_SET_MACRO(PSS_WC_UNIQUE_SCOPE, with_clauses);
-
-	if (STcasecmp(scope, ERx("statement") ) == 0)
-	{
-	    statement_level = TRUE;
-	}
-	else if (STcasecmp(scope, "row" ) == 0)
-	{
-	    statement_level = FALSE;
-	}
-	else
-	{
-	    (void) psf_error(E_PS0BB3_INVALID_UNIQUE_SCOPE, 0L, PSF_USERERR,
-			     &err_code, err_blk, 2,
-			     qry_len, qry,
-			     (i4) STtrmwhite(value), value);
-	    return (E_DB_ERROR);    
-	}
-
-	qeu_cb = (QEU_CB *) sess_cb->pss_object;
-	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-
-	/* Put the storage structure info in the characteristics array. */
-
-	chr = (DMU_CHAR_ENTRY *) 
-	    ((char *) dmu_cb->dmu_char_array.data_address
-	     + dmu_cb->dmu_char_array.data_in_size);
-
-	max_chars = PSQ_INDEX ? PSS_MAX_INDEX_CHARS : PSS_MAX_MODIFY_CHARS;
-
-	if (dmu_cb->dmu_char_array.data_in_size >= 
-					max_chars * sizeof (DMU_CHAR_ENTRY))
-	{
-	    /* Invalid with clause - too many options */
-	    (VOID) psf_error(5327L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-	    return (E_DB_ERROR);
-	}
-
-	chr->char_id = DMU_STATEMENT_LEVEL_UNIQUE;
-	chr->char_value = statement_level ? DMU_C_ON 
-	                                  : DMU_C_OFF;
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-
-    }  /* end if unique_scope */
-    else 
-	if (STcasecmp(name, ERx("index")) == 0)
-    {
-
-	/* 
-	** WITH INDEX only allowed for ANSI constraint definitions.
-	** Note: WITH INDEX = BASE TABLE STRUCTURE is special, handled
-	** in the grammar production, not here.
-	*/
-	if (qmode != PSQ_CONS)
-	{
-	    psl_command_string(qmode, DB_SQL, command, &length);
-	    (void) psf_error(6353, 0L, PSF_USERERR, &err_code, err_blk, 2,
-			length, command,
-			sizeof("INDEX")-1, "INDEX");
-			
-	    return (E_DB_ERROR);
-	}
-
-	/*
-	** Reject multiple INDEX specifications:
-	*/
-	if (PSS_WC_TST_MACRO(PSS_WC_CONS_INDEX, with_clauses))
-	{
-	    _VOID_ psf_error(6351, 0L, PSF_USERERR, &err_code, err_blk, 3,
-			qry_len, qry,
-			sizeof(ERx("INDEX")) - 1, 
-				ERx("INDEX"));
-	    return (E_DB_ERROR);    
-	}
-
-	STmove(value, ' ', sizeof(DB_TAB_NAME), 
-		(char *)&sess_cb->pss_curcons->pss_restab.pst_resname);
-	sess_cb->pss_curcons->pss_cons_flags |= PSS_CONS_IXNAME;
-	PSS_WC_SET_MACRO(PSS_WC_CONS_INDEX, with_clauses);
-    }  /* end if index */
-    else 
-	if (STcasecmp(name, ERx("encryption")) == 0)
-    {
-	qeu_cb = (QEU_CB *) sess_cb->pss_object;
-	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-	if (STcasecmp(value, ERx("aes128")) == 0)
-	    dmu_cb->dmu_enc_flags |= (DMU_ENCRYPTED|DMU_AES128);
-	else
-	if (STcasecmp(value, ERx("aes192")) == 0)
-	    dmu_cb->dmu_enc_flags |= (DMU_ENCRYPTED|DMU_AES192);
-	else
-	if (STcasecmp(value, ERx("aes256")) == 0)
-	    dmu_cb->dmu_enc_flags |= (DMU_ENCRYPTED|DMU_AES256);
-	else
-	{
-	    /* invalid ENCRYPTION= type */
-	    (void) psf_error(9401L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-			     (i4) STlength(value), value);
-	    return (E_DB_ERROR);
-	}
-	sess_cb->pss_stmt_flags2 |= PSS_2_ENCRYPTION;
-    }  /* end if encryption */
-    else 
-	if (STcasecmp(name, ERx("passphrase")) == 0)
-    {
-	int i;
-	char *p;
-	char *pend;
-	u_char *pass_addr[4];
-	int	pass_offset[4];
-	int	pass, pass_start, pass_end;
-
-	qeu_cb = (QEU_CB *) sess_cb->pss_object;
-	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-
-	/* This is so fancy you just know it's ugly deep down. For CREATE
-	** we know what type of AES encryption we are dealing with, but
-	** with MODIFY we won't know until we access the relation record
-	** for the table, so prep all AES flavors from the user string.
-	*/
-	if (qmode == PSQ_CREATE)
-	{
-	    pass_addr[0] = dmu_cb->dmu_enc_passphrase;
-	    if (dmu_cb->dmu_enc_flags & DMU_AES128)
-		pass_offset[0] = AES_128_BYTES;
-	    else
-	    if (dmu_cb->dmu_enc_flags & DMU_AES192)
-		pass_offset[0] = AES_192_BYTES;
-	    else
-	    if (dmu_cb->dmu_enc_flags & DMU_AES256)
-		pass_offset[0] = AES_256_BYTES;
-	    else
-	    {
-		/* ENCRYPTION type has not been specified */
-		(void) psf_error(9402L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-		return (E_DB_ERROR);
-	    }
-	    pass_start = 0;
-	    pass_end = 1;
-	}
-	else
-	{
-	    pass_addr[1] = dmu_cb->dmu_enc_old128pass;
-	    pass_addr[2] = dmu_cb->dmu_enc_old192pass;
-	    pass_addr[3] = dmu_cb->dmu_enc_old256pass;
-	    pass_offset[1] = AES_128_BYTES;
-	    pass_offset[2] = AES_192_BYTES;
-	    pass_offset[3] = AES_256_BYTES;
-	    pass_start = 1;
-	    pass_end = 4;
-	}
-
-	for ( pass = pass_start ; pass < pass_end ; pass++ )
-	{
-	    p = pend = pass_addr[pass];
-	    pend += pass_offset[pass];
-	    MEfill(pass_offset[pass],0,(PTR)pass_addr[pass]);
-	    for ( i = 0; value[i] ; i++ )
-	    {
-		*p += value[i];
-		p++;
-		if (p == pend)
-		    p = pass_addr[pass];
-	    }
-	    if (qmode == PSQ_MODIFY && i == 0)
-	    {
-		/* NULL key turns off encryption */
-		dmu_cb->dmu_enc_flags2 |= DMU_NULLPASS;
-	    }
-	    else if ( i < ENCRYPT_PASSPHRASE_MINIMUM )
-	    {
-		/* passphrase is too short */
-	        (void) psf_error(9403L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-		return (E_DB_ERROR);
-	    }
-	}
-	sess_cb->pss_stmt_flags2 |= PSS_2_PASSPHRASE;
-
-    }  /* end if passphrase */
-    else 
-	if (STcasecmp(name, ERx("new_passphrase")) == 0)
-    {
-	int i;
-	char *p;
-	char *pend;
-	u_char *pass_addr[3];
-	int	pass_offset[3];
-	int	pass, pass_start, pass_end;
-
-	qeu_cb = (QEU_CB *) sess_cb->pss_object;
-	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-
-	if (dmu_cb->dmu_enc_flags2 & DMU_NULLPASS)
-	{
-	    /* invalid passphrase change; old passphrase entered as '' */
-            (void) psf_error(9404L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-	    return (E_DB_ERROR);
-	}
-
-	/* remember we are modifying the passphrase */
-	dmu_cb->dmu_enc_flags2 |= DMU_NEWPASS;
-
-	if (qmode == PSQ_CREATE)
-	{
-	    /* NEW_PASSPHRASE= is only for MODIFY */
-            (void) psf_error(9405L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-	    return (E_DB_ERROR);
-	}
-	else
-	{
-	    /* For MODIFY prep all AES flavors from the user string. */
-	    pass_addr[0] = dmu_cb->dmu_enc_new128pass;
-	    pass_addr[1] = dmu_cb->dmu_enc_new192pass;
-	    pass_addr[2] = dmu_cb->dmu_enc_new256pass;
-	    pass_offset[0] = AES_128_BYTES;
-	    pass_offset[1] = AES_192_BYTES;
-	    pass_offset[2] = AES_256_BYTES;
-	    pass_start = 0;
-	    pass_end = 3;
-	}
-
-	for ( pass = pass_start ; pass < pass_end ; pass++ )
-	{
-	    p = pend = pass_addr[pass];
-	    pend += pass_offset[pass];
-	    MEfill(pass_offset[pass],0,(PTR)pass_addr[pass]);
-	    for ( i = 0; value[i] ; i++ )
-	    {
-		*p += value[i];
-		p++;
-		if (p == pend)
-		    p = pass_addr[pass];
-	    }
-	    if ( i < ENCRYPT_PASSPHRASE_MINIMUM )
-	    {
-		/* passphrase is too short */
-	        (void) psf_error(9403L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-		return (E_DB_ERROR);
-	    }
-	}
-
-    }  /* end if new_passphrase */
-    else 
-	if (   (qmode == PSQ_RETINTO || qmode == PSQ_CREATE)
-	     && sess_cb->pss_lang == DB_SQL
-	     && psl_gw_option(name))
-    {
-	/*
-	** if processing CREATE TABLE [AS SELECT], before declaring this a
-	** syntax error, check if it looks like a gateway option; gateway option
-	** starts with an alphabetic char, followed by 2 alphanumeric chars
-	** followed by an underscore; if it looks like a gateway-specific
-	** option, produce an informational message
-	*/
-	(VOID) psf_error(I_PS1002_CRTTBL_WITHOPT_IGNRD, 0L, PSF_USERERR,
-	    &err_code, err_blk, 1, (i4) STlength(name), name);
-    }
-    else
-    {
-	/* give different error for MODIFY */
-	if (qmode == PSQ_MODIFY)
-	    (void) psf_error(5558L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-			     (i4) STlength(name), name);
-	else 
-	    (void) psf_error(5340L, 0L, PSF_USERERR, &err_code, err_blk, 2,
-			     qry_len, qry, (i4) STtrmwhite(name), name);
-	return (E_DB_ERROR);    
-    }
-
-    return (E_DB_OK);
-
-}  /* end psl_nm_eq_nm */
-
-/*
-** Name: psl_nm_eq_hexconst - semantic actions for processing a WITH clause
-**			      of form NAME=HEXCONST;
-**
-** Description:
-**	This routine performs the semantic actions for WITH clauses of the
-**	general form NAME = HEXCONST.  At creation time for this function
-**	the only production that should get here is AESKEY=.
-**
-** Inputs:
-**	sess_cb		    ptr to a PSF session CB
-**	    pss_lang	    query language
-**	name		    NAME given on the LHS 
-**	value		    value given on the RHS
-**	with_clauses	    mask representing WITH options specified so far
-**	qmode		    query mode
-**	    PSQ_RETINTO	    CREATE TABLE AS SELECT
-**	    PSQ_CREATE	    CREATE TABLE
-**	    PSQ_CONS	    ANSI constraint definition
-**	    PSQ_DGTT	    DECLARE GLOBAL TEMPORARY TABLE
-**	    PSQ_DGTT_AS_SELECT
-**			    DECLARE GLOBAL TEMPORARY TABLE AS SELECT
-**	    PSQ_INDEX	    [CREATE] INDEX
-**	    PSQ_MODIFY	    MODIFY
-**
-** Outputs:
-**	with_clauses	    Updated to indicate the newly specified WITH option.
-**	err_blk		    will be filled in if an error occurs
-**
-** Returns:
-**	E_DB_{OK, ERROR}
-**
-** History:
-**	12-apr-1020 (toumi01)
-**	    Created.
-*/
-DB_STATUS
-psl_nm_eq_hexconst(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	u_i2		hexlen,
-	char		*hexvalue,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk)
-{
-    i4	    err_code;
-    char    	    qry[PSL_MAX_COMM_STRING];
-    i4	    qry_len;
-    QEU_CB	    *qeu_cb;
-    DMU_CB	    *dmu_cb;
-    bool	in_partition_def;
-
-    in_partition_def = (sess_cb->pss_stmt_flags & PSS_PARTITION_DEF) != 0;
-
-    psl_command_string(qmode, sess_cb->pss_lang, qry, &qry_len);
-
-    /* At present, there aren't any name = name options allowed inside a
-    ** partition definition, so trap it off right away:
-    */
-    if (in_partition_def)
-    {
-	(void) psf_error(E_US1931_6449_PARTITION_BADOPT, 0, PSF_USERERR,
-		&err_code, err_blk, 2,
-		qry_len, qry, STlength(name), name);
-	return (E_DB_ERROR);
-    }
-
-    if (STcasecmp(name, ERx("aeskey")) == 0)
-    {
-	int i;
-	char *p;
-	char *pend;
-
-	qeu_cb = (QEU_CB *) sess_cb->pss_object;
-	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-	if (((dmu_cb->dmu_enc_flags & DMU_AES128) && (hexlen == 16)) ||
-	    ((dmu_cb->dmu_enc_flags & DMU_AES192) && (hexlen == 24)) ||
-	    ((dmu_cb->dmu_enc_flags & DMU_AES256) && (hexlen == 32)))
-	{
-	    MEcopy((PTR)hexvalue, hexlen, (PTR)dmu_cb->dmu_enc_aeskey);
-	    dmu_cb->dmu_enc_aeskeylen = hexlen;
-	    dmu_cb->dmu_enc_flags2 |= DMU_AESKEY;
-	}
-	else
-	{
-	    /* AESKEY= hex value invalid for encryption type */
-	    (void) psf_error(9406L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-			     sizeof(hexlen), &hexlen);
-	    return (E_DB_ERROR);
-	}
-    }  /* end if aeskey */
-    else 
-	if (   (qmode == PSQ_RETINTO || qmode == PSQ_CREATE)
-	     && sess_cb->pss_lang == DB_SQL
-	     && psl_gw_option(name))
-    {
-	/*
-	** if processing CREATE TABLE [AS SELECT], before declaring this a
-	** syntax error, check if it looks like a gateway option; gateway option
-	** starts with an alphabetic char, followed by 2 alphanumeric chars
-	** followed by an underscore; if it looks like a gateway-specific
-	** option, produce an informational message
-	*/
-	(VOID) psf_error(I_PS1002_CRTTBL_WITHOPT_IGNRD, 0L, PSF_USERERR,
-	    &err_code, err_blk, 1, (i4) STlength(name), name);
-    }
-    else
-    {
-	/* give different error for MODIFY */
-	if (qmode == PSQ_MODIFY)
-	    (void) psf_error(5558L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-			     (i4) STlength(name), name);
-	else 
-	    (void) psf_error(5340L, 0L, PSF_USERERR, &err_code, err_blk, 2,
-			     qry_len, qry, (i4) STtrmwhite(name), name);
-	return (E_DB_ERROR);    
-    }
-
-    return (E_DB_OK);
-
-}  /* end psl_nm_eq_nm */
-
-/*
-** Name: psl_nm_eq_no - Semantic actions for WITH clauses of the form
-**			NAME = integer-number.
-**
-** Description:
-**	This routine performs the semantic actions following a WITH clause
-**	of the form NAME = number (the twith_num production.)
-**
-**	This semantic action is bypassed during CREATE SCHEMA.
-**
-** Inputs:
-**	sess_cb		    ptr to a PSF session CB
-**	    pss_lang	    query language
-**	    pss_distr_sflags  WITH- and FROM-clause info.
-**	name		    NAME given
-**	value		    Integral constant value.
-**	with_clauses	    Currently specified set of WITH clauses
-**	qmode		    query mode; expected to be one of
-**	    PSQ_RETINTO	    CREATE TABLE AS SELECT
-**	    PSQ_CREATE	    simple CREATE TABLE
-**	    PSQ_CONS	    ANSI constraint definition
-**	    PSQ_INDEX	    [CREATE] INDEX
-**	    PSQ_MODIFY	    MODIFY
-**	    PSQ_DGTT	    DECLARE GLOBAL TEMPORARY TABLE
-**	    PSQ_DGTT_AS_SELECT
-**			    DECLARE GLOBAL TEMPORARY TABLE AS SELECT
-**	xlated_qry	    For query text buffering 
-**
-** Outputs:
-**	with_clauses	    Updated to indicate WITH clauses specified.
-**	err_blk		    will be filled in if an error occurs
-**	sess_cb
-**	    pss_distr_sflags  Updated to indicate WITH has been buffered.
-**
-** Returns:
-**	E_DB_{OK, ERROR}
-**
-** History:
-**	5-mar-1991 (bryanp)
-**	    Created.
-**	12-nov-1991 (andre)
-**	    renamed from psl6cr_nm_eq_no to psl_ct5s_cr_nm_eq_no to conform with
-**	    naming convention described in the file header and added support for
-**	    ALLOCATION and EXTEND
-**	13-nov-1991 (andre)
-**	    merged 02-jul-91 (andre) change:
-**		fix bug 37706.  In SQL unsupported options which look like a
-**		gateway-specific option will result in an informational message
-**		instead of a syntax error message
-**	15-nov-91 (andre)
-**	    renamed to psl_nm_eq_no() and adapted to use with index_wonum: as
-**	    well as cr_nm_eq_no: production
-**	18-nov-91 (andre)
-**	    adapted for use by modopt_num_cl: production
-**	28-feb-1992 (bryanp)
-**	    Allow WITH ALLOCATION and WITH EXTEND for ordinary CREATE TABLE.
-**	15-jun-92 (barbara)
-**	    Added distributed actions for Sybil.  Buffer CREATE with-clause.
-**	22-oct-92 (barbara)
-**	    Minor bug fixes for buffering text for Star.
-**	10-mar-93 (barbara)
-**	    Delimitd id support for Star.  Removed argument ldb_flags. Use
-**	    pss_distr_sflags instead.
-**	30-mar-1993 (rmuth)
-**	    - Add support for "modify xxx to add_extend", only option allowed
-**	      is the "with extend=n". Check no other option passed in.
-**	    - Disallow WITH ALLOCATION and WITH EXTEND for ordinary create
-**	      table.
-**	26-jul-1993 (rmuth)
-**	    Add support for the COPY statement calling this module.
-**      25-apr-1995 (rudtr01)
-**          Bug #68167.  Buffer the WITH clause properly when query type
-**          is PSQ_RETINTO (CREATE TABLE AS SELECT) in Star sessions.
-**	04-may-1995 (shero03)
-**	    Added DIMENSION= RANGE_GRANULARITY= for RTREE
-**	06-mar-1996 (stial01 for bryanp)
-**	    Add support for WITH PAGE_SIZE= clause.
-**	06-nov-1996 (canor01)
-**	    Enable cr_nm_eq_no for quel to allow page_size parameter to
-**	    CREATE TABLE.
-**	30-mar-98 (inkdo01)
-**	    Added support for constraint index options.
-**	06-feb-2001 (gupsh01)
-**	    Page_size is an invalid option for with clause of PSQ_COPY.
-**	    A new error E_US14EE will be given out if page_size is specified
-**	    with the copy statement. BUG 103448. 
-**	19-may-2001 (somsa01)
-**	    Modified E_US2486_9350_MODIFY_TO_TABLE_OPTION to
-**	    E_US248A_9354_MODIFY_TO_TABLE_OPTION.
-**	26-Jan-2004 (schka24)
-**	    Don't laboriously figure out the query by hand, use routine.
-**	24-Feb-2004 (schka24)
-**	    Prohibit any name=number as the modify "structure" except for
-**	    priority=n.  Require that structure-y things (fillfactor, etc)
-**	    appear on structure modifies if modify.
-**	25-Apr-2004 (schka24)
-**	    Remove qeu-cb from COPY data block.
-**	23-Nov-2005 (kschendel)
-**	    Relieve max on allocation= because table might be partitioned.
-**	03-Oct-2006 (jonj)
-**	    Defer allocation check to psl_validate_options() for those
-**	    qmodes that are partitionable.
-*/
-DB_STATUS
-psl_nm_eq_no(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	i4		value,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk,
-	PSS_Q_XLATE	*xlated_qry)
-{
-    i4		err_code;
-    char    	    qry[PSL_MAX_COMM_STRING];
-    i4		qry_len;
-    QEU_CB		*qeu_cb;
-    DMU_CB		*dmu_cb;
-    DMU_CHAR_ENTRY	*chr;
-    DMU_CHAR_ENTRY	*first_chr;
-    bool		bad_option = FALSE;
-    bool		duplicate = FALSE;
-    bool		add_extend = FALSE;
-    bool		is_modify_action = FALSE;
-    bool		in_partition_def;
-    bool		structural_option = FALSE;
-    char		*dupchar;
-    i4		minval, maxval;
-    QEF_RCB		*qef_rcb;
-    DM_DATA		*char_array;
-    DMR_CB		*dmr_cb;
-
-    in_partition_def = (sess_cb->pss_stmt_flags & PSS_PARTITION_DEF) != 0;
-
-    /*
-    ** For distributed thread, for now we are only called on CREATE TABLE
-    ** statement but, just in case, return OK on any other statement.
-    */
-    if (sess_cb->pss_distrib & DB_3_DDB_SESS)
-    {
-	char		*str;
-	DB_STATUS	status;
-	char		numbuf[25];
-
-	if (qmode != PSQ_CREATE && qmode != PSQ_RETINTO)
-	{
-	    return (E_DB_OK);
-	}
-	/* 
-	** Buffer with-clause parameter and pass (unverified) on to the LDB.
-	** LDB will report error if any.  For SELECT INTO, do not
-	** emit "with" -- all we are doing is giving OPC a with-clause
-	** to tack on to the statement it generates.
-	*/
-
-	if (sess_cb->pss_distr_sflags & PSS_PRINT_WITH)
-	{
-	    if (qmode == PSQ_CREATE || qmode == PSQ_RETINTO)
-		str = " with ";
-	    else
-		str = " ";
-	    sess_cb->pss_distr_sflags &= ~PSS_PRINT_WITH;	
-	}
-	else
-	{
-	    str = ", ";
-	}
-
-	status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream, xlated_qry->pss_buf_size,
-			    &xlated_qry->pss_q_list, (i4) -1, (char *) NULL,
-			    (char *) NULL, str, err_blk);
-
-	if (DB_FAILURE_MACRO(status))				
-	    return(status);
-
-	status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream, xlated_qry->pss_buf_size,
-			    &xlated_qry->pss_q_list, (i4) -1, (char *) NULL,
-			    (char *) NULL, name, err_blk);
-
-	if (DB_FAILURE_MACRO(status))
-	    return(status);
-
-	CVla((i4) value, (PTR) numbuf);
-	status = psq_x_add(sess_cb, numbuf, &sess_cb->pss_ostream,
-				xlated_qry->pss_buf_size,
-				&xlated_qry->pss_q_list, STlength(numbuf), "=", 
-				" ", (char *) NULL, err_blk);
-
-	if (DB_FAILURE_MACRO(status))
-	    return(status);
-
-	return (E_DB_OK);
-    }
-
-    psl_command_string(qmode, sess_cb->pss_lang, qry, &qry_len);
-
-    /* At present, there aren't any name = NN options allowed inside a
-    ** partition definition, so trap it off right away:
-    */
-    if (in_partition_def)
-    {
-	(void) psf_error(E_US1931_6449_PARTITION_BADOPT, 0, PSF_USERERR,
-		&err_code, err_blk, 2,
-		qry_len, qry, STlength(name), name);
-	return (E_DB_ERROR);
-    }
-
-    if (qmode == PSQ_INDEX)
-    {
-	qeu_cb = (QEU_CB *) sess_cb->pss_object;
-	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-	char_array = &dmu_cb->dmu_char_array;
-
-	if (char_array->data_in_size >=
-	    PSS_MAX_INDEX_CHARS * sizeof (DMU_CHAR_ENTRY))
-	{
-	    /* Invalid with clause - too many options */
-	    (VOID) psf_error(5327L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-	    return (E_DB_ERROR);
-	}
-
-	chr = (DMU_CHAR_ENTRY *)
-	    ((char *) char_array->data_address
-		+ char_array->data_in_size);
-
-    }
-    else if (qmode == PSQ_MODIFY)
-    {
-
-	qeu_cb = (QEU_CB *) sess_cb->pss_object;
-
-	if (qeu_cb->qeu_d_op == DMU_RELOCATE_TABLE)
-	{
-	    /*
-	    ** This type of option is not allowed in RELOCATE variant of MODIFY.
-	    */
-	    _VOID_ psf_error(5544L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-		sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno);
-	    return (E_DB_ERROR);
-	}
-
-	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-	char_array = &dmu_cb->dmu_char_array;
-	if (char_array->data_in_size == 0)
-	{
-	    /* No characteristics yet means that we are parsing name=n
-	    ** as the modify statement "structure", e.g.
-	    ** modify foo to priority = 3
-	    ** Most of the name=n options are prohibited in this position;
-	    ** the only allowable one is priority=n.
-	    */
-	    is_modify_action = TRUE;
-	    chr = (DMU_CHAR_ENTRY *) char_array->data_address;
-	}
-	else
-	{
-
-	    /*
-	    ** Check whether REORGANIZE has been specified (it would be the
-	    ** first entry in the characteristic array).  If so, this option
-	    ** is not allowed.
-	    */
-
-	    first_chr = (DMU_CHAR_ENTRY *) char_array->data_address;
-
-	    if (first_chr->char_id == DMU_REORG)
-	    {
-		_VOID_ psf_error(5549L, 0L, PSF_USERERR, &err_code, err_blk, 2,
-		    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-		    STlength(name), name);
-		return (E_DB_ERROR);
-	    }
-
-	    /* check for characteristic overflow */
-	    if (char_array->data_in_size == 
-		PSS_MAX_MODIFY_CHARS * sizeof (DMU_CHAR_ENTRY))
-	    {
-		_VOID_ psf_error(5344L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-		    qry_len, qry);
-		return (E_DB_ERROR);
-	    }
-
-
-	    /*
-	    ** ADD_EXTEND only allows the "EXTEND=N" clause make sure
-	    ** that this is true
-	    */
-	    add_extend = ( first_chr->char_id == DMU_ADD_EXTEND);
-
-
-	    chr = (DMU_CHAR_ENTRY *)
-		((char *) first_chr + char_array->data_in_size);
-	}
-    }
-    else
-    if ( qmode == PSQ_COPY )
-    {
-	qef_rcb = (QEF_RCB *) sess_cb->pss_object;
-	dmr_cb  = qef_rcb->qeu_copy->qeu_dmrcb;
-
-	char_array = &dmr_cb->dmr_char_array;
-
-	/* 
-	** check for characteristic overflow 
-	*/
-	if (char_array->data_in_size == 
-	    PSS_MAX_MODIFY_CHARS * sizeof (DMU_CHAR_ENTRY))
-	{
-	    _VOID_ psf_error(5344L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-		qry_len, qry);
-	    return (E_DB_ERROR);
-	}
-
-	chr = (DMU_CHAR_ENTRY *) ((char *) char_array->data_address
-		+ char_array->data_in_size);
-
-    }
-    else if (qmode == PSQ_CONS)
-    {
-	/* Nothing special to do here */
-    }
-    else if (qmode == PSQ_RETINTO || qmode == PSQ_CREATE ||
-	     qmode == PSQ_DGTT_AS_SELECT || qmode == PSQ_DGTT)
-    {
-	i4	    max_create_chars = (sess_cb->pss_lang == DB_SQL)
-	    ? SQL_MAX_CREATE_CHARS
-	    : QUEL_MAX_CREATE_CHARS;
-
-	qeu_cb = (QEU_CB *) sess_cb->pss_object;
-	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-	char_array = &dmu_cb->dmu_char_array;
-
-	if (char_array->data_in_size >=
-	    max_create_chars * sizeof (DMU_CHAR_ENTRY))
-	{
-	    /* Invalid with clause - too many options */
-	    (VOID) psf_error(5327L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-	    return (E_DB_ERROR);
-	}
-
-	chr = (DMU_CHAR_ENTRY *)
-	    ((char *) char_array->data_address
-		+ char_array->data_in_size);
-
-    }
-
-    /* for QUEL, only the "page_size" and "priority" options available for CREATE */
-    if ( sess_cb->pss_lang != DB_SQL &&
-         qmode == PSQ_CREATE &&
-         (STcasecmp(name, "page_size") &&
-          STcasecmp(name, "priority")) )
-    {
-	(VOID) psf_error(2047L, 0L, PSF_USERERR, &err_code,
-	    err_blk, 1, (i4) STtrmwhite(name), name);
-	return (E_DB_ERROR);
-    }
-
-    if (!STcasecmp(name, "fillfactor"))
-    {
-	if (qmode == PSQ_CREATE || qmode == PSQ_DGTT || add_extend || is_modify_action)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_FILLFACTOR, with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "FILLFACTOR";
-	    }
-	    else
-	    {
-		/* Fillfactor must be between 1% and 100% */
-		minval = 1;
-		maxval = 100;
-		structural_option = TRUE;
-
-		PSS_WC_SET_MACRO(PSS_WC_FILLFACTOR, with_clauses);
-		if (qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT)
-		{
-		    sess_cb->pss_restab.pst_fillfac = (i4) value;
-		}
-		else if (qmode == PSQ_CONS)
-		{
-		    sess_cb->pss_curcons->pss_restab.pst_fillfac = 
-								(i4) value;
-		}
-		else	    /* qmode in (PSQ_COPY, PSQ_INDEX, PSQ_MODIFY) */
-		{
-		    chr->char_id = DMU_DATAFILL;
-		    chr->char_value = (i4) value;
-		    char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-		}
-	    }
-	}
-    }
-    else if (!STcasecmp(name, "minpages"))
-    {
-	if (qmode == PSQ_CREATE || qmode == PSQ_DGTT || add_extend || is_modify_action)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_MINPAGES, with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "MINPAGES";
-	    }
-	    else
-	    {
-		/* minpages must be in [1, DB_MAX_PAGENO] */
-		minval = 1;
-		maxval = DB_MAX_PAGENO;
-		structural_option = TRUE;
-
-		PSS_WC_SET_MACRO(PSS_WC_MINPAGES, with_clauses);
-
-		if (qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT)
-		{
-		    sess_cb->pss_restab.pst_minpgs = value;
-		}
-		else if (qmode == PSQ_CONS)
-		{
-		    sess_cb->pss_curcons->pss_restab.pst_minpgs = 
-								(i4) value;
-		}
-		else	    /* qmode in (PSQ_COPY, PSQ_INDEX, PSQ_MODIFY) */
-		{
-		    chr->char_id = DMU_MINPAGES;
-		    chr->char_value = value;
-		    char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-		}
-	    }
-	}
-    }
-    else if (!STcasecmp(name, "maxpages"))
-    {
-	if (qmode == PSQ_CREATE || qmode == PSQ_DGTT || add_extend || is_modify_action)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_MAXPAGES, with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "MAXPAGES";
-	    }
-	    else
-	    {
-		/* maxpages must be in [1, DB_MAX_PAGENO] */
-		minval = 1;
-		maxval = DB_MAX_PAGENO;
-		structural_option = TRUE;
-
-		PSS_WC_SET_MACRO(PSS_WC_MAXPAGES, with_clauses);
-
-		if (qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT)
-		{
-		    sess_cb->pss_restab.pst_maxpgs = value;
-		}
-		else if (qmode == PSQ_CONS)
-		{
-		    sess_cb->pss_curcons->pss_restab.pst_maxpgs = 
-								(i4) value;
-		}
-		else	    /* qmode in (PSQ_COPY, PSQ_INDEX, PSQ_MODIFY) */
-		{
-		    chr->char_id = DMU_MAXPAGES;
-		    chr->char_value = value;
-		    char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-		}
-	    }
-	}
-    }
-    else if (!STcasecmp(name, "nonleaffill"))
-    {
-	if (qmode == PSQ_CREATE || qmode == PSQ_DGTT || add_extend || is_modify_action)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_NONLEAFFILL, with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "NONLEAFFILL";
-	    }
-	    else
-	    {
-		/* Nonleaffill must be between 1% and 100% */
-		minval = 1;
-		maxval = 100;
-		structural_option = TRUE;
-
-		PSS_WC_SET_MACRO(PSS_WC_NONLEAFFILL, with_clauses);
-
-		if (qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT)
-		{
-		    sess_cb->pss_restab.pst_nonleaff = (i4) value;
-		}
-		else if (qmode == PSQ_CONS)
-		{
-		    sess_cb->pss_curcons->pss_restab.pst_nonleaff =
-								(i4) value;
-		}
-		else	    /* qmode in (PSQ_COPY, PSQ_INDEX, PSQ_MODIFY) */
-		{
-		    chr->char_id = DMU_IFILL;
-		    chr->char_value = (i4) value;
-		    char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-		}
-	    }
-	}
-    }
-    else if (!STcasecmp(name, "leaffill") ||
-	     !STcasecmp(name, "indexfill"))
-    {
-	if (qmode == PSQ_CREATE || qmode == PSQ_DGTT || add_extend || is_modify_action)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_LEAFFILL, with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "LEAFFILL";
-	    }
-	    else
-	    {
-		/* Leaffill/indexfill must be between 1% and 100% */
-		minval = 1;
-		maxval = 100;
-		structural_option = TRUE;
-
-		PSS_WC_SET_MACRO(PSS_WC_LEAFFILL, with_clauses);
-
-		if (qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT)
-		{
-		    sess_cb->pss_restab.pst_leaff = (i4) value;
-		}
-		else if (qmode == PSQ_CONS)
-		{
-		    sess_cb->pss_curcons->pss_restab.pst_leaff =
-								(i4) value;
-		}
-		else	    /* qmode in (PSQ_COPY, PSQ_INDEX, PSQ_MODIFY) */
-		{
-		    chr->char_id = DMU_LEAFFILL;
-		    chr->char_value = (i4) value;
-		    char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-		}
-	    }
-	}
-    }
-    else if (!STcasecmp(name, "maxindexfill"))
-    {
-	if (qmode == PSQ_CREATE || qmode == PSQ_DGTT || add_extend || is_modify_action)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_MAXINDEXFILL, with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "MAXINDEXFILL";
-	    }
-	    else
-	    {
-		/* maxindexfill value must be between 1 and 100 */
-		minval = 1;
-		maxval = 100;
-
-		PSS_WC_SET_MACRO(PSS_WC_MAXINDEXFILL, with_clauses);
-		/* otherwise ignore this option */
-	    }
-	}
-    }
-    else if (!STcasecmp(name, "dimension"))
-    {
-	if (qmode != PSQ_INDEX)
-	{
-	    (void) psf_error(2050, 0, PSF_USERERR, &err_code, err_blk,
-			2, qry_len, qry, 0, "DIMENSION=n");
-	    return (E_DB_ERROR);
-   	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_DIMENSION, with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "DIMENSION";
-	    }
-	    else
-	    {
-		/* dimension must be between 2 and MAX */
-		minval = 2;
-		maxval = DB_MAXRTREE_DIM;
-		PSS_WC_SET_MACRO(PSS_WC_DIMENSION, with_clauses);
-		chr->char_id = DMU_DIMENSION;
-		chr->char_value = value;
-		char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    }
-	}
-    }
-
-    else if (!STcasecmp(name, "allocation"))
-    {
-	if (qmode == PSQ_CREATE || add_extend || is_modify_action)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_ALLOCATION, with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "ALLOCATION";
-	    }
-	    else
-	    {
-		/* ALLOCATION must be in [4, DB_MAX_PAGENO],
-		** per-partition. We can't check that
-		** until we know whether the table will be partitioned.
-		** The allocation is for the entire table.
-		*/
-
-		switch ( qmode )
-		{
-		    /* Things that are partitionable: */
-		    case PSQ_RETINTO:
-		    case PSQ_DGTT_AS_SELECT:
-		    case PSQ_MODIFY:
-			/* Defer check to psl_validate_options() */
-			minval = maxval = value;
-			break;
-
-		    default:
-			minval = 4;
-			maxval = DB_MAX_PAGENO;
-			break;
-		}
-
-		PSS_WC_SET_MACRO(PSS_WC_ALLOCATION, with_clauses);
-
-		if (qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT)
-		{
-		    sess_cb->pss_restab.pst_alloc = value;
-		}
-		else if (qmode == PSQ_CONS)
-		{
-		    sess_cb->pss_curcons->pss_restab.pst_alloc =
-								(i4) value;
-		}
-		else	    /* qmode in ( PSQ_COPY, PSQ_CREATE, PSQ_INDEX, 
-			    ** PSQ_MODIFY) */
-		{
-		    chr->char_id = DMU_ALLOCATION;
-		    chr->char_value = value;
-		    char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-		}
-	    }
-	}
-    }
-    else if (!STcasecmp(name, "extend"))
-    {
-	if (qmode == PSQ_CREATE || is_modify_action)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_EXTEND, with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "EXTEND";
-	    }
-	    else
-	    {
-		/* EXTEND must be in [1, DB_MAX_PAGENO] */
-		minval = 1;
-		maxval = DB_MAX_PAGENO;
-
-		PSS_WC_SET_MACRO(PSS_WC_EXTEND, with_clauses);
-
-		if (qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT)
-		{
-		    sess_cb->pss_restab.pst_extend = value;
-		}
-		else if (qmode == PSQ_CONS)
-		{
-		    sess_cb->pss_curcons->pss_restab.pst_extend =
-								(i4) value;
-		}
-		else	    /* qmode in ( PSQ_COPY, PSQ_CREATE, PSQ_INDEX, 
-			    ** PSQ_MODIFY) */
-		{
-		    chr->char_id = DMU_EXTEND;
-		    chr->char_value = value;
-		    char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-		}
-	    }
-	}
-    }
-    else if (!STcasecmp(name, "blob_extend"))
-    {
-	if (qmode != PSQ_MODIFY || is_modify_action)
-	{
-	    (void) psf_error(5340, 0, PSF_USERERR, &err_code, err_blk,
-		2, qry_len, qry, 0, "BLOB_EXTEND");
-	    return (E_DB_ERROR);
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_BLOBEXTEND, with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "BLOBEXTEND";
-	    }
-	    else
-	    {
-		/* BLOBEXTEND must be in [1, DB_MAX_PAGENO] */
-		minval = 1;
-		maxval = DB_MAX_PAGENO;
-
-		PSS_WC_SET_MACRO(PSS_WC_BLOBEXTEND, with_clauses);
-
-		chr->char_id = DMU_BLOBEXTEND;
-		chr->char_value = value;
-		char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    }
-	}
-    }
-    else if (!STcasecmp(name, "page_size"))
-    {
-
-	if (qmode == PSQ_COPY)
-	{
-	    _VOID_ psf_error(5358L, 0L, PSF_USERERR, &err_code, err_blk,
-	    3, qry_len, qry, (i4) STlength(name), name,
-	    (i4) sizeof(value), &value);
-
-	    return (E_DB_ERROR);	
-	}
-
-	if (PSS_WC_TST_MACRO(PSS_WC_PAGE_SIZE, with_clauses))
-	{
-	    duplicate = TRUE;
-	    dupchar = "PAGE_SIZE";
-	}
-	else if (is_modify_action)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    /* page_size must be oneof 2K, 4K, 8K, 16K, 32K, 64K */
-
-	    minval = 2048;
-	    maxval = 65536;
-	    structural_option = TRUE;
-
-	    PSS_WC_SET_MACRO(PSS_WC_PAGE_SIZE, with_clauses);
-
-	    if (qmode == PSQ_RETINTO || qmode == PSQ_DGTT_AS_SELECT)
-	    {
-		sess_cb->pss_restab.pst_page_size = value;
-	    }
-	    else if (qmode == PSQ_CONS)
-	    {
-		sess_cb->pss_curcons->pss_restab.pst_page_size =
-							    (i4) value;
-	    }
-	    else	    /* qmode in ( PSQ_COPY, PSQ_CREATE, PSQ_INDEX, 
-			** PSQ_MODIFY) */
-	    {
-		chr->char_id = DMU_PAGE_SIZE;
-		chr->char_value = value;
-		char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-	    }
-
-	    /* verify that the value specified is valid */
-	    if (value != 2048 && value != 4096 && value != 8192 &&
-		value != 16384 && value != 32768 && value != 65536)
-	    {
-		_VOID_ psf_error(5356L, 0L, PSF_USERERR, &err_code, err_blk,
-		    3, qry_len, qry, (i4) STlength(name), name,
-		    (i4) sizeof(value), &value);
-		return (E_DB_ERROR);	
-	    }
-	}
-    }
-    else if (!STcasecmp(name, "priority"))
-    {
-	if (PSS_WC_TST_MACRO(PSS_WC_PRIORITY, with_clauses))
-	{
-	    duplicate = TRUE;
-	    dupchar = "PRIORITY";
-	}
-	else
-	{
-	    /*
-	    ** Table priority must be between 0 and DB_MAX_TABLEPRI 
-	    ** 0 means no priority
-	    */
-
-	    minval = 0;
-	    maxval = DB_MAX_TABLEPRI;
-
-	    PSS_WC_SET_MACRO(PSS_WC_PRIORITY, with_clauses);
-
-	    chr->char_id = DMU_TABLE_PRIORITY;
-	    if (is_modify_action)
-		chr->char_id = DMU_TO_TABLE_PRIORITY;
-	    chr->char_value = value;
-	    char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-	}
-    }
-    else if (   qmode == PSQ_MODIFY
-	     && !STcasecmp(name, "table_option"))
-    {
-	if (PSS_WC_TST_MACRO(PSS_WC_TABLE_OPTION, with_clauses))
-	{
-	    duplicate = TRUE;
-	    dupchar = "TABLE_OPTION";
-	}
-	else if (is_modify_action)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (value > 15)
-	    {
-		(VOID) psf_error(5552L, 0L, PSF_USERERR, &err_code,
-		    err_blk, 1, (i4) sizeof(value), &value);
-		return (E_DB_ERROR);
-	    }
-	    /* Given the checks above, first_chr is valid here.
-	    ** Only permissible with modify to table_debug.
-	    */
-	    if (first_chr->char_id != DMU_VERIFY
-	      || first_chr->char_value != DMU_V_DEBUG)
-            { 
-		(VOID) psf_error(9354L, 0L, PSF_USERERR, &err_code,
-		    err_blk, 1, 0, "TABLE_OPTION");
-		return (E_DB_ERROR);
-            }
-
-	    PSS_WC_SET_MACRO(PSS_WC_TABLE_OPTION, with_clauses);
-
-	    chr->char_id = DMU_VOPTION;
-	    chr->char_value = value;
-	    char_array->data_in_size += sizeof(DMU_CHAR_ENTRY);
-	
-        } 
-    }
-    else if (   (qmode == PSQ_RETINTO || qmode == PSQ_CREATE)
-	     && sess_cb->pss_lang == DB_SQL
-	     && psl_gw_option(name))
-    {
-	/*
-	** if processing CREATE TABLE [AS SELECT], before declaring this a
-	** syntax error, check if it looks like a gateway option; gateway option
-	** starts with an alphabetic char, followed by 2 alphanumeric chars
-	** followed by an underscore
-	*/
-	(VOID) psf_error(I_PS1002_CRTTBL_WITHOPT_IGNRD, 0L, PSF_USERERR,
-	    &err_code, err_blk, 1, (i4) STlength(name), name);
-    }
-    /* Unknown parameter */
-    else if (qmode == PSQ_MODIFY)
-    {
-	/* Unknown parameter */
-	(VOID) psf_error(5529L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-	    (i4) STtrmwhite(name), name);
-	return (E_DB_ERROR);
-    }
-    else	
-    {
-	(VOID) psf_error(5342L, 0L, PSF_USERERR, &err_code, err_blk, 2,
-	    qry_len, qry, (i4) STtrmwhite(name), name);
-	return (E_DB_ERROR);
-    }
-
-    if (bad_option)
-    {
-	if ( add_extend )
-	{
-	    (VOID) psf_error(5346L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-		(i4) STtrmwhite(name), name);
-	}
-	else if (is_modify_action)
-	{
-	    /* Sure and let's use all flavors of "void" here */
-	    (void) psf_error(E_US1942_6460_EXPECTED_BUT, 0, PSF_USERERR,
-		&err_code, err_blk, 3,
-		qry_len, qry,
-		0, ERx("A storage structure or MODIFY variant"),
-		STlength(name), name);
-	}
-	else
-	{
-	    _VOID_ psf_error(2026L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-			(i4) STlength(name), name);
-	}
-	return (E_DB_ERROR);
-    }
-
-    if (duplicate)
-    {
-	_VOID_ psf_error(E_PS0BC9_DUPLICATE_WITH_CLAUSE,
-	    0L, PSF_USERERR, &err_code, err_blk, 3,
-	    qry_len, qry,
-	    (i4) sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-	    (i4) STlength(dupchar), dupchar);
-	return (E_DB_ERROR);    
-    }
-
-    /* MODIFY has lots of weird flavors that don't restructure the rows.
-    ** Prohibit with-options that can't take effect if you're not
-    ** restructuring.
-    */
-    if (qmode == PSQ_MODIFY && structural_option
-      && ! is_modify_action
-      && first_chr->char_id != DMU_STRUCTURE)
-    {
-	(void) psf_error(E_US1944_6462_STRUCTURE_REQ, 0, PSF_USERERR,
-		&err_code, err_blk, 2,
-		qry_len, qry,
-		STlength(name), name);
-	return (E_DB_ERROR);
-    }
-
-    if (qmode != PSQ_MODIFY || chr->char_id != DMU_VOPTION)
-    {
-	/* verify that the value specified is within legal bounds */
-	if (value < minval || value > maxval)
-	{
-	    _VOID_ psf_error(5341L, 0L, PSF_USERERR, &err_code, err_blk, 5,
-		qry_len, qry, (i4) STlength(name), name,
-		(i4) sizeof(value), &value,
-		(i4) sizeof(minval), &minval,
-		(i4) sizeof(maxval), &maxval);
-	    return (E_DB_ERROR);	
-	}
-    }
-
-    return (E_DB_OK);
-}
-
-/*
-** Name: psl_ct6_cr_single_kwd - Semantic actions for single keyword WITH
-**				 options
-**
-** Description:
-**	This routine is called after a single keyword WITH option is
-**	parsed.  Since the keyword WITH options vary considerably from
-**	statement to statement, this routine only deals with CREATE
-**	TABLE variant.  (CREATE, RET-INTO, and the DGTT analogs.)
-**	CREATE INDEX and MODIFY use different routines.
-**
-**	This semantic actions is bypassed during CREATE SCHEMA.
-**
-** Inputs:
-**	sess_cb		    ptr to a PSF session CB
-**	    pss_lang	    query language
-**	    pss_distr_sflags Distributed WITH- and FROM-clause info
-**	keyword		    single keyword given
-**	with_clauses	    Map of WITH options specified so far
-**	qmode		    query mode
-**	    PSQ_CREATE	    simple CREATE TABLE
-**	    PSQ_RETINTO	    CREATE TABLE AS SELECT
-**	    PSQ_DGTT	    DECLARE GLOBAL TEMPORARY TABLE
-**	    PSQ_DGTT_AS_SELECT
-**			    DECLARE GLOBAL TEMPORARY TABLE AS SELECT
-**	xlated_qry	    For query text buffering 
-**
-** Outputs:
-**	with_clauses	    Updated to include the newly specified option.
-**	err_blk		    will be filled in if an error occurs
-**	sess_cb
-**	    pss_distr_sflags  Updated to indicate WITH has been buffered.
-**
-** Returns:
-**	E_DB_{OK, ERROR}
-**
-** History:
-**	5-mar-1991 (bryanp)
-**	    Created.
-**	12-nov-1991 (andre)
-**	    renamed from psl7cr_single_kwd to psl_ct6_cr_single_kwd;
-**	    removed with_dups and with_journaling from the interface
-**	24-jan-1992 (bryanp)
-**	    Added support for WITH NORECOVERY for temporary tables.
-**	26-may-92 (andre)
-**	    prevent user from specifying NORECOVERY unless creating a DGTT
-**	15-jun-92 (barbara)
-**	    Added distributed actions for Sybil.  Buffer CREATE with-clause.
-**	10-mar-93 (barbara)
-**	    Delimited id support for Star.  Remove ldb_flags argument.  Use
-**	    pss_distr_sflags instead.
-**	10-sep-93 (tam)
-**	    Print "with" if qmode == PSQ_RETINTO.  Padded an extra space after
-**	    with clause.
-**	15-jul-94 (robf)
-**          Explicitly allow WITH NOSECURITY_AUDIT_KEY if desired.
-**	13-may-2007 (dougi)
-**	    Add [no]autostruct options for table structure determination.
-**	18-Mar-2008 (kschendel) SIR 122890
-**	    Table-drive since the if-then-else's are getting a bit out of hand.
-*/
-
-/* Since the list of keywords was getting a bit ridiculous for an
-** if-elseif chain, define a table containing:
-** - the keyword
-** - the with-clauses flag to test / set to prevent duplicate clauses;
-** - the keyword string to use if there is a duplicate clause;
-** - the DMU characteristics ID to add to the DMU CB characteristics
-**   array, or -1 if nothing gets added;
-** - the DMU characteristics value to add, if any.  (In some cases when the
-**   id is -1, this might be a DMU_C_OFF to indicate NOsomething instead
-**   of SOMETHING without an extra action code!)
-** - an action code if any additional ad-hoc syntax checking or actions
-**   are needed.  This could probably be further table driven, with
-**   sufficient contortions, but this is good enough...
-*/
-
-/* Action codes for use by this routine only, for ad-hoc actions */
-#define PSL_ACT_NONE	0		/* No action */
-#define PSL_ACT_DUPS	1		/* [NO]Duplicates */
-#define PSL_ACT_SECAUD	2		/* NOSECURITY_AUDIT_KEY */
-#define PSL_ACT_JNL	3		/* [NO]JOURNALING */
-#define PSL_ACT_CMP	4		/* [NO]COMPRESSION */
-#define PSL_ACT_RECOV	5		/* NORECOVERY */
-#define PSL_ACT_AUTOS	6		/* [NO]AUTOSTRUCT */
-
-/* Local structure for the lookup table: */
-typedef struct {
-	char	*keyword;	/* The keyword in the syntax */
-	char	*dupword;	/* Error string for duplicate clause error */
-	i2	dmu_char_id;	/* DMU characteristics ID, -1 if not used */
-	i2	dmu_char_value;	/* DMU char value if any */
-	i2	with_id;	/* Flag value for with-clauses */
-	i2	action;		/* PSL_ACT_xxx ad-hoc dispatch */
-	bool	sql_only;	/* TRUE if allowed in SQL only */
-	bool	quel_only;	/* TRUE if allowed in QUEL only */
-} PSL_KWD_ACT;
-
-/* This table is searched sequentially, so the really obscure options
-** can be placed at the end.  It doesn't matter all that much, though.
-*/
-static const PSL_KWD_ACT cre_keywords[] =
-{
-	{"duplicates", "DUPLICATES", DMU_DUPLICATES, DMU_C_ON,
-		PSS_WC_DUPLICATES, PSL_ACT_DUPS, FALSE, FALSE},
-	{"noduplicates", "DUPLICATES", DMU_DUPLICATES, DMU_C_OFF,
-		PSS_WC_DUPLICATES, PSL_ACT_DUPS, FALSE, FALSE},
-	{"compression", "COMPRESSION", -1, DMU_C_ON,
-		PSS_WC_COMPRESSION, PSL_ACT_CMP, TRUE, FALSE},
-	{"nocompression", "COMPRESSION", -1, DMU_C_OFF,
-		PSS_WC_COMPRESSION, PSL_ACT_CMP, TRUE, FALSE},
-	{"journaling", "JOURNALING", DMU_JOURNALED, DMU_C_ON,
-		PSS_WC_JOURNALING, PSL_ACT_JNL, FALSE, FALSE},
-	{"nojournaling", "JOURNALING", -1, DMU_C_OFF,
-		PSS_WC_JOURNALING, PSL_ACT_JNL, FALSE, FALSE},
-	{"nopartition", "PARTITION", -1, -1,
-		PSS_WC_PARTITION, PSL_ACT_NONE, FALSE, FALSE},
-	{"norecovery", "RECOVERY", DMU_RECOVERY, DMU_C_OFF,
-		PSS_WC_RECOVERY, PSL_ACT_RECOV, TRUE, FALSE},
-	{"autostruct", "AUTOSTRUCT", -1, DMU_C_ON,
-		PSS_WC_AUTOSTRUCT, PSL_ACT_AUTOS, TRUE, FALSE},
-	{"noautostruct", "AUTOSTRUCT", -1, DMU_C_OFF,
-		PSS_WC_AUTOSTRUCT, PSL_ACT_AUTOS, TRUE, FALSE},
-	{"nosecurity_audit_key", "[NO]SECURITY_AUDIT_KEY", -1, -1,
-		PSS_WC_ROW_SEC_KEY, PSL_ACT_SECAUD, FALSE, FALSE},
-
-	/* Quel-only variants of [no]journaling */
-
-	{"logging", "JOURNALING", DMU_JOURNALED, DMU_C_ON,
-		PSS_WC_JOURNALING, PSL_ACT_JNL, FALSE, TRUE},
-	{"nologging", "JOURNALING", -1, DMU_C_OFF,
-		PSS_WC_JOURNALING, PSL_ACT_JNL, FALSE, TRUE},
-
-	/* NULL keyword terminates */
-
-	{NULL, NULL, -1, -1, 0, 0, FALSE, FALSE}
-};
-
-
-DB_STATUS
-psl_ct6_cr_single_kwd(
-	PSS_SESBLK	*sess_cb,
-	char		*keyword,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk,
-	PSS_Q_XLATE	*xlated_qry)
-{
-    QEU_CB		*qeu_cb;
-    DMU_CB		*dmu_cb;
-    i4		err_code;
-    DMU_CHAR_ENTRY	*chr;
-    bool	    	bad_option = FALSE;
-    char    	qry[PSL_MAX_COMM_STRING];
-    i4		qry_len;
-    i4			max_create_chars;       /*
-						** maximum number of
-						** characteristics is different
-						** between QUEL and SQL
-						*/
-    const PSL_KWD_ACT	*act;			/* Lookup table pointer */
-
-    /* Note: No need to check for "in partition definition", there are
-    ** lots of places that handle single-keywords so the check is done
-    ** in pslsgram.yi.  (At present, no single-keyword WITH options are
-    ** allowed in a partition-with clause.)
-    */
-
-
-    /*
-    ** For distributed thread, for now we are only called on CREATE TABLE
-    ** statement.
-    */
-    if (sess_cb->pss_distrib & DB_3_DDB_SESS)
-    {
-	/* 
-	** Buffer with-clause parameter and pass (unverified) on to the LDB.
-	** LDB will report error if any.  For SELECT INTO, do not
-	** emit "with" -- all we are doing is giving OPC a with-clause
-	** to tack on to the statement it generates.
-	*/
-	char		*str;
-	DB_STATUS	status;
-
-	if (sess_cb->pss_distr_sflags & PSS_PRINT_WITH)
-	{
-	    if (qmode == PSQ_CREATE || qmode == PSQ_RETINTO)
-		str = " with ";
-	    else
-		str = " ";
-	    sess_cb->pss_distr_sflags &= ~PSS_PRINT_WITH;	
-	}
-	else
-	{
-	    str = ", ";
-	}
-
-	status = psq_x_add(sess_cb, str, &sess_cb->pss_ostream, xlated_qry->pss_buf_size,
-				&xlated_qry->pss_q_list, STlength(str), " ",
-				" ", keyword, err_blk);
-
-	if (DB_FAILURE_MACRO(status))				
-	    return(status);
-
-	/*
-	** needs a space after keyword which can be end of query; otherwise 
-	** local server complains
-	*/
-	status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream, xlated_qry->pss_buf_size,
-			    &xlated_qry->pss_q_list, (i4) -1, (char *) NULL,
-			    (char *) NULL, " ", err_blk);
-
-	if (DB_FAILURE_MACRO(status))				
-	    return(status);
-
-	return (E_DB_OK);
-    }
-
-    qeu_cb = (QEU_CB *) sess_cb->pss_object;
-    dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-    chr = (DMU_CHAR_ENTRY *) ((char *) dmu_cb->dmu_char_array.data_address
-				+ dmu_cb->dmu_char_array.data_in_size);
-
-    psl_command_string(qmode, sess_cb->pss_lang, qry, &qry_len);
-    if (sess_cb->pss_lang == DB_SQL)
-    {
-	max_create_chars = SQL_MAX_CREATE_CHARS;
-    }
-    else
-    {
-	max_create_chars = QUEL_MAX_CREATE_CHARS;
-    }
-
-    if (dmu_cb->dmu_char_array.data_in_size >=
-	    max_create_chars * sizeof (DMU_CHAR_ENTRY))
-    {
-	/* Invalid with clause - too many options */
-	(VOID) psf_error(2015L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-	return (E_DB_ERROR);
-    }
-
-    /* Look up the keyword in the table */
-    act = &cre_keywords[0];
-    while (act->keyword != NULL)
-    {
-	if (STcompare(keyword, act->keyword) == 0)
-	    break;
-	++ act;
-    }
-
-    if (act->keyword == NULL
-      || (act->quel_only && sess_cb->pss_lang != DB_QUEL)
-      || (act->sql_only && sess_cb->pss_lang != DB_SQL) )
-    {
-	/* Nomatch, or match but wrong language which acts like nomatch */
-	(void) psf_error( (sess_cb->pss_lang == DB_SQL) ? 2007 : 2046,
-			0, PSF_USERERR, &err_code, err_blk,
-			1,
-			(i4) STtrmwhite(keyword), keyword);
-	return (E_DB_ERROR);
-    }
-
-    /* Got a keyword match.
-    ** Test with-clause bits to see if we've done this one already.
-    */
-
-    if (PSS_WC_TST_MACRO(act->with_id, with_clauses))
-    {
-	(void) psf_error(E_PS0BC9_DUPLICATE_WITH_CLAUSE,
-		0L, PSF_USERERR, &err_code, err_blk, 3,
-		qry_len, qry,
-		(i4) sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-		(i4) STlength(act->dupword), act->dupword);
-	return (E_DB_ERROR);    
-    }
-
-    /* Ad-hoc actions first in case there is added checking */
-    switch (act->action)
-    {
-      case PSL_ACT_DUPS:
-	sess_cb->pss_restab.pst_resdup = (act->dmu_char_value == DMU_C_ON);
-	break;
-
-      case PSL_ACT_SECAUD:
-	if (qmode == PSQ_DGTT || qmode == PSQ_DGTT_AS_SELECT)
-	{
-	    bad_option = TRUE;
-	    break;
-	}
-	/* Additional setting means "no security audit key" */
-	PSS_WC_SET_MACRO(PSS_WC_ROW_NO_SEC_KEY, with_clauses);
-	break;
-
-      case PSL_ACT_JNL:
-	if (act->dmu_char_value == DMU_C_OFF)
-	{
-	    sess_cb->pss_restab.pst_resjour = PST_RESJOUR_OFF;
-	    break;
-	}
-	/*
-	** A lightweight session table may not specify WITH JOURNALING:
-	*/
-	if (sess_cb->pss_restab.pst_temporary)
-	{
-	    (VOID) psf_error(E_PS0BD2_NOT_SUPP_ON_TEMP, 0L, PSF_USERERR,
-		    &err_code, err_blk, 1,
-		    0, "WITH JOURNALING");
-	    return (E_DB_ERROR);
-	}
-	if (sess_cb->pss_ses_flag & PSS_JOURNALED_DB)
-	    sess_cb->pss_restab.pst_resjour = PST_RESJOUR_ON;
-	else
-	    sess_cb->pss_restab.pst_resjour = PST_RESJOUR_LATER;
-	break;
-
-      case PSL_ACT_CMP:
-	/* Always allow NOCOMPRESSION as it's the default */
-	if (act->dmu_char_value == DMU_C_OFF)
-	{
-	    sess_cb->pss_restab.pst_compress = PST_NO_COMPRESSION;
-	    break;
-	}
-	/* More checks if COMPRESSION, action depends on whether it's
-	** simple create or CTAS (or dgtt-as).
-	*/
-	if (qmode == PSQ_CREATE || qmode == PSQ_DGTT)
-	{
-	    /* Assume compression=(data) for simple create */
-#if NOTYET /* this is a future datallegro integration */
-	    chr->char_id = DMU_COMPRESSED;
-	    chr->char_value = DMU_C_ON;
-	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-#else
-	    bad_option = TRUE;
-	    break;
-#endif
-	}
-	else if (sess_cb->pss_restab.pst_struct == 0)
-	{
-	    sess_cb->pss_restab.pst_compress = PST_COMP_DEFERRED;
-	}
-	else
-	{
-	    sess_cb->pss_restab.pst_compress = PST_DATA_COMP;
-	    if (sess_cb->pss_restab.pst_struct == DB_BTRE_STORE)
-		sess_cb->pss_restab.pst_compress |= PST_INDEX_COMP;
-	}
-	break;
-
-      case PSL_ACT_RECOV:
-	/* WITH NORECOVERY only allowed on DGTT and DGTT-AS */
-	if (!sess_cb->pss_restab.pst_temporary)
-	{
-	    (VOID) psf_error(E_PS0BD3_ONLY_ON_TEMP, 0L, PSF_USERERR,
-		&err_code, err_blk, 2,
-		qry_len, qry,
-		0, "WITH NORECOVERY");
-	    return (E_DB_ERROR);
-	}
-	sess_cb->pss_restab.pst_recovery = FALSE;
-	break;
-
-      case PSL_ACT_AUTOS:
-	sess_cb->pss_restab.pst_autostruct = PST_AUTOSTRUCT;
-	/* unless it's NOAUTOSTRUCT... */
-	if (act->dmu_char_value == DMU_C_OFF)
-	    sess_cb->pss_restab.pst_autostruct = PST_NO_AUTOSTRUCT;
-	break;
-
-    } /* switch */
-
-    if (bad_option)
-    {
-	(void) psf_error(2026L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-		(i4) STlength(keyword), keyword);
-	return (E_DB_ERROR);
-    }
-
-    /* Now do standard stuff for all keyword actions */
-
-    PSS_WC_SET_MACRO(act->with_id, with_clauses);
-
-    if (act->dmu_char_id != -1)
-    {
-	chr->char_id = act->dmu_char_id;
-	chr->char_value = act->dmu_char_value;
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-    }
-
-    return (E_DB_OK);
-} /* psl_ct6_cr_single_kwd */
-
-/*
-** Name: psl_lst_prefix	- Semantic actions for a WITH clause list prefix
-**
-** Description:
-**	This routine is called after a WITH list prefix is parsed.  The
-**	clause is something like name = (thing), and "name" has been
-**	parsed.  "Thing" is usually a comma separated list, but can be
-**	anything (a partition definition, for instance.)
-**
-**	This semantic action is NOT bypassed during CREATE SCHEMA.
-**	(The grammar actions need to do stuff for partition definition
-**	parsing.)  But, nothing should happen here.
-**
-** Inputs:
-**	sess_cb		    ptr to a PSF session CB
-**	    pss_lang	    query language
-**	    pss_distr_sflags  Distributed WITH- and FROM-clause info.
-**	psq_cb		    Query-parse control block
-**	    psq_mode	    The query mode: PSQ_CREATE, PSQ_CONS, PSQ_RETINTO,
-**			    PSQ_CREATE_SCHEMA, PSQ_INDEX, PSQ_MODIFY,
-**			    PSQ_DGTT, or PSQ_DGTT_AS_SELECT.
-**	prefix		    The WITH clause prefix
-**	yyvarsp		    Parser state variables
-**
-** Outputs:
-**	yyvarsp		    Parser state variables
-**	    with_clauses    Updated to indicate WITH clauses specified.
-**	    list_clause	    Set to indicate which type of list clause this is.
-**	psq_cb
-**	    psq_error	    Will be filled in if an error occurs
-**	sess_cb
-**	    pss_distr_sflags Updated to indicate WITH has been buffered.
-**
-** Returns:
-**	E_DB_{OK, ERROR}
-**
-** History:
-**	5-mar-1991 (bryanp)
-**	    Created.
-**	12-nov-1991 (andre)
-**	    renamed psl8cr_lst_prefix to psl_ct7_cr_lst_cl_prefix
-**	13-nov-1991 (andre)
-**	    merged 02-jul-91 (andre) change:
-**	        fix bug 37706.  In SQL unsupported options which look like a
-**	        gateway-specific option will result in an informational message
-**		instead of a syntax error message
-**	15-nov-91 (andre)
-**	    renamed to psl_lst_prefix() and adapted for use by index_lst_prefix:
-**	    as well as cr_lst_cl_prefix: production
-**	19-nov-91 (andre)
-**	    adapted for use by modopt_lst-prefix: production
-**	15-jun-92 (barbara)
-**	    Added distributed actions for Sybil.  Buffer CREATE with-clause.
-**      10-mar-93 (barbara)
-**          Delimitd id support for Star.  Removed argument ldb_flags. Use
-**          pss_distr_sflags instead.
-**	30-mar-1993 (rmuth)
-**	    Add support for "modify xxx to add_extend", only option allowed
-**	    is the "with extend=n". Check no other option passed in.
-**	10-sep-93 (tam)
-**	    Print "with" if qmode == PSQ_RETINTO.
-**	03-may-1995 (shero03)
-**	    Add range=((#,#),(#,#)) for RTREE
-**	14-Aug-1997 (shero03)
-**	    B84393: Provide a better message when RANGE used in CREATE TABLE
-**	30-mar-98 (inkdo01)
-**	    Added support for constraint index options.
-**	25-Jan-2004 (schka24)
-**	    Support for partition= with option.
-*/
-DB_STATUS
-psl_lst_prefix(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	char		*prefix,
-	PSS_YYVARS	*yyvarsp)
-{
-    i4		err_code;
-    char	qry[PSL_MAX_COMM_STRING];
-    i4		qry_len;
-    bool	    bad_option = FALSE;
-    bool	    duplicate = FALSE;
-    bool	    in_partition_def;
-    char	    *dupchar;
-    DB_ERROR	*err_blk;
-    QEU_CB	*qeu_cb;
-    DMU_CB	*dmu_cb;
-    i4		first_char;
-    i4		qmode;
-
-    qmode = psq_cb->psq_mode;
-    if (qmode == PSQ_CREATE_SCHEMA)
-	return (E_DB_OK);
-
-    err_blk = &psq_cb->psq_error;
-    in_partition_def = (sess_cb->pss_stmt_flags & PSS_PARTITION_DEF) != 0;
-
-    /*
-    ** For distributed thread, for now we are only called on CREATE TABLE
-    ** statement but, just in case, return if other statement.
-    */
-    if (sess_cb->pss_distrib & DB_3_DDB_SESS)
-    {
-	char		*str;
-	DB_STATUS	status;
-
-	if (qmode != PSQ_CREATE && qmode != PSQ_RETINTO)
-	{
-	    return (E_DB_OK);
-	}
-
-	/* 
-	** Buffer with-clause parameter and pass (unverified) on to the LDB.
-	** LDB will report error if any.  For SELECT INTO, do not
-	** emit "with" -- all we are doing is giving OPC a with-clause
-	** to tack on to the statement it generates.
-	*/
-	if (sess_cb->pss_distr_sflags & PSS_PRINT_WITH)
-	{
-	    if (qmode == PSQ_CREATE || qmode == PSQ_RETINTO)
-		str = " with ";
-	    else
-		str = " ";
-	    sess_cb->pss_distr_sflags &= ~PSS_PRINT_WITH;	
-	}
-	else
-	{
-	    str = ", ";
-	}
-
-	status = psq_x_add(sess_cb, str, &sess_cb->pss_ostream, yyvarsp->xlated_qry.pss_buf_size,
-			    &yyvarsp->xlated_qry.pss_q_list, STlength(str), " ",
-			    " ", prefix, err_blk);
-
-	if (DB_FAILURE_MACRO(status))				
-	    return(status);
-
-	status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream, yyvarsp->xlated_qry.pss_buf_size,
-			    &yyvarsp->xlated_qry.pss_q_list, (i4) -1, (char *) NULL,
-			    (char *) NULL, " = (", err_blk);
-
-	if (DB_FAILURE_MACRO(status))				
-	    return(status);
-
-	return (E_DB_OK);
-    }
-
-    psl_command_string(qmode, sess_cb->pss_lang, qry, &qry_len);
-
-
-    if (qmode == PSQ_MODIFY)
-    {
-	qeu_cb = (QEU_CB *) sess_cb->pss_object;
-	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-
-	/*
-	** first characteristic entry is important since it will allow us to
-	** distinguish between the various flavours of MODIFY statement
-	*/
-	first_char =
-	    ((DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address)->char_id;
-    }
-
-    /*
-    ** CREATE (QUEL), simple CREATE TABLE and ANSI constraints only allow 
-    ** WITH LOCATION;
-    ** 
-    ** CREATE TABLE AS SELECT and [CREATE] INDEX allow WITH
-    ** COMPRESSION/KEY/LOCATION
-    ** 
-    ** MODIFY allows [OLD|NEW]LOCATION/COMPRESSION with restrictions applying to
-    ** various flavours of MODIFY
-    */
-
-    /* At present, partition with's can only be LOCATION=, so check for
-    ** that one separately for a nice message.
-    */
-    if (in_partition_def && STcompare(prefix,"location") != 0)
-    {
-	(void) psf_error(E_US1931_6449_PARTITION_BADOPT, 0, PSF_USERERR,
-			&err_code, err_blk, 2,
-			qry_len, qry, STlength(prefix), prefix);
-	return (E_DB_ERROR);
-    }
-
-    if (!STcompare(prefix, "location"))
-    {
-	if (qmode == PSQ_MODIFY)
-	{
-	    if (qeu_cb->qeu_d_op == DMU_RELOCATE_TABLE)
-	    {
-		/*
-		** Location keyword must not be used in the RELOCATE variant of
-		** MODIFY.
-		*/
-		_VOID_ psf_error(5545L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-		    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno);
-		return (E_DB_ERROR);
-	    }
-
-	    if (first_char != DMU_STRUCTURE && first_char != DMU_REORG)
-	    {
-		/*
-		** Location clause is only allowed on restructure or
-		** reorganize.
-		*/
-		(VOID) psf_error(5543, 0L, PSF_USERERR, &err_code, err_blk, 0);
-		return (E_DB_ERROR);
-	    }
-	}
-	
-	if (PSS_WC_TST_MACRO(PSS_WC_LOCATION, &yyvarsp->with_clauses))
-	{
-	    duplicate = TRUE;
-	    dupchar = "LOCATION";
-	}
-	else
-	{
-	    PSS_WC_SET_MACRO(PSS_WC_LOCATION, &yyvarsp->with_clauses);
-	    yyvarsp->list_clause = PSS_NLOC_CLAUSE;
-	}
-
-	if (!duplicate && qmode == PSQ_CONS)
-	{
-	    DB_STATUS	status;
-	    /*
-	    ** Allocate the location entries.  Assume DM_LOC_MAX, although it's
-	    ** probably fewer.  This is because we don't know how many locations
-	    ** we have at this point, and it would be a big pain to allocate
-	    ** less and then run into problems. This logic was scarfed from
-	    ** psl_ct10_crt_tbl_kwd for use by ANSI constraints.
-	    */
-	    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, 
-		DM_LOC_MAX * sizeof(DB_LOC_NAME),
-		(PTR *)&sess_cb->pss_curcons->pss_restab.pst_resloc.data_address, 
-		err_blk);
-	    if (DB_FAILURE_MACRO(status))
-		return (status);
-
-	    sess_cb->pss_curcons->pss_restab.pst_resloc.data_in_size = 0;    
-						/* Start with 0 locns */
-	}
-    }
-    else if (!STcompare(prefix, "key") && qmode != PSQ_MODIFY)
-    {
-	if (qmode == PSQ_CREATE || qmode == PSQ_DGTT)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_KEY, &yyvarsp->with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "KEY";
-	    }
-	    else
-	    {
-		PSS_WC_SET_MACRO(PSS_WC_KEY, &yyvarsp->with_clauses);
-		yyvarsp->list_clause = PSS_KEY_CLAUSE;
-	    }
-	}
-    }
-    else if (!STcompare(prefix, "range"))
-    {
-	if (qmode != PSQ_INDEX)
-	{
-	  /*
-	  ** Range keyword can only be used in CREATE INDEX with 
-	  ** STRUCTURE=RTREE
-	  */
-	_VOID_ psf_error(2050L, 0L, PSF_USERERR, &err_code, err_blk, 2,
-		qry_len, qry,
-		STtrmwhite(prefix), prefix);
-	return (E_DB_ERROR);
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_RANGE, &yyvarsp->with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "RANGE";
-	    }
-	    else
-	    {
-		PSS_WC_SET_MACRO(PSS_WC_RANGE, &yyvarsp->with_clauses);
-		yyvarsp->list_clause = PSS_RANGE_CLAUSE;
-	    }	
-        }
-    }
-    else if (qmode == PSQ_MODIFY && !STcompare(prefix, "newlocation"))
-    {
-	if (qeu_cb->qeu_d_op != DMU_RELOCATE_TABLE)
-	{
-	    /*
-	    ** New location can be specified only in the RELOCATE variant of
-	    ** MODIFY.
-	    */
-	    _VOID_ psf_error(5546L, 0L, PSF_USERERR, &err_code, err_blk, 2,
-		sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-		STtrmwhite(prefix), prefix);
-	    return (E_DB_ERROR);
-	}
-
-	/* See if newlocation has already been specified */
-	if (PSS_WC_TST_MACRO(PSS_WC_NEWLOCATION, &yyvarsp->with_clauses))
-	{
-	    duplicate = TRUE;
-	    dupchar = "NEWLOCATION";
-	}
-	else
-	{
-	    PSS_WC_SET_MACRO(PSS_WC_NEWLOCATION, &yyvarsp->with_clauses);
-	    yyvarsp->list_clause = PSS_NLOC_CLAUSE;
-	}
-    }
-    else if (qmode == PSQ_MODIFY && !STcompare(prefix, "oldlocation"))
-    {
-	if (qeu_cb->qeu_d_op != DMU_RELOCATE_TABLE)
-	{
-	    /*
-	    ** Old location can be specified only in the RELOCATE variant of
-	    ** MODIFY.
-	    */
-	    _VOID_ psf_error(5546L, 0L, PSF_USERERR, &err_code, err_blk, 2,
-		sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-		STtrmwhite(prefix), prefix);
-	    return (E_DB_ERROR);
-	}
-
-	/* See if oldlocation has already been specified */
-	if (PSS_WC_TST_MACRO(PSS_WC_OLDLOCATION, &yyvarsp->with_clauses))
-	{
-	    duplicate = TRUE;
-	    dupchar = "OLDLOCATION";
-	}
-	else
-	{
-	    PSS_WC_SET_MACRO(PSS_WC_OLDLOCATION, &yyvarsp->with_clauses);
-	    yyvarsp->list_clause = PSS_OLOC_CLAUSE;
-	}
-    }
-    else if (!STcompare(prefix, "compression"))
-    {
-	if (qmode == PSQ_CREATE || qmode == PSQ_DGTT)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (qmode == PSQ_MODIFY)
-	    {
-		if (qeu_cb->qeu_d_op == DMU_RELOCATE_TABLE)
-		{
-		    /*
-		    ** Compression keyword must not be used in the RELOCATE
-		    ** variant of MODIFY.
-		    */
-		    _VOID_ psf_error(E_PS0BC3_COMP_NOT_IN_RELOC, 0L, PSF_USERERR,
-			&err_code, err_blk, 1,
-			sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno);
-		    return (E_DB_ERROR);
-		}
-
-		if (first_char != DMU_STRUCTURE)
-		{
-		    /*
-		    ** Compression keyword must not be used in the
-		    ** REORGANIZE, TRUNCATED, or MERGE variant of MODIFY either
-		    */
-		    _VOID_ psf_error(E_PS0BC2_COMP_NOT_ALLOWED,
-			0L, PSF_USERERR, &err_code, err_blk, 0);
-		    return (E_DB_ERROR);
-		}
-	    }
-
-	    if (PSS_WC_TST_MACRO(PSS_WC_COMPRESSION, &yyvarsp->with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "COMPRESSION";
-	    }
-	    else
-	    {
-		PSS_WC_SET_MACRO(PSS_WC_COMPRESSION, &yyvarsp->with_clauses);
-		yyvarsp->list_clause = PSS_COMP_CLAUSE;
-	    }
-	}
-    }
-    else if (!STcompare(prefix, "security_audit"))
-    {
-	/*
-	** SECURITY_AUDIT option, not allowed for MODIFY or DGTT
-	*/
-	if (qmode == PSQ_MODIFY 
-	    || qmode == PSQ_DGTT 
-	    || qmode==PSQ_DGTT_AS_SELECT)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_ROW_SEC_AUDIT, &yyvarsp->with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "SECURITY_AUDIT";
-	    }
-	    else
-	    {
-		PSS_WC_SET_MACRO(PSS_WC_ROW_SEC_AUDIT, &yyvarsp->with_clauses);
-		yyvarsp->list_clause = PSS_SECAUDIT_CLAUSE;
-	    }
-	}
-    }
-    else if (!STcompare(prefix, "security_audit_key"))
-    {
-	/*
-	** SECURITY_AUDIT_KEY option, not allowed for MODIFY or DGTT
-	*/
-	if (qmode == PSQ_MODIFY 
-	    || qmode == PSQ_DGTT 
-	    || qmode==PSQ_DGTT_AS_SELECT)
-	{
-	    bad_option = TRUE;
-	}
-	else
-	{
-	    if (PSS_WC_TST_MACRO(PSS_WC_ROW_SEC_KEY, &yyvarsp->with_clauses))
-	    {
-		duplicate = TRUE;
-		dupchar = "[NO]SECURITY_AUDIT_KEY";
-	    }
-	    else
-	    {
-		PSS_WC_SET_MACRO(PSS_WC_ROW_SEC_KEY, &yyvarsp->with_clauses);
-		yyvarsp->list_clause = PSS_SECAUDIT_KEY_CLAUSE;
-	    }
-	}
-    }
-    else if (STcompare(prefix, "partition") == 0)
-    {
-	DB_STATUS status;
-
-	/* PARTITION= option is allowed for CREATE, CREATE AS SELECT,
-	** and MODIFY.  Explicitly disallowed for DGTT.  Currently
-	** not allowed for CREATE INDEX, although that's an implementation
-	** issue;  partitioned global indexes are quite reasonable for
-	** the future.
-	** Currently not allowed on constraint with's, both because the
-	** option ultimately applies to an index; and because the constraint
-	** index is generated by qef cooking up a CREATE INDEX string,
-	** and it doesn't know how to output a partition= option yet.
-	*/
-	if (qmode == PSQ_DGTT || qmode == PSQ_DGTT_AS_SELECT
-	  || qmode == PSQ_INDEX
-	  || qmode == PSQ_CONS)
-	{
-	    (void) psf_error(E_US1932_6450_PARTITION_NOTALLOWED,
-		0L, PSF_USERERR, &err_code, err_blk,
-		2, qry_len, qry, qry_len, qry);
-	    return (E_DB_ERROR);
-	}
-	if (qmode == PSQ_MODIFY)
-	{
-	    /* Only allow with the restructuring variant */
-	    if (qeu_cb->qeu_d_op == DMU_RELOCATE_TABLE)
-	    {
-		/*
-		** Partition keyword must not be used in the RELOCATE
-		** variant of MODIFY.
-		*/
-		(void) psf_error(E_US1944_6462_STRUCTURE_REQ, 0L, PSF_USERERR,
-			&err_code, err_blk, 2,
-			qry_len, qry, 0, "PARTITION=");
-		return (E_DB_ERROR);
-	    }
-
-	    if (first_char != DMU_STRUCTURE)
-	    {
-		/*
-		** Partition keyword must be used with restructuring.
-		*/
-		(void) psf_error(E_US1944_6462_STRUCTURE_REQ, 0L, PSF_USERERR,
-			&err_code, err_blk, 2,
-			qry_len, qry, 0, "PARTITION=");
-		return (E_DB_ERROR);
-	    }
-	}
-
-	if (PSS_WC_TST_MACRO(PSS_WC_PARTITION, &yyvarsp->with_clauses))
-	{
-	    duplicate = TRUE;
-	    dupchar = "PARTITION";
-	}
-	else
-	{
-	    PSS_WC_SET_MACRO(PSS_WC_PARTITION, &yyvarsp->with_clauses);
-	    yyvarsp->list_clause = PSS_PARTITION_CLAUSE;
-	}
-	status = psl_partdef_start(sess_cb, psq_cb, yyvarsp);
-	if (DB_FAILURE_MACRO(status))
-	    return (status);
-    }
-    else if (   (qmode == PSQ_RETINTO || qmode == PSQ_CREATE)
-	     && sess_cb->pss_lang == DB_SQL
-	     && psl_gw_option(prefix))
-    {
-	/*
-	** before declaring this a syntax error, check if it looks like a
-	** gateway option; gateway option starts with an alphabetic char,
-	** followed by 2 alphanumeric chars followed by an underscore
-	*/
-
-	_VOID_ psf_error(I_PS1002_CRTTBL_WITHOPT_IGNRD, 0L, PSF_USERERR,
-	    &err_code, err_blk, 1, (i4) STlength(prefix), prefix);
-
-	yyvarsp->list_clause = PSS_UNSUPPORTED_CRTTBL_WITHOPT;
-    }
-    /* at this point we know for sure that we are dealing with invalid option */
-    else if (qmode == PSQ_CREATE || qmode == PSQ_DGTT)
-    {
-	_VOID_ psf_error(2047L, 0L, PSF_USERERR, &err_code,
-	    err_blk, 1, (i4) STlength(prefix), prefix);
-	return (E_DB_ERROR);
-    }
-    else if (qmode == PSQ_MODIFY)
-    {
-	_VOID_ psf_error(5345L, 0L, PSF_USERERR, &err_code,
-	    err_blk, 1, (i4) STlength(prefix), prefix);
-	return (E_DB_ERROR);
-    }
-    else
-    {
-	/* CREATE TABLE AS SELECT and [CREATE] INDEX */
-	_VOID_ psf_error(5343L, 0L, PSF_USERERR, &err_code, err_blk, 2,
-	    qry_len, qry, (i4) STlength(prefix), prefix);
-	return (E_DB_ERROR);
-    }
-
-    if (bad_option)
-    {
-	_VOID_ psf_error(2026L, 0L, PSF_USERERR, &err_code, err_blk, 1,
-		    (i4) STlength(prefix), prefix);
-	return (E_DB_ERROR);
-    }
-
-    if (duplicate)
-    {
-	_VOID_ psf_error(E_PS0BC9_DUPLICATE_WITH_CLAUSE,
-		    0L, PSF_USERERR, &err_code, err_blk, 3,
-		    qry_len, qry,
-		    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-		    (i4) STlength(dupchar), dupchar);
-	return (E_DB_ERROR);
-    }
-
-    return (E_DB_OK);
-}
-
-/*
-** Name: psl_ct8_cr_lst_elem - Semantic action for comma-separated WITH element
-**
-** Description:
-**	This routine performs the semantic actions for a comma-list
-**	element in a WITH clause, for create-table-like contexts.
-**	(Meaning a psq-mode of psq-create, psq-retinto, psq-dgtt,
-**	psq-dgtt-as-select, and psq-create-schema.)  The prefix 
-**	semantics has decided that the WITH clause is valid, and has set
-**	"list_clause" to indicate what sort of elements we're getting.
-**
-**	The list element is a string, and might have been either identifier
-**	style or quoted-string style.  If the clause type cares which,
-**	it can check id_type in the yyvars block.
-**
-** Inputs:
-**	sess_cb		    ptr to a PSF session CB
-**	    pss_lang	    query language
-**	psq_cb		    Query parse control block
-**	yyvarsp		    Pointer to parsing state variables.
-**	element		    List element given
-**	xlated_qry	    For query text buffering 
-**
-** Outputs:
-**	reskey		    If WITH KEY, set to point to key information.
-**	psq_cb.err_blk	    will be filled in if an error occurs
-**
-** Returns:
-**	E_DB_{OK, ERROR}
-**
-** History:
-**	5-mar-1991 (bryanp)
-**	    Created.
-**	12-nov-91 (andre)
-**	    renamed to psl_ct8_cr_lst_elem
-**	13-nov-1991 (andre)
-**	    merged 02-jul-91 (andre) change:
-**		if processing an SQL query and list_clause is set to
-**		PSS_UNSUPPORTED_CRTTBL_WITHOPT, do nothing.
-**	24-nov-1992 (barbara)
-**	    Buffer closing paren on list.
-**	10-sep-1993 (tam)
-**	    Padded an extra space after ")" for local query buffer in star.
-**	09-feb-1995 (cohmi01)
-**	    For RAW/IO, element can now contain raw extent name as well, place
-**	    into new rawextnm array in dmu_cb.
-**	23-jun-1997 (nanpr01)
-**	    Star problem with create table as select with WITH clause.
-**	20-nov-1997 (nanpr01)
-**	    bug 87247 : create table with security_audit_key in a SQL92 
-**	    installation get key column undefined.
-**	28-Jan-2004 (schka24)
-**	    Pass in where to put locations in a partition with.
-**	17-Apr-2008 (thaju02) (B120283)
-**	    For with partition=, partition-rule should be specified. 
-**	17-Nov-2009 (kschendel) SIR 122890
-**	    Change call to simplify future uses;  unify KEY= parsing
-**	    (was needed at Datallegro for IngresStreams, but is a
-**	    useful simplification in any case.)
-*/
-DB_STATUS
-psl_ct8_cr_lst_elem(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_YYVARS	*yyvarsp,
-	char		*element,
-	PST_RESKEY	**reskey,
-	PSS_Q_XLATE	*xlated_qry)
-{
-    DB_ERROR	*err_blk = &psq_cb->psq_error;
-    i4		err_code;
-    QEU_CB	*qeu_cb;
-    DMU_CB	*dmu_cb;
-    char	command[PSL_MAX_COMM_STRING];
-    i4		length;
-    i4		list_clause;
-
-    psl_command_string(psq_cb->psq_mode, sess_cb->pss_lang, command, &length);
-
-    list_clause = yyvarsp->list_clause;
-    /* All but STREAM= expect an identifier-type element. */
-    /* (future IngresStream support) */
-    if ( TRUE && yyvarsp->id_type == PSS_ID_SCONST)
-    {
-	(void) psf_error(E_US1942_6460_EXPECTED_BUT, 0L, PSF_USERERR,
-		&err_code, err_blk, 3,
-		length, command,
-		0, "A name",
-		0, "a string constant");
-	return (E_DB_ERROR);
-    }
-    /*
-    ** For distributed thread, for now we are only called on CREATE TABLE
-    ** statement.
-    */
-    if (sess_cb->pss_distrib & DB_3_DDB_SESS)
-    {
-	DB_STATUS	status;
-	u_char		*c1 = sess_cb->pss_nxtchar;
-
-	status = psq_x_add(sess_cb, element, &sess_cb->pss_ostream,
-			    xlated_qry->pss_buf_size,
-			    &xlated_qry->pss_q_list, STlength(element), " ",
-			    " ", NULL, err_blk);
-
-	if (DB_FAILURE_MACRO(status))				
-	    return(status);
-
-	while (CMspace(c1))
-	    CMnext(c1);
-
-	if (!CMcmpcase(c1, ","))
-	{
-	    CMprev(c1, 0);
-	    if (!CMcmpcase(c1, ")"))
-	    {
-		status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream,
-			xlated_qry->pss_buf_size, &xlated_qry->pss_q_list,
-			-1, (char *) NULL, (char *) NULL, ") ", err_blk);
-	    }
-	    else
-	    {
-		status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream,
-			xlated_qry->pss_buf_size, &xlated_qry->pss_q_list,
-			-1, (char *) NULL, (char *) NULL, ", ", err_blk);
-	    }
-	}
-	else if (CMnmstart(c1)) 
-	{
-	    status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream,
-			xlated_qry->pss_buf_size, &xlated_qry->pss_q_list,
-			-1, (char *) NULL, (char *) NULL, ", ", err_blk);
-	}
-	else if (!CMcmpcase(c1, ")") || !CMcmpcase(c1, ""))
-	{
-	    status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream,
-			xlated_qry->pss_buf_size, &xlated_qry->pss_q_list,
-			-1, (char *) NULL, (char *) NULL, ") ", err_blk);
-	}
-
-	return (status);
-    }
-
-    qeu_cb = (QEU_CB *) sess_cb->pss_object;
-    dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
-
-    if (list_clause == PSS_KEY_CLAUSE)
-    {
-	DB_STATUS	status;
-
-	/* The KEY= entry works two different ways depending on context.
-	** For a (permanent) REGISTER AS IMPORT, add a key entry to the
-	** dmu-cb being built, and do some duplicate name checking.
-	** (Because that's the way the old reg-icols production did it.)
-	**
-	** For anything else, allocate a RESKEY entry where the caller
-	** can see it, and move the name in.
-	*/
-	if (psq_cb->psq_mode == PSQ_REG_IMPORT)
-	{
-	    DB_ATT_NAME		attname;
-	    DMU_KEY_ENTRY	**key;
-	    DMU_KEY_ENTRY	*keymem;
-	    DMF_ATTR_ENTRY	**attrs;
-	    i4			colno;
-	    i4			keycnt;
-	    i4			i;
-
-	    keycnt = dmu_cb->dmu_key_array.ptr_in_count;
- 
-	    STmove(element, ' ', sizeof(DB_ATT_NAME),  (char *) &attname);
- 
-	    /* Check for duplicate column names. */
- 
-	    key = (DMU_KEY_ENTRY **) dmu_cb->dmu_key_array.ptr_address;
-	    for (i = 0; i < keycnt; i++)
-	    {
-		/* check duplicate against previously entered key value */
-		if (!MEcmp((char *) &attname, (char *) &(*key)->key_attr_name,
-			   sizeof(DB_ATT_NAME)))
-		{
-		    (VOID) psf_error(9307L, 0L, PSF_USERERR, &err_code,
-				err_blk, 1,
-				STlength(element), element);
-		    return (E_DB_ERROR);
-		}
-		key++;
-	    }
-
-	    /* validate key value (need a valid column name) */
-	    attrs = (DMF_ATTR_ENTRY **) dmu_cb->dmu_attr_array.ptr_address;
-	    colno = sess_cb->pss_rsdmno;
-	    for (i = 0; i < colno; i++)
-	    {
-		if (!MEcmp((char *)&attname,
-			   (char *)&(attrs[i])->attr_name,
-			   sizeof((attrs[i])->attr_name)))
-		{
-		    break;    /* we have match, a valid key value */
-		}
-	    }
-	    if (i >= colno)
-	    {
-		(VOID) psf_error(9312L, 0L, PSF_USERERR, &err_code,
-				 err_blk, 1,
-				 (i4) STtrmwhite(element), element);
-		return (E_DB_ERROR);		
-	     }
-
-	    /* Store the column name in the DMU_CB key entry array */
-	    key = (DMU_KEY_ENTRY **) dmu_cb->dmu_key_array.ptr_address;
-	    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(DMU_KEY_ENTRY),
-				(PTR *) &keymem, err_blk);
-	    key[keycnt]= keymem;
-	    if (status != E_DB_OK)
-		return (status);
-	    STRUCT_ASSIGN_MACRO(attname, (key[keycnt])->key_attr_name);
-
-	    /* asc/desc from syntax is passed as a qry-mask flag */
-	    if (yyvarsp->qry_mask & PSS_QMASK_REGKEY_DESC)
-		(key[keycnt])->key_order = DMU_DESCENDING;
-	    else
-		(key[keycnt])->key_order = DMU_ASCENDING;
-	    yyvarsp->qry_mask &= ~PSS_QMASK_REGKEY_DESC;  /* tidiness */
-
-	    dmu_cb->dmu_key_array.ptr_in_count++;
-	}
-	else
-	{
-	    /* Allocate memory for a key entry */
-	    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, (i4) sizeof(PST_RESKEY),
-				(PTR *) reskey, err_blk);
-	    if (status != E_DB_OK)
-	    {
-		return (status);
-	    }
-
-	    /*
-	    ** Copy update column name to column entry.
-	    */
-	    STmove(element, ' ', sizeof((*reskey)->pst_attname),
-		(char *) &(*reskey)->pst_attname);
-	    (*reskey)->pst_nxtkey = (PST_RESKEY *) NULL;
-	}
-    }
-    else if (list_clause == PSS_NLOC_CLAUSE)
-    {
-	DM_DATA		    *dmdata_ptr;
-	DB_LOC_NAME	    *loc, *lim;
-
-	dmdata_ptr = &dmu_cb->dmu_location;
-	if (sess_cb->pss_stmt_flags & PSS_PARTITION_DEF)
-	    dmdata_ptr = &yyvarsp->part_locs;
-
-	/* See if there is space for 1 more */
-	if (dmdata_ptr->data_in_size/sizeof(DB_LOC_NAME) >= DM_LOC_MAX)
-	{
-	    /* Too many locations */
-	    (VOID) psf_error(2115L, 0L, PSF_USERERR,
-		&err_code, err_blk, 1, sizeof(sess_cb->pss_lineno),
-		&sess_cb->pss_lineno);
-	    return (E_DB_ERROR);
-	}
-
-	lim = (DB_LOC_NAME *) (dmdata_ptr->data_address +
-		dmdata_ptr->data_in_size);
-
-	STmove(element, ' ', (u_i4) DB_LOC_MAXNAME, (char *) lim);
-	dmdata_ptr->data_in_size += sizeof(DB_LOC_NAME);
-
-	/* See if not a duplicate */
-	for (loc = (DB_LOC_NAME *) dmdata_ptr->data_address;
-	     loc < lim;
-	     loc++
-	    )
-	{
-	    if (!MEcmp((char *) loc, (char *) lim, sizeof(DB_LOC_NAME)))
-	    {
-		/* A duplicate was found */
-		(VOID) psf_error(2116L, 0L, PSF_USERERR,
-		    &err_code, err_blk, 2,
-		    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-		    psf_trmwhite(DB_LOC_MAXNAME, element), element);
-		return (E_DB_ERROR);
-	    }
-	}
-    }
-    else if (list_clause == PSS_COMP_CLAUSE)
-    {
-	/*
-	** WITH COMPRESSION=([NO]KEY,[NO|HI]DATA)
-	*/
-	
-	bool	    duplicate = FALSE;
-
-	/*
-	** Validate the keyword, and update the restab if valid.
-	*/
-	if (!STcompare(element, "key"))
-	{
-	    if (sess_cb->pss_restab.pst_compress &
-				    (PST_INDEX_COMP | PST_NO_INDEX_COMP))
-	    {
-		duplicate = TRUE;
-	    }
-	    else
-	    {
-		sess_cb->pss_restab.pst_compress |= PST_INDEX_COMP;
-	    }
-	}
-	else if (STcompare(element, "nokey") == 0)
-	{
-	    if (sess_cb->pss_restab.pst_compress &
-				    (PST_INDEX_COMP | PST_NO_INDEX_COMP))
-	    {
-		duplicate = TRUE;
-	    }
-	    else
-	    {
-		sess_cb->pss_restab.pst_compress |= PST_NO_INDEX_COMP;
-	    }
-	}
-	else if (STcompare(element, "data") == 0)
-	{
-	    if (sess_cb->pss_restab.pst_compress &
-		   (PST_DATA_COMP | PST_HI_DATA_COMP | PST_NO_DATA_COMP))
-	    {
-		duplicate = TRUE;
-	    }
-	    else
-	    {
-		sess_cb->pss_restab.pst_compress |= PST_DATA_COMP;
-	    }
-	}
-	else if (STcompare(element, "hidata") == 0)
-	{
-	    if (sess_cb->pss_restab.pst_compress &
-		   (PST_DATA_COMP | PST_HI_DATA_COMP | PST_NO_DATA_COMP))
-	    {
-		duplicate = TRUE;
-	    }
-	    else
-	    {
-		sess_cb->pss_restab.pst_compress |= PST_HI_DATA_COMP;
-	    }
-	}
-	else if (STcompare(element, "nodata") == 0)
-	{
-	    if (sess_cb->pss_restab.pst_compress &
-				    (PST_DATA_COMP | PST_NO_DATA_COMP))
-	    {
-		duplicate = TRUE;
-	    }
-	    else
-	    {
-		sess_cb->pss_restab.pst_compress |= PST_NO_DATA_COMP;
-	    }
-	}
-	else
-	{
-	    (VOID) psf_error(E_PS0BC5_KEY_OR_DATA_ONLY, 0L, PSF_USERERR,
-			&err_code, err_blk, 3,
-			sizeof("CREATE TABLE")-1, "CREATE TABLE",
-			sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
-			STlength(element), element);
-	    return (E_DB_ERROR);
-	}
-
-	if (duplicate)
-	{
-	    (VOID) psf_error(E_PS0BC4_COMPRESSION_TWICE,
-		    0L, PSF_USERERR,
-		    &err_code, err_blk, 2,
-		    sizeof("CREATE TABLE")-1, "CREATE TABLE",
-		    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno);
-	    return (E_DB_ERROR);
-	}
-    }
-    else if (list_clause == PSS_SECAUDIT_CLAUSE)
-    {
-	bool duplicate=FALSE;
-	/*
-	** WITH SECURITY_AUDIT=([NO]ROW)
-	*/
-	
-	/*
-	** Validate the keyword, and update the restab if valid.
-	*/
-	if (!STcompare(element, "row"))
-	{
-	    if (sess_cb->pss_restab.pst_secaudit)
-	    {
-		duplicate = TRUE;
-	    }
-	    else
-	    {
-		sess_cb->pss_restab.pst_secaudit |= PST_SECAUDIT_ROW;
-	    }
-	}
-	else if (STcompare(element, "norow") == 0)
-	{
-	    if (sess_cb->pss_restab.pst_secaudit)
-	    {
-		duplicate = TRUE;
-	    }
-	    else
-	    {
-		sess_cb->pss_restab.pst_secaudit |= PST_SECAUDIT_NOROW;
-	    }
-	}
-	else if (STcompare(element, "table")==0)
-	{
-		/* 
-		** TABLE is always allowed, default so ignore
-		*/
-	}
-	else
-	{
-	    (VOID) psf_error(6353, 0L, PSF_USERERR,
-			&err_code, err_blk, 2,
-			sizeof("CREATE TABLE")-1, "CREATE TABLE",
-			STlength(element), element);
-	    return (E_DB_ERROR);
-	}
-	if(duplicate)
-	{
-	    _VOID_ psf_error(6351, 0L, PSF_USERERR, &err_code, err_blk, 3,
-			sizeof("CREATE TABLE")-1, "CREATE TABLE",
-			sizeof(ERx("SECURITY_AUDIT")) - 1, 
-				ERx("SECURITY_AUDIT"));
-	    return (E_DB_ERROR);
-	}
-
-    }
-    else if (list_clause == PSS_SECAUDIT_KEY_CLAUSE)
-    {
-	DB_ATT_NAME *attname;
-	DB_STATUS   status;
-	char	    tempstr[DB_MAX_DELIMID+1];
-	u_i4	    ilen, olen;
-
-	/*
-	** WITH SECURITY_AUDIT_KEY=(column)
-	*/
-	
-	/* Allocate memory for a key entry */
-	attname= sess_cb->pss_restab.pst_secaudkey;
-	if(!attname)
-	{
-		status = psf_malloc(sess_cb, &sess_cb->pss_ostream, 
-			(i4) sizeof(DB_ATT_NAME),
-		    	(PTR *) &sess_cb->pss_restab.pst_secaudkey, err_blk);
-		if (status != E_DB_OK)
-		{
-		    return (status);
-		}
-		attname= sess_cb->pss_restab.pst_secaudkey;
-	}
-	else
-	{
-	    /*
-	    ** Already allocated == duplicate
-	    */
-	    _VOID_ psf_error(6351, 0L, PSF_USERERR, &err_code, err_blk, 3,
-			sizeof("CREATE TABLE")-1, "CREATE TABLE",
-			sizeof(ERx("SECURITY_AUDIT_KEY")) - 1, 
-				ERx("SECURITY_AUDIT_KEY"));
-	    return (E_DB_ERROR);
-	}
-
-	/*
-	** Save this column as the row audit key
-	*/
-	ilen = STlength(element);
-	olen = sizeof(tempstr);
-
-	status = cui_idxlate((u_char *) element, &ilen,
-			      (u_char *)tempstr, &olen, 
-			      *sess_cb->pss_dbxlate | CUI_ID_STRIP, 
-			      (u_i4 *) NULL, err_blk);
-	if (DB_FAILURE_MACRO(status))
-	{
-	    	_VOID_ psf_error(6351, 0L, PSF_USERERR, &err_code, err_blk, 2,
-			sizeof("CREATE TABLE")-1, "CREATE TABLE",
-			sizeof(ERx("SECURITY_AUDIT_KEY")) - 1, 
-				ERx("SECURITY_AUDIT_KEY"));
-	       return (E_DB_ERROR);
-	}
-
-	MEmove(olen, (PTR)tempstr, ' ', sizeof(*attname), 
-	       (PTR) attname);
-    }
-    else if (list_clause == PSS_PARTITION_CLAUSE)
-    {
-	(VOID) psf_error(E_US1950_6468_NO_PARTRULE_SPEC, 0L, 
-			PSF_USERERR, &err_code, err_blk, 2,
-                        sizeof("CREATE TABLE")-1, "CREATE TABLE");
-        return (E_DB_ERROR);
-    }
-    else
-    {
-	/* list_clause == PSS_UNSUPPORTED_CRTTBL_WITHOPT - nothing to do */
-    }
-
-    return (E_DB_OK);
-}
+} /* psl_ct3_crwith */
 
 /*
 ** Name: psl_ct9_new_loc_name - Semantic actions for the new_loc_name production
@@ -5360,7 +2000,7 @@ psl_ct8_cr_lst_elem(
 **	table_name	    Table name
 **
 ** Outputs:
-**	with_clauses	    PSS_WC_LOCATION bit will be turned on if loc:tbl was
+**	dmu_cb indicators and location updated
 **			    specified
 **	xlated_qry	    List of packets will contain qry text
 **	psq_cb
@@ -5412,9 +2052,7 @@ psl_ct9_new_loc_name(
 	PSS_SESBLK	*sess_cb,
 	PSQ_CB		*psq_cb,
 	char		*loc_name,
-	char		*table_name,
-	PSS_WITH_CLAUSE *with_clauses,
-	PSS_Q_XLATE	*xlated_qry)
+	char		*table_name)
 {
     QEU_CB              *qeu_cb;
     DMU_CB		*dmu_cb;
@@ -5434,17 +2072,17 @@ psl_ct9_new_loc_name(
 	    i4 max = DB_LOC_MAXNAME;
 
 	    (VOID) psf_error(2733, 0L, PSF_USERERR, &err_code,
-		&psq_cb->psq_error, 3, 8, "LOCATION", 0, loc_name, 
+		&psq_cb->psq_error, 3, 8, "LOCATION", 0, loc_name,
 		sizeof(max), &max);
 	    return E_DB_ERROR;
 	}
-	
+
 	/*
-	** rememebr that we have seen a location; user will be prevented from
+	** remember that we have seen a location; user will be prevented from
 	** specifying location in the WITH clause if the new table name was
 	** prefixed with location name
 	*/
-	PSS_WC_SET_MACRO(PSS_WC_LOCATION, with_clauses);
+	BTset(PSS_WC_LOCATION, dmu_cb->dmu_chars.dmu_indicators);
 
 	STmove(loc_name, ' ', sizeof(DB_LOC_NAME),
 	    (char *) dmu_cb->dmu_location.data_address);
@@ -5454,12 +2092,9 @@ psl_ct9_new_loc_name(
     STmove(table_name, ' ', sizeof(DB_TAB_NAME),
 	(char *) &dmu_cb->dmu_table_name);
 
-    if (sess_cb->pss_lang == DB_SQL)
-    {
-	/* Set up table name for 'subselect' version' */
-	STRUCT_ASSIGN_MACRO(dmu_cb->dmu_table_name,
+    /* Set up table name for 'subselect' version' */
+    STRUCT_ASSIGN_MACRO(dmu_cb->dmu_table_name,
 			    sess_cb->pss_restab.pst_resname);
-    }
 
     if (sess_cb->pss_distrib & DB_3_DDB_SESS)
     {
@@ -5478,19 +2113,22 @@ psl_ct9_new_loc_name(
 **
 **	    crt_tbl_kwd:        CREATE TABLE
 **	    crestmnt:		CREATE
+**
+**	We also handle the initial setup for declare global temporary table,
+**	and register as import.
+**
 ** Inputs:
 **	sess_cb		    ptr to a PSF session CB
 **	    pss_lang	    query language
 **	psq_cb		    PSF request CB
-**	    psq_mode	    query mode; will help us to distinguish between
-**	                    GW register & create
-**	with_clauses	    Ptr to the $Ywith_clauses field.
-**	temporary	    0 if regular table; non-zero if temporary table.
+**	    psq_mode	    One of PSQ_CREATE, PSQ_DGTT, or PSQ_REG_IMPORT.
+**			    (create -> retinto and dgtt -> dgtt_as_select
+**			    happens later, if appropriate)
 **
 ** Outputs:
 **	psq_cb
 **	    psq_error	    will be filled in if an error occurs
-**	with_clauses	    Set to 0 to indicate no with clauses yet.
+**	dmu_indicators	    Set to 0 to indicate no with clauses yet.
 **
 ** Returns:
 **	E_DB_{OK, ERROR}
@@ -5531,25 +2169,22 @@ psl_ct9_new_loc_name(
 **	    Replace DD_300_MAXCOLUMN with DD_MAXCOLUMN (1024).
 **	28-May-2009 (kschendel) b122118
 **	    temporary is boolean, pass it as such.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Don't pass temporary.  Let REGISTER do options and keys
+**	    the same as everyone else.
 */
 DB_STATUS
 psl_ct10_crt_tbl_kwd(
 	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_WITH_CLAUSE *with_clauses,
-	bool		temporary)
+	PSQ_CB		*psq_cb)
 {
     DB_STATUS		    status;
     QEU_CB		    *qeu_cb;
     DMU_CB		    *dmu_cb;
-    DMU_CHAR_ENTRY	    *chr;
     DB_ERROR		    *err_blk = &psq_cb->psq_error;
 
     /* Start out with column count of zero */
     sess_cb->pss_rsdmno = 0;
-
-    /* record whether this is a regular object or a temporary table */
-    sess_cb->pss_restab.pst_temporary = temporary;
 
     /* Allocate QEU_CB for CREATE/REGISTER [TABLE] and initialize its header;
     ** 
@@ -5558,23 +2193,20 @@ psl_ct10_crt_tbl_kwd(
     ** otherwise just allocate a qeu_cb.
     ** Eventually, all creates will be handled by query nodes and trees,
     ** but for now we are only doing vanilla creates.
+    **
+    ** (create gets a query node, but dgtt goes thru the old qeu_dbu path!
+    ** I guess "eventually" means "Not in our lifetimes...")
     */
     if (psq_cb->psq_mode == PSQ_CREATE)
 	status = pst_crt_tbl_stmt(sess_cb, psq_cb->psq_mode,
 				  DMU_CREATE_TABLE, err_blk);
     else
 	status = psl_qeucb(sess_cb, DMU_CREATE_TABLE, err_blk);
-        
+
     if (status != E_DB_OK)
 	return (status);
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
-
-    if (psq_cb->psq_mode == PSQ_DGTT)
-    {
-	/* remember that we are creating a temp table */
-	qeu_cb->qeu_flag |= QEU_TMP_TBL;
-    }
 
     /* Allocate a DMU control block */
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(DMU_CB),
@@ -5584,7 +2216,8 @@ psl_ct10_crt_tbl_kwd(
 
     qeu_cb->qeu_d_cb = dmu_cb;
 
-    MEfill(sizeof(DMU_CB), NULLCHAR, (PTR) dmu_cb);
+    /* Make sure DMU_CB and embedded DMU_CHARACTERISTICS is clear */
+    MEfill(sizeof(DMU_CB), 0, (PTR) dmu_cb);
 
     /* Fill in the DMU control block header */
     dmu_cb->type = DMU_UTILITY_CB;
@@ -5592,26 +2225,17 @@ psl_ct10_crt_tbl_kwd(
     dmu_cb->dmu_flags_mask = 0;
     dmu_cb->dmu_db_id = sess_cb->pss_dbid;
     STRUCT_ASSIGN_MACRO(sess_cb->pss_user, dmu_cb->dmu_owner);
-    dmu_cb->dmu_key_array.ptr_address = NULL;
-    dmu_cb->dmu_key_array.ptr_in_count = 0;
-    dmu_cb->dmu_key_array.ptr_size = 0;
     dmu_cb->dmu_gw_id = DMGW_NONE;
 
-    /* schang : code from register table */
-
-    dmu_cb->dmu_gwattr_array.ptr_address = NULL;
-    dmu_cb->dmu_gwattr_array.ptr_in_count = 0;
-    dmu_cb->dmu_gwattr_array.ptr_out_count = 0;
-    dmu_cb->dmu_gwattr_array.ptr_size = 0;
-    dmu_cb->dmu_gwchar_array.data_address = NULL;
-    dmu_cb->dmu_gwchar_array.data_in_size = 0;
-    dmu_cb->dmu_gwchar_array.data_out_size = 0;
-
-    /* Default for journaling is OFF */
-    sess_cb->pss_restab.pst_resjour = PST_RESJOUR_OFF;
-
-    /* default for session table recovery is FALSE */
-    sess_cb->pss_restab.pst_recovery = FALSE;
+    if (psq_cb->psq_mode == PSQ_DGTT)
+    {
+	/* remember that we are creating a temp table.
+	** As noted above, this includes dgtt-as-select.
+	*/
+	qeu_cb->qeu_flag |= QEU_TMP_TBL;
+	/* Do it in the DMU characteristics too */
+	BTset(DMU_TEMP_TABLE, dmu_cb->dmu_chars.dmu_indicators);
+    }
 
     /*
     ** Allocate the attribute entries.  Assume DB_MAX_COLS, although it's
@@ -5628,115 +2252,8 @@ psl_ct10_crt_tbl_kwd(
     dmu_cb->dmu_attr_array.ptr_in_count = 0;    /* Start with 0 attributes*/
     dmu_cb->dmu_attr_array.ptr_size = sizeof(DMF_ATTR_ENTRY);
 
-    /* no with clauses seen yet */
-    MEfill(sizeof(PSS_WITH_CLAUSE), 0, with_clauses);
-
-    if (psq_cb->psq_mode != PSQ_REG_IMPORT)
+    if (psq_cb->psq_mode == PSQ_REG_IMPORT)
     {
-	i4                 create_char_num;
-
-	/*
-	** Allocate the description entries.
-	** For CREATE TABLE we need Allocate enough space for 4 entries:
-	** structure, duplicates, journaling, system_maintained;
-	** for CREATE we need to allocate just 3: structure, duplicates, and
-	** journaling.
-	*/
-	create_char_num = (sess_cb->pss_lang == DB_SQL) ? SQL_MAX_CREATE_CHARS
-							: QUEL_MAX_CREATE_CHARS;
-
-	status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-	    sizeof(DMU_CHAR_ENTRY) * create_char_num,
-	    (PTR *) &dmu_cb->dmu_char_array.data_address, err_blk);
-	if (DB_FAILURE_MACRO(status))
-	    return (status);
-
-	chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-	chr->char_id = DMU_STRUCTURE;
-	chr->char_value = DB_HEAP_STORE;
-	dmu_cb->dmu_char_array.data_in_size = sizeof(DMU_CHAR_ENTRY);
-    }
-    else                           /* schang : GW specific stuff */
-    {
-	/*
-	** Allocate the description entries for register-as-import.
-	**
-	** This seems silly, but the gateway ("dbms") name is down in the
-	** WITH clauses, and we have to allow for stuff like structure=
-	** to show up before the DBMS clause.
-	*/
-
-        status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-	    sizeof(DMU_CHAR_ENTRY) * SQL_GW_MAX_REGISTER_CHARS,
-	    (PTR *) &dmu_cb->dmu_char_array.data_address, err_blk);
-        if (DB_FAILURE_MACRO(status))
-	    return (status);
-        chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-
-	/* *** Note! *** DO NOT MOVE THE FIRST SIX OF THESE!
-	**
-	** someone wrote hardcoded offsets into the WITH-option
-	** semantics in the grammar, that "just knows" that the
-	** noupdate option (say) is the sixth one...
-	*/
-
-	/*
-	** Start out with structure flagged as not set.  Heap is the default.
-	*/
- 
-	chr->char_id = DMU_STRUCTURE;
-	chr->char_value = DMU_C_NOT_SET;
-	dmu_cb->dmu_char_array.data_in_size = sizeof(DMU_CHAR_ENTRY);
-
-	/*
-	** Start out with uniqueness flagged as not set.  Non-uniqueness is the
-	** default.
-	*/
- 
-	chr++;
-	chr->char_id = DMU_UNIQUE;
-	chr->char_value = DMU_C_NOT_SET;
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
- 
-	/*
-	** Start out with duplicates flagged as not set.  Duplicates is the
-	** default.
-	*/
- 
-	chr++;
-	chr->char_id = DMU_DUPLICATES;
-	chr->char_value = DMU_C_NOT_SET;
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	sess_cb->pss_restab.pst_resdup = TRUE;
- 
-	/*
-	** Start out with journaling flagged as  not set.  Nojournaling is the
-	** default.
-	*/
- 
-	chr++;
-	chr->char_id = DMU_JOURNALED;
-	chr->char_value = DMU_C_NOT_SET; /* default to NOJOURNALING	*/
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-	/* Default to NOJOURNALING */
-	sess_cb->pss_restab.pst_resjour = PST_RESJOUR_OFF;
-
-	/*
-	** Set gateway characteristic for this table, DMF expects it.
-	*/
- 
-	chr++;
-	chr->char_id = DMU_GATEWAY;
-	chr->char_value = DMU_C_ON;
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
- 
-	chr++;
-	chr->char_id = DMU_GW_UPDT;
-	chr->char_value = DMU_C_NOT_SET;
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
-
-	/* **** End of characteristic entries that must not be moved */
-
 	/*
 	** Allocate the OLOCATION entries to save the from clause and the path
 	** clause for gateway
@@ -5755,21 +2272,6 @@ psl_ct10_crt_tbl_kwd(
 	*/
 	dmu_cb->dmu_gwrowcount = DMGW_NO_ROW_ENTRY;
 
-	/*
-	** Allocate the gwchar entry for recovery/norecovery.
-	*/
-
-	status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-	    SQL_MAX_CREATE_CHARS * sizeof(DMU_CHAR_ENTRY),
-	    (PTR *) &dmu_cb->dmu_gwchar_array.data_address, err_blk);
-	if (status != E_DB_OK)
-	    return (status);
-
-	dmu_cb->dmu_gwchar_array.data_in_size = sizeof(DMU_CHAR_ENTRY);
-	chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_gwchar_array.data_address;
-	chr->char_id = DMU_GW_RCVR;
-	chr->char_value = DMU_C_NOT_SET;
-
 	status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
 	    DB_MAX_COLS * sizeof(DMU_GWATTR_ENTRY *),
 	    (PTR *) &dmu_cb->dmu_gwattr_array.ptr_address, err_blk);
@@ -5779,32 +2281,6 @@ psl_ct10_crt_tbl_kwd(
 	dmu_cb->dmu_gwattr_array.ptr_in_count = 0;  /* Start with 0 attributes*/
 	dmu_cb->dmu_gwattr_array.ptr_size = sizeof(DMU_GWATTR_ENTRY);
 
-	/*
-	** Allocate the key entries.  Allocate enough space for DB_MAX_COLS
-	** (the maximum number of columns in a table), although it's probably
-	** fewer.  This is because we don't know how many columns we have at
-	** this point, and it would be a big pain to allocate less and then
-	** run into problems.
-	*/
-
-	status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
-	    DB_MAX_COLS * sizeof(DMU_KEY_ENTRY *),
-	    (PTR *) &dmu_cb->dmu_key_array.ptr_address, err_blk);
-	if (status != E_DB_OK)
-	    return (status);
-
-	dmu_cb->dmu_key_array.ptr_size = sizeof(DMU_KEY_ENTRY);
-	dmu_cb->dmu_key_array.ptr_in_count = 0;	    /* Start with 0 keys */
-
-	/*
-	**  in the REGISTER TABLE command the storage structure is never
-	**  compressed, so the variable sess_cb->pss_restab.pst_compress is
-	**  initiated as 0.
-	*/
- 
-	sess_cb->pss_restab.pst_compress = 0;    /* no compressed structure   */
-						/* in REGISTER TABLE command */
-	sess_cb->pss_restab.pst_struct = 0L;
     }
 
     /*
@@ -5961,7 +2437,6 @@ psl_ct11_tname_name_name(
 {
     DB_STATUS	    status;
     i4		    dv_size;
-    i4		    left;
 
     /* concat the two names */
     /* determine the length of the result */
@@ -6150,11 +2625,10 @@ psl_ct12_crname(
     i4		    tbls_to_lookup = PSS_USRTBL;
     QEU_CB	    *qeu_cb;
     DMU_CB	    *dmu_cb;
-    DMU_CHAR_ENTRY  *chr;
 
     /* get command string in case we find an error 
      */
-    psl_command_string(psq_cb->psq_mode, sess_cb->pss_lang, qry, &qry_len);
+    psl_command_string(psq_cb->psq_mode, sess_cb, qry, &qry_len);
 
     /*
     ** If SESSION.t, create a lightweight session table.
@@ -6162,7 +2636,7 @@ psl_ct12_crname(
     if (tbl_spec->pss_objspec_flags & PSS_OBJSPEC_SESS_SCHEMA)
     {
 	/* make sure DECLARE GLOBAL TEMPORARY TABLE was used */
-	if (! sess_cb->pss_restab.pst_temporary)
+	if (psq_cb->psq_mode != PSQ_DGTT && psq_cb->psq_mode != PSQ_DGTT_AS_SELECT)
 	{
 	    (VOID) psf_error(E_PS0BD3_ONLY_ON_TEMP, 0L, PSF_USERERR,
 			&err_code, &psq_cb->psq_error, 2,
@@ -6189,11 +2663,6 @@ psl_ct12_crname(
 	qeu_cb = (QEU_CB *) sess_cb->pss_object;
 	dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
 
-	chr = (DMU_CHAR_ENTRY *) ((char *) dmu_cb->dmu_char_array.data_address
-				+ dmu_cb->dmu_char_array.data_in_size);
-	chr->char_id = DMU_TEMP_TABLE;
-	chr->char_value = DMU_C_ON;
-	dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
 	MEcopy((PTR)&sess_cb->pss_sess_owner, sizeof(dmu_cb->dmu_owner),
 		(PTR)&dmu_cb->dmu_owner);
     }
@@ -6222,7 +2691,7 @@ psl_ct12_crname(
 	** NOT specified, create the table AND turn on the session flag
 	** that allows "session." to be implied for table references
 	*/
-	if (sess_cb->pss_restab.pst_temporary)
+	if (psq_cb->psq_mode == PSQ_DGTT || psq_cb->psq_mode == PSQ_DGTT_AS_SELECT)
 	{
 	    if (sess_cb->pss_ses_flag & PSS_GTT_SYNTAX_NOSHORTCUT)
 	    {
@@ -6238,12 +2707,6 @@ psl_ct12_crname(
 	    qeu_cb = (QEU_CB *) sess_cb->pss_object;
 	    dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
 
-	    chr = (DMU_CHAR_ENTRY *)
-		((char *) dmu_cb->dmu_char_array.data_address
-		+ dmu_cb->dmu_char_array.data_in_size);
-	    chr->char_id = DMU_TEMP_TABLE;
-	    chr->char_value = DMU_C_ON;
-	    dmu_cb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
 	    MEcopy((PTR)&sess_cb->pss_sess_owner, sizeof(dmu_cb->dmu_owner),
 		(PTR)&dmu_cb->dmu_owner);
 	}
@@ -6435,13 +2898,14 @@ psl_ct12_crname(
 	** 
 	** NOTE: we only do this for CREATE TABLE, CREATE VIEW,
 	**     gateway registers, and distributed CREATE TABLE.
-	**     We don't do it for CREATE SYNONYM, or Quel RETRIEVE INTO,
-	**     as no dmu_cb is allocated for them.  We also don't do it for
+	**     We don't do it for CREATE SYNONYM,
+	**     as no dmu_cb is allocated for it.  We also don't do it for
 	**     temp tables, as their 'owner name' is a session-specific
 	**     identifier.
 	**     Note that Star REGISTERs don't go through this code.
 	*/
 	if (   (psq_cb->psq_mode == PSQ_CREATE)
+	    || (psq_cb->psq_mode == PSQ_RETINTO)
 	    || (psq_cb->psq_mode == PSQ_VIEW)
 	    || (psq_cb->psq_mode == PSQ_REG_IMPORT)
 	    || (psq_cb->psq_mode == PSQ_DISTCREATE)
@@ -7238,8 +3702,8 @@ psl_ct14_typedesc(
     ** collation is supported for defined collation. */
     if (collationID > DB_NOCOLLATION)
     {
-	if (status = psl_collation_check(psq_cb, sess_cb,
-		    &dt_dv, collationID))
+	status = psl_collation_check(psq_cb, sess_cb, &dt_dv, collationID);
+	if (status != E_DB_OK)
 	    return status;
     }
 
@@ -7282,7 +3746,7 @@ psl_ct14_typedesc(
 	}
 	cur_attr->attr_encflags |= ATT_ENCRYPT_CRC;
 	cur_attr->attr_encwid += CRC_BYTES;
-	if (enc_modulo = cur_attr->attr_encwid % AES_BLOCK)
+	if ((enc_modulo = cur_attr->attr_encwid % AES_BLOCK) != 0)
 	    cur_attr->attr_encwid += AES_BLOCK - enc_modulo;
     }
 
@@ -8299,7 +4763,7 @@ psl_ct18s_type_qual(
     if ((qual1 & qual2) && !(qual1 & PSS_TYPE_NOT_NULL))
     {
 	psl_find_18colname(qmode, sess_cb, dbpinfo, &colname);
-	psl_command_string(qmode, DB_SQL, command, &length);
+	psl_command_string(qmode, sess_cb, command, &length);
     
 	_VOID_ psf_error(E_PS0479_DUP_COL_QUAL, 0L, PSF_USERERR,
 			 &err_code, err_blk, 2,
@@ -8326,7 +4790,7 @@ psl_ct18s_type_qual(
 	|| ((temp & PSS_TYPE_USER_DEFAULT) && (temp & PSS_TYPE_SYS_MAINTAINED)))
     {
 	psl_find_18colname(qmode, sess_cb, dbpinfo, &colname);
-	psl_command_string(qmode, DB_SQL, command, &length);
+	psl_command_string(qmode, sess_cb, command, &length);
 
 	_VOID_ psf_error(E_PS047A_CONFLICT_COL_QUAL, 0L, PSF_USERERR, 
 			 &err_code, err_blk, 2,
@@ -8422,15 +4886,16 @@ psl_ct19s_constraint(
     i4	err_code;
     PSY_COL	*temp_cols;
     DB_TEXT_STRING  *txt;
-    
+
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(PSS_CONS),
 			(PTR *) consp, err_blk);
     if (status != E_DB_OK)
 	return (status);
 
     cons = *consp;
-        
+
     /* initialize the structure
+    ** which includes the embedded DMU_CHARACTERISTICS, etc
      */
     MEfill(sizeof(PSS_CONS), (u_char) 0, (PTR) cons);
 
@@ -8809,12 +5274,12 @@ psl_ct22s_cons_allowed(
     }
     else
     {
-	psl_command_string(psq_cb->psq_mode, 
-			   sess_cb->pss_lang, command, &length);
+	psl_command_string(psq_cb->psq_mode,
+			   sess_cb, command, &length);
 
 	if (sess_cb->pss_distrib & DB_3_DDB_SESS)
 	    err = E_PS0488_DDB_CONSTRAINT_NOT_ALLOWED;
-	else 
+	else
 	    err = E_PS0475_CONSTRAINT_NOT_ALLOWED;
 
 	_VOID_ psf_error(err, 0L, PSF_USERERR, 
@@ -8835,7 +5300,7 @@ psl_ct22s_cons_allowed(
 **      
 ** Inputs:
 **	qmode	    	    query mode
-**	language	    DB_SQL or DB_QUEL
+**	sess_cb		    PSS_SESBLK parser session cb
 **
 ** Outputs:
 **      length              length of the string being returned
@@ -8863,16 +5328,19 @@ psl_ct22s_cons_allowed(
 **	    PSQ_EVREGISTER, PSQ_EVDEREG, PSQ_EVRAISE
 **	27-Jan-2004 (schka24)
 **	    Use utility lookup instead of switch.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Spiff up the MODIFY string with the modify action, e.g.
+**	    MODIFY (to table_recovery_disallowed).  Needs sess_cb.
 */
-VOID 
+VOID
 psl_command_string(
-	i4  	 qmode, 
-	DB_LANG	 language,
-	char     *command,
-	i4  *length)
+	i4	qmode,
+	PSS_SESBLK *sess_cb,
+	char	*command,
+	i4	*length)
 {
     
-    if (language == DB_SQL)
+    if (sess_cb->pss_lang == DB_SQL)
     {
 	STcopy(uld_psq_modestr(qmode), command);
 	*length = STlength(command);
@@ -8908,56 +5376,11 @@ psl_command_string(
 		break;
 	}
     }  /* end else language is QUEL */
-
+    if (qmode == PSQ_MODIFY)
+	psl_md_action_string(sess_cb, command, length);
 
 }  /* end psl_command_string */
 
-
-/*
-** Name: psl_gw_option	- check if an option looks like a GW option
-**
-** Description:	    Examine an option name to determine if it could be a
-**		    gateway-specific option.  Note that we don't have an
-**		    exhaustive list of gateway db_id codes, so we will examine
-**		    the first 4 chars of the name to determine if it looks like
-**		    a gateway option (i.e. the first char must be alphabetic,
-**		    the next two - alphanumeric, the fourth char must be '_'.
-**
-** Input:
-**	name	    option name
-**
-** Output
-**	none
-**
-** Returns:
-**	TRUE if the option name looks like a valid gateway option name;
-**	FALSE otherwise
-**
-** Side effects:
-**	none
-**
-** History:
-**
-**	02-jul-91 (andre)
-**	    written
-*/
-static bool
-psl_gw_option(
-	register char	    *name)
-{
-    register char	*c2, *c3, *c4;
-
-    c2 = name + CMbytecnt(name);
-    c3 = c2 + CMbytecnt(c2);
-    c4 = c3 + CMbytecnt(c3);
-
-    return
-	(   CMalpha(name)		  /* first char must be alphabetic    */
-         && (CMalpha(c2) || CMdigit(c2))  /* second char must be alphanumeric */
-         && (CMalpha(c3) || CMdigit(c3))  /* second char must be alphanumeric */
-	 && !CMcmpcase(c4, "_")		  /* fourth char must be '_'	      */
-	);
-}
 
 /*
 ** Name: psl_seckey_attr_name
