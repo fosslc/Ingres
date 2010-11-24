@@ -1416,6 +1416,8 @@ ADI_FI_ID	    *instr)
 **      20-Oct-2010 (maspa05) b124617
 **          Timezone offset for ingresdates was being output as minutes 
 **          instead of seconds.
+**      20-Oct-2010 (maspa05)
+**          Removed un-used tmp_buf buffer
 */
 
 STATUS
@@ -1519,15 +1521,9 @@ PTR file)
 	  case DB_CHA_TYPE:
 	  case DB_CHR_TYPE:
 	    if (blen == 0)
-	    {
 		SIfprintf(file, "''\n");
-	    }
 	    else
-	    {
-                char tmp_buf[DB_MAXSTRING + 3];
-
 	        SIfprintf(file, "'%*s'\n", blen, (u_char *) data);
-	    }
 
 	    break;
 
