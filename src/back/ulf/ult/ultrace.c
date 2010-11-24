@@ -555,7 +555,7 @@ ult_print_tracefile(void *file, i2 type, char *string)
 				type_str="COMMIT";
 				break;
 		case SC930_LTYPE_SECURE:
-				type_str="SECURE";
+				type_str="PREPCOMMIT";
 				break;
 		case SC930_LTYPE_ABORT:
 				type_str="ABORT";
@@ -611,6 +611,7 @@ ult_print_tracefile(void *file, i2 type, char *string)
 		case SC930_LTYPE_BEGINTRACE:
 				STprintf(type_str2,"SESSION BEGINS(%d)",SC930_VERSION);
 				type_str=&type_str2[0];
+
 				break;
 		case SC930_LTYPE_QUEL:      
 				type_str="QUEL";
@@ -630,6 +631,24 @@ ult_print_tracefile(void *file, i2 type, char *string)
 				break;
  		case SC930_LTYPE_ENDQRY:
  				type_str="EQY";
+ 				break;
+ 		case SC930_LTYPE_XA_START:
+ 				type_str="XA_STRT";
+ 				break;
+ 		case SC930_LTYPE_XA_END:
+ 				type_str="XA_END";
+ 				break;
+ 		case SC930_LTYPE_XA_PREPARE:
+ 				type_str="XA_PREP";
+ 				break;
+ 		case SC930_LTYPE_XA_COMMIT:
+ 				type_str="XA_COMM";
+ 				break;
+ 		case SC930_LTYPE_XA_ROLLBACK:
+ 				type_str="XA_RBCK";
+ 				break;
+ 		case SC930_LTYPE_XA_UNKNOWN:
+ 				type_str="XA_UNKNOWN";
  				break;
 		case SC930_LTYPE_UNKNOWN:
 		default:

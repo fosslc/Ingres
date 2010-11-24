@@ -1220,6 +1220,10 @@
 **	    make it into DMF (who is the guy who needs the workspace info).
 **	    Delete rd_lo_next/prev list, has been nothing but a very
 **	    expensive no-op for a long time it seems.
+**      04-nov-2010 (maspa05) bug 124654
+**           Added sc930_xatrace to trace XA operations in SC930. 
+**           Re-surrected scs_format_xa_xid to do the formatting of an XA xid
+**           for both sc930_xatrace and scs_xatrace
 **/
 
 /*
@@ -1322,6 +1326,16 @@ static void print_sc930_param(SCD_SCB *scb,
 		char *parm_name,
 		i4 pcount,
 		i2 msg_name);
+
+static VOID sc930_xatrace(SCD_SCB *scb,
+i4		     qmode,
+i4		     qflags,
+DB_DIS_TRAN_ID	     *dis_tran_id,
+i4    xa_stat);
+
+static void scs_format_xa_xid(char * xid_str,
+SCD_SCB *scb,
+DB_DIS_TRAN_ID	     *dis_tran_id);
 
 GLOBALREF SC_MAIN_CB *Sc_main_cb; /* server control block */
 
@@ -2682,6 +2696,8 @@ static char execproc_syntax2[] = " = session.";
 **	14-Oct-2010 (kschendel) SIR 124544
 **	    Change "set result-structure" to a do-nothing.  PSF handles
 **	    result-structure now, not OPF.
+**	04-Nov-2010 (maspa05) bug 124654
+**	    Added SC930 tracing for XA operations
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -7371,6 +7387,7 @@ scs_sequencer(i4 op_code,
 		    scs_xatrace(scb, qmode, GCAdata->gca_xa_flags, (char *)0,
 			&DisTranId, *err_code);
 
+
 		/* Transform originating QEF error code into XA return code */
 		if ( DB_FAILURE_MACRO(status) )
 		{
@@ -7473,6 +7490,12 @@ scs_sequencer(i4 op_code,
 		    if (qe_ccb->qef_illegal_xact_stmt)
 			qry_status |= GCA_ILLEGAL_XACT_STMT;
 		}
+
+		/* SC930 trace of XA call */
+                if (ult_always_trace() & SC930_TRACE)
+		    sc930_xatrace(scb, qmode, GCAdata->gca_xa_flags, 
+			&DisTranId, *XAerr_code);
+
 		sscb->sscb_state = SCS_INPUT;
 		*next_op = CS_EXCHANGE;
 		break;
@@ -7538,11 +7561,20 @@ scs_sequencer(i4 op_code,
                     if (f)
                     {
 	   		i2 x;
+			char tmp[100];
+			STcopy("",tmp);
+
 	   		switch (qmode)
 	   		{
            		case PSQ_ENDTRANS:	x=SC930_LTYPE_ENDTRANS;break;
            		case PSQ_COMMIT:	x=SC930_LTYPE_COMMIT;break;
-           		case PSQ_SECURE:	x=SC930_LTYPE_SECURE;break;
+           		case PSQ_SECURE:	
+				x=SC930_LTYPE_SECURE;
+				STprintf(tmp,"%08x:%08x",
+			    sscb->sscb_dis_tran_id.db_dis_tran_id.db_ingres_dis_tran_id.db_tran_id.db_high_tran,
+			    sscb->sscb_dis_tran_id.db_dis_tran_id.db_ingres_dis_tran_id.db_tran_id.db_low_tran);
+
+				break;
            		case PSQ_ABORT:		x=SC930_LTYPE_ABORT;break;
            		case PSQ_ROLLBACK:	x=SC930_LTYPE_ROLLBACK;break;
            		case PSQ_ABSAVE:	x=SC930_LTYPE_ABSAVE;break;
@@ -7555,7 +7587,7 @@ scs_sequencer(i4 op_code,
            		case PSQ_DDLCONCUR:	x=SC930_LTYPE_DDLCONCUR;break;
 	   		default:		x=SC930_LTYPE_UNKNOWN;break;
 	   		}
-                        ult_print_tracefile(f,x,"");
+                        ult_print_tracefile(f,x,tmp);
                         ult_close_tracefile(f);
                     }
                 }
@@ -10191,6 +10223,7 @@ massive_for_exit:
 		if (Sc_main_cb->sc_trace_errno == E_SC0206_CANNOT_PROCESS)
 		    scs_xatrace(scb, qmode, 0, "QEFABORT",
 		    (DB_DIS_TRAN_ID *)NULL, qry_status);
+		
 	    }
 
 	    /* When aborting xacts, make sure that all psf cursors are closed */
@@ -19843,6 +19876,9 @@ LK_LKID		*lkid)
 **      12-Mar-2004 (hanal04) Bug 111923 INGSRV2751
 **          Modify all XA xid fields to i4 (int for supplied files)
 **          to ensure consistent use across platforms.
+**      28-Oct-2010 (maspa05) Bug 124654
+**          Separated out the formatting of the XID into a new function so
+**          we can use it from here and sc930_xatrace
 */
 static VOID
 scs_xatrace(SCD_SCB *scb,
@@ -19854,32 +19890,8 @@ i4    xa_stat)
 {
   CS_SID		sid;
   char			xid_str[IIXA_XID_STRING_LENGTH];
-  char     *cp = xid_str;
-  i4       data_lword_count = 0;
-  i4       data_byte_count  = 0;
-  u_char   *tp;                  /* pointer to xid data */
-  u_i4 unum;                /* unsigned i4 work field */
-  i4       i;
-  DB_XA_EXTD_DIS_TRAN_ID *extId;
-  DB_XA_DIS_TRAN_ID      *xa_xid_p;
   char			 qmtemp[20];
   char			 *qm;
-  i4			 db_dis_tran_id_type;
-
-  if (dis_tran_id)
-  {
-     extId = &(dis_tran_id->db_dis_tran_id.db_xa_extd_dis_tran_id);
-     xa_xid_p = &extId->db_xa_dis_tran_id;
-     db_dis_tran_id_type = dis_tran_id->db_dis_tran_id_type;
-  }
-  else
-  {
-     /* use the xa tran id in the scb */
-     extId = 
-	&(scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id.db_xa_extd_dis_tran_id);
-     xa_xid_p = &extId->db_xa_dis_tran_id;
-     db_dis_tran_id_type = scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id_type;
-  }
 
  switch (qmode)
  {
@@ -19897,6 +19909,123 @@ i4    xa_stat)
 	STprintf(qm, "QM-%d", qmode);
 	break;
  }
+
+
+  CSget_sid(&sid);
+
+  if (!qstr)
+    qstr = "";
+  
+  scs_format_xa_xid(xid_str,scb,dis_tran_id);
+
+  TRdisplay("Sid %x %8s %8s %8x %8x XID: %s \n", 
+      sid, qm, qstr, qflags, xa_stat, xid_str);
+
+} 
+
+/*
+**   Name: sc930_xatrace()
+**
+**   Description: 
+**       SC930 trace of GCA_XA messages
+**
+**   History:
+**      28-Oct-2010 (maspa05) Bug 124654
+**          Created from scs_xatrace
+*/
+static VOID
+sc930_xatrace(SCD_SCB *scb,
+i4		     qmode,
+i4		     qflags,
+DB_DIS_TRAN_ID	     *dis_tran_id,
+i4    xa_stat)
+{
+  char			xid_str[IIXA_XID_STRING_LENGTH];
+  char			 qmtemp[20];
+  char			 *qm;
+  void			*file;
+  char			sc930_txt[100];
+  i4                    sc930_msg;
+
+
+
+  file = ult_open_tracefile((PTR)scb->cs_scb.cs_self);
+  if (file)
+  {
+
+      qm="";
+    
+      switch (qmode)
+      {
+          case PSQ_GCA_XA_START: sc930_msg=SC930_LTYPE_XA_START; break;
+          case PSQ_GCA_XA_END: sc930_msg=SC930_LTYPE_XA_END; break;
+          case PSQ_GCA_XA_PREPARE: sc930_msg=SC930_LTYPE_XA_PREPARE; break;
+          case PSQ_GCA_XA_COMMIT: sc930_msg=SC930_LTYPE_XA_COMMIT; break;
+          case PSQ_GCA_XA_ROLLBACK: sc930_msg=SC930_LTYPE_XA_ROLLBACK; break;
+          default: 
+      	      qm = &qmtemp[0];
+      	      STprintf(qm, "QM-%d", qmode);
+      	      sc930_msg=SC930_LTYPE_XA_UNKNOWN;
+      	      break;
+      }
+      scs_format_xa_xid(xid_str,scb,dis_tran_id);
+
+      if (sc930_msg==SC930_LTYPE_XA_UNKNOWN)
+      {
+	  STprintf(sc930_txt,"%s:XID(%s):%08x:%d", qm, xid_str, qflags, 
+			  xa_stat);
+      }
+      else
+      {
+          STprintf(sc930_txt,"XID(%s):%08x:%d", xid_str, qflags, xa_stat);
+      }
+
+      ult_print_tracefile(file,sc930_msg,sc930_txt);
+      ult_close_tracefile(file);
+  }
+
+
+} 
+
+/*
+**   Name: scs_format_xa_xid()
+**
+**   Description: 
+**       Format an XA XID for tracing
+**
+**   History:
+**       28-Oct-2010 (maspa05) b124654
+**          (re-)Created from scs_xatrace 
+*/
+static void
+scs_format_xa_xid(char *xid_str,
+SCD_SCB *scb,
+DB_DIS_TRAN_ID  *dis_tran_id)
+{
+  char     *cp = xid_str;
+  i4       data_lword_count = 0;
+  i4       data_byte_count  = 0;
+  u_char   *tp;                  /* pointer to xid data */
+  u_i4 unum;                /* unsigned i4 work field */
+  i4       i;
+  DB_XA_EXTD_DIS_TRAN_ID *extId;
+  DB_XA_DIS_TRAN_ID      *xa_xid_p;
+  i4			 db_dis_tran_id_type;
+
+  if (dis_tran_id)
+  {
+     extId = &(dis_tran_id->db_dis_tran_id.db_xa_extd_dis_tran_id);
+     xa_xid_p = &extId->db_xa_dis_tran_id;
+     db_dis_tran_id_type = dis_tran_id->db_dis_tran_id_type;
+  }
+  else
+  {
+     /* use the xa tran id in the scb */
+     extId = 
+	&(scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id.db_xa_extd_dis_tran_id);
+     xa_xid_p = &extId->db_xa_dis_tran_id;
+     db_dis_tran_id_type = scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id_type;
+  }
 
   CVlx(xa_xid_p->formatID,cp);
   STcat(cp, ERx(":"));
@@ -19937,13 +20066,5 @@ i4    xa_stat)
   {
       STcat(cp, ERx(":OTHER"));
   }
-
-  CSget_sid(&sid);
-
-  if (!qstr)
-    qstr = "";
-
-  TRdisplay("Sid %x %8s %8s %8x %8x XID: %s \n", 
-      sid, qm, qstr, qflags, xa_stat, xid_str);
 
 } /* scs_format_xa_xid */

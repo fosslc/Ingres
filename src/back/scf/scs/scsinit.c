@@ -1375,6 +1375,10 @@ GLOBALREF DU_DATABASE	      dbdb_dbtuple;
 **	15-Oct-2010 (kschendel) SIR 124544
 **	    Session startup result-structure goes to PSF now, not OPF.
 **	    Use generic structure looker-upper instead of hand coding.
+**	04-nov-2010 (maspa05) bug 124654, 124687
+**	    Moved SC930 SESSION BEGINS here from PSQ so that we get a session
+**          begin even when no query is issued, as can happen with XA 
+**          operations
 */
 i4
 scs_initiate(SCD_SCB *scb )
@@ -4370,6 +4374,47 @@ scs_initiate(SCD_SCB *scb )
 			   : ", Normal"),
 		     0, (PTR)0);
 	}
+
+	/* SC930 trace of session begin */
+
+	if ((scb->scb_sscb.sscb_stype != SCS_SMONITOR) &&
+	    (ult_always_trace() & SC930_TRACE))
+	{
+	    void *f = ult_open_tracefile((PTR)scb->cs_scb.cs_self);
+	    if (f)
+	    {
+		    char tmp[1000];
+
+		    STprintf(tmp,"(DBID=%d)(%*s)(%*s)(%*s)(SVRCL=%*s)(%*s)(%08x:%08x)",
+		       scb->scb_sscb.sscb_ics.ics_udbid,
+				    /* username */
+		      sizeof(scb->scb_sscb.sscb_ics.ics_iusername.db_own_name),
+		      scb->scb_sscb.sscb_ics.ics_iusername.db_own_name,
+				    /* role */
+		      sizeof(scb->scb_sscb.sscb_ics.ics_eaplid.db_own_name),
+		      scb->scb_sscb.sscb_ics.ics_eaplid.db_own_name,
+				    /* group */
+		      sizeof(scb->scb_sscb.sscb_ics.ics_egrpid.db_own_name),
+		      scb->scb_sscb.sscb_ics.ics_egrpid.db_own_name,
+				    /* Server class */
+		      SVR_CLASS_MAXNAME,
+		      Sc_main_cb->sc_server_class,
+				    /* dbname */
+		       sizeof(scb->scb_sscb.sscb_ics.ics_dbname.db_db_name),
+		       scb->scb_sscb.sscb_ics.ics_dbname.db_db_name,
+				    /* Dis transaction ID */
+		      scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id.
+		           db_ingres_dis_tran_id.db_tran_id.db_high_tran,
+		      scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id.
+		           db_ingres_dis_tran_id.db_tran_id.db_low_tran
+		      );
+
+		    ult_print_tracefile(f,SC930_LTYPE_BEGINTRACE,tmp);
+		    ult_close_tracefile(f);
+
+	    }
+	}
+
     }
 
     return(error.err_code);

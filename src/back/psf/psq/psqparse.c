@@ -133,6 +133,8 @@ GLOBALREF       PSF_SERVBLK    *Psf_srvblk;
 **          Added server_class to output
 **      19-oct-2010 (maspa05) bug 124551
 **          use adu_sc930prtdataval to output the parameter value
+**      04-nov-2010 (maspa05) bug 124654, 124687
+**          Moved output of SC930 SESSION BEGINS line to scsinit
 **
 */
 static void
@@ -145,26 +147,6 @@ print_qry_buffer(PSQ_CB *psq_cb,
 	i2 qtype;
         if (f)
         {
-	    if (!(sess_cb->pss_ses_flag & PSS_SESSION_STARTED))
-	    {
-                char tmp[1000];
-	        STprintf(tmp,"(DBID=%d)(%*.*s)(%*.*s)(%*.*s)(SVRCL=%*s)",
-			psq_cb->psq_udbid,
-                        sizeof(sess_cb->pss_user.db_own_name),
-                        sizeof(sess_cb->pss_user.db_own_name),
-                        sess_cb->pss_user.db_own_name,
-                        sizeof(sess_cb->pss_aplid.db_tab_own.db_own_name),
-                        sizeof(sess_cb->pss_aplid.db_tab_own.db_own_name),
-                        sess_cb->pss_aplid.db_tab_own.db_own_name,
-                        sizeof(sess_cb->pss_group.db_tab_own.db_own_name),
-                        sizeof(sess_cb->pss_group.db_tab_own.db_own_name),
-                        sess_cb->pss_group.db_tab_own.db_own_name,
-			SVR_CLASS_MAXNAME,
-			Psf_srvblk->psf_server_class
-                        );
-		sess_cb->pss_ses_flag |= PSS_SESSION_STARTED;
-                ult_print_tracefile(f,SC930_LTYPE_BEGINTRACE,tmp);
-	    }
 	    if (sess_cb->pss_dbp_flags & PSS_RECREATE)
 	    {
 		qtype = (psq_cb->psq_qlang == DB_QUEL) ? SC930_LTYPE_REQUEL : SC930_LTYPE_REQUERY;

@@ -124,6 +124,11 @@
 **          ult_tracefile_loc() now extern
 **      19-oct-2010 (maspa05) Bug 124551
 **          Added SC930_DATAVAL_BUFSIZE
+**      04-Nov-2010 (maspa05) bug 124654
+**          Added SC930_LTYPE_XA_START, SC930_LTYPE_XA_END, 
+**          SC930_LTYPE_XA_PREPARE, SC930_LTYPE_XA_COMMIT, 
+**          SC930_LTYPE_XA_ROLLBACK, SC930_LTYPE_XA_UNKNOWN and bumped the
+**          SC930_VERSION
 **/
 #ifndef TR_HDR_INCLUDED
 #include <tr.h>
@@ -732,7 +737,7 @@ FUNC_EXTERN void ult_close_tracefile(void *);
 FUNC_EXTERN STATUS ult_set_tracefile(char *);
 FUNC_EXTERN PTR ult_tracefile_loc(void);
 
-#define	SC930_VERSION		8	/* version of SC930 output */
+#define	SC930_VERSION		9	/* version of SC930 output */
 
 /* SC930 trace flags */
 #define SC930_TRACE               0x00000001  /* SC930 tracing ON */
@@ -769,6 +774,12 @@ FUNC_EXTERN PTR ult_tracefile_loc(void);
 #define SC930_LTYPE_REQUEL		26
 #define SC930_LTYPE_REQUERY		27
 #define SC930_LTYPE_ENDQRY		28
+#define SC930_LTYPE_XA_START   		29
+#define SC930_LTYPE_XA_END   		30
+#define SC930_LTYPE_XA_PREPARE 		31
+#define SC930_LTYPE_XA_COMMIT  		32
+#define SC930_LTYPE_XA_ROLLBACK		33
+#define SC930_LTYPE_XA_UNKNOWN          34
 
 /* Buffer size for SC930 data values - used by adu_valuetomystr */
 #define SC930_DATAVAL_BUFSIZE         2048
