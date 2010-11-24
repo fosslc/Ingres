@@ -94,8 +94,8 @@
 #	    -march=i486 becomes -march=i586. support for 64-bit atomic built-ins
 #	    only came in pentium architecture
 #	01-Nov-2010 (bonro01)
-#	    Add compile flags to "back" directory tree to show warnings for
-#	    missing prototypes.
+#	    Add compile flags to "back,common,cl,gl" directory trees to show
+#	     warnings for missing prototypes.
 #
 
 # Tell Jamdefs that this include worked:
@@ -209,3 +209,6 @@ PAMLIB ?= TRUE ;
 
 # Set Directory Tree compile flags
 DIRCCFLAGS_back += -Wmissing-prototypes ;
+DIRCCFLAGS_common += -Wmissing-prototypes ;
+DIRCCFLAGS_cl += -Wmissing-prototypes ;
+DIRCCFLAGS_gl += -Wmissing-prototypes ;
