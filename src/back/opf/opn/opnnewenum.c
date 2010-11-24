@@ -2934,6 +2934,10 @@ opn_neweplan(
 **	    logic for copying the ixmap values from CINDEX to CINDEX (via the
 **	    base table) in the event that you don't have any placement indices
 **	    at all - only replacement ones (CINDEX).
+**	05-Nov-2010 (smeke01) b123011
+**	    Back out change that included secondaries with OJ subsets even if
+**	    there are only two (rather than three) primaries, as this could
+**	    sometimes cause poor performing plans to be picked.
 */
 OPN_STATUS
 opn_newenum(
@@ -3272,7 +3276,7 @@ opn_newenum(
 		/* Don't do this for full joins, since the p1 and p2 arrays
 		** already contain the secondary indices we might need 
 		*/
-		if (i >= 2 && (jptr->ojtype != OPL_FULLJOIN))
+		if (i >= 3 && (jptr->ojtype != OPL_FULLJOIN))
 		{
 		  /* If this is a full join, and there are joins below it,
 		  ** the list of items to pull down into this preliminary
