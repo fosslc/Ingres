@@ -1317,6 +1317,12 @@ char		     *qstr,
 DB_DIS_TRAN_ID	     *dis_tran_id,
 i4    xa_stat);
 
+static void print_sc930_param(SCD_SCB *scb,
+		DB_DATA_VALUE *dbdv,
+		char *parm_name,
+		i4 pcount,
+		i2 msg_name);
+
 GLOBALREF SC_MAIN_CB *Sc_main_cb; /* server control block */
 
 /*}
@@ -10889,10 +10895,10 @@ massive_for_exit:
 
 /*
 ** {
-** Name: print_sc930_info	- Output sc930 tracing
+** Name: print_sc930_param	- Output parameter value for sc930 tracing
 **
 ** Description:
-**	Separate this segment so the large strings don't end up on the stack.
+**	outputs parameter values - either for DBprocs or prepared queries
 **
 ** History:
 **	23-Jul-2009 (kibro01)
@@ -10912,42 +10918,26 @@ massive_for_exit:
 **          causes SIGSEGV on some platforms
 **      19-Oct-2010 (maspa05) b124551
 **          Use adu_sc930prtdataval to output parameter values to SC930 trace
+**      02-Nov-2010 (maspa05) b124671
+**          Replace GCA_P_PARM *gpm with char *parm_name for the parameter 
+**          name. Also re-name to print_sc930_param.
 **
 */
 static void
-print_sc930_info(SCD_SCB *scb,
+print_sc930_param(SCD_SCB *scb,
 		DB_DATA_VALUE *dbdv,
-		GCA_P_PARAM *gpm,
+		char *parm_name,
 		i4 pcount,
 		i2 msg_name)
 {
     void *f = ult_open_tracefile((PTR)scb->cs_scb.cs_self);
     if (f)
     {
-	i4 namelen;
-	char *parm_name=NULL,tmp[DB_PARM_MAXNAME + 1];
-
-	if (gpm)
-	{
-	    parm_name=&tmp[0];
-	    MEcopy((PTR)&gpm->gca_parname.
-	        gca_l_name, sizeof(namelen),(PTR)&namelen);
-	    STprintf(parm_name,"%*s",
-		namelen, gpm->gca_parname.gca_name);
-	}
-
 	adu_sc930prtdataval(msg_name,parm_name,pcount,dbdv, 
 			    scb->scb_sscb.sscb_adscb,f);
 	ult_close_tracefile(f);
     }
 }
-
-/*
-** Use a global function pointer and indirect through it to make absolutely sure
-** that no compiler can inline this function.
-*/
-void (*print_sc930_ptr)(SCD_SCB*,DB_DATA_VALUE*,GCA_P_PARAM*,i4,i2) =
-	print_sc930_info;
 
 /*
 ** {
@@ -11241,6 +11231,10 @@ void (*print_sc930_ptr)(SCD_SCB*,DB_DATA_VALUE*,GCA_P_PARAM*,i4,i2) =
 **	25-Mar-2010 (kschendel) SIR 123485
 **	    Readability: replace scb->scb_sscb. with sscb->, likewise
 **	    with scb_cscb.  Fix up some bad indents. Add comments.
+**      02-Nov-2010 (maspa05) b124671
+**          print_sc930_param now takes a char* for the parameter name. Also
+**          call it directly, as the reason for using a function pointer (to
+**          avoid inlining) no longer applies.
 */
 DB_STATUS
 scs_input(SCD_SCB *scb,
@@ -12663,8 +12657,18 @@ scs_input(SCD_SCB *scb,
 			      adu_2prvalue(sc0e_trace, &sc930_dbdv);
 
 			    if (ult_always_trace())
-			      (*print_sc930_ptr)(scb,&sc930_dbdv,sc930_gpm,pcount,
-						 SC930_LTYPE_PARMEXEC);
+			    {
+                                char parm_name[DB_PARM_MAXNAME + 1];
+				i4 namelen;
+
+				MEcopy((PTR)&sc930_gpm->gca_parname.gca_l_name, 
+						sizeof(namelen),(PTR)&namelen);
+				STprintf(parm_name,"%*s",
+				namelen, sc930_gpm->gca_parname.gca_name);
+
+			      print_sc930_param(scb,&sc930_dbdv,parm_name,
+						 pcount, SC930_LTYPE_PARMEXEC);
+			    }
 
 			}
 # ifdef BYTE_ALIGN
@@ -13031,7 +13035,7 @@ scs_input(SCD_SCB *scb,
 
 			if (ult_always_trace())
 			{
-			    (*print_sc930_ptr)(scb,&dbdv,NULL,pcount,SC930_LTYPE_PARM);
+			    print_sc930_param(scb,&dbdv,NULL,pcount,SC930_LTYPE_PARM);
 			}
 			/* Move NULL byte to EOS */
 			(VOID)adg_vlup_setnull(&dbdv);
@@ -15181,6 +15185,8 @@ scs_fetch_data(SCD_SCB	  *scb,
 **	    We need to align qup->parm_dbv.db_data and add space to the name
 **	    to account for this alignment.  (Related to the change in 
 **	    scs_fetch_data() above for bug 55993.)
+**	02-Nov-2010 (maspa05) b124671
+**	    Output parameter values to SC930 tracing 
 [@history_template@]...
 */
 DB_STATUS
@@ -15824,6 +15830,17 @@ scs_fdbp_data(SCD_SCB	  *scb,
 
 		    adu_2prvalue(sc0e_trace, &dbdv);
 		}
+
+		if (ult_always_trace() & SC930_TRACE)
+		{
+		    STprintf(stbuf, "%*s",
+			    scb->scb_sscb.sscb_gclname,
+			    scb->scb_sscb.sscb_gcname);
+
+		    print_sc930_param(scb,&dbdv,stbuf,
+			               scb->scb_sscb.sscb_cquery.cur_qprmcount,
+				    SC930_LTYPE_PARMEXEC);
+		}
 		/*
 		** Query text trace the parameter
 		*/
@@ -15876,13 +15893,10 @@ scs_fdbp_data(SCD_SCB	  *scb,
 		scb->scb_sscb.sscb_dmm = 0;
 		scb->scb_sscb.sscb_cquery.cur_qprmcount++;
 
-		if (print_qry)
+		if (print_qry || ult_always_trace() & SC930_TRACE)
 		{
 		    DB_DATA_VALUE	dbdv;
 
-		    sc0e_trace(STprintf(stbuf, "Parameter Name %*s, Value:\n",
-			    scb->scb_sscb.sscb_gclname,
-			    scb->scb_sscb.sscb_gcname));
 
 		    dbdv.db_datatype =
 			    (DB_DT_ID) scb->scb_sscb.sscb_gcadv.gca_type;
@@ -15890,7 +15904,25 @@ scs_fdbp_data(SCD_SCB	  *scb,
 		    dbdv.db_length = (i4) scb->scb_sscb.sscb_gcadv.gca_l_value;
 		    dbdv.db_data = (PTR) qup->parm_dbv.db_data;
 
-		    adu_2prvalue(sc0e_trace, &dbdv);
+		    if (print_qry)
+		    {
+		        sc0e_trace(STprintf(stbuf, "Parameter Name %*s, Value:\n",
+			    scb->scb_sscb.sscb_gclname,
+			    scb->scb_sscb.sscb_gcname));
+
+		        adu_2prvalue(sc0e_trace, &dbdv);
+		    }
+
+		    if (ult_always_trace() & SC930_TRACE)
+		    {
+		        STprintf(stbuf, "%*s",
+			    scb->scb_sscb.sscb_gclname,
+			    scb->scb_sscb.sscb_gcname);
+
+		        print_sc930_param(scb,&dbdv,stbuf,
+			             scb->scb_sscb.sscb_cquery.cur_qprmcount-1,
+		      	             SC930_LTYPE_PARMEXEC);
+		    }
 		}
 		/*
 		** Query text trace the parameter
