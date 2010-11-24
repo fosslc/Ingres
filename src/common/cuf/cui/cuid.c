@@ -5,6 +5,7 @@
 # include	<compat.h>
 # include	<gl.h>
 # include	<cm.h>
+# include	<me.h>
 # include	<sl.h>
 # include	<iicommon.h>
 # include	<usererror.h>
@@ -66,6 +67,8 @@
 **	    Include cv.h for function defintions
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Added cui_move, cui_compare, cui_trmwhite routines
+**      21-oct-2010 (joea)
+**          Include missing me.h header for MEcmp, MEmove.
 */
 
 /*
