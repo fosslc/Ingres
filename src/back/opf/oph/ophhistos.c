@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /*
@@ -114,22 +114,132 @@ NO_OPTIM =  sos_us5 i64_aix
 **          Redefined name constants without trailing blanks.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-/* Static routines and variables: */
-
-static OPB_BFARG *
-oph_compargalloc(
-	OPS_SUBQUERY	*subquery,
-	i4		totallen);
-
-static VOID
-oph_compargorder(
-	OPS_SUBQUERY	*subquery,
-	OPB_BFARG	*bfargp,
-	OPB_BFARG	**arglistpp,
-	i4		keylen);
+/* TABLE OF CONTENTS */
+static void oph_battr(
+	OPS_SUBQUERY *subquery,
+	OPZ_IATTS atno,
+	OPV_IVARS *pvarno,
+	OPZ_IATTS *patno);
+static i4 oph_fhandler(
+	EX_ARGS *args);
+PTR oph_hvalue(
+	OPS_SUBQUERY *subquery,
+	DB_DATA_VALUE *histdt,
+	DB_DATA_VALUE *valuedt,
+	PTR key,
+	ADI_OP_ID opid);
+static void oph_sarglist(
+	OPS_SUBQUERY *subquery,
+	OPZ_ATTS *attrp,
+	OPB_BFARG **keylistpp);
+static bool oph_compkeybld(
+	OPS_SUBQUERY *subquery,
+	OPB_BFARG **arglistpp,
+	OPB_BFARG **curargpp,
+	OPH_HISTOGRAM *histp,
+	i4 offset,
+	i4 level,
+	i2 *attrvec,
+	i4 attcount,
+	i4 totallen);
+static void oph_compsarg(
+	OPS_SUBQUERY *subquery,
+	OPH_HISTOGRAM *histp,
+	OPH_INTERVAL *intervalp,
+	OPB_BFARG **keylistpp);
+static void oph_compargorder(
+	OPS_SUBQUERY *subquery,
+	OPB_BFARG *bfargp,
+	OPB_BFARG **arglistpp,
+	i4 keylen);
+static OPB_BFARG *oph_compargalloc(
+	OPS_SUBQUERY *subquery,
+	i4 totallen);
+static OPB_BFARG *oph_findkeys(
+	OPS_SUBQUERY *subquery,
+	OPZ_ATTS *attrp,
+	i4 *maxcellcountp,
+	OPH_HISTOGRAM *newhistp,
+	OPH_INTERVAL *intervalp);
+static i4 oph_equalcells(
+	OPS_STATE *global,
+	OPZ_ATTS *attrp,
+	DB_DATA_VALUE *adckeyvaluep,
+	OPH_CELLS newlower,
+	i4 celllength,
+	OPN_PERCENT *newcount,
+	i4 sdifflength,
+	OPO_TUPLES celltups,
+	OPH_INTERVAL *intervalp);
+static void oph_newcounts(
+	i4 newsubcells,
+	OPN_PERCENT *newcount,
+	OPO_TUPLES celltups,
+	OPH_HISTOGRAM *newhistp,
+	OPN_PERCENT originalcount,
+	OPO_TUPLES dmftuples,
+	OPO_TUPLES origcreptf,
+	OPO_TUPLES *newcreptf);
+static i4 oph_splitcell(
+	OPS_STATE *global,
+	OPZ_ATTS *attrp,
+	OPB_BFARG **sbfargpp,
+	DB_DATA_VALUE *adcupperp,
+	OPN_PERCENT cellcount,
+	OPH_CELLS newlower,
+	i4 celllength,
+	OPN_PERCENT *newcount,
+	i4 sdifflength,
+	OPO_TUPLES celltups,
+	OPH_HISTOGRAM *newhistp,
+	OPO_TUPLES dmftuples,
+	OPO_TUPLES origcreptf,
+	OPO_TUPLES *newcreptf,
+	OPH_INTERVAL *intervalp);
+static void oph_addkeys(
+	OPS_SUBQUERY *subquery,
+	OPZ_ATTS *attrp,
+	OPZ_IATTS attno,
+	OPV_IVARS varno,
+	OPO_TUPLES dmftuples,
+	OPH_HISTOGRAM *newhistp,
+	OPH_INTERVAL *intervalp);
+static bool oph_temphist(
+	OPS_SUBQUERY *subquery,
+	OPZ_ATTS *attrp,
+	OPV_GRV *grvp,
+	DB_ATT_ID *model_id);
+static bool oph_catalog(
+	OPS_SUBQUERY *subquery,
+	OPH_HISTOGRAM *newhistp,
+	OPZ_IATTS attno,
+	OPZ_ATTS *attrp,
+	OPV_IVARS varno,
+	OPV_VARS *var_ptr,
+	OPH_INTERVAL *intervalp,
+	bool *nocells);
+static void oph_uniform(
+	OPS_SUBQUERY *subquery,
+	OPH_HISTOGRAM *newhistp,
+	OPZ_ATTS *attrp,
+	OPV_VARS *varp,
+	OPH_INTERVAL *intervalp,
+	bool nocells);
+static void oph_index(
+	OPS_SUBQUERY *subquery,
+	OPH_HISTOGRAM *newhistp,
+	OPZ_IATTS attr,
+	OPZ_ATTS *attrp);
+static bool collatable_type(
+	i4 datatype);
+static void oph_composites(
+	OPS_SUBQUERY *subquery);
+void oph_histos(
+	OPS_SUBQUERY *subquery);
 
 static char gtt_model[] = {'_', 'g', 't', 't', '_', 'm', 'o', 'd', 'e', 'l'};
 				/* default schema qualifier for model
@@ -725,6 +835,9 @@ oph_sarglist(
 **	    Only set the 2nd value to NULL in the precise case where two 
 **	    BFs are being combined into a BETWEEN.  Leave it alone for the
 **	    remainder of the histogram.
+**      18-oct-2010 (huazh01)
+**          skip boolean factor containing flag OPH_NOCOMPHIST. 
+**          (b124287)
 */
 static bool
 oph_compkeybld(
@@ -748,9 +861,8 @@ oph_compkeybld(
     OPG_CB	*opg_cb = subquery->ops_global->ops_cb->ops_server;
     OPE_IEQCLS	attreqc;
 
-    i4		attrlen, alignment;
-    ADI_OP_ID	opno;
-    bool	allocarg = FALSE, nolower = FALSE, found = FALSE;
+    i4		attrlen;
+    bool	nolower = FALSE, found = FALSE;
     bool	found_lte = FALSE, found_gte = FALSE, found_between = FALSE;
     bool	between_starting_now = FALSE;
 
@@ -779,7 +891,9 @@ oph_compkeybld(
 	bool	dropbfk, firstval, oneval;
 
 	dropbfk = FALSE;
-	if (attreqc != (*bfpp)->opb_eqcls) continue;
+	if (attreqc != (*bfpp)->opb_eqcls ||
+            (*bfpp)->opb_mask & OPB_NOCOMPHIST) 
+           continue;
 	if ((bfkeyp = (*bfpp)->opb_keys) == (OPB_BFKEYINFO *) NULL) 
 		continue;
 
@@ -974,11 +1088,10 @@ oph_compkeybld(
 
 	    if (klistp->opb_opno != (ADI_OP_ID)opg_cb->opg_eq)
 	    {
-		OPB_BFVALLIST	*nextklistp;
 		PTR	key1addr;
 		i4	fill1len;
 		char	fillchar1, fillchar2;
-		bool	reverse = FALSE, between = FALSE;
+		bool	reverse = FALSE;
 
 		/* Copy attr's value to end of buffer, then dup for range. */
 		MEcopy((PTR)klistp->opb_hvalue, attrlen, keyaddr);
@@ -1227,7 +1340,6 @@ oph_compargorder(
 	i4		keylen)
 
 {
-    OPB_BFVALLIST	*valp, *val1p;
     OPB_BFARG		*curargp, *prevargp;
     DB_DATA_VALUE	adc_dv1, adc_dv2;
     DB_STATUS		comparestatus;
@@ -1393,8 +1505,6 @@ oph_findkeys(
 	OPH_HISTOGRAM	*newhistp,
 	OPH_INTERVAL	*intervalp)
 {
-    OPZ_ATTS	   *sargp;	/* ptr to element which	defines ordered list of
-				** histogram constants used in the query */
     OPB_BFARG	   *keylistp = (OPB_BFARG *) NULL;
 
     /* Build list of keys in same equivalence class as this attribute, and with
@@ -1470,7 +1580,7 @@ oph_findkeys(
 	    if (sbfargp->opb_valp->opb_opno ==
 		global->ops_cb->ops_server->opg_eq ||
 	        sbfargp->opb_valp->opb_opno ==
-		global->ops_cb->ops_server->opg_ne); /* ADF ID for "="/"<>"
+		global->ops_cb->ops_server->opg_ne) /* ADF ID for "="/"<>"
 						     ** operator */
 	    {   /* since an equality can potentially produce 2 cells, since the
 		** "decrement" function is called to produce an "range" type
@@ -1637,7 +1747,7 @@ oph_equalcells(
     STRUCT_ASSIGN_MACRO(intervalp->oph_dataval, adclower);
     STRUCT_ASSIGN_MACRO(adclower, adcdecvalue);
     adcdecvalue.db_data = (PTR)&temp;	/* Buffer for decremented value */
-    if (sizeof(temp) < adcdecvalue.db_length)
+    if ((i4)sizeof(temp) < adcdecvalue.db_length)
 	opx_error(E_OP0391_HISTLEN);	/* histogram length is not within the
 					** expected limits */
 
@@ -3831,6 +3941,13 @@ collatable_type(i4    datatype)
 **	5-Jan-2009 (kibro01) b121385
 **	    Don't apply collation unless all the composite histogram is
 **	    collatable (similar to bug 121063 during generation of statistics).
+**      18-oct-2010 (huazh01)
+**          if there are two ADC_KEXACTKEY restriction on a key column, then 
+**          use only one of them to build composite histogram. For example, if 
+**          the key is based on [col1, col2], and the query is: ... where 
+**          col1 = X AND col2 = Y AND col1 = Z, then we only use one of the 
+**          restrictions based on 'col1' to build composite histograms. 
+**          (b124287).
 */
 static VOID
 oph_composites(
@@ -3842,17 +3959,21 @@ oph_composites(
     OPZ_ATTS		locattr;
     OPV_IVARS		varno;
     OPV_VARS		*varptr;
-    OPV_GRV		*gvarptr;
     OPV_RT		*vbase = subquery->ops_vars.opv_base;
     i2			i;
     bool		nocells;
     bool		all_collatable;
     PTR			save_collation;
+    OPB_BFT             *bfbase; 
+    OPZ_BMATTS          attrmap;
+    PST_QNODE           *qtree; 
+    i4                  tree_varno, tree_attrno, k; 
 
     save_collation = subquery->ops_global->ops_adfcb->adf_collation;
 
     MEfill(sizeof(OPZ_ATTS), (u_char)0, (PTR)&locattr);
     locattr.opz_mask = OPZ_COMPATT;	/* init dummy attr desc */
+    bfbase = subquery->ops_bfs.opb_base;
 
     /* Loop over range table, looking for variables with multi-attr
     ** key structures, at least 2 columns of which are covered by
@@ -3903,6 +4024,42 @@ oph_composites(
 	{
 	    i4	j;
 	    j = varptr->opv_mbf.opb_kbase->opb_keyorder[i].opb_attno;
+
+            MEfill(sizeof(OPZ_BMATTS), (u_char)0, (PTR)&attrmap); 
+
+	    for (k = 0; k < subquery->ops_bfs.opb_bv; k++)
+	    {
+                qtree = bfbase->opb_boolfact[k]->opb_qnode; 
+
+                if (!(qtree->pst_sym.pst_type == PST_BOP &&
+                    qtree->pst_left->pst_sym.pst_type == PST_VAR &&
+                    qtree->pst_right->pst_sym.pst_type == PST_CONST))
+                   continue;
+		
+		tree_attrno = qtree->pst_left->pst_sym.pst_value.
+				pst_s_var.pst_atno.db_att_id; 
+		tree_varno = qtree->pst_left->pst_sym.pst_value.pst_s_var.pst_vno; 
+
+                if (varno != tree_varno)
+                   continue; 
+
+		if (BTtest(tree_attrno, (char*)&attrmap))
+		{
+                   bfbase->opb_boolfact[k]->opb_mask |= OPB_NOCOMPHIST; 
+		}
+
+                if (bfbase->opb_boolfact[k]->opb_eqcls == 
+                     subquery->ops_attrs.opz_base->opz_attnums[j]->opz_equcls &&
+                    j == tree_attrno &&
+                    bfbase->opb_boolfact[k]->opb_keys &&
+                    bfbase->opb_boolfact[k]->opb_keys->opb_sargtype == ADC_KEXACTKEY
+                   )
+                {
+                    BTset(tree_attrno, (char*)&attrmap); 
+		}			
+
+	    }
+
 	    newhistp->oph_composite.oph_attrvec[i] = j;
 	    BTset((u_i2)subquery->ops_attrs.opz_base->opz_attnums[j]->
 			opz_equcls, (PTR)newhistp->oph_composite.oph_eqclist);
@@ -3913,6 +4070,7 @@ oph_composites(
 			opz_dataval.db_datatype))
 		all_collatable = FALSE;
 	}
+
 	newhistp->oph_composite.oph_attrvec[i] = OPZ_NOATTR;	
 				/* terminate attno array */
 

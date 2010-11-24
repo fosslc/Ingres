@@ -358,6 +358,8 @@ scs_get_session_roles(SCD_SCB *scb)
 **	   dbpriv but is still handled as privilege in the code.
 **    16-jul-96 (stephenb)
 **        Add efective username to scs_check_external_password() parameters.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Cast that username properly.
 */
 DB_STATUS
 scs_check_session_role(SCD_SCB *scb, 
@@ -422,7 +424,7 @@ scs_check_session_role(SCD_SCB *scb,
 		break;
 	    }
 	    status=scs_check_external_password(scb, rolename, 
-			(char*)scb->scb_sscb.sscb_ics.ics_eusername, 
+			(DB_OWN_NAME*)scb->scb_sscb.sscb_ics.ics_eusername, 
 			rolepassword, TRUE);
 	    break;
 	}

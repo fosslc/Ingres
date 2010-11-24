@@ -310,9 +310,13 @@ handle_peripheral(
 **	    Make sure the fastcommit flag is set in the DCB if appropriate;
 **	    otherwise we can fail to set WCOMMIT and end up with DM9302
 **	    errors.
+**	16-Mar-2010 (troal01)
+**	    Added ADF FEXI dmf_get_srs.
 **	19-Apr-2010 (kschendel) SIR 123485
 **	    Various changes for new blob handling, which among other things
 **	    requires the use of DML level table open here.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    dmf_tbl_info(), dmf_last_id() prototyped in dml.h
 */
 DB_STATUS
 dmffload( DMF_JSX	*jsx,
@@ -505,7 +509,8 @@ dmffload( DMF_JSX	*jsx,
     {
         FUNC_EXTERN DB_STATUS   dmf_tbl_info();
         FUNC_EXTERN DB_STATUS	dmf_last_id();
- 
+        FUNC_EXTERN DB_STATUS	dmf_get_srs();
+
  
         status = adg_add_fexi(&adf_scb, ADI_01PERIPH_FEXI, dmpe_call);
         if (status != E_DB_OK)
@@ -546,6 +551,15 @@ dmffload( DMF_JSX	*jsx,
             return(E_DB_ERROR);
         }
 
+	    status = adg_add_fexi(&adf_scb, ADI_08GETSRS_FEXI,
+				  dmf_get_srs );
+        if (status != E_DB_OK)
+        {
+            uleFormat(&adf_scb.adf_errcb.ad_dberror, 0,
+                NULL, ULE_LOG, NULL, 0, 0, 0, &local_err, 0);
+	    SETDBERR(&jsx->jsx_dberr, 0, E_DM007F_ERROR_STARTING_SERVER);
+            return(E_DB_ERROR);
+        }
     }
     /*
     ** Open the load file

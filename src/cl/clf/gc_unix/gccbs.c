@@ -270,13 +270,15 @@
 **	    When starting more than one GCC server the symbolic ports are not
 **	    incremented (Example: II1, II2) in the startup messages, while the 
 **	    actual portnumber is increasing and printed correctly.
+**	15-nov-2010 (stephenb)
+**	    Correctly proto all functions.
 **
 */
 
 /*
 ** Forward functions
 */
-static	VOID	GCbssm();
+static	VOID	GCbssm(GCC_P_PLIST *);
 
 /*
 ** local variables
@@ -330,8 +332,13 @@ typedef struct _GC_PCB
 
 } GC_PCB;
 
+/*
+** Forward references
+*/
 static i4  GCbs_trace = 0;
 static void GC_abort( GC_PCB *);
+STATUS	GCbk( i4, GCC_P_PLIST * );
+STATUS  GCbs( i4, GCC_P_PLIST * );
 
 # define GCTRACE(n) if( GCbs_trace >= n )(void)TRdisplay
 

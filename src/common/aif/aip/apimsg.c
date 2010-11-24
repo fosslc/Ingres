@@ -89,6 +89,8 @@
 **	29-Jul-10 (gordy)
 **	    Use the actual message buffer size when a buffer is
 **	    retrieved from the free queue.
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs.
 */
 
 
@@ -5883,6 +5885,14 @@ formatDataValue( IIAPI_STMTHNDL *stmtHndl, IIAPI_DESCRIPTOR *descriptor,
     case IIAPI_LVCH_TYPE :
     case IIAPI_LBYTE_TYPE :
     case IIAPI_LNVCH_TYPE :
+    case IIAPI_GEOM_TYPE :
+    case IIAPI_POINT_TYPE :
+    case IIAPI_MPOINT_TYPE :
+    case IIAPI_LINE_TYPE :
+    case IIAPI_MLINE_TYPE :
+    case IIAPI_POLY_TYPE :
+    case IIAPI_MPOLY_TYPE :
+    case IIAPI_GEOMC_TYPE :
 	/*
 	** LOB values are treated as a single data segment
 	** (no more segments to follow).

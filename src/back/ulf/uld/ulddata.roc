@@ -200,6 +200,8 @@ GLOBALDEF const INTXLATE Uld_psq_xlatetab[] =
 ** History:
 **	23-Nov-2005 (kschendel)
 **	    Add for the result_structure option.
+**	5-Oct-2010 (kschendel) SIR 124544
+**	    Add Vectorwise structures and old x100 synonyms.
 */
 
 GLOBALDEF const INTXLATE Uld_struct_xlatetab[] =
@@ -210,6 +212,19 @@ GLOBALDEF const INTXLATE Uld_struct_xlatetab[] =
 	{DB_BTRE_STORE, "btree"},
 	{DB_RTRE_STORE, "rtree"},
 	{DB_SORT_STORE, "heapsort"},
+#if defined(conf_IVW)
+	/* Note, put the preferred name first so uld_struct_name finds
+	** that one (for messages)
+	*/
+	{DB_X100_STORE, "vectorwise"},
+	{DB_X100_STORE, "x100"},
+	{DB_X100CL_STORE, "vectorwise_cl"},
+	{DB_X100CL_STORE, "x100cl"},
+	{DB_X100IX_STORE, "vectorwise_ix"},
+	{DB_X100IX_STORE, "x100ix"},
+	{DB_X100RW_STORE, "vectorwise_row"},
+	{DB_X100RW_STORE, "x100_row"},
+#endif
 	{0, NULL}
 };
 

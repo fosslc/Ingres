@@ -317,6 +317,8 @@
 **          Extend pad overhead to include a second copy of the orig_len.
 **          If the tail of the pad is corrupted we'll try to report pad errors
 **          for the wrong memory locations and hit spurious exceptions.
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes
 **/
 
 
@@ -336,6 +338,10 @@ static DB_STATUS ulm_challoc( ULM_PHEAD *pool, i4 nodesize,
 static VOID ulm_pad_error(ULM_NODE *node, char *padchar);
 
 static void ulm_printpool(PTR pool_ptr, char *facility);
+
+static void ulm_countpool(ULM_PHEAD *pool_ptr,
+			i4 *poolsum, i4 *poolnum,
+			i4 *free_blks, i4 *free_tot);
 
 
 /* Static definitions */
@@ -407,7 +413,7 @@ static char	    *conchk_names[] =
 **	This routine should only be called when pool_ptr->ulm_psem is held.
 **
 */
-void
+static void
 ulm_countpool(ULM_PHEAD *pool_ptr, i4 *poolsum, i4 *poolnum, i4 *free_blks, i4 *free_tot)
 {
     ULM_PHEAD   *pool = (ULM_PHEAD *)pool_ptr; 	/* current memory pool */

@@ -353,6 +353,10 @@
 #	    BUG 123830
 #	    Add -z noexecstack to remove "needs executable stack" bit from
 #	    shared libraries as this causes issues with SELinux on x86.
+#	30-Sep-2010 (troal01)
+#	    Added -L/usr/lib32 to the linker options. This is required for
+#	    distributions who uses this as the default location for 32 bit
+#	    libraries on 64 bit systems (such as Arch Linux).
 #
 
 CMD=`basename /$0`
@@ -658,7 +662,7 @@ case "$config" in
 	    krblink_cmd="$shlink_cmd"
 	    krblink_opts="$shlink_opts"
 	else
-	    shlink32_cmd="ld -shared -melf_i386 $noexecstack -L/lib -L/usr/lib "
+	    shlink32_cmd="ld -shared -melf_i386 $noexecstack -L/lib -L/usr/lib -L/usr/lib32 "
 	    shlink64_cmd="ld -shared -melf_x86_64 $noexecstack -L/lib64 -L/usr/lib64 "
 	    [ "$conf_LSB_BUILD" ] &&
 	    {

@@ -152,6 +152,8 @@
 **          '.local_vnode' value. 
 **	27-Aug-10 (gordy)
 **	    Added E_GC0106_GCN_CONFIG_VALUE for invalid config values.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 **/
 
 #ifndef GCN_INCLUDED
@@ -436,5 +438,7 @@ struct _GCN_OPER_DATA
 
 FUNC_EXTERN     STATUS          IIgcn_check( VOID );
 FUNC_EXTERN     VOID            gcn_seterr_func( i4  ((*)(char *)) );
+FUNC_EXTERN	VOID		gcn_checkerr( char *, STATUS *, 
+					      STATUS, CL_ERR_DESC * );
 #endif
 /************************** End of gcn.h *************************************/

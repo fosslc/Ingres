@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -71,25 +71,63 @@
 **	    Changes for subselect order bys.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/* static function declarations */
-static DB_STATUS
-pst_sqlsort_resdom(
-	PSS_SESBLK	*sess_cb,
-	PSF_MSTREAM	*stream,
-	DB_ERROR	*err_blk,
-	PST_QNODE	**nodep);
 
-static DB_STATUS
-pst_adsort(
-	PSS_SESBLK	    *sess_cb,
-	PST_QNODE	    *sort_attr,
-	PST_QNODE	    **list,
-	PSF_MSTREAM	    *stream,
-	PST_QNODE	    **sort_node,
-	DB_ERROR	    *err_blk);
+/* TABLE OF CONTENTS */
+static i4 pst_adsort(
+	PSS_SESBLK *sess_cb,
+	PST_QNODE *sort_attr,
+	PST_QNODE **list,
+	PSF_MSTREAM *stream,
+	PST_QNODE **sort_node,
+	DB_ERROR *err_blk);
+i4 pst_sdir(
+	PST_QNODE *node,
+	char *direction,
+	DB_ERROR *err_blk);
+i4 pst_expsort(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	PST_QNODE *tlist,
+	PST_QNODE **sort_list,
+	char *expname,
+	PST_QNODE **newnode,
+	PSQ_CB *psq_cb);
+i4 pst_varsort(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	PST_QNODE *tlist,
+	PST_QNODE **sort_list,
+	register PSS_RNGTAB *rngvar,
+	char *colname,
+	PST_QNODE **newnode,
+	PSQ_CB *psq_cb);
+i4 pst_numsort(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	PST_QNODE *tlist,
+	PST_QNODE **sort_list,
+	i2 *expnum,
+	PST_QNODE **newnode,
+	PSQ_CB *psq_cb);
+i4 pst_sqlsort(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	PST_QNODE *tlist,
+	PST_QNODE *intolist,
+	PST_QNODE **sort_list,
+	PST_QNODE *expnode,
+	PST_QNODE **newnode,
+	PSQ_CB *psq_cb,
+	PSS_RNGTAB **rng_vars);
+static i4 pst_sqlsort_resdom(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	DB_ERROR *err_blk,
+	PST_QNODE **nodep);
+
 /*{
 ** Name: pst_adsort	- Add a sort node to a sort list
 **

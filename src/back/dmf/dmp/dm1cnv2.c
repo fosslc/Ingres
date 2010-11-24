@@ -24,6 +24,7 @@
 #include    <dm0m.h>
 #include    <dm0p.h>
 #include    <dm1c.h>
+#include    <dm1cn.h>
 #include    <dm1cnv2.h>
 #include    <dm1u.h>
 #include    <dm1b.h>
@@ -194,6 +195,8 @@
 **          dm1cnv2_isnew() Check rcb_new_fullscan, handle the XTABLE case where
 **          new tids are added to rcb_new_tids without any update to the page,
 **          defer_add_new() Set rcb_new_fullscan if page wasn't updated.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dm1cn.h to get defer_add_new() prototype.
 */
 
 /* NO_OPTIM = pym_us5 */

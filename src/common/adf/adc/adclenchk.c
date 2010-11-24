@@ -140,9 +140,15 @@
 **          Added support for unicode long nvarchar datatype.
 **      16-oct-2006 (stial01)
 **          Added length check for locator datatypes
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      29-sep-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1lenchk_rti.  Change
 **          adc_2lenchk_bool to use i1 as the underlying type.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -646,6 +652,7 @@ DB_DATA_VALUE	*adc_rdv)
 
       case DB_BYTE_TYPE:
       case DB_NCHR_TYPE:
+      case DB_NBR_TYPE:
 
 	if (adc_rdv != NULL)
 	{
@@ -1132,6 +1139,14 @@ DB_DATA_VALUE	*adc_rdv)
 
       case DB_LVCH_TYPE:
       case DB_LBYTE_TYPE:
+      case DB_GEOM_TYPE:
+      case DB_POINT_TYPE:
+      case DB_MPOINT_TYPE:
+      case DB_LINE_TYPE:
+      case DB_MLINE_TYPE:
+      case DB_POLY_TYPE:
+      case DB_MPOLY_TYPE:
+      case DB_GEOMC_TYPE:
       case DB_LNVCHR_TYPE:
 	/* Long Varchar datatype, a fixed length datatype, internally */
 

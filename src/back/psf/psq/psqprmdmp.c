@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -56,9 +56,13 @@
 **	11-oct-1993 (tad)
 **	    Bug #56449
 **	    Changed %x to %p for pointer values in psq_prmdump().
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psq_prmdump(
+	register PSQ_CB *psq_cb);
 
 /*{
 ** Name: psq_prmdump	- Dump the parameters in a control block.

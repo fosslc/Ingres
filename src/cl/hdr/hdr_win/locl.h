@@ -45,6 +45,9 @@
 **
 **      10-apr-2006 (horda03) BUG 115913
 **          Extend fix for Windows.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    In cleaning up PSF errors, added LOCATION_INIT as a supported
+**	    initial value for LOCATION.
 ******************************************************************************/
 
 
@@ -167,6 +170,8 @@ typedef struct _LOCATION
         LOCTYPE desc;
         LO_DIR_CONTEXT  *fp;
 } LOCATION;
+#define LOCATION_INIT {NULL,NULL,NULL,NULL,0,NULL}
+
 
 /*
 ** structure for LOinfo calls.

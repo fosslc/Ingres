@@ -15,6 +15,7 @@
 #include    <me.h>
 #include    <cx.h>
 #include    <cxprivate.h>
+#include "cxlocal.h"
 
 /* If non-zero, allow user to override NUMA shared library name. */
 #define ENABLE_NUMA_DEBUG_LIB	0	/* Turn off before ship! */
@@ -104,6 +105,8 @@
 **          conf_CLUSTER_BUILD define string for axp_osf platform.
 **	07-jan-2008 (joea)
 **	    Discontinue use of cluster nicknames.
+**      03-nov-2010 (joea)
+**          Include cxlocal.h for prototypes.
 **/
 
 

@@ -71,6 +71,8 @@
 #	    19-Jun edit broke large-file-awareness on 32-bit;  fix.
 #	    Delete even more Datallegro stuff that isn't supposed to be
 #	    in here (yet).
+#	19-Nov-2009 (thich01)
+#	    Add GEOS_LOC and GEOS64_LOC for geospatial library locations
 #	11-Jan-2010 (bonro01)
 #	    Replace -lgcc_s with -shared-libgcc in LDLIBMACH32.
 #	    The RHEL4 gcc 32bit build environmnt does not have a 32bit shared
@@ -93,6 +95,19 @@
 #	10-may-2010 (stephenb)
 #	    -march=i486 becomes -march=i586. support for 64-bit atomic built-ins
 #	    only came in pentium architecture
+#	3-Jul-2010 (warmerdam)
+#	    Add PROJ_LOC and PROJ64_LOC for geospatial library locations
+#	31-Aug-2010 (troal01)
+#	    Added the PROJ/GEOS64_LOC to LDLIBMACH32
+#	31-Aug-2010 (thich01)
+#	    Add WITH_GEO for platforms where spatial is not supported.
+#	31-Aug-2010 (troal01)
+#	    Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
+#	30-Sep-2010 (troal01)
+#	    Removed Geospatial linker flags. These are now handled in IINEEDLIBS
+#	01-Nov-2010 (bonro01)
+#	    Add compile flags to "back,common,cl,gl" directory trees to show
+#	     warnings for missing prototypes.
 #
 
 # Tell Jamdefs that this include worked:
@@ -115,8 +130,8 @@ CD      = "cd" ;
 CC      default = "cc" ;
 CCDEBUG = "-g" ;
 CPP     default = "/lib/cpp" ;
-CCMACH32 = -DBUILD_ARCH32 -m32 -march=i586 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE ;
-CCMACH64 = -DBUILD_ARCH64 -m64 -fsigned-char -fno-strength-reduce -fno-omit-frame-pointer -Wno-write-strings -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS ;
+CCMACH32 = -DBUILD_ARCH32 -m32 -march=i586 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE $(WITH_GEO) ;
+CCMACH64 = -DBUILD_ARCH64 -m64 -fsigned-char -fno-strength-reduce -fno-omit-frame-pointer -Wno-write-strings -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS $(WITH_GEO) ;
 
 # The -rdynamic here is probably not needed, but doesn't hurt.
 CCLDMACH32 = -m32 -rdynamic ;	# appropriate LDORIGIN gets tacked on
@@ -203,3 +218,9 @@ if $(OSVER) != DEBIAN
 }
 BUILD_GTK_GUI ?= TRUE ;
 PAMLIB ?= TRUE ;
+
+# Set Directory Tree compile flags
+DIRCCFLAGS_back += -Wmissing-prototypes ;
+DIRCCFLAGS_common += -Wmissing-prototypes ;
+DIRCCFLAGS_cl += -Wmissing-prototypes ;
+DIRCCFLAGS_gl += -Wmissing-prototypes ;

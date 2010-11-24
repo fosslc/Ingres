@@ -212,6 +212,8 @@ set_meta_table_attributes(XF_TABINFO *table, char **att_name,
 **	17-Oct-2005 (thaju02)
 **	    For object_key/table_key (fixed-length), don't set 
 **	    cp->extern_length, otherwise adc_lenchk fails with E_AD2007. 
+**	19-Aug-2010 (troal01)
+**	    cp->srid is defaulted to -1 and set properly if defined
 */
 
 void
@@ -223,6 +225,11 @@ set_tabcol_attributes(XF_COLINFO  *cp, char **att_name,
     char 	column_label[MAXSTRING];   /* Extra for now */
     i4		precision = 0;
     i4		scale = 0;
+
+    /*
+     * Set SRID to the default -1
+     */
+    cp->srid = -1;
 
     for(i2 i=0; i <size; i++)
     {
@@ -296,6 +303,10 @@ set_tabcol_attributes(XF_COLINFO  *cp, char **att_name,
         else if (STequal (att_name[i], "column_encrypt_salt"))
 	{
             STcopy (value[i], cp->column_encrypt_salt);
+        }
+        else if (STequal (att_name[i], "srid"))
+	{
+            CVal (value[i], &cp->srid);
 	}
        /* else give out error that the attribute is not recognized */
     }
@@ -652,6 +663,7 @@ XF_COLINFO *mkcollist(XF_COLINFO  *cp)
       STcopy (temp->column_encrypted, element->column_encrypted);
     if (temp->column_encrypt_salt)
       STcopy (temp->column_encrypt_salt, element->column_encrypt_salt);
+    element->srid = temp->srid;
  
     element->col_next = new_list; 
     new_list = element; 

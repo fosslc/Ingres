@@ -173,6 +173,8 @@
 **          Added -nologging option to add "set nologging" to copy.in
 **          in the case of unloaddb "set session authorization <dbaname>" is
 **          also added
+**	15-Mar-2010 (troal01)
+**	    xf_is_cat and xf_is_fecat will now check for spatial_ref_sys as well.
 **          
 */
 
@@ -342,6 +344,8 @@ FUNC_EXTERN char	*IIUGdmlStr();
 **	    Output a "set nocreate_compression" statement to disable any
 **	    default compression, since the rest of xferdb assumes that
 **	    nocompression is the default.
+**	19-Aug-2010 (troal01)
+**	    Added geometry_columns to xf_is_fecat and xf_is_cat
 */
 void
 xfcrscript(char *owner, char *progname, char *dbaname, bool portable, 
@@ -836,6 +840,10 @@ xf_found_msg(char *otype, i4  count)
 bool
 xf_is_cat(char *name)
 {
+    if (!STncasecmp(name, "spatial_ref_sys", 15))
+	return (TRUE);
+    if (!STncasecmp(name, "geometry_columns", 16))
+	return (TRUE);
     if (name != NULL && ((*name == 'i' && name[1] == 'i')
 		      || (*name == 'I' && name[1] == 'I')))
 	return (TRUE);
@@ -863,6 +871,10 @@ xf_is_cat(char *name)
 bool
 xf_is_fecat(char *name)
 {
+    if (!STncasecmp(name, "spatial_ref_sys", 15))
+	return (TRUE);
+    if (!STncasecmp(name, "geometry_columns", 16))
+	return (TRUE);
     if (name != NULL && ((*name == 'i' && name[1] == 'i' && name[2] == '_')
 		      || (*name == 'I' && name[1] == 'I' && name[2] == '_')))
 	return (TRUE);

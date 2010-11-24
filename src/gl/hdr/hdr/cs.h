@@ -129,6 +129,8 @@
 **          remove one of them.
 **	17-may-2010 (stephenb)
 **	    Fix typo in above change.
+**      04-nov-2010 (joea)
+**          Add prototype for CSMTset_scb.
 **/
 
 /* Adjust counter */
@@ -907,6 +909,10 @@ FUNC_EXTERN STATUS CSMTinitiate(
 #define CScancelCheck Cs_fvp->IIcancelCheck
 #define CSMTcancelCheck IICSMTcancelCheck
 FUNC_EXTERN void IICSMTcancelCheck(CS_SID sid);
+
+#undef CSMTset_scb
+#define CSMTset_scb IICSMTset_scb
+FUNC_EXTERN void CSMTset_scb(CS_SCB *scb);
 
 # endif /* OS_THREADS_USED && (UNIX || VMS) */
 

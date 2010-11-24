@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -125,8 +125,32 @@
 **	2-Dec-2009 (whiro01) Bug 122890
 **	    Make "opn_nonsystem_rule" non-static so it can be called
 **	    externally (corollary to Karl's massive Datallegro change).
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opn_iemaps(
+	OPS_SUBQUERY *subquery);
+bool opn_uniquecheck(
+	OPS_SUBQUERY *subquery,
+	OPV_BMVARS *vmap,
+	OPE_BMEQCLS *jeqcmap,
+	OPE_IEQCLS eqcls);
+static bool opn_ovqp(
+	OPS_SUBQUERY *subquery);
+static OPV_BMVARS *opn_halloween(
+	OPS_SUBQUERY *subquery);
+static void opd_byposition(
+	OPS_SUBQUERY *subquery);
+static void opn_ienum(
+	OPS_SUBQUERY *subquery);
+static i4 opn_jhandler(
+	EX_ARGS *args);
+void opn_enum(
+	OPS_SUBQUERY *subquery);
+bool opn_nonsystem_rule(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opn_iemaps	- initialize global maps needed for enumeration
@@ -204,7 +228,6 @@ opn_iemaps(
 	    {
 		if (qnodep->pst_sym.pst_value.pst_s_rsdm.pst_rsflags&PST_RS_PRINT)
 		{
-		    OPZ_DMFATTR	    dmfattr;
 		    OPZ_IATTS	    attno;
 		    attno = opz_findatt(subquery, varno, 
 			(OPZ_DMFATTR)qnodep->pst_sym.pst_value.pst_s_rsdm.pst_rsno);
@@ -568,6 +591,12 @@ opn_uniquecheck(
 **	    didn't appear to be justified.
 **	6-feb-2008 (dougi)
 **	    Guard against SEGV because of "distinct" on constant view.
+**	14-Oct-2010 (kschendel)
+**	    Delete weird sort test that looked at default result structure
+**	    instead of actual result structure.  I think it was trying to
+**	    test for heapsort, but who knows why.  We actually allow
+**	    ctas into a heapsort, but it's done with a post-modify, not
+**	    a sort on the query.
 */
 static bool
 opn_ovqp(
@@ -697,14 +726,6 @@ opn_ovqp(
 	}
     }
     if(	dupsort
-	||
-	(
-	    (subquery->ops_mode == PSQ_RETINTO) /* is this a retrieval
-					** into relation */
-	    &&
-	    				/* is relation to be sorted ? */
-	    (global->ops_cb->ops_alter.ops_storage == DB_SORT_STORE)
-	)
 	||
 	(subquery->ops_sqtype == OPS_PROJECTION)
 	||
@@ -1880,9 +1901,11 @@ onceMorewithFeeling:
     if (!global->ops_cb->ops_check 
 	||
 	!opt_strace( global->ops_cb, OPT_F048_FLOAT))
+    {
 	EXmath(EX_ON);			/* turn on math exception handling for
 					** OPF so that parts of the search space
 					** can be skipped when necessary */
+    }
     opn_ienum(subquery);		/* initialize enumeration phase */
 
     if ((((!global->ops_cb->ops_check 

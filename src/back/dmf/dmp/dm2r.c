@@ -975,6 +975,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
 **	    sensitized to crow_locking().
+**	24-Feb-2010 (troal01)
+**	    Propagate E_DM5423_SRID_MISMATCH errors.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **	01-apr-2010 (toumi01) SIR 122403
@@ -992,6 +994,9 @@ NO_OPTIM=dr6_us5 i64_aix
 **          base_delete_put() release value lock after put (not after allocate)
 **      12-Jul-2010 (stial01) (SIR 121619 MVCC, B124076)
 **          dm2r_replace() if row/crow_locking, defer_add_new() else dmpp_dput()
+**      19-Jul-2010 (thich01)
+**          Need to setup a coupon when inserting into a table with an rtree
+**          index already associated with it.
 **	20-Aug-2010 (miket) SIR 122403 SD 145904
 **	    Encrypted indexes get the encryption shm slot number from the base
 **	    table parent.
@@ -5097,7 +5102,8 @@ dm2r_put(
 			    dberr);
 	if ( status && dberr->err_code != E_DM0065_USER_INTR
 	  && dberr->err_code != E_DM010C_TRAN_ABORTED 
-          && dberr->err_code != E_DM016B_LOCK_INTR_FA)
+          && dberr->err_code != E_DM016B_LOCK_INTR_FA
+          && dberr->err_code != E_DM5423_SRID_MISMATCH)
 	{
 	    /* 
 	    ** User interrupts are now a possibility, since dmpe
@@ -5321,6 +5327,15 @@ dm2r_put(
     ** may not be set for Partitions.
     */
 
+    /* Reconstitute short-term part of coupons in case QEF wants the
+    ** record for more "stuff" such as rule firing.
+    ** This is moved to happen before the index stuff below.  For spatial
+    ** rtree indexes the data are LOBs.  Therefore all coupon stuff needs to
+    ** happen before any indexing happens.
+    */
+    if (status == E_DB_OK && t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
+	status = dm1c_pget(t->tcb_atts_ptr, r, record, dberr);
+
     if ( status == E_DB_OK && t->tcb_update_idx && !r->rcb_siAgents )
     {
 	i4 cancel_ix;	/* ordinal position of index in progress */
@@ -5371,12 +5386,6 @@ dm2r_put(
 	    }
 	}
     }
-
-    /* Reconstitute short-term part of coupons in case QEF wants the
-    ** record for more "stuff" such as rule firing.
-    */
-    if (status == E_DB_OK && t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS)
-	status = dm1c_pget(t->tcb_atts_ptr, r, record, dberr);
 
     /*
     ** check for replication and perform data capture in necesary
@@ -6409,7 +6418,8 @@ DB_ERROR	    *dberr )
 	    {
 		if (dberr->err_code != E_DM0065_USER_INTR
 		  && dberr->err_code != E_DM010C_TRAN_ABORTED
-                  && dberr->err_code != E_DM016B_LOCK_INTR_FA)
+                  && dberr->err_code != E_DM016B_LOCK_INTR_FA
+                  && dberr->err_code != E_DM5423_SRID_MISMATCH)
 		{
 		    /*
 		    ** User interrupts are now a possibility, since dmpe
@@ -7765,6 +7775,9 @@ dm2r_unfix_pages(
 **	    DMP_RELATION structure, use new CSadjust_i8counter to peform
 **	    atomic counter adjustment. Also, restrict actual values to
 **	    MAXI4 until we can handle larger numbers.
+**	28-Oct-2010 (kschendel)
+**	    Fix byte-aligned platforms (eg Solaris) so that compression
+**	    control arrays are aligned.
 */
 DB_STATUS
 dm2r_load(
@@ -7900,7 +7913,8 @@ dm2r_load(
 		    {
 			if (dberr->err_code != E_DM0065_USER_INTR
 			  && dberr->err_code != E_DM010C_TRAN_ABORTED
-			  && dberr->err_code != E_DM016B_LOCK_INTR_FA)
+			  && dberr->err_code != E_DM016B_LOCK_INTR_FA
+			  && dberr->err_code != E_DM5423_SRID_MISMATCH)
 			{
 			    /*
 			    ** User interrupts are now a
@@ -8119,21 +8133,24 @@ dm2r_load(
 	**  Initialize pointers to dynamic portions of the
         **  MDFY control block.
 	*/
-	lct->lct_cmp_list = (DB_CMP_LIST*) ((char *)lct + sizeof(*lct));
-	lct->lct_record = (char *)lct->lct_cmp_list +
-                           ((t->tcb_rel.relatts + 1) * sizeof(DB_CMP_LIST));
-	p = (char *)lct->lct_record + sort_width + sizeof(i4);
+	p = (char *) lct + sizeof(DM2R_L_CONTEXT);
+	p = ME_ALIGN_MACRO(p, DB_ALIGN_SZ);
+	lct->lct_cmp_list = (DB_CMP_LIST*) p;
+	p += (t->tcb_rel.relatts+1) * sizeof(DB_CMP_LIST);
+	lct->lct_record = p;
+	p += sort_width + sizeof(i4);
+	p = ME_ALIGN_MACRO(p, DB_ALIGN_SZ);
 	if (index_cmpcontrol_size > 0)
 	{
 	    mct->mct_index_rac.cmp_control = (PTR) p;
 	    mct->mct_index_rac.control_count = index_cmpcontrol_size;
-	    p = p + index_cmpcontrol_size;
+	    p = p + index_cmpcontrol_size; 	/* Aligned already */
 	}
 	if (leaf_cmpcontrol_size > 0)
 	{
 	    mct->mct_leaf_rac.cmp_control = (PTR) p;
 	    mct->mct_leaf_rac.control_count = leaf_cmpcontrol_size;
-	    p = p + leaf_cmpcontrol_size;
+	    p = p + leaf_cmpcontrol_size; 	/* Aligned already */
 	}
 
 	mct->mct_location = (DMP_LOCATION *) ME_ALIGN_MACRO(p, sizeof(PTR));

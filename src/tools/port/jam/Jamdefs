@@ -537,6 +537,8 @@
 #	    BUG 122571
 #	    Remove RPMHDR and RPMCCLD defs, no longer need. (using python
 #	    module)
+#	19-Nov-2009 (thich01)
+#	    Added HDRGEOS for GEOS geospatial headers.
 #	25-Jan-2010 (kschendel) b123194
 #	    INGICE and XERCVERS used before definition, fix.
 #	    Always set XERCVERS with default-assign (windows wasn't) since
@@ -561,9 +563,16 @@
 #       25-May-2010 (horda03)
 #           On VMS LIBFELIB.EXE is built using RAATLIB and ABFRTLIB, so include
 #           these in LIBQ_LIBS.
+#	16-Jun-2010 (warmerdam)
+#	    Added HDRPROJ for PROJ geospatial headers.
+#	31-Aug-2010 (troal01)
+#	    Added SHGEOSLIB, SHGEOSCLIB, and SHPROJLIB
 #    20-Sep-2010 (hanje04)
 #  	    Fix build for FC 13/ Xerces 3.x, add XERCLIB to handle lib
 #  	    naming anomalies between 2.x and 3.0
+#	30-Sep-2010 (troal01)
+#	    Added GEOSLIB, GEOSCLIB, PROJLIB, SHGEOSLIBHB, SHGEOSCLIBHB, and SHPROJLIBHB
+#	
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE DEFINITIONS and EXCEPTIONS
 #
@@ -973,6 +982,9 @@ HDRODBC		= [ FDirName $(ING_SRC) common odbc hdr ] ;
 HDRTOOLS	= [ FDirName $(ING_SRC) tools port hdr_unix_vms ] ;
 
 HDRSTRESS	= [ FDirName $(ING_SRC) tst stress gcf esql ] ;
+
+HDRGEOS		= $(GEOS_INC) ;
+HDRPROJ		= $(PROJ_INC) ;
 
 #
 #set HDRPATTERN
@@ -2673,6 +2685,27 @@ else
     }
 }
 
+#
+# GEOS and Proj.4 libraries
+#
+if ! $(NT)
+{
+    SHGEOSLIB = libgeos.$(SLSFX) ;
+    SHGEOSCLIB = libgeos_c.$(SLSFX) ;
+    SHPROJLIB = libproj.$(SLSFX) ;
+    GEOSLIB = $(GEOS_LOC)$(DFS)libgeos.$(LIBSFX) ;
+    GEOSCLIB = $(GEOS_LOC)$(DFS)libgeos_c.$(LIBSFX) ;
+    PROJLIB = $(PROJ_LOC)$(DFS)libproj.$(LIBSFX) ;
+    GEOSLIBHB = $(GEOSHB_LOC)$(DFS)libgeos.$(LIBSFX) ;
+    GEOSCLIBHB = $(GEOSHB_LOC)$(DFS)libgeos_c.$(LIBSFX) ;
+    PROJLIBHB = $(PROJHB_LOC)$(DFS)libproj.$(LIBSFX) ;	
+}
+else
+{
+    SHGEOSLIB = geos.$(SLSFX) ;
+    SHGEOSCLIB = geos_c.$(SLSFX) ;
+    SHPROJLIB = proj.$(SLSFX) ;
+}
 
 # HDRSAX uses Xerces definitions, can define now.
 if $(VMS)

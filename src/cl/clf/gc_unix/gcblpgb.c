@@ -36,6 +36,8 @@
 **	    replace nat and longnat with i4
 **	26-Aug-2009 (kschendel) b121804
 **	    Bool prototypes to keep gcc 4.3 happy.
+**  	15-nov-2010 (stephenb)
+**  	    correct proto all forward functions.
 */
 
 
@@ -159,36 +161,43 @@ FUNC_EXTERN 	VOID	comxon();
 /*
 **  Forward functions 
 */
-static	VOID	sndsasm();
-static	VOID	sndsasma();
-static	VOID	sndsw();
-static	VOID	addsw();
-static	bool	chksw();
-static	int 	upsasm();
-static	int 	upsasma();
-static 	VOID	upsw();
-static	VOID	buf_free();
-static	unsigned long	ctol();
-static	VOID	ltoc();
-static	int 	ltos();
-static	bool	isnum();
-static  VOID    snddisc();
-static	VOID	sndack();
-static  int 	addack();
-static	int 	getrblk();
-static	VOID	add_sblk();
-static	VOID	snduiblk();
-static	bool	sndnxdblk();
-static	bool	blk2snd();
-static	int 	udswdw();
-static	VOID	uprak();
-static	VOID	erlog();
-static	int 	pgpby();
-static	VOID	xmtblk();
-static	long	blrand();
-static  int     inc_seqn();
-static  int     inc_wdwn();
-
+static	VOID	sndsasm(void);
+static	VOID	sndsasma(void);
+static	VOID	addsw(char *, char *, long, char *);
+static	bool	chksw(char *, char *, long *, char *);
+static	int 	upsasm(char *);
+static	int 	upsasma(char *);
+static 	VOID	upsw(char *);
+static	VOID	buf_free(void);
+static	unsigned long	ctol(char *);
+static	VOID	ltoc(unsigned long, char *);
+static	int 	ltos(char *, unsigned long);
+static	bool	isnum(char);
+static  VOID    snddisc(void);
+static	VOID	sndack(void);
+static  int 	addack(char *);
+static	int 	getrblk(char *);
+static	VOID	add_sblk(char *, int);
+static	VOID	snduiblk(char *, int);
+static	bool	sndnxdblk(void);
+static	bool	blk2snd(void);
+static	int 	udswdw(void);
+static	VOID	uprak(char *);
+static	VOID	erlog(int);
+static	int 	pgpby(char);
+static	VOID	xmtblk(char *, int, int);
+static	long	blrand(void);
+static  int     inc_seqn(int);
+static  int     inc_wdwn(int);
+VOID 		pgcnt(PG_CB *);
+VOID 		pglgn(PG_CB *);
+VOID 		pglgo( PG_CB * );
+VOID 		pgsnd( PG_CB * );
+VOID 		pgrd( PG_CB * );
+VOID 		pguisnd( PG_CB * );
+VOID 		pguird( PG_CB * );
+int 		pgpnd( PG_CB * );
+static VOID	sndsw( char * );
 /* --- Rev 7/T Tunable Global Parameters --- */
 static bool xonxoff = TRUE; 	    	/* enable software flow control */
 static int timo = 120;	    	    	/* block reception timeout */
@@ -1211,7 +1220,7 @@ static char *wszsw =  "/W=%d";
 **		Made function return VOID
 */
 static VOID
-sndsasm( )
+sndsasm(void )
 {
     register char *pt = pgcbuf;
 
@@ -1247,7 +1256,7 @@ sndsasm( )
 **		Made function return VOID
 */
 static VOID
-sndsasma( )
+sndsasma(void )
 {
     register char *pt = pgcbuf;
 
@@ -1822,7 +1831,7 @@ char ch;
 **		Made function VOID
 */
 static VOID
-snddisc( )
+snddisc(void )
 {
     register char *pt = pgcbuf;
 
@@ -1854,7 +1863,7 @@ snddisc( )
 **		Made function VOID
 */
 static VOID
-sndack()
+sndack(void)
 {
     register char *pt = pgcbuf;
 
@@ -2055,7 +2064,7 @@ int cnt;
 **		Made function return bool
 */
 static bool
-sndnxdblk( )		/* return true if n3 delay required after */
+sndnxdblk( void)		/* return true if n3 delay required after */
 {
     static int last_sb;		        /* last blk sent */
     char *pf, *pfp1;
@@ -2188,7 +2197,7 @@ sndnxdblk( )		/* return true if n3 delay required after */
 **		Made function return bool
 */
 static bool
-blk2snd()
+blk2snd(void)
 {
     int i;
 
@@ -2221,7 +2230,7 @@ blk2snd()
 **		Made function return int
 */
 static int
-udswdw()
+udswdw(void)
 {
     static bool sbkqak[SWDWSZ];
     int last_ack, rc;
@@ -2925,7 +2934,7 @@ int cnt, flag;
 **		
 */
 static long
-blrand() 
+blrand(void) 
 {
     /* set seed for random numbers */
     MHsrand(TMcpu());

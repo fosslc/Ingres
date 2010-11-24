@@ -68,6 +68,8 @@
 **	    between compat.h and system limits.h on (sqs_ptx).
 **      21-sep-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_hdec.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 */
 
 /*{
@@ -425,6 +427,7 @@ DB_DATA_VALUE       *adc_dvthg)
 	case DB_CHA_TYPE:
         case DB_BIT_TYPE:
     	case DB_BYTE_TYPE:
+        case DB_NBR_TYPE:
 	{
 	    /*
 	    ** All character string data types should be converted to SQL char

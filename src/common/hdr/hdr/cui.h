@@ -34,6 +34,9 @@
 **	    Add prototypes for cui_chk3_locname, and cui_chk1_dbname.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Added prototypes for cui_move, cui_compare, cui_trmwhite routines
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Add back prototype for cus_trmwhite()
+**          Changes to eliminate compiler prototype warnings.
 [@history_template@]...
 **/
 
@@ -137,10 +140,14 @@ char    pad_char,
 i4	len2,
 char	*id2);
 
-/*	prototypes in CUSTRING.C	*/
-
 FUNC_EXTERN	i4
 cui_trmwhite(
 i4	len,
 char	*id);
 
+
+/*	prototypes in CUSTRING.C	*/
+FUNC_EXTERN	i4
+cus_trmwhite(
+ 	u_i4	len,
+ 	char	*bufp);

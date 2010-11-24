@@ -32,6 +32,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs.
 **/
 
 /*
@@ -516,7 +518,15 @@ OI_PutParam(
 			tmp = params;
 			for (i = 0; tmp != NULL; i++) 
 			{
-				if (tmp->type == IIAPI_LBYTE_TYPE) 
+				if (tmp->type == IIAPI_LBYTE_TYPE ||
+					tmp->type == IIAPI_GEOM_TYPE ||
+					tmp->type == IIAPI_POINT_TYPE ||
+					tmp->type == IIAPI_MPOINT_TYPE ||
+					tmp->type == IIAPI_LINE_TYPE ||
+					tmp->type == IIAPI_MLINE_TYPE ||
+					tmp->type == IIAPI_POLY_TYPE ||
+					tmp->type == IIAPI_MPOLY_TYPE ||
+					tmp->type == IIAPI_GEOMC_TYPE ) 
 				{
 					putParmParm.pp_parmCount = i;
 					IIapi_putParms( &putParmParm );

@@ -1,4 +1,4 @@
-/* Copyright (c) 1995, 2005 Ingres Corporation
+/* Copyright (c) 1995, 2005, 2010 Ingres Corporation
 **
 **
 */
@@ -207,7 +207,23 @@
 **          adu_lo_filter() change parameter order.
 **	21-Jul-2010 (kschendel) SIR 124104
 **	    Add set [no]create_compression.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+i4 psl_scan(
+	register PSS_SESBLK *pss_cb,
+	register PSQ_CB *psq_cb);
+static i4 psl_quel_unorm(
+	PSS_SESBLK *pss_cb,
+	PSQ_CB *psq_cb,
+	i4 token);
+static bool psl_dtunorm(
+	ADF_CB *adf_cb,
+	i2 idt);
 
 /*
 **  Defines of other constants.
@@ -648,18 +664,6 @@ static const AGGTOK	Agg_tok[] = {
 /* 8 */	       { "count"},
 /* 9 */	       { "countu"},
 			};
-
-static i4 
-psl_quel_unorm(
-PSS_SESBLK *pss_cb,
-PSQ_CB	    *psq_cb,
-i4	    token);
-
-static bool
-psl_dtunorm(
-ADF_CB          *adf_cb,
-i2		idt);
-
 
 /*{
 ** Name: psl_scan	- The scanner for the server's QUEL parser.
@@ -829,7 +833,6 @@ psl_scan(
 {
     register u_char	*next_char;
     register u_char	*qry_end;
-    ULM_RCB		ulm_rcb;
     i4		err_code;
     i4			ret_val = 0;
     u_char		*firstchar;
@@ -844,7 +847,9 @@ psl_scan(
     DB_CURSOR_ID	*db_cursid;
     i4		lineno;
     DB_STATUS		status;
+# ifdef BYTE_ALIGN
     i4			left;
+# endif
 				/*
 				** will point to the first non-white character
 				** in a token (if any); will skip over any
@@ -1802,7 +1807,7 @@ psl_scan(
 	    }
 
 	    /*  Check to see if this is a keyword   */
-	    if (length < (sizeof(Key_index) / sizeof(Key_index[0])))
+	    if (length < (i4)(sizeof(Key_index) / sizeof(Key_index[0])))
 	    {
 		/* find starting position by length */
 		key = (u_char *)Key_index[length];
@@ -1824,7 +1829,7 @@ psl_scan(
 			 register KEYINFO   *tret = (KEYINFO*)&Key_info[*--key];
 			 register u_char    *this_char;
 			 register u_char    *word2;
-			 register i4	    ii_try;
+			 register i4	    ii_try = 0;
 			 register i4	    low;
 			 register i4	    high;
 			 u_char		    savechar;
@@ -2215,12 +2220,10 @@ PSS_SESBLK *pss_cb,
 PSQ_CB	    *psq_cb,
 i4	    token)
 {
-    DB_NVCHR_STRING	*nvchr;
     DB_TEXT_STRING	*text;
     char		*name;
     DB_NVCHR_STRING	*norm_nvchr;
     DB_TEXT_STRING	*norm_text;
-    char		*norm_name;
     DB_DATA_VALUE	dv1;
     DB_DATA_VALUE	rdv;
     DB_DATA_VALUE	*pop[2];
@@ -2436,7 +2439,8 @@ dv1.db_length, rdv.db_length);
 	return (token);
 	*/
     }
-    else if (ult_check_macro(&pss_cb->pss_trace, 19, &val1, &val2))
+    else if (ult_check_macro(&pss_cb->pss_trace,
+			PSS_SCANNER_UNORM, &val1, &val2))
     {
 	i4	t1 = dv1.db_datatype;
 	i4	t2 = rdv.db_datatype;

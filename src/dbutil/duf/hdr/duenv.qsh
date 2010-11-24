@@ -183,6 +183,9 @@ FUNC_EXTERN STATUS du_dmp_ingpath();	/* Generate an Ingres dump
 **	    Added du_uninfc_flag.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    cmptlvl is reinterpreted as integer.
+**	15-Mar-2010 (troal01)
+**	    Added the du_srid_flag so that we can restrict the pre-loading
+**	    of EPSG data to spatial_ref_sys.
 **      31-aug-2010 (maspa05) bug 124328
 **          Added du_db_passwd, du_db_passwd_given for -P flag on createdb and 
 **          destroydb
@@ -299,6 +302,7 @@ FUNC_EXTERN STATUS du_dmp_ingpath();	/* Generate an Ingres dump
 # define	DU_SECURE_C2	0x04
 ##	char	    *du_ingres_low;		    /* INGRES_LOW */
 ##	char	    *du_ingres_high;		    /* INGRES_HIGH*/
+	i4  	    du_srid_flag;		/* srid flag specified? */
 ##  }   DU_ENV;
 
 

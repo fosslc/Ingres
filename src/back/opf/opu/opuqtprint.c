@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -62,8 +62,15 @@
 **	15-sep-93 (swm)
 **	    Moved cs.h include above other header files which need its
 **	    definition of CS_SID.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opu_qtprint(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	char *origin);
 
 /*{
 ** Name: opu_qtprint	- print query tree

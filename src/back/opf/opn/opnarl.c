@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -69,8 +69,80 @@
 **	    Changed 'nat' to 'i4' due to cross-integration.
 **	3-Jun-2009 (kschendel) b122118
 **	    Cleanup: remove unused CCARTPROD flag, dead ojfilter code.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opn_cpartition(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep);
+static void opn_rconnected(
+	OPS_SUBQUERY *subquery,
+	OPV_MVARS *connect,
+	OPV_IVARS var,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar);
+bool opn_cartprod(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar,
+	OPV_IVARS keyedvar,
+	bool *notjoinable);
+static bool opn_connected(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar,
+	OPV_IVARS keyedvar,
+	bool tidjoin,
+	OPV_BMVARS *ojvarmap);
+static void opn_tjrconnected(
+	OPS_SUBQUERY *subquery,
+	OPV_MVARS *connect,
+	OPV_IVARS var,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar,
+	OPV_BMVARS *tidjoins);
+static i4 opn_bforks(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar,
+	OPV_BMVARS *tidmap);
+bool opn_tjconnected(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS *partition,
+	OPV_IVARS maxvar,
+	OPV_BMVARS *tidmap,
+	OPN_JTREE *childp);
+static bool opn_ntcheck(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS *rdpartition,
+	OPV_IVARS rdmaxvar,
+	OPV_IVARS *kdpartition,
+	OPV_IVARS kdmaxvar);
+bool opl_ojverify(
+	OPS_SUBQUERY *subquery,
+	OPZ_BMATTS *attrmap,
+	OPV_BMVARS *vmap,
+	OPL_OUTER *outerp);
+static OPL_IOUTER opl_ojboolplace(
+	OPS_SUBQUERY *subquery,
+	OPV_BMVARS *vmap,
+	OPL_OUTER *outerp);
+static void opl_cartprodcheck(
+	OPS_SUBQUERY *subquery,
+	OPL_OUTER *outerp,
+	OPV_BMVARS **cartprodpp,
+	OPV_BMVARS *cartprodp);
+bool opn_jintersect(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep,
+	OPN_STATUS *sigstat);
+bool opn_arl(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep,
+	OPN_STLEAVES varset,
+	OPN_STATUS *sigstat);
 
 /*{
 ** Name: opn_cpartition	- generate next partition of set of relations
@@ -1122,6 +1194,13 @@ OPV_IVARS          kdmaxvar;
 **          tables that is not referenced on oj's ON clause. Otherwise, an
 **          iftrue() node won't be able to get inserted and leads to wrong
 **          result. (b122613)
+**      03-jun-2010 (huazh01)
+**          for query in the form of a outer join b outer join c, reject
+**          plans that try to solve query by doing a X c X b. (b123744)
+**      12-oct-2010 (huazh01)
+**          It is not suitable to apply the fix to b123744 if 'vmap' 
+**          contains join composite produced by opn_newenum().
+**          (b124582)
 [@history_template@]...
 */
 bool
@@ -1142,7 +1221,9 @@ opl_ojverify(
     OPB_BFT         *bfbase;
     OPE_IEQCLS      maxeqcls;
     OPV_IVARS       ovar;
-    OPV_BMVARS      outeronmap;
+    OPV_BMVARS      outeronmap, outerVarMap;
+    OPL_OUTER       *ojdesc; 
+    i4              i; 
 
     maxvar = subquery->ops_vars.opv_rv;
     maxattr = subquery->ops_attrs.opz_av;
@@ -1162,7 +1243,6 @@ opl_ojverify(
 	{
 	    if (!BTtest((i4)ovar, (char *)vmap))
 	    {
-		OPV_IVARS	i;
 		OPV_VARS	*varp;
 		bool		ojindex = FALSE;
 
@@ -1206,6 +1286,48 @@ opl_ojverify(
 
 	    }
 	}
+
+        /* b123744:
+        ** for query in the form of a outer join b outer join c, reject
+        ** plans that try to solve query by doing a X c X b. 
+        ** b124582:
+        ** fix to b123744 can't be applied if either a, b, or c is not a 
+        ** table or index, but rather a join composite produced by 
+        ** opn_newenum(). 
+        */
+        if ((!(subquery->ops_mask & OPS_LAENUM) ||
+              (subquery->ops_mask & OPS_LAENUM &&
+               BTcount((char*)vmap->opv_bm, OPV_MAXVAR) <= subquery->ops_lacount)
+            )
+            &&
+            !BTsubset((char*)vmap->opv_bm, (char*)outerp->opl_onclause, 
+                     OPV_MAXVAR))
+        {
+           MEcopy((PTR)outerp->opl_ivmap, (u_i2)sizeof(outerVarMap),
+		  (PTR)&outerVarMap);
+
+           BTnot(OPV_MAXVAR, (char *)&outerVarMap);
+
+           BTand(OPV_MAXVAR, (char *)vmap->opv_bm, (char *)&outerVarMap);
+
+           for (i = 0; i < subquery->ops_oj.opl_lv; i++)
+           {
+
+              ojdesc = subquery->ops_oj.opl_base->opl_ojt[i];
+
+              if (ojdesc->opl_id == outerp->opl_id)
+                 continue; 
+            
+              if (BTsubset( (char *)outerVarMap.opv_bm, 
+                            (char *)ojdesc->opl_ovmap, 
+                            OPV_MAXVAR )  &&
+                  BTsubset( (char *)ojdesc->opl_bvmap, 
+                            (char *)outerp->opl_ovmap, 
+                            OPV_MAXVAR ))
+                  return (FALSE);
+           }
+        }
+
     }
     for (attr= -1; (attr = BTnext((i4)attr, (char *)attrmap, (i4)maxattr))>=0;)
     {
@@ -1961,8 +2083,6 @@ opn_jintersect(
 	OPL_OJT		    *lbase;	/* ptr to base of outer join descriptor
 					** table */
 	bool		    joinid_found;   /* TRUE if one outer join id found */
-	OPE_BMEQCLS	    joinmap;	/* map of equivalence classes used in join
-					** at this node */
 	OPL_IOUTER	    tidojid;	/* set to most deeply nested outer join id
 					** which still contains the base relation
 					** of the TID join as an inner */
@@ -2328,6 +2448,8 @@ opn_jintersect(
 				    ** and not a tid join so not allowed */
 		    break;
 		}
+		default:
+		    break;
 	        } /* end switch */
 
 		outerchildp = NULL;

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 **
 */
 
@@ -47,8 +47,17 @@
 **	11-Aug-1997 (jenjo02)
 **	    Changed ulm_streamid from (PTR) to (PTR*) so that ulm
 **	    can destroy those handles when the memory is freed.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 pst_trdup(
+	PTR stream,
+	PST_QNODE *tree,
+	PST_QNODE **dup,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: pst_trdup	- Duplicate a query tree
@@ -109,7 +118,6 @@ pst_trdup(
 {
     DB_STATUS		    status;
     PST_QNODE		    *newtree;
-    i4			    offset;
     i4			    symsize, datasize, size;
     ULM_RCB		    ulm_cb;
     i4		    err_code;

@@ -59,6 +59,8 @@
 **	29-Sep-2000 (jenjo02)
 **	    Break out event wait counts by thread type, keep track
 **	    of I/O and transaction rates.
+**      04-nov-2010 (joea)
+**          Add prototype for CSMT_sampler.
 ******************************************************************************/
 # define MAXCONDS	17
 # define MAXEVENTS	10	/* DIO_MASK(r/w), BIO_MASK(r/w), LIO_MASK(r/w),
@@ -206,3 +208,5 @@ typedef struct _CSSAMPLERBLK {
 STATUS LockSamplerBlk(CS_SYNCH *hpLockSem);
 
 STATUS UnlockSamplerBlk(CS_SYNCH *hpLockSem);
+
+FUNC_EXTERN void CSMT_sampler(void);

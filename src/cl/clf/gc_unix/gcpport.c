@@ -19,6 +19,7 @@
 #include    <errno.h>
 #include    <diracc.h>
 #include    <bsi.h>
+#include    <gcccl.h>
 #include    "gcarw.h"
 #include    "gcacli.h"
 
@@ -59,6 +60,8 @@ FUNC_EXTERN     BS_DRIVER       *GC_get_driver();
 **	    actual portnumber is increasing and printed correctly. So, the 
 **	    portmapper routine defined by the network protocol driver takes 
 **	    additional parameter for returning the actual symbolic port.
+**	15-nov-2010 (stephenb)
+**	    Include gccl.h for prototypes.
 */
 STATUS
 GCpportaddr( char* protname, i4 addrlen, char* portaddr, 

@@ -168,6 +168,8 @@ NO_OPTIM = r64_us5
 **	    egregious, though, that I've kept this change.
 **	09-Dec-2008 (jonj)
 **	    SIR 120874: use new form uleFormat, CL_CLEAR_ERR.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Fix declaration of LG_resume_event()
 */
 
 /*
@@ -185,7 +187,7 @@ static STATUS       LG_cancel(
 			i4		    flags,
 			LG_ID		    *lx_id);
 
-static VOID         LG_resume_event();
+static VOID         LG_resume_event(void);
 
 static VOID         LG_suspend_event(
 			LXB		    *lxb);

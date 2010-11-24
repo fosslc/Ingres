@@ -147,6 +147,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	    E_PS0C88_ENCRYPT_NOPASS
 **	1-jul-2010 (stephenb)
 **	    Add E_PS03B4_NO_COPY_CACHE
+**	11-Oct-2010 (kschendel) SIR 124544
+**	    WITH-option cleanup, remove PS0BC6.
 */
 
 
@@ -3414,6 +3416,9 @@ object of type '%1c'."
 **	Make sure the operation (SELECT, CONNECT, etc.) is appropriate
 **	for the type of object (TABLE, DATABASE, etc.), then rerun the query.
 */
+E_PS04F0_NOWITH_X100:SS42000_SYN_OR_ACCESS_ERR
+"%0c: A table declared as structure = vectorwise may not have 
+any other WITH clause options."
 E_PS0501_SESSION_OPEN:SS5000B_INTERNAL_ERROR
 "There were open sessions when trying to shut down the parser facility."
 E_PS0502_LEFTOVER_MEM:SS5000B_INTERNAL_ERROR
@@ -4936,41 +4941,6 @@ E_PS0BAF_SHORT_REM_UNSUPPORTED:SS50008_UNSUPPORTED_STMT
 ** Recommendation:
 **	Reenter the query, specifying only the long remark.
 */
-E_PS0BB0_UNIQ_SCOPE_NOT_ALLOWED:SS42000_SYN_OR_ACCESS_ERR
-"%0c: UNIQUE_SCOPE is not a valid WITH option for this statement.
-It is only valid for CREATE INDEX or MODIFY."
-/*%
-** Parameters:
-**	%0c - entered statement
-**
-** Explanation:
-**	UNIQUE_SCOPE is only valid with a UNIQUE index or table order,
-**	and UNIQUE can only be specified via the "CREATE INDEX" or
-**	"MODIFY" commands.  Commands such as "CREATE TABLE", "DECLARE TEMP
-**	TABLE", and "CREATE TABLE .. AS SELECT" will return this error.
-**
-** System Status:
-**	The statement is rejected.
-**
-** Recommendation:
-**	Re-issue the statement without the UNIQUE_SCOPE option.
-*/
-E_PS0BB1_UNIQ_SCOPE_SQL_ONLY:SS42000_SYN_OR_ACCESS_ERR
-"%0c: UNIQUE_SCOPE is only allowed in SQL."
-/*%
-** Parameters:
-**	%0c - entered statement
-**
-** Explanation:
-**	UNIQUE_SCOPE is only allowed in SQL, not QUEL.
-**
-** System Status:
-**	The statement is rejected.
-**
-** Recommendation:
-**	Re-issue the statement without the UNIQUE_SCOPE option,
-**	or re-issue the statement using SQL "CREATE INDEX".
-*/
 E_PS0BB2_UNIQUE_REQUIRED:SS42000_SYN_OR_ACCESS_ERR
 "%0c: UNIQUE_SCOPE cannot be specified unless UNIQUE is also
 specified."
@@ -5120,43 +5090,6 @@ E_PS0BC1_KCOMP_BTREE_ONLY:SS42000_SYN_OR_ACCESS_ERR
 **	Correct the statement (either do not request KEY compression or specify
 **	the Btree storage structure) and re-issue the statement.
 */
-E_PS0BC2_COMP_NOT_ALLOWED:SS42000_SYN_OR_ACCESS_ERR
-"The WITH COMPRESSION clause is not allowed in the MODIFY TO MERGE,
-\nMODIFY TO TRUNCATED, or MODIFY TO REORGANIZE forms of the MODIFY statement."
-/*%
-** Parameters:
-**	None.
-**
-** Explanation:
-**	This message is issued when a "MODIFY TO MERGE", "MODIFY TO TRUNCATED",
-**	or "MODIFY TO REORGANIZE" statement specifies the "WITH COMPRESSION"
-**	clause. This clause is not valid on these special-purpose forms of the
-**	"MODIFY" statement.
-**
-** System Status:
-**	The statement is rejected.
-**
-** Recommendation:
-**	Remove the "WITH COMPRESSION" clause, and re-issue the statement.
-*/
-E_PS0BC3_COMP_NOT_IN_RELOC:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: Line %0d: the WITH COMPRESSION clause is not allowed in the
-\nMODIFY TO RELOCATE form of the MODIFY statement."
-/*%
-** Parameters:
-**	%0d - line number
-**
-** Explanation:
-**	This message is issued when a "MODIFY TO RELOCATE" statement
-**	specifies the "WITH COMPRESSION" clause. This clause is not valid
-**	on this special-purpose form of the "MODIFY" statement.
-**
-** System Status:
-**	The statement is rejected.
-**
-** Recommendation:
-**	Remove the "WITH COMPRESSION" clause, and re-issue the statement.
-*/
 E_PS0BC4_COMPRESSION_TWICE:SS42000_SYN_OR_ACCESS_ERR
 "%0c: Line %1d: compression options may not be specified more than once."
 /*%
@@ -5209,27 +5142,6 @@ E_PS0BC5_KEY_OR_DATA_ONLY:SS42000_SYN_OR_ACCESS_ERR
 **	Correct any typographical errors and remove any invalid keywords,
 **	then re-issue the statement.
 */
-E_PS0BC6_BAD_COMP_CLAUSE:SS42000_SYN_OR_ACCESS_ERR
-"%0c: Line %1d, %2c is not a valid option for WITH clause. Valid single-keyword WITH options in a create statement are COMPRESSION, NOCOMPRESSION, NOPARTITION, PERSISTENCE or NOPERSISTENCE. The valid options for modify statement are all the above and NODEPENDENCY_CHECK."
-/*%
-** Parameters:
-**	%0c - statement name ("MODIFY", "CREATE INDEX", etc.)
-**	%1d - line number
-**	%2c - invalid value
-**
-** Explanation:
-**	This message is issued when a "MODIFY", "CREATE INDEX", or
-**	"CREATE TABLE ... AS SELECT" statement specifies an invalid
-**	single-keyword option.  The WITH clause must specify one of
-**	[NO]COMPRESSION, NOPARTITION, or [NO]PERSISTENCE, instead of
-**	the value printed in the message.
-**
-** System Status:
-**	The statement is rejected.
-**
-** Recommendation:
-**	Correct the WITH clause, and re-issue the statement.
-*/
 E_PS0BC7_NO_STRUCTURE:SS42000_SYN_OR_ACCESS_ERR
 "MODIFY: Line %0d: Internal error -- storage structure not known when
 \nCOMPRESSION clause encountered."
@@ -5252,33 +5164,6 @@ E_PS0BC7_NO_STRUCTURE:SS42000_SYN_OR_ACCESS_ERR
 **	Save the error log file for analysis by Technical Support personnel. If
 **	possible, determine the "MODIFY" statement which caused the error --
 **	this information will be valuable for diagnosing the problem.
-*/
-E_PS0BC8_COMP_NO_STRUCTURE:SS42000_SYN_OR_ACCESS_ERR
-"%0c: Line %1d: specification of COMPRESSION options requires
-\nspecification of STRUCTURE as well."
-/*%
-** Parameters:
-**	%0c - statement name ("CREATE INDEX" or "CREATE TABLE")
-**	%1d - line number
-**
-** Explanation:
-**	The "WITH COMPRESSION" clause on the "CREATE INDEX" and
-**	"CREATE TABLE ... AS SELECT" statements can only be provided
-**	if the "STRUCTURE=" clause is also provided.
-**
-**	This restriction exists because the meaning of the COMPRESSION clause
-**	depends on the storage structure of the table or index. Some storage
-**	structures, such as HASH and HEAP, do not support KEY compression.
-**	Other storage structures, such as a Btree secondary index, do not
-**	support DATA compression. Therefore, the desired storage structure
-**	must be specified in order to clarify the meaning of the COMPRESSION
-**	options.
-**
-** System Status:
-**	The statement is rejected.
-**
-** Recommendation:
-**	Add the "STRUCTURE=" clause to the statement and re-issue.
 */
 E_PS0BC9_DUPLICATE_WITH_CLAUSE:SS42000_SYN_OR_ACCESS_ERR
 "%0c: Line %1d: %2c options may not be specified more than once."
@@ -6755,8 +6640,6 @@ E_PS1101_REG_NOLOC:SS42000_SYN_OR_ACCESS_ERR
 "REGISTER TABLE/INDEX: Can not specify location in register table/index syntax."
 E_PS1102_REG_NODIST:SS42000_SYN_OR_ACCESS_ERR
 "REGISTER/REMOVE TABLE/INDEX statement not allowed in a distributed server."
-E_PS1103_IDX_TOOMANYOPT:SS42000_SYN_OR_ACCESS_ERR
-"REGISTER INDEX: Too many options in the WITH clause."
 E_PS1104_IDX_BADSTRUCT:SS42000_SYN_OR_ACCESS_ERR
 "REGISTER INDEX: Bad storage structure '%0c'.
 The valid storage structure names are keyed, sorkey, fullkey."

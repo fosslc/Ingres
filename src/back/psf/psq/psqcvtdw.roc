@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2008 Ingres Corporation
+** Copyright (c) 1986, 2008, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -27,8 +27,13 @@
 **	    replace nat and longnat with i4
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psq_cvtdow(
+	char *sdow);
 
 /*}
 ** Name: PSQ_DOWNAME - Day of week versus day number
@@ -52,23 +57,23 @@ typedef struct _PSQ_DOWNAME
 
 static  const PSQ_DOWNAME Psq_dowlist[] = 	/* List of days of week */
 {
-    "sun",	    0,
-    "sunday",	    0,
-    "mon",	    1,
-    "monday",	    1,
-    "tue",	    2,
-    "tues",	    2,
-    "tuesday",	    2,
-    "wed",	    3,
-    "wednesday",    3,
-    "thu",	    4,
-    "thurs",	    4,
-    "thursday",	    4,
-    "fri",	    5,
-    "friday",	    5,
-    "sat",	    6,
-    "saturday",	    6,
-    NULL
+    {"sun",	    0},
+    {"sunday",	    0},
+    {"mon",	    1},
+    {"monday",	    1},
+    {"tue",	    2},
+    {"tues",	    2},
+    {"tuesday",	    2},
+    {"wed",	    3},
+    {"wednesday",   3},
+    {"thu",	    4},
+    {"thurs",	    4},
+    {"thursday",    4},
+    {"fri",	    5},
+    {"friday",	    5},
+    {"sat",	    6},
+    {"saturday",    6},
+    {NULL,	    0}
 };
 
 

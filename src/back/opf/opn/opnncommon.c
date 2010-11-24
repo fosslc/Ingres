@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -73,8 +73,27 @@
 **          Variable Page Size - Variable Page Type support (SIR 102955)
 **      28-apr-2004 (stial01)
 **          Optimizer changes for 256K rows, rows spanning pages
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opn_ncommon(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep,
+	OPN_RLS **rlmp,
+	OPN_EQS **eqclp,
+	OPN_SUBTREE **subtp,
+	OPE_BMEQCLS *eqr,
+	OPN_SRESULT search,
+	OPN_LEAVES nleaves,
+	OPO_BLOCKS *blocks,
+	bool selapplied,
+	OPN_PERCENT selectivity,
+	OPO_TUPLES *tuples);
+i4 opn_pagesize(
+	OPG_CB *opg_cb,
+	OPS_WIDTH width);
 
 /*{
 ** Name: opn_ncommon	- common routine between leaf and non-leaf (in nodecost)
@@ -290,7 +309,6 @@ opn_pagesize(
 	OPG_CB		*opg_cb,
 	OPS_WIDTH       width)
 {
-	DB_STATUS       status;
 	i4		page_sz, pagesize;
 	i4             i;
 	i4             noofrow, prevnorow;

@@ -335,6 +335,8 @@ init_encode_tables()
 **	30-MAY-2002 (gupsh01)
 **	    Added has_default attribute to meta_columns. The earlier 
 **	    default_value now holds the actual value of the attribute.
+**	19-Aug-2010 (troal01)
+**	    Added srid to meta_columns for Ingres Geospatial
 */
 void 
 xmldtd(bool internal_dtd, char *title_doctype) 
@@ -428,7 +430,8 @@ xmldtd(bool internal_dtd, char *title_doctype)
     xfwrite(Xf_xml_dtd , ERx("\t\t\t scale \t\t CDATA \t #IMPLIED\n"));
     xfwrite(Xf_xml_dtd , ERx("\t\t\t column_label \t CDATA \t #IMPLIED\n"));
     xfwrite(Xf_xml_dtd , ERx("\t\t\t column_encrypted \t CDATA \t #IMPLIED\n"));
-    xfwrite(Xf_xml_dtd , ERx("\t\t\t column_encrypt_salt \t CDATA \t #IMPLIED >\n"));
+    xfwrite(Xf_xml_dtd , ERx("\t\t\t column_encrypt_salt \t CDATA \t #IMPLIED\n"));
+    xfwrite(Xf_xml_dtd , ERx("\t\t\t srid  \t\t CDATA \t #IMPLIED >\n"));
 
     /* write meta_index information */
     xfwrite(Xf_xml_dtd ,
@@ -681,10 +684,18 @@ static	char lfmt[] = "%ld";
 **	    Added support for ANSI date/time types.
 **      21-Jan-2009 (coomi01) b121370
 **          Add support for unicode datatypes NCHAR, NVARCHAR and LONG NVARCHAR.
+**      16-Jun-2009 (thich01)
+**          Add GEOM type.
 **      30-Jul-2009 (coomi01) b122370
 **          Use xfxmlwrite() to send default value correctly.
+**      20-Aug-2009 (thich01)
+**          Add all spatial types.
 **      28-Oct-2009 (coomi01) b122786
 **          Add test to ensure no attempt to deref a null pointer on default value.
+**      17-Aug-2010 (thich01)
+**          Add NBR and GEOMC spatial types.
+**	19-Aug-2010 (troal01)
+**	    Added SRID to the schema for Ingres Geospatial
 */
 i4
 xmlprintcols (XF_TABINFO *tp)
@@ -809,6 +820,33 @@ xmlprintcols (XF_TABINFO *tp)
         case DB_LBYTE_TYPE:
             xfwrite(Xf_out, ERx("\"LONG BYTE\""));
             break;
+        case DB_GEOM_TYPE:
+            xfwrite(Xf_out, ERx("\"GEOM\""));
+            break;
+        case DB_POINT_TYPE:
+            xfwrite(Xf_out, ERx("\"POINT\""));
+            break;
+        case DB_MPOINT_TYPE:
+            xfwrite(Xf_out, ERx("\"MPOINT\""));
+            break;
+        case DB_LINE_TYPE:
+            xfwrite(Xf_out, ERx("\"LINE\""));
+            break;
+        case DB_MLINE_TYPE:
+            xfwrite(Xf_out, ERx("\"MLINE\""));
+            break;
+        case DB_POLY_TYPE:
+            xfwrite(Xf_out, ERx("\"POLY\""));
+            break;
+        case DB_MPOLY_TYPE:
+            xfwrite(Xf_out, ERx("\"MPOLY\""));
+            break;
+        case DB_NBR_TYPE:
+            xfwrite(Xf_out, ERx("\"NBR\""));
+            break;
+        case DB_GEOMC_TYPE:
+            xfwrite(Xf_out, ERx("\"GEOMC\""));
+            break;
         case DB_NCHR_TYPE:
             xfwrite(Xf_out, ERx("\"NCHAR\""));
             break;
@@ -847,6 +885,7 @@ xmlprintcols (XF_TABINFO *tp)
         case DB_LOGKEY_TYPE:
         case DB_TABKEY_TYPE:
         case DB_BYTE_TYPE:
+        case DB_NBR_TYPE:
 	    STprintf(tbuf, ERx("\n\t\t column_width=\"%d\""),
 	        length);
 	    xfwrite(Xf_out,tbuf ); 
@@ -874,6 +913,14 @@ xmlprintcols (XF_TABINFO *tp)
         case DB_LBIT_TYPE:
         case DB_DTE_TYPE:
         case DB_LBYTE_TYPE:
+        case DB_GEOM_TYPE:
+        case DB_POINT_TYPE:
+        case DB_MPOINT_TYPE:
+        case DB_LINE_TYPE:
+        case DB_MLINE_TYPE:
+        case DB_POLY_TYPE:
+        case DB_MPOLY_TYPE:
+        case DB_GEOMC_TYPE:
 	default:
             break;
         }
@@ -936,6 +983,14 @@ xmlprintcols (XF_TABINFO *tp)
         STprintf(tbuf, ERx("\n\t\t column_encrypt_salt=\"%s\""),
             cp->column_encrypt_salt);
 	xfwrite(Xf_out, tbuf );
+	
+	/* SRID */
+	if(cp->srid != -1)
+	{
+	    STprintf(tbuf, ERx("\n\t\t srid=\"%d\""),
+	        cp->srid);
+	    xfwrite(Xf_out, tbuf );
+	}
 
 	xfwrite(Xf_out, ERx("/>\n"));		
     }

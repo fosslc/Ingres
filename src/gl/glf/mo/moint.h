@@ -45,6 +45,10 @@
 **	    replace nat and longnat with i4
 **      11-Sep-2000 (hanje04)
 **          Increase MO_DEF_MEM_LIMIT for axp_lnx) (Alpha Linux).
+**      03-nov-2010 (joea)
+**          Remove declaration of spptree which is only used for test programs.
+**          Add momon.c declarations from modata.c.  Add prototypes for
+**          modebug.c.
 **/
 
 /* some forward refs */
@@ -62,7 +66,6 @@ typedef struct mo_mon_block MO_MON_BLOCK;
 # define MO_DEF_MEM_LIMIT	((i4)1936 * 1024)
 #endif
 
-int spptree();
 VOID MO_dumpmem(char *,i4);
 
 /* for possible 64 bit machines */
@@ -225,6 +228,11 @@ FUNC_EXTERN MO_INDEX_METHOD MO_index;
 FUNC_EXTERN STATUS MO_getclass( char *classid, MO_CLASS **cp );
 FUNC_EXTERN STATUS MO_nxtclass( char *classid, MO_CLASS **cp );
 
+/* modebug.c */
+
+FUNC_EXTERN void MO_showclasses(void);
+FUNC_EXTERN void MO_showinstances(void);
+
 /* moget.c */
 
 FUNC_EXTERN STATUS MO_get( i4  valid_perms,
@@ -254,6 +262,9 @@ FUNC_EXTERN VOID MO_free( PTR obj, i4  size );
 
 FUNC_EXTERN STATUS MO_tell_class( MO_CLASS *cp, char *instance,
 				 char *value, i4  op );
+FUNC_EXTERN MO_GET_METHOD MO_mon_class_get;
+FUNC_EXTERN MO_INDEX_METHOD MO_mon_index;
+FUNC_EXTERN MO_GET_METHOD MO_nullstr_get;
 
 /* momutex.c */
 

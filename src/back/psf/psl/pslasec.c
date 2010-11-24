@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -63,8 +63,26 @@
 **	    psl_as1_nonkeyword 	   	 - actions for nonkeyword
 **	    psl_as2_with_nonkw_eq_sconst - actions for WITH nkw=sconst
 **	    psq_as3_alter_secaud	 - actions for end of statement
+**
+** History:
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
+/* TABLE OF CONTENTS */
+i4 psl_as1_nonkeyword(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	char *word);
+i4 psl_as2_with_nonkw_eq_sconst(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	char *word2);
+i4 psl_as3_alter_secaud(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb);
 /*
 ** Forward/external declarations
 */
@@ -113,9 +131,7 @@ psl_as1_nonkeyword(
 	char 	    *word
 )
 {
-	DB_STATUS   status;
 	i4	    err_code;
-        DB_DATA_VALUE	db_data;
 
 	if (STcasecmp(word, "SUSPEND" ) == 0)
 	{

@@ -1,5 +1,5 @@
 
-		Building and Installing Ingres ® on Linux
+		Building and Installing Ingres (R) on Linux
 
 
   Note: this is a living document; for the latest version please see
@@ -241,6 +241,27 @@
 	cp -p $XERCESCROOT/lib/libxerces-c.so.27.0 \
 	      /my/own/.../xerces-c-src_2_7_0/lib/lp32
 	export XERCESCROOT=/my/own/.../xerces-c-src_2_7_0
+
+  With the introduction of the new Ingres Geospatial you will now also need
+  the GEOS library to compile Ingres. The source can be found here:
+    http://trac.osgeo.org/geos/
+  You will need version 3.3.0 or if not available the SVN trunk version at:
+    http://svn.osgeo.org/geos/trunk
+  GEOS_LOC should point to the directory
+  where the .so libraries are installed. The build system will by default
+  check either /usr/local/lib or /usr/lib. GEOS_INC will point to the directory
+  where the GEOS headers are located (/usr/local/include and /usr/include by
+  default). GEOS64_LOC should point to the directory where the 32 bit versions
+  of the libraries are located if doing a 64 bit hybrid build.
+    
+  For the new Ingres Geospatial you will also need the Proj library. 
+  The source can be found here:
+    http://trac.osgeo.org/proj/
+  Version 4.7.0 or newer is recommended but you might have success with an
+  older version. PROJ_LOC (defaults to /usr/local/lib or /usr/lib) points to
+  where the libraries are. PROJ_INC will point to the proj_api.h header 
+  (/usr/local/include or /usr/include by default). PROJ64_LOC should point to
+  the 32 bit libraries if doing a hybrid build. 
 
   Building Ingres
   ---------------

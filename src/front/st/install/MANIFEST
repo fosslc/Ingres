@@ -4,6 +4,8 @@
 # History:
 #	24-jan-2005 (abbjo03)
 #	    ingbuild and iichksum are only delivered on Unix.
+#	06-Oct-2010 (troal01)
+#	    Add ingbuild to GEOLINKSTATIC.
 
 SubDir ING_SRC front st install ;
 
@@ -12,6 +14,7 @@ IISUBSYS front st install ;
 if $(UNIX)
 {
 IIUTILEXE ingbuild : ipmain.sc ;
+GEOLINKSTATIC += ingbuild ;
 
 IINEEDLIBS ingbuild : INSTALLLIB UFLIB RUNSYSLIB RUNTIMELIB
 	FDLIB FTLIB FEDSLIB UILIB LIBQSYSLIB LIBQLIB UGLIB FMTLIB

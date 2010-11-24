@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 **
 */
 
@@ -24,7 +24,6 @@
 #include    <pshparse.h>
 #include    "pslgram.h"
 #include    <yacc.h>
-#include    <pslyalloc.h>
 
 /**
 **
@@ -54,8 +53,18 @@
 **	    replace nat and longnat with i4
 **      7-oct-2004 (thaju02)
 **          Use SIZE_TYPE for memory pool > 2Gig.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psl_yalloc(
+	PTR stream,
+	SIZE_TYPE *memleft,
+	PTR *yacc_cb,
+	DB_ERROR *err_blk);
+void psl_yinit(
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psl_yalloc	- Allocate a yacc control block

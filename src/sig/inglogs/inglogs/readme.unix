@@ -1,22 +1,20 @@
-KB Doc ID:415682
+inglogs - a Unix shell script collecting Ingres and OS information 
 
- inglogs - a Unix shell script collecting some Ingres and OS information 
+When experiencing some unexpected behavior in your Ingres installation(hangings,
+ slowdowns etc.), it is often difficult to decide which information to collect 
+and to send to the support for further analysis. 
+The script "inglogs" collects all the information automatically - you simply 
+need to execute it as the installation owner.
+
+inglogs is now delivered with the distribution/patch, newer patches may contain 
+a newer version of it. The latest version is available in Servicedesk, 
+check KB Doc ID:415682
+
   
-Summary: 
-Actual Version: 1.26
-"inglogs" is sometimes updated, so you should check the version you are using from time to time.
-(check the second line of your copy) 
-  
-Problem: 
-When experiencing some unexpected behavior in your Ingres installation(hangings, slowdowns etc.), it is often difficult to decide which information to collect and to send to the support for further analysis. 
-The attached script "inglogs" collects all the information automatically - you simply need to execute it.
-The file is attached as gzip'ed Unix text file, save it as "inglogs.gz", gunzip it on a Unix/Linux box to avoid any problem with the text format. 
-  
-Resolution: 
-The inglogs script collects some information from your system which might be helpful for analysis. By default it collects as much information as possible, but you can switch off some "modules" if wanted.
-By default, most of the commands are running in the background, i.e. in parallel. This is especially useful in cases where a particular command hangs - otherwise it would block all following commands.
-The script waits until all processes are ready, so it might not finish.
-In this case use ^C to interrupt (or kill -INT pid), you may need to interrupt again, since the script is trying to collect the iimonitor output again if not collected yet.
+inglogs knows several flags, for a short description run:
+inglogs -h
+for a detailed description run:
+inglogs --help
 
 
 Usage: inglogs [-nosystemconfig] [-nosystemstate]
@@ -26,73 +24,5 @@ Usage: inglogs [-nosystemconfig] [-nosystemstate]
        inglogs [--help]
        inglogs [-v|-version|--version]
 
-Please execute as the installation owner(usually ingres)    
+Please execute as the installation owner(usually ingres).    
 
-Flags:
--no<modulename>
-  (-nosystemconfig -nosystemstate -nologfiles -noingresconfig -noingresstate)
-  By default all the above modules are executed, you can switch off
-  one or multiple modules by using -no<modulename> ... 
-
-+stackdebug
-  If set, try to get the stack traces by using an appropriate debugger
-  not needed on Solaris because of pstack 
-  you may use it on AIX, because procstack output is incomplete if OS <5.3
-  Ignored if -noingresstate is used
-  Ignored on some platforms
-
--internalthreads
-  When using the flag "-internalthreads" the command "stacks" in iimonitor
-  is executed. This command is useful only when running with Ingres internal
-  threads - and it is dangerous on installations running with 
-  system/posix threads, at least in 64bit versions this crashes the dbms server.
-
--noparallel
-  Disables the parallel mode, i.e. no process is started in the background
-
--help (-h)
-  Prints out a short usage message and exits
-
---help
-  Prints out this message and exits
-
---version (-v, -version)
-  Prints out the version of inglogs and exits
-
-
-The following information is collected, the exact information/command may differ from platform to platform:
-
-module systemconfig: 
- ulimit -a, ulimit -aH, uname -a
- /lib/libc.so.6 (libc version, Linux only)
- oslevel (AIX only) 
- sizer -v (OS version, tru64)
-
-module systemstate:
-ps 
-ipcs
-netstat
-
-module ingconfig:
-config.dat, config.log, protect.dat
-ingprenv
-env
-version.rel, version.dat 
-
-module inglogfiles:
-errlog.log
-iircp.log
-iiacp.log
-dbms logs
-
-module ingstate:
- pstack (Solaris/Linux), procstack (AIX)
- stacktraces using debugger (see +stackdebug flag)
- list of open files(Solaris, Linux, AIX)
- logstat, logstat -verbose
- lockstat, lockstat -dirty
- csreport
- iimonitor: show all sessions, show all sessions formatted
- iimonitor: stacks (ONLY if explicitly requested, dangerous, see below)
- iimonitor: show mutex x
- iinamu

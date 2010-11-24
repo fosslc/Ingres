@@ -108,6 +108,9 @@
 ##	23-Mar-2010 (hanje04)
 ##	    SIR 123296
 ##	    Set II_ABF_LNK_OPT for LSB builds
+##      29-Sep-2010 (thich01)
+##          Call iisetres to indicate this script ran successfully so the post
+##          install script detects its success.
 ##
 #  DEST = utility
 #----------------------------------------------------------------------------
@@ -401,6 +404,59 @@ cat << !
 Application-By-Forms setup complete.
 
 !
+   if [ -f $II_SYSTEM/ingres/install/release.dat ] ; then
+       VERSION=`$II_SYSTEM/ingres/install/ingbuild -version=dbms` ||
+       {
+           cat << !
+   
+$VERSION
+
+!
+          exit 1
+       }
+   elif [ x"$conf_LSB_BUILD" = x"TRUE" ] ; then
+      VERSION=`head -1 /usr/share/ingres/version.rel` ||
+   {
+       cat << !
+
+Missing file /usr/share/ingres/version.rel
+
+!
+      exit 1
+   }
+   else
+       VERSION=`head -1 $II_SYSTEM/ingres/version.rel` ||
+       {
+           cat << !
+   
+Missing file $II_SYSTEM/ingres/version.rel
+   
+!
+          exit 1
+       }
+   fi
+
+   RELEASE_ID=`echo $VERSION | sed "s/[ ().\/]//g"`
+   SETUP=`iigetres ii.$CONFIG_HOST.config.abf.$RELEASE_ID`
+   if [ "$SETUP" = "complete" ]
+   then
+        # If testing, then pretend we're not set up, otherwise scram.
+        $DEBUG_DRY_RUN ||
+        {
+            cat << !
+   
+The $VERSION version of Application-By-Forms has
+already been set up on local host "$HOSTNAME".
+   
+!
+            $BATCH || pause
+            trap : 0
+            exit 0
+        }
+        SETUP=""
+   fi
+
+iisetres ii.$CONFIG_HOST.config.abf.$RELEASE_ID complete
 $BATCH || pause
 trap : 0
 exit 0

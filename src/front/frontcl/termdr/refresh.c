@@ -183,6 +183,16 @@
 **      20-Apr-2010 (coomi01) b123602
 **          Make DOUBLE-BYTE a runtime test and bring into line with
 **          routine TDfgoto()
+**      27-may-2010 (huazh01)
+**          after finish making the change, on HP terminal (XS), output 
+**          display attribute if current display attribute is not the same as 
+**          previous on. (b123820)
+**      28-jul-2010 (huazh01)
+**          only apply the fix to b123820 if the previous display attribute
+**          is reverse video. (b124090)
+**      23-Aug-2010 (huazh01)
+**          On HP-UX, clean up display attribute if previous frame has a reverse 
+**          video field. (b124215)
 */
 u_char		TDsaveLast();
 
@@ -1608,7 +1618,11 @@ i4	wy;
 					 ((zda && !*cda && ndaval) ||
 					  (!zda && *cda && !ndaval) ||
 					  (ndaval && (IITDcda_prev != *cda) &&
-					   (ndaval != *cda)))))
+					   (ndaval != *cda))))
+                                        ||
+                                        (*cda == _RVVID && 
+                                         *cda != (ndaval & _DAMASK))
+                                       )
 				    {
 					/*
 					** Handle the case of clearing
@@ -2204,6 +2218,23 @@ i4	wy;
 			*/
 			if (XS && wx > lch)
 			{
+
+				/* output display attribute if previous
+                                ** one is not the same as the current one.
+                                */
+                                if (pda != *nda  &&
+                                   (pda & _DAMASK) == _RVVID)
+                                {
+                                   TDsmvcur(ly, lx, y, wx + invc_wx);
+                                   ly = y;
+                                   lx = wx + invc_wx;
+                                   fonts = (ndaval = *nda) & _LINEMASK;
+                                   da = ndaval & _DAMASK;
+                                   color = ndaval & _COLORMASK;
+
+                                   TDdaout(fonts, da, color);
+                                }
+
 				if ((wx + invc_wx) > cols_1)
 				{
 					pda = EOS;

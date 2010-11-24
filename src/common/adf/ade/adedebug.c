@@ -131,10 +131,18 @@
 **	    byte data as a stream of hex digits.
 **	27-Oct-2008 (kiria01) SIR120473
 **	    Added DB_PAT_TYPE types to display
+**	16-Jun-2009 (thich01)
+**	    Add GEOM type.
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Add and treat all spatial types the same as LBYTE.  Moving SEC and
+**          SECID to where their numbers are, according to adfint.h
 **      04-dec-2009 (joea)
 **          Change location of DB_BOO_TYPE in type_name array.
 **       7-Jul-2010 (hanal04) Bug 124048
 **          Correct op150 output for ADE_CALCLEN.
+**	19-Aug-2010 (thich01)
+**	    Left a space at 60 for GCA SECL TYPE.
 **/
 
 #define		ADE_PDTSMALL	0   /* Minimum datatype in this table */
@@ -199,10 +207,10 @@ static char	*type_name[] = {
     NULL,	    "DB_LTXT_TYPE", NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
-    NULL,	    NULL,	    "DB_LOGKEY_TYPE", "DB_TABKEY_TYPE",
-    NULL,	    NULL,	    NULL,	    NULL,
-/* 60 - 79 */
-    "DB_SEC_TYPE", "DB_SECID_TYPE",	    NULL,	    NULL,
+    NULL,	    NULL,	    "DB_LOGKEY_TYPE", NULL,
+    "DB_GEOM_TYPE", "DB_POINT_TYPE", "DB_MPOINT_TYPE",	"DB_LINE_TYPE",
+/* 60 - 79  60 is left for SECL*/
+    NULL,	    "DB_MLINE_TYPE", "DB_POLY_TYPE", "DB_MPOLY_TYPE",
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
@@ -212,7 +220,7 @@ static char	*type_name[] = {
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
-    NULL,	    NULL,	    NULL,	    NULL
+    NULL,	    NULL,	    "DB_SEC_TYPE",	    "DB_SECID_TYPE" 
 };
 
 static char	*lnc_name[] = {
@@ -1500,6 +1508,14 @@ DB_DATA_VALUE      *db_dv)
 	  case DB_LBIT_TYPE:
 	  case DB_CPN_TYPE:
 	  case DB_LBYTE_TYPE:
+	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  case DB_LNVCHR_TYPE:
 	  case DB_LVCH_TYPE:
 	  case DB_LNLOC_TYPE:

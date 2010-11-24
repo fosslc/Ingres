@@ -76,6 +76,8 @@
 **	    remove dbdbms.h
 **      13-aug-2009 (joea)
 **          Add cases for DB_BOO_TYPE in adc_1klen_rti and adc_2kcvt_rti.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -731,6 +733,7 @@ i4		    *adc_width)
       case DB_LTXT_TYPE:
       case DB_BYTE_TYPE:
       case DB_VBYTE_TYPE:
+      case DB_NBR_TYPE:
 	{
 	    u_char		*endp;
 	    register i4	inbytes;
@@ -740,6 +743,7 @@ i4		    *adc_width)
 	    if (    adc_dv->db_datatype == DB_CHA_TYPE
 		||  adc_dv->db_datatype == DB_CHR_TYPE
 		||  adc_dv->db_datatype == DB_BYTE_TYPE
+                ||  adc_dv->db_datatype == DB_NBR_TYPE
 	       )
 	    {
 		p = f;
@@ -1140,6 +1144,7 @@ i4		    *adc_buflen)
       case DB_LTXT_TYPE:
       case DB_BYTE_TYPE:
       case DB_VBYTE_TYPE:
+      case DB_NBR_TYPE:
 	{
 	    u_char		*startp;
 	    u_char		*endp;
@@ -1148,6 +1153,7 @@ i4		    *adc_buflen)
 	    if (    adc_dv->db_datatype == DB_CHA_TYPE
 		||  adc_dv->db_datatype == DB_CHR_TYPE
 		||  adc_dv->db_datatype == DB_BYTE_TYPE
+                ||  adc_dv->db_datatype == DB_NBR_TYPE
 	       )
 	    {
 		p = f;

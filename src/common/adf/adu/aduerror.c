@@ -232,6 +232,9 @@
 **          E_AD106B_INV_INT_FOR_BOOL_CAST in aduErrorFcn.
 **      01-Jul-2010 (horda03) B123234
 **          Convert E_AD5079_INTERVAL_IN_ABS_FUNC to E_US10F5_INTERVAL_IN_ABS_FUNC
+**      31-Aug-2010 (thich01)
+**          Add E_AD5606_SPATIAL_NOT_SUPPORTED for platforms where spatial is
+**          not supported.
 **/
     
 
@@ -735,6 +738,7 @@ i4		    pcnt,
       case E_AD5511_BAD_DTLEN_FOR_ESCAPE:
       case E_AD5512_BAD_DTID2_FOR_ESCAPE:
       case E_AD5513_BAD_DTLEN2_FOR_ESCAPE:
+      case E_AD5601_GEOSPATIAL_INTERNAL:
       case E_AD6001_BAD_MATHOPT:
       case E_AD7000_ADP_BAD_INFO:
       case E_AD7001_ADP_NONEXT:
@@ -1103,6 +1107,8 @@ i4		    pcnt,
       case E_AD5090_DATE_MUL:
       case E_AD5091_DATE_DIV:
       case E_AD50A0_BAD_UUID_PARM:
+      case E_AD5600_GEOSPATIAL_USER:
+      case E_AD5606_SPATIAL_NOT_SUPPORTED:
       case E_AD8999_FUNC_NOT_IMPLEMENTED:
 	adf_errcb->ad_usererr	= adf_errorcode;
 	break;

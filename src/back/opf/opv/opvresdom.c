@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -64,10 +64,15 @@
 **	06-Jul-06 (kiria01) b116230
 **	    psl_print becomes PSL_RS_PRINT bit in new field psl_rsflags
 **	    to allow for extra flags in PST_RSDM_NODE
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-
+/* TABLE OF CONTENTS */
+PST_QNODE *opv_resdom(
+	OPS_STATE *global,
+	PST_QNODE *function,
+	DB_DATA_VALUE *datatype);
 
 /*{
 ** Name: opv_resdom	- create a resdom node

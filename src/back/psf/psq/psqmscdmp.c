@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -45,7 +45,6 @@
 **          psq_ciddmp - Dump a cursor id
 **          psq_errdmp - Dump an error block
 **	    psq_str_dmp - Dump a string
-[@func_list@]...
 **
 **
 **  History:    $Log-for RCS$
@@ -73,17 +72,43 @@
 **	10-Jan-2001 (jenjo02)
 **	    ADF_CB* is available in PSS_SESBLK, remove SCU_INFORMATION
 **	    call to get it, use psf_sesscb() instead.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-/*
-[@forward_type_references@]
-[@forward_function_references@]
-[@#defines_of_other_constants@]
-[@type_definitions@]
-[@global_variable_definitions@]
-[@static_variable_or_function_definitions@]
-*/
+/* TABLE OF CONTENTS */
+i4 psq_headdmp(
+	PSQ_CBHEAD *cb_head);
+i4 psq_siddmp(
+	CS_SID *sessid);
+i4 psq_lngdmp(
+	DB_LANG qlang);
+i4 psq_decdmp(
+	DB_DECIMAL *decimal);
+i4 psq_dstdmp(
+	DB_DISTRIB distrib);
+i4 psq_booldmp(
+	i4 boolval);
+i4 psq_modedmp(
+	i2 mode);
+i4 psq_tbiddmp(
+	DB_TAB_ID *tabid);
+i4 psq_ciddmp(
+	DB_CURSOR_ID *cursid);
+i4 psq_errdmp(
+	DB_ERROR *errblk);
+i4 psq_dtdump(
+	DB_DT_ID dt_id);
+i4 psq_tmdmp(
+	DB_TAB_TIMESTAMP *timestamp);
+i4 psq_jrel_dmp(
+	PST_J_MASK *inner_rel,
+	PST_J_MASK *outer_rel);
+i4 psq_upddmp(
+	i4 updtmode);
+i4 psq_str_dmp(
+	unsigned char *str,
+	i4 len);
 
 /*{
 ** Name: psq_headdmp	- Dump a control block header

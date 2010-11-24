@@ -140,45 +140,209 @@
 **	04-aug-2010 (miket) SIR 122403
 **	    Change encryption activation terminology from
 **	    enabled/disabled to unlock/locked.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    Turf out the dmu characteristics array and replace it with
+**	    a structure that both parse and DMF can use.
 **/
 
-/*}
-** Name:  DMF_ATTR_ENTRY - Description of each attribute of a database table.
+/*
+** Name: DMU_CHARACTERISTICS -- Table characteristics structure
 **
 ** Description:
-**      This structure is used to describe the attributes records to be 
-**      inserted in the system tables for a database table create operation.  
-**      The DMU_CB.dmu_attr_array field contains a pointer to an array 
-**      containing entries of this type.
+**	This structure is used to describe various table characteristics
+**	to DMF:  structure, uniqueness, fillfactor, and so on.
+**	The structure contains an "indicator" bitmap which shows
+**	which characteristics are actually being passed, and a bunch
+**	of values.
+**
+**	Indicator-only characteristics don't have an associated value;
+**	all that's needed is the indicator.  A good example is DMU_TEMP_TABLE,
+**	which says that the associated table is a temporary table.
+**
+**	Flag-valued characteristics are those which might be ON, OFF,
+**	or not specified.  The associated flag is set (along with the
+**	indicator, of course) if the passed value is ON.
+**
+**	Numeric-valued characteristics have some sort of associated
+**	numeric value which is part of the structure.  Some numeric
+**	characteristics take a set of predefined values (DMU_STRUCTURE),
+**	and some take a more or less arbitrary value (FILLFACTOR or EXTEND).
+**
+**	The DMU_CHARACTERISTICS is not only used to pass values to DMF;
+**	it's used by the parser to collect WITH-option values and
+**	verify them.
+**
+**	As a historical note, DMU characteristics used to be passed
+**	using a variable-length array.  Each array element had a type
+**	and a value.  This form may have saved a bit of memory, but was
+**	not especially convenient for parsing and checking.  Considerable
+**	effort was being expended converting from one form to another.
+**	The current DMU_CHARACTERISTICS structure isn't all that
+**	large, and it's a lot easier to use by both parse and DMF.
 **
 ** History:
-**      01-sep-85 (jennifer)
-**          Created.
-**      26-feb-87 (jennifer)
-**          Added a flag for ndefault.
-**	06-mar-89 (neil)
-**          Reserved a flag for rules.
-**	17-apr-89 (mikem)
-**	    Logical key development. Added DMU_F_SYS_MAINTAINED and DMU_F_WORM.
-**	24-jan-1990 (fred)
-**	    Added peripheral datatype support.  Added DMU_F_PERIPHERAL.
-**	28-jul-92 (rickh)
-**	    FIPS CONSTRAINTS:  default id, default tuple pointer, change
-**	    DMU_F_NULL to DMU_F_KNOWN_NOT_NULLABLE.
-**	2-june-93 (robf)
-**	    Add DMU_F_HIDDEN/SEC_LABEL/SEC_KEY values, matching the ATT_
-**	    values in dmf.h
-**	9-dec-04 (inkdo01)
-**	    Added attr_collID for column level collation support.
-**	4-june-2008 (dougi)
-**	    Added attr_seqTuple and flags for identity columns.
-**	07-Dec-2009 (troal01)
-**	    Renamed to DMF_ATTR_ENTRY and moved to hdr!hdr!dmf.h
+**	12-Oct-2010 (kschendel)
+**	    Ditch the dmu_char_array in favor of something that's
+**	    easier for both the parser and DMF.
 */
 
-/*
- * Moved to dmf.h
- */
+/* The indicator array is a bit-map.  Define the indicator bits. */
+
+enum dmu_charind_enum {
+
+/* Indicator-only characteristics. */
+	DMU_CASCADE,		/* CASCADE variation of ALTER TABLE */
+	DMU_EXT_CREATE,		/* DMF internal: creating an etab */
+	DMU_GATEWAY,		/* Doing a gateway operation */
+	DMU_GLOBAL_INDEX,	/* Defining a global index (on a partitioned
+				** base table */
+	DMU_NOT_DROPPABLE,	/* Table/index not droppable */
+	DMU_NOT_UNIQUE,		/* Table/index supports a non-unique
+				** constraint.  This is *NOT* the opposite
+				** of DMU_UNIQUE. */
+	DMU_ROW_SEC_AUDIT,	/* Security-auditing on ROW */
+	DMU_SUPPORTS_CONSTRAINT, /* Table/index supports a constraint */
+	DMU_SYS_MAINTAINED,	/* Table contains a system_maintained column */
+	DMU_SYSTEM_GENERATED,	/* System generated object (index, probably) */
+	DMU_TEMP_TABLE,		/* Creating / modifying a temp table */
+	DMU_UNIQUE,		/* UNIQUE key structure */
+	DMU_VIEW_CREATE,	/* Creating a view */
+
+/* Indicators with an associated flag value in dmu_char_flags */
+
+	DMU_ACTION_ONOFF,	/* Distinguish e.g. modify to phys_consistent
+				** from modify to phys_inconsistent */
+	DMU_AUTOSTRUCT,		/* Auto constraint-index structuring; not
+				** really a DMF flag, is for QEF, but
+				** it's convenient to have it here. */
+	DMU_CLUSTERED,		/* (notused at present) Clustered primary */
+	DMU_CONCURRENT_ACCESS,	/* Concurrent index creation */
+	DMU_CONCURRENT_UPDATES,	/* "online modify" */
+	DMU_DUPLICATES,		/* Duplicate rows or not */
+	DMU_GW_UPDT,		/* Gateway: [no]update */
+	DMU_PERSISTS_OVER_MODIFIES,  /* [no]Persistence */
+	DMU_RECOVERY,		/* [no]recovery */
+	DMU_STATEMENT_LEVEL_UNIQUE,  /* unique_scope=statement (as opposed to
+				** row.  flag set -> statement) */
+
+/* Indicators for numeric value things */
+
+	DMU_DATAFILL,		/* FILLFACTOR= dmu_fillfac */
+	DMU_IFILL,		/* NONLEAFFILL= dmu_nonleaff */
+	DMU_LEAFFILL,		/* LEAFFILL= dmu_leaff */
+	DMU_MINPAGES,		/* MINPAGES= dmu_minpgs */
+	DMU_MAXPAGES,		/* MAXPAGES= dmu_maxpgs */
+	DMU_ALLOCATION,		/* ALLOCATION= dmu_alloc */
+	DMU_EXTEND,		/* EXTEND= dmu_extend */
+	DMU_PAGE_SIZE,		/* PAGE_SIZE= dmu_page_size */
+	DMU_TABLE_PRIORITY,	/* PRIORITY= dmu_cache_priority */
+	DMU_BLOBEXTEND,		/* dmu_blobextend for blob etabs */
+	DMU_DIMENSION,		/* RTREE dimensionality dmu_dimension */
+
+/* Numeric things with specifically defined values */
+
+	DMU_STRUCTURE,		/* STRUCTURE= dmu_struct (DB_xxx_STORE) */
+	DMU_DCOMPRESSION,	/* Data compression, see below */
+	DMU_KCOMPRESSION,	/* Key / index compression, see below */
+	DMU_JOURNALED,		/* Journaling on or off (or later) */
+	DMU_VACTION,		/* "Verify" action (patch, table_debug, etc) */
+	DMU_VOPTION,		/* Verify sub-option (eg table_option) */
+
+/* The last indicator that DMF cares / knows about. */
+
+	DMU_CHARIND_LAST,	/* End of DMF-relevant indicators */
+
+/* This is not the end of the bit-map!  We need to allow for more bits,
+** because the parser has any amount of stuff that it wants to keep
+** track of, such as location= and many others.
+** We could define the parser indicators here too, but it seems a shame
+** to make someone edit dmucb.h to make a parser change.  Instead, we'll
+** simply make room for a couple dozen more indicators.  A quick
+** check in the code will verify that there's enough extra bits.
+**
+** (I originally tried the alternative, which was to keep a separate
+** and larger parser bit-map.  It works, but knowing which one to use
+** when, and updating one from the other, was tedious and error prone.)
+*/
+
+	DMU_ALLIND_LAST = DMU_CHARIND_LAST+30	/* End of the bits */
+
+};
+
+typedef struct _DMU_CHARACTERISTICS
+{
+
+    char	dmu_indicators[(DMU_ALLIND_LAST+BITSPERBYTE) / BITSPERBYTE];
+
+    i4		dmu_struct;		/* structure type */
+    i4		dmu_fillfac;		/* fillfactor value */
+    i4		dmu_leaff;		/* leaffill (indexfill) value */
+    i4		dmu_nonleaff;		/* nonleaffill value */
+    i4		dmu_minpgs;		/* minpages value */
+    i4		dmu_maxpgs;		/* maxpages values */
+    i4		dmu_alloc;		/* allocation value. */
+    i4		dmu_extend;		/* extend value. */
+    i4		dmu_page_size;		/* requested page size for table */
+    i4		dmu_blobextend;		/* blob_extend value */
+    i4		dmu_cache_priority;	/* priority= value */
+    i4		dmu_dimension;		/* rtree dimension */
+    i4		dmu_voption;		/* table_option= value */
+
+/* dmu_voption values in addition to table_option values */
+#define			    DMU_T_BITMAP	0x0001
+#define			    DMU_T_LINK		0x0002
+#define			    DMU_T_RECORD	0x0004
+#define			    DMU_T_ATTRIBUTE	0x0008
+#define			    DMU_T_PERIPHERAL	0x0010
+
+    i2		dmu_vaction;		/* DMU_ACT_VERIFY sub-action */
+#define			    DMU_V_VERIFY	1
+#define			    DMU_V_REPAIR	2
+#define			    DMU_V_PATCH		3
+#define			    DMU_V_FPATCH	4
+#define			    DMU_V_DEBUG		5
+/* A modifier flag OR'ed to any of the above */
+#define			    DMU_V_VERBOSE	8
+
+    i2		dmu_journaled;		/* Journaled? */
+#define	DMU_JOURNAL_OFF		0	/* Not journaled */
+#define	DMU_JOURNAL_ON		1	/* Journaled now (db is journaled) */
+#define	DMU_JOURNAL_LATER	2	/* Journaled later; db not journaled
+					** *NOTE* If "later" makes it to DMF,
+					** it means "ON".
+					*/
+
+    i2		dmu_dcompress;		/* Data compression */
+    i2		dmu_kcompress;		/* Key compression */
+#define	DMU_COMP_OFF	0		/* Explicitly no compression */
+#define DMU_COMP_ON	1		/* "normal" compression on */
+#define DMU_COMP_HI	2		/* Hidata compression on */
+#define DMU_COMP_DFLT	3		/* Compression "on" but defaulted,
+					** figure it out after doing storage
+					** structure resolution.
+					** *Note* DMF does not see "dflt",
+					** it's for the parser.
+					*/
+    i4		dmu_flags;		/* On/Off flags */
+#define DMU_FLAG_ACTON		0x01	/* General modify action ON (vs OFF)
+					** This is used when the modify action
+					** does NOT have an equivalent with-
+					** option.  (else the with-option
+					** flag is used instead.)
+					*/
+#define DMU_FLAG_AUTOSTRUCT	0x02	/* AUTOSTRUCT option */
+#define DMU_FLAG_CLUSTERED	0x04	/* Clustered option */
+#define DMU_FLAG_CONCUR_A	0x08	/* CONCURRENT_ACCESS option */
+#define DMU_FLAG_CONCUR_U	0x10	/* CONCURRENT_UPDATES option */
+#define DMU_FLAG_DUPS		0x20	/* DUPLICATES option */
+#define DMU_FLAG_EXTONLY	0x40	/* EXTENSIONS_ONLY option */
+#define DMU_FLAG_RECOVERY	0x80	/* RECOVERY option */
+#define DMU_FLAG_PERSISTENCE	0x100	/* PERSISTENCE option */
+#define DMU_FLAG_UPDATE		0x200	/* (gw)UPDATE option (register) */
+#define DMU_FLAG_UNIQUE_STMT	0x400	/* UNIQUE_SCOPE stmt (not row) */
+
+} DMU_CHARACTERISTICS;
+
 
 /*}
 ** Name:  DMU_CB - DMF utility call control block.
@@ -262,21 +426,70 @@
 **	18-Mar-2010 (gupsh01) SIR 123444
 **	    Added dmu_newtab_name to support Alter table rename operation.
 */
+
+/* MODIFY and ALTER TABLE have numerous variations.  This "action code"
+** defined exactly what sort of operation is going on.  (One note of caution:
+** MODIFY to RELOCATE is not at present listed here, because it's
+** handled as a separate statement with a separate dmf-call.  It may
+** be desirable to fix that at some point.)
+** Many if not all of these actions require as a minimum that certain
+** indicators and values be set in the DMU_CHARACTERISTICS section.
+*/
+
+enum dmu_action_enum {
+	DMU_ACT_NONE = 0,	/* Not set yet */
+
+	/* MODIFY actions */
+
+	DMU_ACT_STORAGE,	/* MODIFY to storage-structure, including
+				** MODIFY to RECONSTRUCT */
+	DMU_ACT_ADDEXTEND,	/* MODIFY to add_extend */
+	DMU_ACT_ENCRYPT,	/* MODIFY to encrypt */
+	DMU_ACT_LOG_CONSISTENT,	/* MODIFY to log_[in]consistent */
+	DMU_ACT_MERGE,		/* MODIFY to merge */
+	DMU_ACT_PERSISTENCE,	/* MODIFY to [no]persistence */
+	DMU_ACT_PHYS_CONSISTENT, /* MODIFY to phys_[in]consistent */
+	DMU_ACT_PRIORITY,	/* MODIFY to priority=n */
+	DMU_ACT_READONLY,	/* MODIFY to [no]readonly */
+	DMU_ACT_REORG,		/* MODIFY to reorganize */
+	DMU_ACT_TABLE_RECOVERY,	/* MODIFY to table_recovery_[dis]allowed */
+	DMU_ACT_TRUNC,		/* MODIFY to truncated */
+	DMU_ACT_USCOPE,		/* MODIFY to unique_scope=[row | statement] */
+	DMU_ACT_VERIFY,		/* MODIFY to patch / verify / table_debug */
+
+	/* ALTER TABLE actions */
+
+	DMU_ALT_ADDCOL,		/* Add column */
+	DMU_ALT_DROPCOL,	/* Drop column */
+	DMU_ALT_ALTERCOL,	/* Alter column */
+	DMU_ALT_TBL_RENAME,	/* Rename table */
+	DMU_ALT_COL_RENAME,	/* Rename column */
+
+	/* Fake action for RELOCATE.  This never appears (at present)
+	** as a dmu_action, but we define it so that callers can treat
+	** DMU_RELOCATE_TABLE (a qeu_d_op) as if it were a MODIFY action
+	** for comparison purposes.
+	*/
+	DMU_ACT_RELOC
+};
+
+
 typedef struct _DMU_CB
 {
-    PTR             q_next;
-    PTR             q_prev;
-    SIZE_TYPE       length;                 /* Length of control block. */
-    i2		    type;                   /* Control block type. */
-#define                 DMU_UTILITY_CB      2
-    i2              s_reserved;
-    PTR             l_reserved;
-    PTR             owner;
-    i4         ascii_id;             
-#define                 DMU_ASCII_ID        CV_C_CONST_MACRO('#', 'D', 'M', 'U')
-    DB_ERROR        error;                  /* Common DMF error block. */
-    PTR	            dmu_tran_id;            /* Transaction ID. */
-    i4         dmu_flags_mask;         /* Modifier to operation. */
+    PTR		q_next;
+    PTR		q_prev;
+    SIZE_TYPE	length;                 /* Length of control block. */
+    i2		type;                   /* Control block type. */
+#define	DMU_UTILITY_CB      2
+    i2		s_reserved;
+    PTR		l_reserved;
+    PTR		owner;
+    i4		ascii_id;
+#define	DMU_ASCII_ID        CV_C_CONST_MACRO('#', 'D', 'M', 'U')
+    DB_ERROR	error;                  /* Common DMF error block. */
+    PTR		dmu_tran_id;            /* Transaction ID. */
+    enum dmu_action_enum dmu_action;	/* MODIFY or ALTER action code */
+    i4		dmu_flags_mask;         /* Modifier to operation. */
 #define			DMU_EXTONLY_MASK    0x0001L
 #define                 DMU_EXTTOO_MASK     0x0002L
 #define			DMU_PARTITION	    0x0004L  /* Create a partition */
@@ -347,10 +560,10 @@ typedef struct _DMU_CB
                                             ** location list. */
     DM_PTR          dmu_key_array;          /* Array of key attributes. */
     DM_PTR          dmu_attr_array;         /* Array of attributes. */
-    DM_DATA         dmu_char_array;         /* Array of characteristics. */
-    DM_DATA         dmu_conf_array;         /* Array of configuration 
+    DM_DATA         dmu_conf_array;         /* Array of configuration
                                             ** variables. */
-    DB_TAB_NAME     dmu_newtab_name;	    /* New table name for Rename 
+    DMU_CHARACTERISTICS dmu_chars;	    /* Table characteristics */
+    DB_TAB_NAME     dmu_newtab_name;	    /* New table name for Rename
 					    ** operation. */
     i4         dmu_gw_id;              /* Gateway id */
 #define	    DMGW_NONE       0
@@ -453,164 +666,6 @@ typedef struct _DMU_CB
     u_char	    dmu_enc_new256pass[AES_256_BYTES];
 
 }   DMU_CB;
-
-/*}
-** Name:  DMU_CHAR_ENTRY - Description of characteristic of a database table.
-**
-** Description:
-**      This structure is used to describe the characteristics of
-**      the storage structure in create, modify and index operations.
-**      The DMU_CB.dmu_char_array field contains a pointer to an array
-**      containing entries of this type.
-**
-** History:
-**      01-sep-85 (jennifer)
-**          Created.
-**	17-apr-89 (mikem)
-**	    Logical key development.   Added DMU_SYS_MAINTAINED.
-**	15-aug-89 (rogerk)
-**	    Added support for Non-SQL Gateway - added DMU_GATEWAY attribute.
-**	24-jan-1990 (fred)
-**	    Peripheral Datatype support.  Added DMU_EXT_CREATE.
-**	10-jan-1991 (bryanp)
-**	    Added new characteristic DMU_INDEX_COMP for specifying Btree index
-**	    compression.
-**	24-jan-1992 (bryanp)
-**	    Renamed DMU_TEMP_CREATE to DMU_TEMP_TABLE.
-**	    Added DMU_RECOVERY characteristic for WITH NORECOVERY support.
-**	28-jul-92 (rickh)
-**	    FIPS CONSTRAINTS:  new characteristics:  table not droppable,
-**	    uniqueness enforced at statement end, table persists over modifies,
-**	    table is system generated.
-**	23-oct-92 (teresa)
-**	    added DMU_V_VERBOSE
-**	30-mar-1993 (rmuth)
-**	    Add new item DMU_ADD_EXTEND.
-**	15-may-1993 (rmuth)
-**	    Add new items DMU_READONLY, DMU_NOREADONLY and
-**	    DMU_CONCURRENT_ACCESS.
-**	1-jun-1993 (robf)
-**	    Add DMU_ROW_SEC_LABEL and DMU_ROW_SEC_AUDIT items.
-**	26-july-1993 (rmuth)
-**	    Remove DMU_NOREADONLY, use the ON/OFF field in DMU_READONLY.
-**	6-jan-95 (nanpr01)
-**          Add DMU_PHYS_INCONSISTENT, DMU_LOG_INCONSISTENT, 
-**	    DMU_TABLE_RECOVERY_DISALLOWED
-**	    Added for partial backup & recovery Bug # 66002.
-**	06-mar-1996 (stial01 for bryanp)
-**	    Add DMU_PAGE_SIZE characteristic.
-**      22-jul-1996 (ramra01 for bryanp)
-**          Add Alter Table support: DMU_CASCADE, DMU_ALTER_TYPE,
-**          DMU_C_DROP_ALTER, and DMU_C_ADD_ALTER.
-**	13-aug-96 (somsa01)
-**	    Added DMU_ETAB_JOURNAL for enabling jounaling at next checkpoint for
-**	    etab tables.
-**	21-Mar-1997 (jenjo02)
-**	    Table priority project:
-**	    Added DMU_TABLE_PRIORITY, DMU_TO_TABLE_PRIORITY.
-**	9-apr-98 (inkdo01)
-**	    Added DMU_TO_PERSISTS_OVER_MODIFIES,
-**	    DMU_TO_STATEMENT_LEVEL_UNIQUE for modify "to" options for 
-**	    constraint index with clause feature.
-**	27-apr-99 (stephenb)
-**	    Add DMU_T_PERIPHERAL
-**      17-Apr-2001 (horda03) Bug 104402
-**          Add DMU_NOT_UNIQUE.
-**	22-Dec-2003 (jenjo02)
-**	    Added DMU_GLOBAL_INDEX for Partitioned Table Project.
-**	03-Mar-2004 (gupsh01)
-**	    Added DMU_C_ALTCOL_ALTER for alter table alter column support.
-**	25-Apr-2006 (jenjo02)
-**	    Add DMU_CLUSTERED for Clustered (Btree) primary table.
-**	30-Mar-2009 (gupsh01, dougi)
-**	    Added DMU_C_ALTCOL_RENAME for alter table rename tables/column 
-**	    support.
-*/
-typedef struct _DMU_CHAR_ENTRY
-{
-    i4         char_id;                /* Characteristic identifier. */
-#define                 DMU_STRUCTURE	    1L
-                                            /* Valid values are DB_HEAP_STORE,
-					    ** DB_ISAM_STORE, DB_HASH_STORE or
-					    ** DB_BTRE_STORE, DB_RTRE_STORE. */
-#define                 DMU_DATAFILL        2L
-#define                 DMU_MINPAGES        3L
-#define                 DMU_MAXPAGES        4L
-#define                 DMU_UNIQUE          5L
-#define                 DMU_TEMP_TABLE      6L
-#define                 DMU_VIEW_CREATE     7L
-#define                 DMU_JOURNALED       8L
-#define                 DMU_IFILL           9L
-#define                 DMU_COMPRESSED     10L
-#define                 DMU_IDX_CREATE	   11L
-#define			DMU_LEAFFILL	   12L
-#define			DMU_MERGE	   13L
-#define                 DMU_TRUNCATE       14L
-#define                 DMU_DUPLICATES     15L
-#define                 DMU_REORG          16L
-#define                 DMU_SYS_MAINTAINED 17L
-#define                 DMU_GATEWAY	   18L
-#define			DMU_GW_UPDT	   19L
-#define			DMU_GW_RCVR	   20L
-#define			DMU_ALLOCATION	   21L
-#define			DMU_EXTEND	   22L
-#define			DMU_VERIFY	   23L
-#define			    DMU_V_VERIFY	1L
-#define			    DMU_V_REPAIR	2L
-#define			    DMU_V_PATCH		3L
-#define			    DMU_V_FPATCH	4L
-#define			    DMU_V_DEBUG		5L
-#define			    DMU_V_VERBOSE	8L
-#define			DMU_VOPTION	   24L
-#define			    DMU_T_BITMAP	0x0001L
-#define			    DMU_T_LINK		0x0002L
-#define			    DMU_T_RECORD	0x0004L
-#define			    DMU_T_ATTRIBUTE	0x0008L
-#define			    DMU_T_PERIPHERAL	0x0010L
-#define			DMU_INDEX_COMP     25L
-#define			DMU_RECOVERY	   26L
-#define			DMU_EXT_CREATE	   27L
-#define			DMU_STATEMENT_LEVEL_UNIQUE 28L
-					/* uniqueness checked at stmt end */
-#define			DMU_PERSISTS_OVER_MODIFIES 29L /* persists across modifies */
-#define			DMU_SYSTEM_GENERATED 30L /* created by system */
-#define			DMU_SUPPORTS_CONSTRAINT	31L  /* underlies a constraint*/
-#define			DMU_NOT_DROPPABLE   32L /* table not user-droppable */
-#define			DMU_ADD_EXTEND      33L /* Add free space to a table */
-#define			DMU_READONLY        	34L  /* Table is readonly */
-#define			DMU_CONCURRENT_ACCESS   35L  /* index does not take X*/
-#define                 DMU_PAGE_SIZE           36L
-#define			DMU_TABLE_PRIORITY      37L  /* "WITH" Table priority */
-#define			DMU_TO_TABLE_PRIORITY   38L  /* "TO" Table priority */
-#define			DMU_NOT_UNIQUE		39L  /* Index for a non-unique constraint */
-#define			DMU_CLUSTERED		40L  /* Clustered primary  */
-#define			DMU_BLOBEXTEND	        41L  /* add_extend for blobs */
-#define			DMU_GLOBAL_INDEX	42L  /* Global index on
-						     ** partitioned table */
-#define			DMU_ROW_SEC_AUDIT       51L /* Table as row security audit*/
-#define 		DMU_PHYS_INCONSISTENT 52L /* Table physically inconsi */
-#define			DMU_LOG_INCONSISTENT  53L /* Table logically inconsis */
-#define			DMU_TABLE_RECOVERY_DISALLOWED 54L /* No table recovery*/
-#define			DMU_ALTER_TYPE 	    56L   
-#define			DMU_CASCADE	    57L	 
-#define			DMU_DIMENSION	    58L /* Rtree dimensionality */
-#define			DMU_TO_STATEMENT_LEVEL_UNIQUE 59L
-				/* modify to unique_scope=statement */
-#define			DMU_TO_PERSISTS_OVER_MODIFIES 60L 
-				/* modify to persistence */
-#define			DMU_ENCRYPT		61L	/* encryption */
-
-    i4       char_value;               /* Characteristic value. */
-#define                 DMU_C_OFF           0L
-#define                 DMU_C_ON            1L
-#define			DMU_C_NOT_SET	    2L
-#define 		DMU_C_ADD_ALTER	    3L  
-#define			DMU_C_DROP_ALTER    4L 
-#define			DMU_C_HIGH	    5L
-#define			DMU_C_ALTCOL_ALTER  6L
-#define			DMU_C_ALTTBL_RENAME 7L
-#define			DMU_C_ALTCOL_RENAME 8L
-}   DMU_CHAR_ENTRY;
 
 /*}
 ** Name:  DMU_CONF_ENTRY - Description of configuration variables.

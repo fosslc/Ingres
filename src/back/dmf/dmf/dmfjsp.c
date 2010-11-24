@@ -608,6 +608,8 @@
 **          Changes for Long IDs
 **      14-Apr-2010 (hanal04) SIR 123574
 **          Added -disable_mustlog and -enable_mustlog options to alterdb.
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Return int instead of VOID to agree with function prototype.
 **	    
 */
 /*
@@ -814,9 +816,9 @@ typedef struct
 **	    otherwise.
 */
 # ifdef	II_DMF_MERGE
-VOID MAIN(argc, argv)
+int MAIN(argc, argv)
 # else
-VOID 
+int 
 main(argc, argv)
 # endif
 i4                  argc;
@@ -1152,6 +1154,9 @@ char		    *argv[];
     /*  Exit with error status. */
 
     PCexit(FAIL);
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 /*{

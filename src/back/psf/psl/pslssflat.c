@@ -114,7 +114,61 @@
 **	    be recorded against the exported inner, maybe exported multiple
 **	    levels and the final export will be picked up later when the
 **	    updated BOP is seen in the tree higher up.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+static i4 psl_flatten1(
+	PST_QNODE **nodep,
+	PSS_YYVARS *yyvarsp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PST_STK *stk);
+i4 psl_ss_flatten(
+	PST_QNODE **nodep,
+	PSS_YYVARS *yyvarsp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl_add_resdom_var(
+	PSS_SESBLK *cb,
+	PST_QNODE **chainp,
+	PST_QNODE *var);
+i4 psl_add_resdom_agh(
+	PSS_SESBLK *cb,
+	PST_QNODE **chainp,
+	PST_QNODE **aghp);
+PST_QNODE **psl_lu_resdom_var(
+	PSS_SESBLK *cb,
+	PST_QNODE **chainp,
+	PST_QNODE *var);
+static void psl_retarget_vars(
+	PSS_SESBLK *cb,
+	PST_QNODE *tree,
+	PSS_RNGTAB *dt_rng);
+static i4 psl_float_factors(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *from,
+	PSS_RNGTAB *dt_rng,
+	PST_QNODE *to);
+static i4 psl_project_vars(
+	PSS_SESBLK *cb,
+	PST_QNODE *srctree,
+	PST_QNODE *desttree);
+static i4 psl_project_corr_vars(
+	PSS_SESBLK *cb,
+	PST_QNODE *srctree,
+	PST_QNODE *desttree);
+static void psl_analyse_vars(
+	PST_STK *stk,
+	PST_QNODE *tree,
+	char *map,
+	i4 dtvno,
+	u_i4 *pseen);
+#define SEEN_INNER	1
+#define SEEN_OUTER	2
+#define SEEN_DTVNO	4
 
 
 /*
@@ -140,64 +194,6 @@ static const u_i4 opmeta_unsupp[] = {
     /*PST_CARD_ALL*/	FLAT_CAP_NOMETA | FLAT_CAP_01 | FLAT_CAP_ANY,
     /*PST_CARD_01L*/	FLAT_CAP_NOMETA
 };
-/*
-**  Forward and/or External function references.
-*/
-
-static DB_STATUS
-psl_add_resdom_var(
-	PSS_SESBLK	*cb,
-	PST_QNODE	**chainp,
-	PST_QNODE	*var);
-
-static DB_STATUS
-psl_add_resdom_agh(
-	PSS_SESBLK	*cb,
-	PST_QNODE	**chainp,
-	PST_QNODE	**aghp);
-
-static PST_QNODE**
-psl_lu_resdom_var(
-	PSS_SESBLK	*cb,
-	PST_QNODE	**chainp,
-	PST_QNODE	*var);
-
-static VOID
-psl_retarget_vars(
-	PSS_SESBLK	*cb,
-      PST_QNODE		*tree,
-      PSS_RNGTAB	*dt_rng);
-
-static DB_STATUS
-psl_float_factors(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PST_QNODE	*from,
-	PSS_RNGTAB	*dt_rng,
-	PST_QNODE	*to);
-
-static DB_STATUS
-psl_project_vars (
-	PSS_SESBLK	*cb,
-	PST_QNODE	*srctree,
-	PST_QNODE	*desttree);
-
-static DB_STATUS
-psl_project_corr_vars (
-	PSS_SESBLK	*cb,
-	PST_QNODE	*srctree,
-	PST_QNODE	*desttree);
-
-static VOID
-psl_analyse_vars(
-	PST_STK		*stk,
-	PST_QNODE	*tree,
-	char		*map,
-	i4		dtvno,
-	u_i4		*pseen);
-#define SEEN_INNER	1
-#define SEEN_OUTER	2
-#define SEEN_DTVNO	4
 
 /*
 ** Name: psl_flatten1 - flattens out singleton sub-selects from 1 tree.
@@ -319,7 +315,6 @@ psl_flatten1(
 	/****** Start reduced recursion, depth first tree scan ******/
 	if (descend && (node->pst_left || node->pst_right))
 	{
-	    i4 i;
 	    /* Increment depth counters for children */
 	    switch (node->pst_sym.pst_type)
 	    {
@@ -348,6 +343,8 @@ psl_flatten1(
 		    pst_push_item(stk, (PTR)PST_DESCEND_MARK);
 		}
 
+		break;
+	    default:
 		break;
 	    }
 	    /* Delay node evaluation */
@@ -473,9 +470,7 @@ psl_flatten1(
 		    i4 r_vno = r->pst_sym.pst_value.pst_s_var.pst_vno;
 		    i4 inner, outer, card;
 		    PST_J_MASK masks[2]; /* left, right */
-		    PSS_1JOIN *join_info;
 		    DB_JNTYPE jtype;
-		    bool in_qual = FALSE; /* just local where */ 
 
 		    /* We will now decend LHS & RHS collecting info about the
 		    ** VAR nodes in each. Usually there will be 1 in each. */
@@ -868,7 +863,6 @@ psl_flatten1(
 			    }
 			    {
 				PST_RT_NODE agnode;
-				YYAGG_NODE_PTR *agglist_elem;
 				PST_QNODE *agqual = NULL;
 				if (status = pst_node(cb, &cb->pss_ostream, NULL, NULL, 
 						    PST_QLEND, NULL, 0, 0, 0, 0, NULL,
@@ -1223,7 +1217,6 @@ psl_flatten1(
 			{
 			    PST_VAR_NODE varnode;
 			    PST_QNODE *ag_resdom = subsel->pst_left;
-			    PST_QNODE *res = NULL;
 			    PST_QNODE *aop;
 			    PST_STK_CMP cmp_ctx;
 
@@ -1353,9 +1346,6 @@ psl_flatten1(
 			v = NULL;
 			while (psl_find_node(residue->pst_right, &v, PST_VAR))
 			{
-			    PST_VAR_NODE varnode;
-			    PST_QNODE *ag_resdom = subsel->pst_left;
-			    PST_QNODE *res = NULL;
 			    PST_QNODE **p;
 			    if (v->pst_sym.pst_value.pst_s_var.pst_vno == dt_rng->pss_rgno)
 				continue; /* Already done */
@@ -1615,6 +1605,8 @@ psl_flatten1(
 		}
 	    }
 	    break;
+	default:
+	    break;
 	}
 	nodep = (PST_QNODE**)pst_pop_item(stk);
 	if (descend = (nodep == PST_DESCEND_MARK))
@@ -1654,7 +1646,6 @@ psl_ss_flatten(
 	PSQ_CB		*psq_cb)
 {
     PST_STK		stk;
-    i4			err_code;
     DB_STATUS		status = E_DB_OK;
     i4 i;
 
@@ -1766,7 +1757,7 @@ psl_add_resdom_var(
 	    else
 	    {
 		PST_STK_CMP cmp_ctx;
-		i4 res;
+
 		PST_STK_CMP_INIT(cmp_ctx, cb, NULL);
 		if (pst_qtree_compare(&cmp_ctx, &node->pst_right,
 				&var, FALSE) < 0)
@@ -1900,7 +1891,6 @@ psl_add_resdom_agh(
     PST_QNODE		*node, *rvar;
     DB_ERROR		error;
     PST_RSDM_NODE	resdom;
-    PSS_DUPRB		dup_rb;
 
     if ((*aghp)->pst_sym.pst_type != PST_AGHEAD)
 	psl_bugbp();
@@ -1919,7 +1909,7 @@ psl_add_resdom_agh(
 	else
 	{
 	    PST_STK_CMP cmp_ctx;
-	    i4 res;
+
 	    PST_STK_CMP_INIT(cmp_ctx, cb, NULL);
 	    if (pst_qtree_compare(&cmp_ctx, &node->pst_right,
 			    aghp, FALSE) < 0)
@@ -2029,7 +2019,7 @@ psl_lu_resdom_var(
 	    else
 	    {
 		PST_STK_CMP cmp_ctx;
-		i4 res;
+
 		PST_STK_CMP_INIT(cmp_ctx, cb, NULL);
 		if (pst_qtree_compare(&cmp_ctx, &node->pst_right,
 				&var, FALSE) < 0)
@@ -2603,7 +2593,6 @@ psl_analyse_vars(
 	i4		dtvno,
 	u_i4		*pseen)
 {
-    DB_STATUS status = E_DB_OK;
     register PST_QNODE *v = tree;
     register u_i4 seen = 0;
 

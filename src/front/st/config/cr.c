@@ -353,6 +353,7 @@
 # include <gl.h>
 # include <pc.h>
 # include <cv.h>
+# include <qu.h>
 # include <lo.h>
 # include <me.h>
 # include <st.h>
@@ -371,6 +372,7 @@
 # include <ctype.h>
 # include <equel.h>
 # include <iicommon.h>
+# include <gcccl.h>
 # include <fe.h>
 # include <ug.h>
 # include "cr.h"
@@ -409,6 +411,8 @@ static PM_CONTEXT *protect_data;
 
 void scan_cache_params(char *, char *, char *, char *, char *, char *, 
 			FILE *, bool);
+static void scan_ports_and_change(char *host, char *serverType, char *instance, 
+                           char *countStr, FILE *output);
 static void special_rules(char *, char *, FILE *, i4, char *, char *);
 static char * get_cache_name(char *host, char *instance);
 bool check_cache_name(char *value);
@@ -3371,6 +3375,9 @@ get_cache_name(char *host, char *instance)
 **	    cbf crashes on an attempt to change the name of cache when
 **	    not using shared caching (which could be useful if you were
 **	    doing that and intending to change to shared caching afterwards)
+**       4-Nov-2010 (hanal04) Bug 124655
+**          Update port values in-line with CBF when the gcd startup count
+**          is changed.
 */
 
 static void
@@ -3574,6 +3581,16 @@ special_rules(char *host, char *instance, FILE *output,
 	    /* now set it and everything it depends on */ 
 	    (void)CRsetPMval( resource, value, output, tee_stdout, FALSE );
     }
+
+    if ( STcompare( symbol + STlength(SystemCfgPrefix), 
+	 ERx(".$.ingstart.$.gcd") ) == 0 )
+    {
+        /* Need to update the ports */
+        char *serverType;
+
+        serverType = PMmGetElem(pm_context, 4, symbol);       
+        scan_ports_and_change(host, serverType, instance, value, output);
+    }
 } /* special_rules */
 
 bool
@@ -3597,3 +3614,270 @@ check_cache_name(char   *value)
     return(OK);
 }
 
+/*
+** Name: scan_ports_and_change - Change ports values.
+**
+** Description:
+**	Indicate that port rollups are supported for DAS or GCC
+**      TCP ports with the syntax XXnn or numeric ports.  A plus
+**      sign ("+") is appended to the port code if this format is
+**      detected and no plus sign already exists.
+**
+** Inputs:
+**      host		The config host being updated.
+**	serverType	The server type being updated. gcd only for now.
+**	instance	The instance being updated.
+**      countStr	The value being set.
+**	output		FILE * for output file
+**
+** Outputs:
+**	None
+**
+** Side Effects:
+**	May update port parameters.
+**
+** History:
+**	 4-Nov-2010 (hanal04) Bug 124655
+**	    Created from format_port_rollups() used in CBF.
+**
+*/
+
+static void
+scan_ports_and_change(char *host, char *serverType, char *instance, 
+                      char *countStr, FILE *output)
+{
+    char temp[ BIG_ENOUGH ], expbuf[ BIG_ENOUGH ];
+    char *regexp, *last, *name, *value;
+    char *startCntBuff;
+    char *gcd_warnmsg = "Setting startup count to one";
+    char *protocol;
+    char *type;
+    STATUS status;
+    char newPort[GCC_L_PORT];
+    u_i2 offset = 0;
+    u_i2 portNum = 0;
+    u_i2 numericPort = 0;
+    u_i2 startCount = 0;
+    u_i2 startOffset = 0;
+    PM_SCAN_REC state;
+    typedef struct
+    {
+        QUEUE port_q;
+        char *port;
+        char *protocol;
+    }  PORT_QUEUE;
+    PORT_QUEUE pq, *pp;
+    QUEUE *q;
+
+    startCntBuff = countStr;
+    QUinit ( &pq.port_q );
+
+    STprintf( expbuf, ERx( "%s.%s.%s.%s.%%.port" ),
+        SystemCfgPrefix, host, serverType, instance );
+
+    regexp = PMmExpToRegExp( pm_context, expbuf );
+
+    /*
+    ** Search for items pertaining to the present server type and
+    ** instance with a TCP protocol and port.
+    */
+    for( status = PMmScan( pm_context, regexp, &state, NULL,
+        &name, &value ); status == OK; status =
+        PMmScan( pm_context, NULL, &state, NULL, &name,
+        &value ) )
+    {
+        /* extract protocol name */
+        protocol = PMmGetElem( pm_context, 4, name );
+
+        /* extract port */
+        type = PMmGetElem( pm_context, 5, name );
+
+        if ( !STcompare(protocol, "tcp_ip" ) ||
+             !STcompare(protocol, "wintcp" ) ||
+             !STcompare(protocol, "tcp_wol" ) ||
+             !STcompare(protocol, "tcp_dec" ))
+        {
+            pp = (PORT_QUEUE *)MEreqmem( 0,
+                sizeof(PORT_QUEUE), TRUE, NULL );
+            pp->port = STalloc( value );
+            pp->protocol = STalloc( protocol );
+            QUinsert( (QUEUE *)pp, &pq.port_q );
+
+            /*
+            ** Check for a numeric port.
+            **
+            ** If input is not strictly numeric, input is
+            ** ignored.
+            **
+            ** Extract the numeric port and check for expected
+            ** syntax: n{n}+.
+            */
+            numericPort = 0;
+            if ( portNum == 0 )
+                for( offset = 0; CMdigit( &value[offset] ); offset++ )
+                    numericPort = (numericPort * 10) + (value[offset] - '0');
+            /*
+            ** Extract the startup count.
+            */
+            for( startOffset = 0, startCount = 0;
+                CMdigit( &startCntBuff[startOffset] ); startOffset++ )
+            {
+                startCount = (startCount * 10) +
+                    (startCntBuff[startOffset] - '0');
+            }
+
+            /*
+            ** If the port is explicitly numeric, the user may
+            ** not want the port number to increment.  Skip
+            ** the change the user will need to manually
+            ** set the port number.
+            */
+            if ( ! value[ offset ] && numericPort && startCount > 1)
+            {
+                STprintf( expbuf, ERx( "%s.%s.%s.%s.%s.%s" ),
+                          SystemCfgPrefix, host, serverType,
+                          instance, pp->protocol, type );
+                STprintf( temp, ERx( "\nUNCHANGED %s: (%s)\n\n" ),
+                                   expbuf, pp->port );
+                CRFPRINT( output, temp);
+                startCount = 1;
+            }
+        } /* if (!STcompare("tcp_ip"... */
+    } /* for( status = PMmScan( pm_context... */
+
+    /*
+    ** Go through the queue and re-write the ports
+    ** with the rollup indicator if the startup count is greater
+    ** than one and no indicator exists.  If the startup count
+    ** is less than 2, remove the indicator if it exists.
+    */
+    for (q = pq.port_q.q_prev; q != &pq.port_q;
+        q = q->q_prev)
+    {
+        pp = (PORT_QUEUE *)q;
+        for( portNum = 0, offset = 0; CMalpha( &pp->port[0] )
+           && (CMalpha( &pp->port[1] ) ||
+              CMdigit( &pp->port[1] )); )
+        {
+            /*
+            ** A two-character symbolic port permits rollup
+            ** without special formatting.
+            */
+            offset = 2;
+            if ( ! pp->port[offset] )
+                break;
+
+            /*
+            ** A one or two-digit base subport may be
+            ** specified.
+            */
+            if ( CMdigit( &pp->port[offset] ) )
+            {
+                portNum = (portNum * 10) + (pp->port[offset++] - '0');
+
+                if ( CMdigit( &pp->port[offset] ) )
+                {
+                    portNum = (portNum * 10) + (pp->port[offset++] - '0');
+
+                    /*
+                    ** An explicit base subport must be in
+                    ** the range [0,15].  A minimum of
+                    ** 14 is required to support
+                    ** rollup.
+                    */
+                    if ( portNum > 14 )
+                    {
+                        offset = 0;
+                        break;
+                    }
+                }
+            } /* if ( CMdigit ( &pp->port[offset] ) */
+
+            /*
+            ** Unconditionally break from this loop.
+            */
+            break;
+
+        } /* for( ; CMalpha( &pp->port[0] ) ... */
+
+        /*
+        ** Subport values greater than 14 cannot roll up.  Ignore them.
+        */
+        if ( portNum > 14 )
+           continue;
+
+        /*
+        ** Check for a numeric port.
+        **
+        ** If input is not strictly numeric, input is
+        ** ignored.
+        **
+        ** Extract the numeric port and check for expected
+        ** syntax: n{n}+.
+        */
+        numericPort = 0;
+        if ( portNum == 0 )
+        {
+            for( offset = 0; CMdigit( &pp->port[offset] ); offset++ )
+                numericPort = (numericPort * 10) + (pp->port[offset] - '0');
+        }
+
+        /*
+        ** Ports with the format "XX" are ignored.
+        */
+        if ( offset < 3 && !numericPort )
+            continue;
+
+        /*
+        ** Existing ports with rollups are ignored if the startup count
+        ** is greater the one.
+        */
+        if ( startCount > 1 && ( pp->port[ offset ] == '+' ) )
+            continue;
+
+        /*
+        ** If no rollup indicator is present, and no multiple startups
+        ** have been specified, ignore.
+        */
+        if ( startCount < 2 && ! pp->port[ offset ] )
+            continue;
+
+        /*
+        ** If multiple startups are not specified, remove the rollup
+        ** indicator if it exists.
+        **
+        ** After this, all exceptions should have been handled and
+        ** the port is re-written with the plus indicator.
+        */
+        if ( startCount < 2 && pp->port[ offset ] == '+' )
+        {
+            STprintf( newPort, "%s", pp->port );
+            newPort[ offset ] = '\0';
+        }
+        else
+            STprintf( newPort, "%s+", pp->port );
+
+        STprintf( expbuf, ERx( "%s.%s.%s.%s.%s.%s" ),
+            SystemCfgPrefix, host, serverType,
+                instance, pp->protocol, type );
+
+        STprintf( temp, ERx( "\nCHANGE %s: (%s)...(%s)\n\n" ),
+                                   expbuf, pp->port, newPort );
+        CRFPRINT( output, temp);
+        (void)CRsetPMval( expbuf, newPort, output, tee_stdout, FALSE );
+
+    } /* for ( q = pq.port... */
+
+    /*
+    ** De-allocate any items in the port queue.
+    */
+    for (q = pq.port_q.q_prev; q != &pq.port_q;
+        q = pq.port_q.q_prev)
+    {
+        pp = (PORT_QUEUE *)q;
+        MEfree((PTR)pp->port);
+        MEfree((PTR)pp->protocol);
+        QUremove (q);
+        MEfree((PTR)q);
+    }
+}

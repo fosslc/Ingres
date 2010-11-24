@@ -632,6 +632,8 @@
 --#     11-Aug-2010 (hanal04) Bug 124180
 --#         Added money_compat for backwards compatibility of money
 --#         string constants.
+--#     11-Nov-2010 (frima01)
+--#         Correct dbms stack size for LP64 builds.
 
 -- location setup resources
 # ifdef UNIX 
@@ -988,7 +990,7 @@ ii.$.dbms.$.stack_caching:	OFF;
 --# Go with 256K on any 64-bit platform, everything is larger.
 --# 32+64 hybrid will probably run the 64-bit server, so include them.
 #if defined(LP64) || defined(conf_BUILD_ARCH_32_64)
-ii.$.dbms.$.stack_size:		300;
+ii.$.dbms.$.stack_size:		300K;
 #else
 ii.$.dbms.$.stack_size:		200K, MIN = 200K;
 #endif /* LP64 */

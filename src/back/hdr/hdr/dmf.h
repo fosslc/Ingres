@@ -345,8 +345,16 @@
 **          Added E_DM016B_LOCK_INTR_FA
 **	15-feb-2010 (toumi01)
 **	    Add attribute fields and messages for column encryption.
+**	24-Feb-2010 (troal01)
+**	    Add E_DM5423_SRID_MISMATCH
 **      14-May-2010 (stial01)
 **          Make attname the last col in iiattribute (DM_COLUMN)
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Moved II_DMF_MERGE function prototypes here from
+**	    dmfmerge.c, added typed parameters.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype dmf_diag_dmp_pool(), dmf_diag_dump_tables(),
+**	    really prototype dmf_call().
 [@history_template@]...
 **/
 
@@ -355,6 +363,25 @@
 */
 
 typedef struct _DM_MDATA DM_MDATA;
+
+# ifdef II_DMF_MERGE
+
+FUNC_EXTERN int cacheutil_libmain(i4 argc, char *argv[]);
+FUNC_EXTERN int dmfacp_libmain(i4 argc, char *argv[]);
+FUNC_EXTERN int dmfjsp_libmain(i4 argc, char *argv[]);
+FUNC_EXTERN int iidbms_libmain(i4 argc, char *argv[]);
+FUNC_EXTERN int iimerge(i4 argc, char *argv[]);
+FUNC_EXTERN int iishowres_libmain(i4 argc, char *argv[]);
+FUNC_EXTERN int lartool_libmain(i4 argc, char *argv[]);
+FUNC_EXTERN int lockstat_libmain(i4 argc, char *argv[]);
+FUNC_EXTERN int logdump_libmain(i4 argc, char *argv[]);
+FUNC_EXTERN int logstat_libmain(i4 argc, char *argv[]);
+FUNC_EXTERN int rcpstat_libmain(i4 argc, char *argv[]);
+FUNC_EXTERN int rcpconfig_libmain(i4 argc, char *argv[]);
+FUNC_EXTERN int repstat_libmain(i4 argc, char *argv[]);
+
+# endif /* II_DMF_MERGE */
+
 
 /**
 ** Name: DMF symbolic constants. 
@@ -1162,7 +1189,7 @@ typedef struct _DM_ERR
 
 /* Misc. warning and informational messages */
 #define		    W_DM5422_IIDBDB_NOT_JOURNALED	(E_DM_MASK + 0x5422L)
-
+#define		    E_DM5423_SRID_MISMATCH  		(E_DM_MASK + 0x5423L)
 #define             E_DM9D00_IISEQUENCE_NOT_FOUND	(E_DM_MASK + 0x9D00L)
 #define             E_DM9D01_SEQUENCE_EXCEEDED 		(E_DM_MASK + 0x9D01L)
 #define             E_DM9D02_SEQUENCE_NOT_FOUND		(E_DM_MASK + 0x9D02L)
@@ -1952,20 +1979,13 @@ typedef struct _DMF_ATTR_ENTRY
 
 
 
-/*
-** The public interface to DMF is dmf_call. It would be nice to prototype
-** this function, but it's not very useful because the second argument to
-** dmf_call is sometimes a (DMC_CB *), sometimes a (DMT_CB *), sometimes a
-** (DMR_CB *), sometimes a (DMU_CB *), etc. So the only thing you can do
-** with the second argument is make it a "PTR", which ends up meaning that
-** every caller of DMF must cast the second argument to (PTR), which means
-** that there's not much value in prototyping it and we force a lot of
-** code to be touched. So, instead, we just declare it old-style.
-*/
-FUNC_EXTERN DB_STATUS	dmf_call(/*
-			    DM_OPERATION    operation,
-			    void 	    *control_block
-				*/);
+FUNC_EXTERN DB_STATUS	dmf_call( 
+				DM_OPERATION    operation,
+			        void 	    	*control_block);
+FUNC_EXTERN VOID	dmf_diag_dmp_pool(void);
+FUNC_EXTERN VOID	dmf_diag_dump_tables(
+				void (*output)(),
+				void (*error)());
 
 /*
 ** Additional defines

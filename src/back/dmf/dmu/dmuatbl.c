@@ -4,6 +4,7 @@
 
 #include    <compat.h>
 #include    <gl.h>
+#include    <bt.h>
 #include    <tm.h>
 #include    <cs.h>
 #include    <me.h>
@@ -82,6 +83,9 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
+**	    Fix the operation preamble here.
 **/
 
 /* Name: dmu_atable - Alter table (add or drop column to a table).
@@ -128,24 +132,10 @@
 **					     begin transaction operation.
 **	     .dmu_tbl_id                     Internal name of table to be 
 **					     altered.
-**	     .dmu_char_array.data_address    Pointer to an area used to input
-**					     and array of entries of type
-**					     DMU_CHAR_ENTRY.
-**					     See below for description of 
-**					     <dmu_char_array> entries.
-**	     .dmu_char_array.data_in_size    Length of char_array in bytes.
-**	
-**	
-**	     <dmu_char_array> entries are of type DMU_CHAR_ENTRY and
-**	     must have following format:
-**	     char_id                         Must be one of the dmu 
-**					     characteristics:
-**					     DMU_ALTER_TYPE
-**					     DMU_CASCADE
-**	
-**	     char_value                      The value to associate with above
-**					     characteristic.
-**	
+**	     .dmu_action		     The kind of alter to do
+**	     .dmu_chars			     Various characteristics
+**
+**
 ** Outputs:
 **	dmu_cb
 **	 .dmu_tup_cnt                    Set to -1.
@@ -237,11 +227,10 @@ dmu_atable(DMU_CB    *dmu_cb)
     DB_TAB_NAME		table_name;
     u_i4		relstat2 = 0;
     DB_TAB_NAME		newtable_name;
-    i4		i;
     i4		mask;
-    i4		char_count, attr_count;
+    i4		attr_count;
+    i4		indicator;
     DMF_ATTR_ENTRY	**attr_entry;
-    DMU_CHAR_ENTRY	*char_entry;
     DB_STATUS		s;
     ADF_CB		adf_cb;
     DB_DATA_VALUE	adc_dv1;
@@ -332,47 +321,27 @@ dmu_atable(DMU_CB    *dmu_cb)
 
 	/*  Check for characteristics. */
 	cascade = 0;
-	operation = 0;
+	operation = dmu->dmu_action;
 
-	if (dmu->dmu_char_array.data_address && 
-		dmu->dmu_char_array.data_in_size)
+	indicator = -1;
+	while ((indicator = BTnext(indicator, dmu->dmu_chars.dmu_indicators, DMU_CHARIND_LAST)) != -1)
 	{
-	    char_entry = (DMU_CHAR_ENTRY*) dmu->dmu_char_array.data_address;
-	    char_count = dmu->dmu_char_array.data_in_size / 
-			    sizeof(DMU_CHAR_ENTRY);
-
-	    for (i = 0; i < char_count; i++)
+	    switch (indicator)
 	    {
-		switch (char_entry[i].char_id)
-		{
-
-		case DMU_ALTER_TYPE:
-		    operation = (char_entry[i].char_value);
-		    if (operation != DMU_C_ADD_ALTER &&
-			operation != DMU_C_DROP_ALTER &&
-			operation != DMU_C_ALTCOL_RENAME &&
-			operation != DMU_C_ALTTBL_RENAME &&
-			operation != DMU_C_ALTCOL_ALTER)
-		    {
-			SETDBERR(&dmu->error, i, E_DM006D_BAD_OPERATION_CODE);
-		    }
-		    break;
-
 		case DMU_CASCADE:
-		    cascade = (char_entry[i].char_value == DMU_C_ON);
+		    cascade = TRUE;
 		    break;
 
 		default:
-		    SETDBERR(&dmu->error, i, E_DM000D_BAD_CHAR_ID);
-		}
-		if (dmu->error.err_code)
-		    break;
+		    SETDBERR(&dmu->error, indicator, E_DM000D_BAD_CHAR_ID);
 	    }
 	    if (dmu->error.err_code)
 		break;
 	}
 
-	if (!operation)
+	if (operation != DMU_ALT_ADDCOL && operation != DMU_ALT_DROPCOL
+	  && operation != DMU_ALT_ALTERCOL && operation != DMU_ALT_TBL_RENAME
+	  && operation != DMU_ALT_COL_RENAME)
 	{
 	   SETDBERR(&dmu->error, 0, E_DM002A_BAD_PARAMETER);
 	   break;
@@ -380,7 +349,7 @@ dmu_atable(DMU_CB    *dmu_cb)
 
 	/* Check the attribute values. */
 
-	if (operation != DMU_C_ALTTBL_RENAME)
+	if (operation != DMU_ALT_TBL_RENAME)
 	{
 	  if (dmu->dmu_attr_array.ptr_address && 
 	      (dmu->dmu_attr_array.ptr_size == sizeof(DMF_ATTR_ENTRY))
@@ -388,14 +357,14 @@ dmu_atable(DMU_CB    *dmu_cb)
 	  {
 	    attr_entry = (DMF_ATTR_ENTRY**) dmu->dmu_attr_array.ptr_address;
 	    attr_count = dmu->dmu_attr_array.ptr_in_count;
-	    if ((attr_count != 1) && (operation != DMU_C_ALTCOL_RENAME))
+	    if ((attr_count != 1) && (operation != DMU_ALT_COL_RENAME))
 	    {
 		SETDBERR(&dmu->error, attr_count, E_DM002A_BAD_PARAMETER);
 	       break;
 	    }
 
-	    if ((operation == DMU_C_ADD_ALTER) ||
-	        (operation == DMU_C_ALTCOL_ALTER))
+	    if ((operation == DMU_ALT_ADDCOL) ||
+	        (operation == DMU_ALT_ALTERCOL))
 	    {
 
 	       adf_cb.adf_errcb.ad_ebuflen = 0;

@@ -204,6 +204,8 @@ PROGRAM =	ntlogdmp
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Remove table name,owner from log records.
 **          logdump: remove support for -ttablename, add -i(reltid,reltidx)
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Return int instead of VOID to agree with function prototype.
 **          
 [@history_template@]...
 **/
@@ -378,9 +380,9 @@ PROGRAM =       logdump
 */
 
 # ifdef	II_DMF_MERGE
-VOID MAIN(argc, argv)
+int MAIN(argc, argv)
 # else
-VOID 
+int 
 main(argc, argv)
 # endif
 i4                  argc;
@@ -422,6 +424,9 @@ char		    *argv[];
     }
 
     PCexit(log_dump(argc, argv, &ldmp));
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 /*{

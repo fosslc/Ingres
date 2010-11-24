@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -77,8 +77,38 @@
 **          Moved <cs.h> for CS_SID.
 **	11-Mar-2008 (kschendel) b122118
 **	    Delete notused OJ-filter stuff.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opn_createsort(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *sortcop,
+	OPO_CO *outercop,
+	OPN_EQS *eqsp);
+static bool opn_rdups(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop);
+bool opn_checksort(
+	OPS_SUBQUERY *subquery,
+	OPO_CO **oldcopp,
+	OPO_COST oldcost,
+	OPO_BLOCKS newdio,
+	OPO_CPU newcpu,
+	OPN_EQS *eqsp,
+	OPO_COST *newcostp,
+	OPO_ISORT available_ordering,
+	bool *sortrequired,
+	OPO_CO *newcop);
+OPO_CO *opn_oldplan(
+	OPS_SUBQUERY *subquery,
+	OPO_CO **oldcopp);
+void opn_cleanup(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	OPO_BLOCKS *dio,
+	OPO_CPU *cpu);
 
 /*{
 ** Name: opn_createsort - create a sort node on top of the outer

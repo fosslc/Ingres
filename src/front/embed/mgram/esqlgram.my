@@ -824,6 +824,9 @@ static bool   set_role=FALSE;
 **	 11-Oct-2010 (kiria01) b124564
 **	    Revised grammar for DECLARE CURSOR to avoid the empty branch of
 **	    query_with from erroneously triggering the error production.
+**	 1-Nov-2010 (kschendel) SIR 124544
+**	    Allow UNIQUE as a single word WITH-option now that main sql
+**	    grammar allows it.
 **
 ** Rules to apply when writing new grammar parts:
 **
@@ -9049,6 +9052,10 @@ sql_wleft:	tNAME
 		    db_key( $1.s );
 		}
 	|	tINDEX
+		{
+		    db_key( $1.s );
+		}
+	|	tUNIQUE
 		{
 		    db_key( $1.s );
 		}

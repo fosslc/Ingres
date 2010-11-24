@@ -6,6 +6,8 @@
 #	    control jam variables as well as shell/compile options.
 #       21-May-2010 (bonro01)
 #           Remove ICE from standard builds
+#	31-Aug-2010 (thich01)
+#	    Add WITH_GEO for platforms where spatial is not supported.
 
 
 #set: config32 int_lnx
@@ -32,3 +34,4 @@ XERCES_ARCH ?= 32 ;
 
 PAX_CHECK = TRUE ;
 PLATFORM_JAMDEFS = hyb86_lnx ;
+WITH_GEO = -D_WITH_GEO ; #set option: WITH_GEO

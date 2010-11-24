@@ -348,10 +348,15 @@
 **     26-Apr-2010 (Ralph Loen) SIR 123641
 **         In SQLBrowseConnect(), replace list of hard-coded driver names
 **         with "Ingres XX", where XX is the value of II_INSTALLATION.
+**     30-Aug-2010 (thich01)
+**         In AllocEnv() added API initialization of IIAPI_VERSION_8 to 
+**         support spatial types.
 **     10-Oct-2010 (Ralph Loen) Bug 124578
 **         Set bcConnectCalled to FALSE upon SQLDisconnect(), in case
 **         SQLBrowseConnect() is called after a disconnecton the same
 **         connection handle.
+**     15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**         Changes to eliminate compiler prototype warnings.
 ** 
 */
 
@@ -407,7 +412,7 @@ static BOOL hasVnode( II_PTR connHandle, II_PTR tranHandle, char *queryText );
 #endif
 #ifndef NT_GENERIC
 static BOOL          FileDoesExist(char *, BOOL);
-char *getAltPath();
+char *getAltPath(void);
 char * getFileEntry(char *p, char * szToken, bool ignoreBracket);
 #endif
 static void         TranslatePWD(char * name, char * pwd);
@@ -2713,7 +2718,9 @@ RETCODE AllocEnv(
     */
     initParm.in_timeout = -1;
 
-# if defined(IIAPI_VERSION_7)
+# if defined(IIAPI_VERSION_8)
+    initParm.in_version = IIAPI_VERSION_8;
+# elif defined(IIAPI_VERSION_7)
     initParm.in_version = IIAPI_VERSION_7;
 # elif defined(IIAPI_VERSION_6)
     initParm.in_version = IIAPI_VERSION_6;

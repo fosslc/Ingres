@@ -4,6 +4,7 @@
 
 #include    <compat.h>
 #include    <gl.h>
+#include    <bt.h>
 #include    <cs.h>
 #include    <pc.h>
 #include    <tr.h>
@@ -631,6 +632,9 @@ DMR_CB  *dmr_cb)
 **	20-Apr-2010 (kschendel) SIR 123485
 **	    A table bulk-load is definitely a multi-row operation in the
 **	    LOB sense, reflect it in the BQCB if there is one.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
+**	    Fix the setup here.
 */
 static STATUS
 start_load(
@@ -646,11 +650,9 @@ DMP_RCB		*rcb)
     i4		 row_estimate;
     char		 *rec_buf = NULL;
     DM2R_BUILD_TBL_INFO  build_tbl_info;
-    i4		 chr_count, i;
-    DMU_CHAR_ENTRY	 *chr;
+    i4		 indicator;
     i4		 min_pages = 0, max_pages = 0;
     bool		 table_empty = TRUE;
-    i4			 error;
 
     /* Get the tuple buffer from the rcb */
     if ( rcb->rcb_tupbuf == NULL )
@@ -822,51 +824,47 @@ DMP_RCB		*rcb)
 	build_tbl_info.dm2r_extend       = tcb->tcb_rel.relextend;
 	build_tbl_info.dm2r_allocation   = tcb->tcb_rel.relallocation;
 
-	if ( dmr_cb->dmr_flags_mask & DMR_CHAR_ENTRIES )
+	/* See if we have characteristics, passed using a DMU_CHARACTERISTICS
+	** instead of a DMR char array!
+	*/
+	if ( dmr_cb->dmr_flags_mask & DMR_CHAR_ENTRIES
+	  && dmr->dmr_char_array.data_in_size == 1)
 	{
-	    chr = (DMU_CHAR_ENTRY *)dmr_cb->dmr_char_array.data_address;
-	    chr_count = dmr->dmr_char_array.data_in_size / 
-						sizeof(DMU_CHAR_ENTRY);
+	    DMU_CHARACTERISTICS *dmuchar = (DMU_CHARACTERISTICS *) dmr->dmr_char_array.data_address;
 
-	    if ( chr_count && chr == NULL )
+	    indicator = -1;
+	    while ((indicator = BTnext(indicator, dmuchar->dmu_indicators, DMU_CHARIND_LAST)) != -1)
 	    {
-		SETDBERR(&dmr->error, 0, E_DM002A_BAD_PARAMETER);
-		status = E_DB_ERROR;
-		break;
-	    }
-
-	    for ( i = 0; i < chr_count; i++)
-	    {
-		switch (chr[i].char_id)
+		switch (indicator)
 		{
 		case DMU_IFILL:
-		    build_tbl_info.dm2r_nonleaffill = chr[i].char_value;
+		    build_tbl_info.dm2r_nonleaffill = dmuchar->dmu_nonleaff;
 		    if ( build_tbl_info.dm2r_nonleaffill > 100 )
 			build_tbl_info.dm2r_nonleaffill = 100;
 		    continue;
-			
+
 		case DMU_LEAFFILL:
-		    build_tbl_info.dm2r_leaffill = chr[i].char_value;
+		    build_tbl_info.dm2r_leaffill = dmuchar->dmu_leaff;
 		    if ( build_tbl_info.dm2r_leaffill > 100 )
 			build_tbl_info.dm2r_leaffill = 100;
 		    continue;
 
 		case DMU_DATAFILL:
-		    build_tbl_info.dm2r_fillfactor = chr[i].char_value;
+		    build_tbl_info.dm2r_fillfactor = dmuchar->dmu_fillfac;
 		    if ( build_tbl_info.dm2r_fillfactor > 100 )
 			build_tbl_info.dm2r_fillfactor = 100;
 		    continue;
 
 		case DMU_MINPAGES:
-		    min_pages = chr[i].char_value;
+		    min_pages = dmuchar->dmu_minpgs;
 		    continue;
 
 		case DMU_MAXPAGES:
-		    max_pages = chr[i].char_value;
+		    max_pages = dmuchar->dmu_maxpgs;
 		    continue;
 
 		case DMU_ALLOCATION:
-		    build_tbl_info.dm2r_allocation = chr[i].char_value;
+		    build_tbl_info.dm2r_allocation = dmuchar->dmu_alloc;
 		    /*
 		    ** If a mult-location table then round allocation size
 		    */
@@ -875,7 +873,7 @@ DMP_RCB		*rcb)
 		    continue;
 
 		case DMU_EXTEND:
-		    build_tbl_info.dm2r_extend = chr[i].char_value;
+		    build_tbl_info.dm2r_extend = dmuchar->dmu_extend;
 		    /*
 		    ** If a mult-location table then round extend size
 		    */
@@ -884,22 +882,14 @@ DMP_RCB		*rcb)
 		    continue;
 
 		default:
-		    SETDBERR(&dmr->error, i, E_DM000D_BAD_CHAR_ID);
+		    /* Just ignore anything else, the parser tries to please
+		    ** everyone and might spew some stuff we don't need.
+		    */
+		    continue;
 		}
-		break;
-	    }
-
-	    /*
-	    ** See if we found an invalid parameter
-	    */
-	    if ( i < chr_count )
-	    {
-		status = E_DB_ERROR;
-		break;
 	    }
 	}
 
-	    
     } while (FALSE);
 
     if (status)

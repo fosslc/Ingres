@@ -231,6 +231,8 @@
 **	10-Nov-2008 (jonj)
 **	    SIR 120874 Change function prototypes to pass DB_ERROR *dberr
 **	    instead of i4 *err_code, use new form uleFormat.
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Return int instead of VOID to agree with function prototype.
 **/
 
 /*
@@ -462,9 +464,9 @@ static 	VOID 	logstat_usage(void);
 */
 
 # ifdef	II_DMF_MERGE
-VOID MAIN(argc, argv)
+int MAIN(argc, argv)
 # else
-VOID 
+int 
 main(argc, argv)
 # endif
 i4	argc;
@@ -474,6 +476,9 @@ char	*argv[];
     MEadvise(ME_INGRES_ALLOC);
 # endif
     PCexit(logstat(argc, argv));
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 static STATUS

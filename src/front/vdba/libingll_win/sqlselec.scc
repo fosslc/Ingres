@@ -70,6 +70,9 @@
 **    Add new BOOLEAN datatype.
 **    Add routines to interpret boolean datatype being returned from
 **    the server and routines to display the information recieved.
+** 17-Aug-2010 (thich01)
+**    Make changes to treat spatial IISQ types like LBYTEs or NBR type as
+**    BYTE.
 **/
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
 #pragma warning(disable: 4996)
@@ -454,8 +457,17 @@ static void GetRowFromSqlda(
 				}
 				break;
 			case IISQ_BYTE_TYPE:
+			case IISQ_NBR_TYPE:
 			case IISQ_VBYTE_TYPE:
 			case IISQ_LBYTE_TYPE:
+			case IISQ_GEOM_TYPE:
+			case IISQ_POINT_TYPE:
+			case IISQ_MPOINT_TYPE:
+			case IISQ_LINE_TYPE:
+			case IISQ_MLINE_TYPE:
+			case IISQ_POLY_TYPE:
+			case IISQ_MPOLY_TYPE:
+			case IISQ_GEOMC_TYPE:
 				{
 					char* lpstr   = (char*)sqlv->sqldata + sizeof(short);
 					short nLendta = * ((short *)sqlv->sqldata);
@@ -635,9 +647,18 @@ handle_as_char:
 			sqlv->sqldata = T2A(pBufferColumn->GetBuffer());
 			break;
 		case IISQ_LBYTE_TYPE:
+		case IISQ_GEOM_TYPE:
+		case IISQ_POINT_TYPE:
+		case IISQ_MPOINT_TYPE:
+		case IISQ_LINE_TYPE:
+		case IISQ_MLINE_TYPE:
+		case IISQ_POLY_TYPE:
+		case IISQ_MPOLY_TYPE:
+		case IISQ_GEOMC_TYPE:
 			// recover only the first 64 characters
 			sqlv->sqllen = 64;
 		case IISQ_BYTE_TYPE:
+		case IISQ_NBR_TYPE:
 		case IISQ_VBYTE_TYPE:
 			sqlv->sqltype= (sqlv->sqltype < 0)? -IISQ_VBYTE_TYPE: IISQ_VBYTE_TYPE;
 			pBufferColumn->SetBufferSize (sqlv->sqllen + 1 + sizeof (short));
@@ -1092,6 +1113,7 @@ int INGRESII_GetSqlDisplayType(int nInternalIngresDataType)
 	case IISQ_MNY_TYPE:
 		return SQLACT_NUMBER_FLOAT;
 	case IISQ_BYTE_TYPE:
+	case IISQ_NBR_TYPE:
 	case IISQ_VBYTE_TYPE:
 		return SQLACT_TEXT;
 

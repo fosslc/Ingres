@@ -1,6 +1,5 @@
-/***********************/
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -60,10 +59,99 @@
 **  History:
 **      6-sep-02 (inkdo01)
 **	    Written.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-typedef struct _JDESC
+/*
+** Forward Structure Definitions:
+*/
+typedef struct _JDESC JDESC;
+
+/* TABLE OF CONTENTS */
+static bool opn_ecomb(
+	OPN_STLEAVES cvector,
+	i4 n,
+	i4 k);
+static bool opn_combgen(
+	OPS_SUBQUERY *subquery,
+	OPN_STLEAVES cvector,
+	OPN_EVAR *evarp,
+	OPN_STLEAVES emap,
+	i4 n,
+	i4 k,
+	bool *firstcomb,
+	bool allowCPs);
+static bool opn_eperm(
+	OPN_STLEAVES pvector,
+	i4 n);
+static bool opn_permgen(
+	OPS_SUBQUERY *subquery,
+	OPN_STLEAVES pvector,
+	OPN_EVAR *evarp,
+	i4 n,
+	bool *firstperm);
+static bool opn_ojanalyze(
+	OPS_SUBQUERY *subquery,
+	JDESC *jdesc,
+	i4 ojcount);
+static void opn_jtco_merge(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *np,
+	OPN_JTREE **freep,
+	OPO_CO *cop);
+static bool opn_jtreegen(
+	OPS_SUBQUERY *subquery,
+	OPN_EVAR *evarp,
+	OPN_JTREE **np,
+	OPN_STLEAVES pvector,
+	i4 *pindex,
+	OPN_JTREE **freep);
+static void opn_treeshape(
+	OPN_JTREE **freep,
+	i4 count);
+static bool opn_jintcaller(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *jtreep,
+	OPN_STATUS *sigstat);
+static void opn_plantest(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	OPV_BMVARS *primset);
+static bool opn_fullplan(
+	OPS_SUBQUERY *subquery,
+	OPV_BMVARS *primset);
+void opn_bestfrag(
+	OPS_SUBQUERY *subquery);
+static void opn_clearheld(
+	OPO_CO *cop);
+static void opn_evconnected(
+	OPS_SUBQUERY *subquery,
+	OPN_EVAR *evarp,
+	OPN_STLEAVES iemap,
+	i4 nvars,
+	i4 *num_partitions,
+	i4 *largest_partition);
+static OPN_STATUS opn_neweplan(
+	OPS_SUBQUERY *subquery,
+	OPN_EVAR *evarp,
+	OPN_STLEAVES iemap,
+	OPN_STLEAVES oemap,
+	i4 evarcount,
+	i4 pvarcount,
+	i4 *rsltix);
+OPN_STATUS opn_newenum(
+	OPS_SUBQUERY *subquery,
+	i4 enumcode);
+static void opn_reduce_map(
+	char *elim,
+	char *map,
+	i2 varcount,
+	OPN_STLEAVES oemap,
+	i4 ecount,
+	i4 rsltix);
+
+struct _JDESC
 {
     OPV_BMVARS	ojivmap;	/* inner vars to this OJ */
     OPV_BMVARS	ojtotal;	/* inner vars + indexes */
@@ -76,15 +164,8 @@ typedef struct _JDESC
     i2		ojp2count;
     OPV_BMVARS  p1map;
     OPV_BMVARS  p2map;
-} JDESC;
+};
 
-static VOID
-opn_clearheld(
-	OPO_CO	*cop);
-
-static void
-opn_reduce_map(char *elim, char *map, i2 varcount,
-			OPN_STLEAVES oemap, i4 ecount, i4 rsltix);
 
 /*{
 ** Name: opn_ecomb	- generate var list combinations for enumerator
@@ -250,7 +331,6 @@ opn_combgen(
     OPV_BMVARS	combmap, restmap, workmap;
     OPV_VARS	*varp, *var1p;
     bool	failure = FALSE;
-    bool	skipCPs;
 
     /* Loop over calls to opn_cgen until we run out of combinations or we get one
     ** that passes subsequent heuristic tests. */
@@ -820,13 +900,14 @@ opn_ojanalyze(
 	    /* Two entries with same ivcount should drop one - try the 
 	    ** outer loop one first to reduce processing. */
 	    if (jdp2->ojivcount == i)
-	     if (jdp1->ojtype == OPL_INNERJOIN ||
-		jdp1->ojtype == OPL_FOLDEDJOIN)
 	    {
-		jdp1->ojdrop = TRUE;
-		break;
+		if (jdp1->ojtype == OPL_INNERJOIN ||
+			jdp1->ojtype == OPL_FOLDEDJOIN)
+		{
+		    jdp1->ojdrop = TRUE;
+		    break;
+		}
 	    }
-	     else;
 	    /* It makes no sense to drop one, just because it has
 	    ** the same number of entries as another. And this may
 	    ** interfere with the OJ pre-computation logic and result
@@ -834,7 +915,7 @@ opn_ojanalyze(
 	    ** left inside comments, should I remember why it was there
 	    ** in the first place).
 	    {
-		/* Drop the second (kth) and continue. * 
+		* Drop the second (kth) and continue. * 
 		jdp2->ojdrop = TRUE;
 		continue;
 	    } end of removed code */
@@ -1484,7 +1565,6 @@ opn_fullplan(
 
 {
     OPV_BMVARS	primset1;
-    i4		i;
 
     /* Start by copying primary variable bitmask to local variable.
     ** The function opn_plantest will recursively analyze the plan
@@ -2033,7 +2113,6 @@ opn_neweplan(
     OPE_BMEQCLS eqcmap;
     OPN_STATUS	sigstat;
     i2		bestix[3];
-    OPO_CO	*ocop, *icop;
     bool	firstcomb, firstperm, ixfolded;
     bool	doneCO = FALSE;
     bool	first_noplan = TRUE;
@@ -2093,9 +2172,10 @@ opn_neweplan(
     for (i = 0; i < OPN_MAXLEAF && iemap[i] >= 0; i++)
     {
 	if (evarp[iemap[i]].opn_evmask & OPN_EVTABLE)
+	{
 	 if (evarp[iemap[i]].u.v.opn_varnum < subquery->ops_vars.opv_prv)
 	    BTset(evarp[iemap[i]].u.v.opn_varnum, (char *)&primset);
-	 else;
+	}
 	else if (evarp[iemap[i]].opn_evmask & OPN_EVCOMP)
 	{
 	    /* Loop over varmap setting corresponding primvars into primset. */
@@ -2379,9 +2459,6 @@ opn_neweplan(
 	    if (lbase)
 	     for (i = 0; i < subquery->ops_oj.opl_lv; i++)
 	    {
-		OPV_BMVARS	tempvmap;
-		OPV_IVARS	innervar;
-		OPE_IEQCLS	ojeqcls;
 		ojp = lbase->opl_ojt[i];
 
 		if (ojp->opl_type != OPL_LEFTJOIN &&
@@ -2934,6 +3011,10 @@ opn_neweplan(
 **	    logic for copying the ixmap values from CINDEX to CINDEX (via the
 **	    base table) in the event that you don't have any placement indices
 **	    at all - only replacement ones (CINDEX).
+**	05-Nov-2010 (smeke01) b123011
+**	    Back out change that included secondaries with OJ subsets even if
+**	    there are only two (rather than three) primaries, as this could
+**	    sometimes cause poor performing plans to be picked.
 */
 OPN_STATUS
 opn_newenum(
@@ -2944,7 +3025,7 @@ opn_newenum(
 						** range table entries */
     OPS_STATE	*global = subquery->ops_global;
     OPN_JTREE	*jtreep;
-    i4		i, j, k, rsltix, ojcount, cocount;
+    i4		i, j, k, rsltix, ojcount;
     OPN_EVAR	*evarp;				/* address of OPN_EVAR vector */
     i4		varcount = subquery->ops_vars.opv_rv;
     i4		la_count;			/* no. tables in each join */
@@ -2955,7 +3036,7 @@ opn_newenum(
     OPZ_ATTS	*attrp;
     OPO_PERM	*permp;
     OPN_STATUS	sigstat;
-    JDESC	jdesc[OPL_MAXOUTER+2] = {0}; /* outer join descriptor stuff */
+    JDESC	jdesc[OPL_MAXOUTER+2]; /* outer join descriptor stuff */
     bool	ojanal = FALSE, done;
     bool	p1_reduce;
     bool	p2_reduce;
@@ -2969,6 +3050,7 @@ opn_newenum(
 						/* deprecate variable fragment
 						** tree size code */
     la_count = subquery->ops_lacount = 3;	/* number of tables in jtree */
+    MEfill(sizeof(jdesc), 0, jdesc);
 
     evarp = (OPN_EVAR *)opu_memory (global, (varcount+1)*sizeof(OPN_EVAR));
     for (i = 0; i < varcount; i++)
@@ -2982,8 +3064,6 @@ opn_newenum(
 	{
 	    if (varp->opv_joinable.opv_bool[j] && i != j)
 	    {
-		OPV_VARS	*var1p = vbase->opv_rt[j];
-
 		/* Joinable entries are copied when both are 
 		** primaries, one is primary and the other a replacement
 		** index, or one is primary and the other a placement
@@ -3166,7 +3246,7 @@ opn_newenum(
 	OPV_BMVARS ivmap;
 	JDESC	*jptr;
 	i4	miniv, ecount, pcount;
-	bool	gotone, setres;
+	bool	gotone;
 
 	subquery->ops_lacount = la_count;	/* reset - OJ subset might
 						** have decremented it */
@@ -3272,7 +3352,7 @@ opn_newenum(
 		/* Don't do this for full joins, since the p1 and p2 arrays
 		** already contain the secondary indices we might need 
 		*/
-		if (i >= 2 && (jptr->ojtype != OPL_FULLJOIN))
+		if (i >= 3 && (jptr->ojtype != OPL_FULLJOIN))
 		{
 		  /* If this is a full join, and there are joins below it,
 		  ** the list of items to pull down into this preliminary

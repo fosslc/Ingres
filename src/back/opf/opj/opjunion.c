@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -55,8 +55,6 @@
 **  Description:
 **      Routines used to optimize unions, union views 
 **
-{@func_list@}...
-**
 **
 **  History:    
 **      28-jun-89 (seputis)
@@ -74,8 +72,33 @@
 **	06-Jul-06 (kiria01) b116230
 **	    psl_print becomes PSL_RS_PRINT bit in new field psl_rsflags
 **	    to allow for extra flags in PST_RSDM_NODE
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opj_uvar(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *qual,
+	OPV_IVARS varno,
+	DB_ATT_ID *attidp);
+static void opj_utree(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *qual,
+	OPV_IVARS varno);
+static bool opj_ctree(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *qual,
+	OPV_IVARS varno,
+	OPS_SUBQUERY *usubquery,
+	PST_QNODE *uqual);
+void opj_union(
+	OPS_SUBQUERY *subquery);
+static PST_QNODE **opj_subboolfact(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qualpp);
+void opj_uboolfact(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opj_uvar	- get the attribute number of the union view var node
@@ -432,7 +455,7 @@ opj_union(
 			    ** qualification and place into the list */
 			    PST_QNODE	    *and_node;
 			    total_bfs++;
-			    if (total_bfs >= BITS_IN(unionbm))
+			    if (total_bfs >= (i4)BITS_IN(unionbm))
 				break;		    /* cannot add anymore qualifications
 						    ** since the max boolean factor
 						    ** count has been reached */

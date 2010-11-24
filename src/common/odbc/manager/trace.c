@@ -56,6 +56,8 @@
 **	    Need pm.h for PMhost.
 **   03-Dec-2009 (Ralph Loen) 
 **      Add function templates for GetODBCTrace( ) and isCLI();
+**   15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**      Changes to eliminate compiler prototype warnings.
 */
 
 /*
@@ -216,8 +218,7 @@ char *trace_syms[] = {
 };
 
 static i2 is_cli = 0;
-i4 GetODBCTrace( );
-BOOL isCLI();
+i4 GetODBCTrace( void );
 
 /*
 ** Name: IIodbc_initTrace

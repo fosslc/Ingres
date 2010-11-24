@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2008 Ingres Corporation
+** Copyright (c) 1986, 2008, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -40,8 +40,14 @@
 **          Added <cs.h> for CS_SID.
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psl_copydelim(
+	char *delimname,
+	char **delimchar);
 
 /*}
 ** Name: PSL_CPDELIMTAB - Table of copy delimiters and their names
@@ -74,33 +80,33 @@ typedef struct _PSL_CPDELIMTAB
 
 static  const PSL_CPDELIMTAB Copy_delim_tab[] =   /* Table of copy delims */
 {
-    "nl",		"\n",
-    "sp",		" ",
-    "tab",		"\t",
-    "nul",		"\0",
-    "null",		"\0",
-    "comma",		",",
-    "colon",		":",
-    "csv",		"\001",
-    "dash",		"-",
-    "lparen",		"(",
-    "rparen",		")",
-    "quote",		"\"",
-    "ssv",		"\002",
-    "NL",		"\n",
-    "SP",		" ",
-    "TAB",		"\t",
-    "NUL",		"\0",
-    "NULL",		"\0",
-    "COMMA",		",",
-    "COLON",		":",
-    "CSV",		"\001",
-    "DASH",		"-",
-    "LPAREN",		"(",
-    "RPAREN",		")",
-    "QUOTE",		"\"",
-    "SSV",		"\002",
-    NULL
+    {"nl",		"\n"},
+    {"sp",		" "},
+    {"tab",		"\t"},
+    {"nul",		"\0"},
+    {"null",		"\0"},
+    {"comma",		","},
+    {"colon",		":"},
+    {"csv",		"\001"},
+    {"dash",		"-"},
+    {"lparen",		"("},
+    {"rparen",		")"},
+    {"quote",		"\""},
+    {"ssv",		"\002"},
+    {"NL",		"\n"},
+    {"SP",		" "},
+    {"TAB",		"\t"},
+    {"NUL",		"\0"},
+    {"NULL",		"\0"},
+    {"COMMA",		","},
+    {"COLON",		":"},
+    {"CSV",		"\001"},
+    {"DASH",		"-"},
+    {"LPAREN",		"("},
+    {"RPAREN",		")"},
+    {"QUOTE",		"\""},
+    {"SSV",		"\002"},
+    {NULL, NULL}
 };
 
 /*{

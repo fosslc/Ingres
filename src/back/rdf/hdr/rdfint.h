@@ -252,6 +252,8 @@
 **          Changes for Long IDs
 **      20-aug-2010 (stial01)
 **          rdu_mrecover() Added ULM_RCB param.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add a host of missing prototypes.
 */
 
 /* Macro to return pointer to session's RDF_SESS_CB directly from SCF's SCB */
@@ -2108,6 +2110,29 @@ FUNC_EXTERN DB_STATUS rdu_xlock(    RDF_GLOBAL	*global,
 FUNC_EXTERN STATUS rdu_drop_attachments (RDF_GLOBAL *global,
 					 RDR_INFO *infoblk,
 					 i4 sessions_reqd);
+
+FUNC_EXTERN DB_STATUS rdu_r_deulh( RDF_GLOBAL	*global,
+				   RDR_INFO	*infoblk,
+				   DMT_ATT_ENTRY *att_ptr );
+
+FUNC_EXTERN DB_STATUS rdu_i_deulh( RDF_GLOBAL	*global,
+				   RDR_INFO	*infoblk,
+				   DMT_ATT_ENTRY *att_ptr );
+
+FUNC_EXTERN VOID rdu_master_infodump( RDR_INFO		*info,
+			   	      RDF_GLOBAL	*global,
+			      	      RDF_CALLER	caller,
+			      	      RDF_SVAR		request );
+
+FUNC_EXTERN VOID rdf_mo_init( RDI_SVCB	*rdf_svci );
+
+FUNC_EXTERN DB_STATUS rdd_buffcap( RDF_GLOBAL	*global,
+				   DD_1LDB_INFO	*ldb_p );
+
+FUNC_EXTERN DB_STATUS rdu_bld_colcompare( RDF_GLOBAL	*global );
+
+FUNC_EXTERN DB_STATUS rdf_readtuples( RDF_GLOBAL	*global,
+				      RDF_CB		*rdfcb );
 
 /* the following routines are not used now but may be useful later, they are
 ** lifted from the TITAN codeline (6.4 star) 

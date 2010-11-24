@@ -19,6 +19,7 @@
 # include	<unistd.h>
 
 # include	<PCerr.h>
+# include	<pccl.h>
 # include	"pclocal.h"
 
 /*
@@ -26,8 +27,8 @@
  *		PCspawn.c
  *			routines defined
  *				PCspawn()
- *				no_fork()
- *				no_exec()
+ *				PCno_fork()
+ *				PCno_exec()
  */
 
 
@@ -143,6 +144,8 @@
 **	12-Feb-2008 (hanje04)
 **	    SIR S119978
 **	    Include unistd.h to quite compiler warnings for system functions.
+**	15-nov-2010 (stephenb)
+**	    Include pccl.h and fix up finction defines for prototyping.
 */
 
 
@@ -155,8 +158,6 @@ LOCATION	*in_name;
 LOCATION	*out_name;
 PID		*pid;
 {
-    STATUS PCdospawn();
-
     /* 
     ** Someday the added functionality of appended output and redirected
     ** stderr may be part of PCspawn.
@@ -175,7 +176,6 @@ i4		append;		/* non-zero to append, rather than recreate,
 i4		rederr;		/* Non-zero to redirect stderr to err_log */
 PID		*pid;
 {
-    STATUS		no_exec();
     char		buf[64];
     char		*in_fname;
     char		*out_fname;
@@ -342,7 +342,7 @@ PID		*pid;
 
 		/* should never reach here, because we checked first */
 
-		no_exec(buf);
+		PCno_exec(buf);
 	    }
 	}
 
@@ -363,7 +363,7 @@ PID		*pid;
  *		PCspawn.c
  *
  *	Function:
- *		no_fork
+ *		PCno_fork
  *
  *	Arguments:
  *		None
@@ -390,7 +390,7 @@ PID		*pid;
  
 
 STATUS
-no_fork()
+PCno_fork(void)
 {
 	switch (errno)
 	{
@@ -415,10 +415,10 @@ no_fork()
 /*
  *
  *	Name:
- *		no_exec
+ *		PCno_exec
  *
  *	Function:
- *		no_exec
+ *		PCno_exec
  *
  *	Arguments:
  *		char	*command;
@@ -449,7 +449,7 @@ no_fork()
  
 
 STATUS
-no_exec(command)
+PCno_exec(command)
 char	*command;
 {
 	PCstatus = FAIL;

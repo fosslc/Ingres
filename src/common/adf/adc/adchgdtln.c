@@ -81,6 +81,8 @@
 **	    replace nat and longnat with i4
 **      14-aug-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1hg_dtln_rti.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -560,6 +562,7 @@ DB_DATA_VALUE	    *adc_hgdv)
       }
 
       case DB_BYTE_TYPE:
+      case DB_NBR_TYPE:
 	adc_hgdv->db_datatype	= DB_BYTE_TYPE;
 	adc_hgdv->db_prec	= 0;
 	if (adc_hgdv->db_length <= 0)

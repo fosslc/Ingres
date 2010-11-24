@@ -172,6 +172,10 @@ typedef	struct	_GW_RCB	GW_RCB;
 **	    Correctly cast gwr_session_id to PTR, not CS_SID.
 **	12-Apr-2008 (kschendel)
 **	    Expand qualification function stuff to match new DMF style.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    gwr_char_array replaced with DMU_CHARACTERISTICS.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Properly declared gwf_call(), gwf_trace().
 **/
 
 #define	GWF_VERSION	1
@@ -233,7 +237,7 @@ struct _GW_RCB
 */
     DM_PTR          gwr_key_array;	/* Array of key attributes. */
     DM_PTR          gwr_attr_array;	/* Array of attributes. */
-    DM_DATA         gwr_char_array;	/* Array of characteristics. */
+    struct _DMU_CHARACTERISTICS *gwr_dmf_chars;  /* DMF table attributes */
     DM_DATA         gwr_conf_array;	/* Array of configuration 
 					** variables.
 					*/
@@ -844,8 +848,9 @@ typedef struct _DM_COLUMN	GW_DMP_ATTR;
 **     function prototype
 */
 
-FUNC_EXTERN DB_STATUS gwf_call();
-FUNC_EXTERN DB_STATUS gwf_trace();
+FUNC_EXTERN DB_STATUS gwf_call(GWF_OPERATION op,
+			       GW_RCB	*rcb);
+FUNC_EXTERN DB_STATUS gwf_trace(DB_DEBUG_CB *debug_cb);
 
 /* Name of the special place object for use in 'is' clauses which appear
 ** in an array below for use in the parser

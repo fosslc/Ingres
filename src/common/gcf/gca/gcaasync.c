@@ -5399,6 +5399,19 @@ gca_load_v7_peer( GCA_ACB *acb, char **buffer, GCA_PEER_INFO *peer )
 **      04-Dec-2007 (horda03/ashco01) Bug 119120
 **          Re-instate check for outstanding GC_SEND and do not call
 **          gca_purge() if this is the case.
+**	16-Nov-2010 (gordy & rajus01) Bug 124732
+**	    An abf hang was reported when porting Ingres 10 on HP-UX PA-RISC
+**	    platform. Investigation of the issue with GCA trace revealed that
+**	    occurrence of an old problem and a normal channel GCA_SEND 
+**	    operation has not happened. It was also noticed in the trace 
+**	    that an interrupt (GCA_ATTENTION) had occurred immediately after 
+**	    GCA_RESTORE. And GCpurge() was deferred. Since this is a 
+**	    GCA_RESTORE, it doesn't really matter what state the snd_parms 
+**	    in the parent is in because GCA_SAVE/GCA_RESTORE is
+**	    not allowed with active operations. The svc_parms information is 
+**	    really only valid if svc->in_use is true indicating that 
+**	    a normal channel send is at least active. The test for active 
+**	    normal send situation has been extended.	
 */
 
 static VOID
@@ -5407,19 +5420,20 @@ gca_purge( GCA_SVC_PARMS *svc_parms )
     GCA_ACB		*acb = svc_parms->acb;
     GCA_SR_SM		*ssm = &acb->send[ GCA_NORMAL ];
     GCA_SVC_PARMS	*svc = &acb->snd_parms[ GCA_NORMAL ];
+    bool normal_send_active = ( svc->in_use && 
+			      gca_states[ svc->state-1 ].action == GC_SEND );
 
     GCA_DEBUG_MACRO(3)
 	( "%04d   GCA_PURGE %s %s %s\n",
 	  (i4)(acb ? acb->assoc_id : -1), 
 	  (ssm->bufend > ssm->bufptr) ? "(unflushed data) " : "",
-          (gca_states[ svc->state - 1 ].action == GC_SEND)  ? "deferred" : "",
+          ( normal_send_active )  ? "deferred" : "",
           (acb->flags.send_active)  ? "SendActive" : "" );
 
     /*
     ** Don't call GCpurge if a normal GCsend is outstanding.  
     */
-    if (acb->flags.send_active ||
-        gca_states[ svc->state - 1 ].action == GC_SEND)  return;
+    if (acb->flags.send_active || normal_send_active)  return;
     /* 
     ** Buffered send data wouldn't get flushed until after the channel
     ** was purged, so we discard it now.

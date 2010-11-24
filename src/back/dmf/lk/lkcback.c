@@ -115,6 +115,9 @@ NO_OPTIM=dr6_us5
 **	    Expand trace buffer to 2048 entries.
 **	09-Dec-2008 (jonj)
 **	    SIR 120874: use new form uleFormat, CL_CLEAR_ERR.
+**      21-oct-2010 (joea)
+**          Add a diagnostic trace in lk_cback_post if cback_posts != 1.
+**          In lk_callback, fix the counting of callback posts.
 */
 
 /*
@@ -325,6 +328,7 @@ lk_callback(DMC_CB	    *dmc_cb)
     i4		    posts;
     LK_LKID	    CbackLockid;
     LK_LOCK_KEY	    DebugKey;
+    bool            cback_is_valid;
 
     /* Find the callback thread descriptor from offset */
     cbt = (CBT *)LGK_PTR_FROM_OFFSET(LK_mycbt);
@@ -455,6 +459,7 @@ lk_callback(DMC_CB	    *dmc_cb)
 	*/
 	while ( DB_SUCCESS_MACRO(status) && next_offset )
 	{
+            cback_is_valid = TRUE;
 	    cback_offset = next_offset;
 	    cback = (CBACK *)LGK_PTR_FROM_OFFSET(cback_offset);
 	    
@@ -504,6 +509,7 @@ lk_callback(DMC_CB	    *dmc_cb)
 	    }
 	    else
 	    {
+                cback_is_valid = FALSE;
 		/* Resource/cback is stale */
 		if ( cback->cback_cbt_id != LK_mycbt )
 		{
@@ -540,7 +546,8 @@ lk_callback(DMC_CB	    *dmc_cb)
 	    if ( status != E_DB_INFO )
 	    {
 		/* If more cbacks queued on this lock, stay on this cback */
-		if ( (CSadjust_counter(&cback->cback_posts, -1)) > 0 )
+                if (cback_is_valid &&
+		    CSadjust_counter(&cback->cback_posts, -1) > 0)
 		{
 		    if ( rsb )
 		    {
@@ -755,6 +762,12 @@ lk_cback_post(LKB *lkb, bool fromAST)
 	/* Atomically compare and swap into head of singly linked list. */
 	cback_offset = LGK_OFFSET_FROM_PTR(cback);
 	LK_HOOK_CBT(cbt, cback->cback_q_next, cback_offset );
+    }
+    else
+    {
+        LK_LOCK_KEY key = rsb->rsb_name;
+        key.lk_key1 = cback->cback_posts;
+        LK_CALLBACK_TRACE(85, &key);
     }
 
     /* Now resume callback thread if necessary */

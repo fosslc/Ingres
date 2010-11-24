@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -62,9 +62,7 @@
 **  Description:
 **      This file hold routines that print out the OPF data structures that 
 **      are passed to OPC.  
-[@comment_line@]...
 **
-{@func_list@}...
 **
 **
 **  History:
@@ -112,75 +110,56 @@
 **	    removed obsolete references to outer join structures
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Forward and/or External function references.
-*/
-static VOID
-opc_grange(
-	OPS_STATE		*global,
-	OPV_GLOBAL_RANGE	*grange );
 
-static VOID
-opt_subquery(
-	OPS_STATE		*global,
-	OPS_SUBQUERY		*psubqry );
-
-static VOID
-opt_rangev(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subqry );
-
-static VOID
-opt_jatts(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subqry );
-
-static VOID
-opt_fatts(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subqry );
-
-static VOID
-opc_eclass(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subqry );
-
-static VOID
-opt_bfs(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subqry );
-
-static VOID
-opt_ce(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subqry );
-
-static VOID
-opt_ojt(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subqry );
-
-static VOID
-opt_cobfs(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subqry,
-	OPB_BMBF	*bfactbm );
-
-static VOID
-opt_dbitmap(
-	OPS_STATE	*global,
-	char		*label,
-	PTR		tmap,
-	i4		mapsize );
-
-static VOID
-opt_msort(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subqry );
-
+/* TABLE OF CONTENTS */
+void opt_state(
+	OPS_STATE *global);
+static void opc_grange(
+	OPS_STATE *global,
+	OPV_GLOBAL_RANGE *grange);
+static void opt_subquery(
+	OPS_STATE *global,
+	OPS_SUBQUERY *psubqry);
+static void opt_rangev(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subqry);
+static void opt_jatts(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subqry);
+static void opt_fatts(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subqry);
+static void opc_eclass(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subqry);
+static void opt_msort(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subqry);
+static void opt_bfs(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subqry);
+static void opt_ojt(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subqry);
+static void opt_ce(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subqry);
+static void opt_cobfs(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subqry,
+	OPB_BMBF *bfactbm);
+void opt_fcodisplay(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subqry,
+	OPO_CO *co);
+static void opt_dbitmap(
+	OPS_STATE *global,
+	char *label,
+	PTR tmap,
+	i4 mapsize);
 
 /*{
 ** Name: OPT_STATE	- Trace an OPS_STATE structure.
@@ -217,8 +196,6 @@ VOID
 opt_state(
 		OPS_STATE   *global)
 {
-    DB_ERROR	error;
-
     TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf, OPT_PBLEN, 
 	"***************************************************\n\n");
     TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf, OPT_PBLEN, 
@@ -1222,7 +1199,6 @@ opt_ojt(
 {
     i4		    ojno;
     OPL_OUTER	    *oj;
-    DB_ERROR	    error;
 
     for (ojno = 0; ojno < subqry->ops_oj.opl_lv; ojno++)
     {

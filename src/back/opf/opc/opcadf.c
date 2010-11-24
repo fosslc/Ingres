@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -52,48 +52,6 @@
 #define        OPC_XADF		TRUE
 #include    <opxlint.h>
 #include    <opclint.h>
-
-
-/*
-**  Defines of constants
-*/
-#define	    OPC_PMYES		1
-#define	    OPC_PMNO		2
-#define	    OPC_PMUNSET		3
-#define     MAXUI2              (2 * MAXI2 + 1)         /* Largest u_i2 */
-
-/*
-**  Definition of static variables and forward static functions.
-*/
-
-static i4 cxhead_size = -1;		/* Filled in upon first use */
-
-static VOID opc_adbegin (
-	OPS_STATE	*global,
-	OPC_ADF		*cadf,
-	QEN_ADF		*qadf,
-	i4		ninstr,
-	i4		nops,
-	i4		nconst,
-	i4		szconst,
-	i4		max_base,
-	i4		mem_flag
-);
-
-static VOID
-opc_adexpand(
-	OPS_STATE   *global,
-	OPC_ADF	    *cadf );
-
-static VOID
-opc_bsmap(
-	OPS_STATE   *global,
-	OPC_ADF	    *cadf,
-	i4	    *parray,
-	i4	    *pindex,
-	i4	    baseno );
-
-FUNC_EXTERN DB_STATUS	    adi_resolve();
 
 /**
 **
@@ -202,11 +160,144 @@ FUNC_EXTERN DB_STATUS	    adi_resolve();
 **	    Remove dead code, unused adbase parameters.
 **	04-May-2010 (kiria01) b123680
 **	    Correct the bad stack referencing code in dt_family processing
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      08-Jun-2010 (horda03) b123878
 **          For nullable string to decimal transformation, need to increase the
 **          length of the datatype by 1, otherwise E_OP0791 gets reported.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opc_adalloc_begin(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	QEN_ADF **qadf,
+	i4 ninstr,
+	i4 nops,
+	i4 nconst,
+	i4 szconst,
+	i4 max_base,
+	i4 mem_flag);
+void opc_adalloct_begin(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	QEN_ADF **qadf,
+	i4 ninstr,
+	i4 nops,
+	i4 nconst,
+	i4 szconst,
+	i4 max_base,
+	i4 mem_flag);
+static void opc_adbegin(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	QEN_ADF *qadf,
+	i4 ninstr,
+	i4 nops,
+	i4 nconst,
+	i4 szconst,
+	i4 max_base,
+	i4 mem_flag);
+void opc_adconst(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	DB_DATA_VALUE *dv,
+	ADE_OPERAND *adfop,
+	DB_LANG qlang,
+	i4 seg);
+void opc_adparm(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	i4 parm_no,
+	DB_LANG qlang,
+	i4 seg);
+void opc_adinstr(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	i4 icode,
+	i4 seg,
+	i4 nops,
+	ADE_OPERAND ops[],
+	i4 noutops);
+void opc_adlabres(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	ADE_OPERAND *labop);
+static void opc_adexpand(
+	OPS_STATE *global,
+	OPC_ADF *cadf);
+void opc_adbase(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	i4 array,
+	i4 index);
+static void opc_bsmap(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	i4 *parray,
+	i4 *pindex,
+	i4 baseno);
+void opc_adtransform(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	ADE_OPERAND *srcop,
+	ADE_OPERAND *resop,
+	i4 seg,
+	bool setresop,
+	bool pqmat_retry_char);
+void opc_adend(
+	OPS_STATE *global,
+	OPC_ADF *cadf);
+void opc_adcalclen(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	ADI_LENSPEC *lenspec,
+	i4 numops,
+	ADE_OPERAND *op[],
+	ADE_OPERAND *resop,
+	PTR data[]);
+void opc_adempty(
+	OPS_STATE *global,
+	DB_DATA_VALUE *dv,
+	DB_DT_ID type,
+	i2 prec,
+	i4 length);
+void opc_adkeybld(
+	OPS_STATE *global,
+	i4 *key_type,
+	ADI_OP_ID opid,
+	DB_DATA_VALUE *kdv,
+	DB_DATA_VALUE *lodv,
+	DB_DATA_VALUE *hidv,
+	PST_QNODE *qop);
+void opc_adseglang(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	DB_LANG qlang,
+	i4 seg);
+void opc_resolve(
+	OPS_STATE *global,
+	DB_DATA_VALUE *idv,
+	DB_DATA_VALUE *odv,
+	DB_DATA_VALUE *rdv);
+
+/*
+**  Defines of constants
+*/
+#define	    OPC_PMYES		1
+#define	    OPC_PMNO		2
+#define	    OPC_PMUNSET		3
+#define     MAXUI2              (2 * MAXI2 + 1)         /* Largest u_i2 */
+
+/*
+**  Definition of static variables and forward static functions.
+*/
+
+static i4 cxhead_size = -1;		/* Filled in upon first use */
 
 /*
 **  Defines of constants used in this file
@@ -863,7 +954,11 @@ opc_adinstr(
     {
 	tempdt = abs(ops[opno].opr_dt);
 	if (tempdt == DB_LVCH_TYPE || tempdt == DB_LBYTE_TYPE || 
-			tempdt == DB_LNVCHR_TYPE )
+			tempdt == DB_LNVCHR_TYPE || tempdt == DB_GEOM_TYPE   ||
+                        tempdt == DB_POINT_TYPE  || tempdt == DB_MPOINT_TYPE ||
+                        tempdt == DB_LINE_TYPE   || tempdt == DB_MLINE_TYPE  ||
+                        tempdt == DB_POLY_TYPE   || tempdt == DB_MPOLY_TYPE  ||
+                        tempdt == DB_GEOMC_TYPE )
 	{
 	    qadf->qen_mask |= QEN_HAS_PERIPH_OPND;
 	    break;
@@ -1503,6 +1598,8 @@ opc_bsmap(
 **	06-jan-2009 (gupsh01)
 **	    On UTF-8 installations, when coercing between a LOB-Locator 
 **	    and a long type do not introduce Unicode normalization.
+**      24-mar-2010 (thich01)
+**          Add a check for DB_GEOM_TYPE when src and res types are not equal.
 **
 **      07-Jun-2010 (horda03) b123878
 **          For nullable decimal transforms, add 1 to the length (for the null
@@ -1676,7 +1773,13 @@ opc_adtransform(
        ** the special case of non-comparison operators).
        */
 
-       if (abs_srctype != abs_restype
+       /*
+        * Check if both types are in the GEOM Family
+        * If so, the types are effectively equal.
+       */
+       if ((abs_srctype != abs_restype &&
+           !(adi_dtfamily_retrieve(abs_srctype) == DB_GEOM_TYPE &&
+             adi_dtfamily_retrieve(abs_restype) == DB_GEOM_TYPE))
                || (resop->opr_len == OPC_UNKNOWN_LEN))
        {
        	  PTR	 dataptr = NULL;
@@ -2398,9 +2501,7 @@ opc_resolve(
     DB_DATA_VALUE	leftop;
     DB_DATA_VALUE	rightop;
     DB_DATA_VALUE	tempop;
-    i4			i;
     DB_DATA_VALUE	*opptrs[ADI_MAX_OPERANDS];
-    DB_DT_ID		dts[ADI_MAX_OPERANDS];
     ADI_LENSPEC		lenspec;
     bool		nullable;
 

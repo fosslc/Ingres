@@ -123,6 +123,9 @@ $!!	    Clean up commented out code.
 $!!     24-Jun-2010 (horda03) Bug 122555
 $!!             Add check_lglk_mem to ensure Ingres will connect to a
 $!!             new LG/LK shared memory section.
+$!!     16-Nov-2010 (loera01)
+$!!         Invoke iicvtgcn to merge node-specific GCN info into the
+$!!             clustered GCN database.
 $!!
 $!----------------------------------------------------------------------------
 $_START_IISUNODE:
@@ -774,6 +777,11 @@ $    iisetres "ii.''CONFIG_HOST'.lnm.ii_gcn''II_INSTALLATION'_lcl_vnode" -
 	"''cfu_host'"
 $    iisetres "ii.''CONFIG_HOST'.gcn.local_vnode"   "''cfu_host'"
 $    echo ""
+$!
+$! Convert GCN files to cluster format.  Merge this node's GCN database
+$! with the GCN cluster database.
+$!
+$ iicvtgcn -c
 $!
 $!   # clear the II_GCN logicals
 $!   

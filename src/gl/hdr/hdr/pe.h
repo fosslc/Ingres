@@ -22,31 +22,24 @@
 **/
 
 FUNC_EXTERN STATUS PEumask(
-#ifdef CL_PROTOTYPED
 	    char	*pattern
-#endif
 );
 
 FUNC_EXTERN STATUS PEworld(
-#ifdef CL_PROTOTYPED
 	    char	*pattern,
 	    LOCATION	*loc
-#endif
 );
 
 #ifndef PEsave
 FUNC_EXTERN VOID PEsave(
-#ifdef CL_PROTOTYPED
 	    void
-#endif
 );
 #endif
 
 #ifndef PEreset
 FUNC_EXTERN VOID PEreset(
-#ifdef CL_PROTOTYPED
+
 	    void
-#endif
 );
 #endif
 

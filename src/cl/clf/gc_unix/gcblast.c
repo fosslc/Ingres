@@ -50,13 +50,6 @@ FUNC_EXTERN     int     cominit();
 FUNC_EXTERN     int     comst();
 FUNC_EXTERN     VOID    comdone();
 
-/*
-** Forward functions
-*/
-static	VOID	GCblastsm();	    	    /* Async state machine */
-static  VOID	GCblastpnd();	    	    /* Async event pend */
-static	VOID	GCblastread();	    	    /* Async serial i/o read */
-static	VOID	GCblastwrite();	    	    /* Async serial i/o write */
 
 /*
 ** local variables
@@ -82,6 +75,20 @@ typedef struct _GC_PCB
     	bool	    	disconnecting;	    /* Disconnection in progress */
 	PG_CB		pgcb;		    /* control block for pg services */
 } GC_PCB;
+
+/*
+** Forward functions
+*/
+static	VOID	GCblastsm();	    	    /* Async state machine */
+static  VOID	GCblastpnd();	    	    /* Async event pend */
+static	VOID	GCblastread();	    	    /* Async serial i/o read */
+static	VOID	GCblastwrite();	    	    /* Async serial i/o write */
+STATUS 		GCblast( i4, GCC_P_PLIST * );
+static 	VOID	GCblastsm( GCC_P_PLIST * );
+static 	VOID	GCblastpnd( GC_PCB * );
+static 	VOID	GCblastread( GC_PCB *, int );
+static 	VOID	GCblastwrite( GC_PCB *, int );
+
 
 GLOBALDEF i4  GCblast_trace = 0;
 
@@ -258,6 +265,8 @@ static char async_port[GCC_L_PORT];
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
 **	26-Aug-2009 (kschendel) b121804
 **	    Remove function defns now in headers.
+**	15-nov-2010 (stephenb)
+**	    Add forwrd protos to quiet compiler.
 */
 STATUS
 GCblast( func_code, parms )

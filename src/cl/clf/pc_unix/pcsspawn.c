@@ -134,10 +134,14 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	15-nov-2010 (stephenb)
+**	    Correctlty define static functions for prototyping.
 */
 
-static i4	pipe_open();
-static STATUS	swap_pipes();
+static i4	pipe_open(PIPE *);
+static STATUS	swap_pipes(PIPE *, PIPE *, char **);
+
+
 
 STATUS
 PCsspawn(argc, argv, wait, c_stdin, c_stdout, pid)
@@ -268,7 +272,7 @@ PID	*pid;		/* process id of spawned child */
     
 		/* should never reach here...	*/
     
-		no_exec(argv[0]); /*  find out why execv[p] failed */
+		PCno_exec(argv[0]); /*  find out why execv[p] failed */
 	    }
 	    (void)exit( FAIL );
 	    /*NOTREACHED*/

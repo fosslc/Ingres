@@ -7,6 +7,7 @@
 #include    <me.h>
 #include    <st.h>
 #include    <sl.h>
+#include    <clfloat.h>
 #include    <iicommon.h>
 #include    <adf.h>
 #include    <adfops.h>
@@ -15,6 +16,10 @@
 #include    <adfint.h>
 #include    <aduucol.h>
 #include    "adudate.h"
+
+/* string length of a float/money for length calculations, need 
+** extra characters for additional output formatting (such as money symbol)  */
+#define	FLT_CHAR_SIZE	DBL_DIG + 5
 /*
 [@#include@]...
 */
@@ -163,6 +168,10 @@
 **	    length of passed string.
 **      10-sep-2008 (gupsh01,stial01)
 **          Fixed calclen for ADI_O1UNIDBL, Added calclen for ADI_O1UNORM
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **	24-Aug-2009 (kschendel) 121804
 **	    Need me.h to satisfy gcc 4.3.
 **	12-Mar-2010 (toumi01) SIR 122403
@@ -1114,6 +1123,10 @@ i4                 *adi_rlen;
 **	20-Sep-2010 (kiria01) b124438
 **	    Slight correction to last change to handle minimum char size
 **	    correctly.
+**	12-oct-2010 (stephenb)
+**	    nvl2 length calculation needs to take account of the fact that
+**	    a string result from some non-string input types will require
+**	    length expansion (bug 124605)
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -1352,7 +1365,8 @@ DB_DATA_VALUE      *adi_dvr;
 	    /* 
 	    ** length is longer of args 2 and 3 taking the 
 	    ** result into account. If any input is date/time and result is not,
-	    ** we may need expansion. This only
+	    ** we may need expansion. Expansion is also required where the
+	    ** result is a string and the input is not. This only usually
 	    ** occurs when two non-intrinsic types do not
 	    ** compare (such as byte and date). See rules
 	    ** in adi_resolve.
@@ -1417,6 +1431,13 @@ DB_DATA_VALUE      *adi_dvr;
 		** from here down, none of the inputs can be date/time types
 		** and neither is the result
 		*/
+		else if (res == DB_MNY_TYPE ||
+			res == DB_FLT_TYPE)
+		    /* fixed */
+		    rlen = sizeof(double);
+		else if (res == DB_INT_TYPE)
+		    /* fixed */
+		    rlen = sizeof(i8);
 		else if (res == DB_DEC_TYPE)
 		{
 		    /*
@@ -1435,8 +1456,114 @@ DB_DATA_VALUE      *adi_dvr;
 		    rprec = DB_PS_ENCODE_MACRO(rp, rs);
 		    rlen = DB_PREC_TO_LEN_MACRO(rp);
 		}
+		else if (res == DB_CHA_TYPE || res == DB_VCH_TYPE || 
+			res == DB_BYTE_TYPE || res == DB_VBYTE_TYPE ||
+			res == DB_CHR_TYPE || res == DB_TXT_TYPE)
+		{
+		    int l1, l2;
+		    /* 
+		    ** result is a string/byte type. In some cases non-string
+		    ** inputs may require expansion to be displayed as a string
+		    */
+		    if (res == DB_CHA_TYPE || res == DB_BYTE_TYPE || 
+			    res == DB_CHR_TYPE)
+		    {
+			/* 
+			** result is not a var type, reduce var inputs for 
+			** length calculations, otherwise result may be too long
+			*/
+			if (abs(adi_dv[1]->db_datatype) == DB_VCH_TYPE ||
+				abs(adi_dv[1]->db_datatype) == DB_VBYTE_TYPE ||
+				abs(adi_dv[1]->db_datatype) == DB_TXT_TYPE)
+			    l1 = len[1] - DB_CNTSIZE;
+			else
+			    l1 = len[1];
+			if (abs(adi_dv[2]->db_datatype) == DB_VCH_TYPE ||
+				abs(adi_dv[2]->db_datatype) == DB_VBYTE_TYPE ||
+				abs(adi_dv[2]->db_datatype) == DB_TXT_TYPE)
+			    l2 = len[2] - DB_CNTSIZE;
+			else
+			    l2 = len[2];
+		    }
+		    else
+		    {
+			l1 = len[1];
+			l2 = len[2];
+		    }
+		    if (abs(adi_dv[1]->db_datatype) == DB_DEC_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_DEC_TYPE)
+			rlen = ADU_BIGGEST_MACRO(l1, l2, CL_MAX_DECPREC);
+		    else if (abs(adi_dv[1]->db_datatype) == DB_INT_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_INT_TYPE)
+			rlen = ADU_BIGGEST_MACRO(l1, l2, 
+				MAX_I8_DIGITS_AND_SIGN);
+		    else if (abs(adi_dv[1]->db_datatype) == DB_FLT_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_FLT_TYPE ||
+			    abs(adi_dv[1]->db_datatype) == DB_MNY_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_MNY_TYPE)
+			rlen = ADU_BIGGEST_MACRO(l1, l2, FLT_CHAR_SIZE);
+		    else
+			rlen = l1 > l2 ? l1 : l2;
+		}
+		else if (res == DB_NCHR_TYPE || res == DB_NVCHR_TYPE)
+		{		    
+		    /* same as above but double for nchar/nvarchar */
+		    int	l1, l2;
+		    int usize = sizeof(UCS2);
+		    
+		    /* 
+		    ** reduce var inputs for 
+		    ** length calculations, otherwise result may be too long
+		    */
+		    if (abs(adi_dv[1]->db_datatype) == DB_VCH_TYPE ||
+			    abs(adi_dv[1]->db_datatype) == DB_VBYTE_TYPE ||
+			    abs(adi_dv[1]->db_datatype) == DB_TXT_TYPE)
+			l1 = len[1] - DB_CNTSIZE;
+		    else
+			l1 = len[1];
+		    if (abs(adi_dv[2]->db_datatype) == DB_VCH_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_VBYTE_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_TXT_TYPE)
+			l2 = len[2] - DB_CNTSIZE;
+		    else
+			l2 = len[2];
+		    
+		    if (abs(adi_dv[2]->db_datatype) == DB_CHA_TYPE || 
+			abs(adi_dv[2]->db_datatype) == DB_VCH_TYPE || 
+			abs(adi_dv[2]->db_datatype) == DB_BYTE_TYPE || 
+			abs(adi_dv[2]->db_datatype) == DB_VBYTE_TYPE ||
+			abs(adi_dv[2]->db_datatype) == DB_CHR_TYPE || 
+			abs(adi_dv[2]->db_datatype) == DB_TXT_TYPE)
+			/* string input, need to double for Unicode output */
+			l1 = usize*l1;
+		    if (abs(adi_dv[2]->db_datatype) == DB_CHA_TYPE || 
+			abs(adi_dv[2]->db_datatype) == DB_VCH_TYPE || 
+			abs(adi_dv[2]->db_datatype) == DB_BYTE_TYPE || 
+			abs(adi_dv[2]->db_datatype) == DB_VBYTE_TYPE ||
+			abs(adi_dv[2]->db_datatype) == DB_CHR_TYPE || 
+			abs(adi_dv[2]->db_datatype) == DB_TXT_TYPE)
+			/* string input, need to double for Unicode output */
+			l2 = usize*l2;
+		    if (abs(adi_dv[1]->db_datatype) == DB_DEC_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_DEC_TYPE)
+			rlen = ADU_BIGGEST_MACRO(l1, l2, CL_MAX_DECPREC*usize);
+		    else if (abs(adi_dv[1]->db_datatype) == DB_INT_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_INT_TYPE)
+			rlen = ADU_BIGGEST_MACRO(l1, l2, 
+				MAX_I8_DIGITS_AND_SIGN*usize);
+		    else if (abs(adi_dv[1]->db_datatype) == DB_FLT_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_FLT_TYPE ||
+			    abs(adi_dv[1]->db_datatype) == DB_MNY_TYPE ||
+			    abs(adi_dv[2]->db_datatype) == DB_MNY_TYPE)
+			rlen = ADU_BIGGEST_MACRO(l1, l2, FLT_CHAR_SIZE*usize);
+		    else
+			rlen = l1 > l2 ? l1 : l2;
+		    /* add back var size for var type */
+		    if (res == DB_NVCHR_TYPE)
+			rlen = rlen+DB_CNTSIZE;
+		}
 		else
-		    /* no dates or decimals involved  just user the longer */
+		    /* no special expansion involved,  just use the longer */
 		    rlen = len[1] > len[2] ? len[1] : len[2];
 	    }
 	    else
@@ -2710,6 +2837,14 @@ ADI_LENSPEC        *out_lenspec)
 	    break;
 	  case DB_LVCH_TYPE:
 	  case DB_LBYTE_TYPE:
+	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  case DB_LNVCHR_TYPE:
 	    out_lenspec->adi_lncompute = ADI_COUPON;
 	    break;
@@ -2813,6 +2948,14 @@ ADI_LENSPEC        *out_lenspec)
 	    break;
 	  case DB_LVCH_TYPE:      
 	  case DB_LBYTE_TYPE:      
+	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  case DB_LNVCHR_TYPE:
 	    out_lenspec->adi_lncompute = ADI_COUPON;
 	    break;
@@ -2914,6 +3057,14 @@ ADI_LENSPEC        *out_lenspec)
             break;
           case DB_LVCH_TYPE:
           case DB_LBYTE_TYPE:
+          case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
           case DB_LNVCHR_TYPE:
             out_lenspec->adi_lncompute = ADI_COUPON;
             break;
@@ -3009,6 +3160,14 @@ ADI_LENSPEC        *out_lenspec)
             break;
           case DB_LVCH_TYPE:
           case DB_LBYTE_TYPE:
+          case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
           case DB_LNVCHR_TYPE:
             out_lenspec->adi_lncompute = ADI_COUPON;
             break;

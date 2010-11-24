@@ -239,6 +239,29 @@
   your system from the apache.org site.  Please make sure that the binaries 
   and source are located in the same root Xerces directory.
  
+  With the introduction of the new Ingres Geospatial you will now also need
+  the GEOS library to compile Ingres. The source can be found here:
+    http://trac.osgeo.org/geos/
+  There are no binaries for GEOS on Windows so you will have to compile them
+  yourself. GEOSROOT will point to a directory with two expected 
+  sub-directories:
+    inc
+    lib
+  The inc directory will contain all the headers from GEOS and the lib
+  directory will contain the DLL and LIB files necessary for linking and
+  running Ingres.
+  
+  For the new Ingres Geospatial you will also need the Proj library. 
+  The source can be found here:
+    http://trac.osgeo.org/proj/
+  Version 4.7.0 or newer is recommended. If there are no binaries for Windows
+  of an approrpiate version so you will have to compile them yourself.
+  PROJROOT will point to a directory with two expected sub-directories:
+    include
+    lib
+  The include directory will contain proj_api.h and the lib
+  directory will contain the DLL and LIB files necessary for linking and
+  running Ingres.
 
   When all of the necessary components have been downloaded (Ingres source
   tree, Xerces and Kerberos components, all building prerequisites), you are

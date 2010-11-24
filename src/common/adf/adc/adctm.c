@@ -124,6 +124,8 @@
 **	    visible on all platforms.
 **      22-sep-2009 (joea)
 **          Add cases for DB_BOO_TYPE in adc_1tmlen_rti and adc_2tmcvt_rti.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -744,6 +746,7 @@ i4                  *adc_worstwid)
       case DB_CHR_TYPE:
       case DB_CHA_TYPE:
       case DB_BYTE_TYPE:
+      case DB_NBR_TYPE:
 	*adc_defwid   = max(len, adf_scb->adf_outarg.ad_c0width);
 	/* worst case is 4 times longer in case of \000 format on output */
 	*adc_worstwid = max((len * 4), *adc_defwid);
@@ -1326,6 +1329,7 @@ i4		    *adc_outlen)
 
       case DB_BYTE_TYPE:
       case DB_VBYTE_TYPE:
+      case DB_NBR_TYPE:
 	{
 	    i2	    i2tmp;
 	    u_char  *endp;
@@ -1547,6 +1551,7 @@ i4		    *adc_outlen)
 	    {
 	    case DB_CHA_TYPE:
 	    case DB_BYTE_TYPE:
+            case DB_NBR_TYPE:
 		p = f;
 		i = length;
 		length = max(length, adf_scb->adf_outarg.ad_c0width);

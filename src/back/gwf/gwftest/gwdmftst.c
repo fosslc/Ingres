@@ -64,10 +64,27 @@
 **          Removed gwxit.h inclusion which is not required.
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype all static functions.
 */
 
 GLOBALREF   char    *Gwdmftst_version;
-static	    DB_STATUS	(*dmf_cptr)();
+static	    DB_STATUS	(*dmf_cptr)(DM_OPERATION op, void *cb);
+
+static	DB_STATUS	gw09_term( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_tabf( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_idxf( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_open( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_close( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_get( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_put( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_replace( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_delete( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_begin( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_abort( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_commit( GWX_RCB *gwx_rcb );
+static	DB_STATUS	gw09_info( GWX_RCB *gwx_rcb );
+FUNC_EXTERN DB_STATUS	gw09_init( GWX_RCB *gwx_rcb );
 
 
 /*
@@ -89,7 +106,7 @@ typedef struct
 			    */
 } GWDMF_RSB;
 
-DB_STATUS
+static DB_STATUS
 gw09_term( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -97,7 +114,7 @@ GWX_RCB	    *gwx_rcb;
     return (E_DB_OK);
 }
 
-DB_STATUS
+static DB_STATUS
 gw09_tabf( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -105,7 +122,7 @@ GWX_RCB	    *gwx_rcb;
     return (E_DB_OK);
 }
 
-DB_STATUS
+static DB_STATUS
 gw09_idxf( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -131,7 +148,7 @@ GWX_RCB	    *gwx_rcb;
 **	    the DMF record access id.
 **	    Re-structured to exit through the bottom, per server conventions.
 */
-DB_STATUS
+static DB_STATUS
 gw09_open( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -205,7 +222,7 @@ GWX_RCB	    *gwx_rcb;
     return ( status );
 }
 
-DB_STATUS
+static DB_STATUS
 gw09_close( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -231,7 +248,7 @@ GWX_RCB	    *gwx_rcb;
     return (E_DB_OK);
 }
 
-DB_STATUS
+static DB_STATUS
 gw09_position( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -296,7 +313,7 @@ GWX_RCB	    *gwx_rcb;
     return (E_DB_OK);
 }
 
-DB_STATUS
+static DB_STATUS
 gw09_get( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -335,7 +352,7 @@ GWX_RCB	    *gwx_rcb;
 **	28-mar-90 (bryanp)
 **	    Deleted return of tid, as gwf code doesn't need tids.
 */
-DB_STATUS
+static DB_STATUS
 gw09_put( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -364,7 +381,7 @@ GWX_RCB	    *gwx_rcb;
 }
 
 
-DB_STATUS
+static DB_STATUS
 gw09_replace( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -394,7 +411,7 @@ GWX_RCB	    *gwx_rcb;
 }
 
 
-DB_STATUS
+static DB_STATUS
 gw09_delete( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -420,7 +437,7 @@ GWX_RCB	    *gwx_rcb;
     return (E_DB_OK);
 }
 
-DB_STATUS
+static DB_STATUS
 gw09_begin( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -429,7 +446,7 @@ GWX_RCB	    *gwx_rcb;
 }
 
 
-DB_STATUS
+static DB_STATUS
 gw09_abort( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -438,7 +455,7 @@ GWX_RCB	    *gwx_rcb;
 }
 
 
-DB_STATUS
+static DB_STATUS
 gw09_commit( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {
@@ -447,7 +464,7 @@ GWX_RCB	    *gwx_rcb;
 }
 
 
-DB_STATUS
+static DB_STATUS
 gw09_info( gwx_rcb )
 GWX_RCB	    *gwx_rcb;
 {

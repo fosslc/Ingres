@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -64,7 +64,6 @@
 **      used by the orig node building routines (opcorig.c). As such, this file 
 **      only builds keys for orig nodes. Keys for join nodes are built in  
 **      opcjcommon.c (opc_kjkeyinfo()). 
-[@comment_line@]...
 **
 **	Externally visable routines:
 **          opc_srange() - Set up a single range for keying with repeat query
@@ -72,7 +71,6 @@
 **          opc_meqrange() - Set up multiple equality ranges for keying with
 **				repeat query parameters.
 **          opc_range() - Set up for full keying with multiple ranges
-[@func_list@]...
 **
 **	Internal only routines:
 **          opc_kfuse() - Combine (fuse?) overlapping ranges (OPC_KOR structs).
@@ -81,7 +79,6 @@
 **				ranges.
 **          opc_rcompare() - Compare two ranges and return which is higher.
 **          opc_complex_range() - Detect and simplify overly complex ranges.
-[@func_list@]...
 **
 **
 **  History:    
@@ -129,55 +126,56 @@
 **      15-nov-2000 (devjo01)
 **          Back out anitap's fix for 35506, it was insufficient,
 **          and fix for 103164 made it redundant.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opc_srange(
+	OPS_STATE *global,
+	OPC_QUAL *cqual,
+	OPC_KOR *dnf_or);
+void opc_meqrange(
+	OPS_STATE *global,
+	OPC_QUAL *cqual,
+	OPC_KOR *dnf_or);
+void opc_range(
+	OPS_STATE *global,
+	OPC_QUAL *cqual,
+	OPC_KOR *dnf_or);
+static void opc_kfuse(
+	OPS_STATE *global,
+	OPC_QUAL *cqual,
+	OPC_KOR *dnf_or,
+	i4 *lo_keyno,
+	i4 *hi_keyno);
+static bool opc_ne_bop(
+	PST_QNODE *nodep);
+static void opc_orcopy(
+	OPS_STATE *global,
+	OPC_QUAL *cqual,
+	OPC_KOR *src,
+	OPC_KOR **pdest,
+	i4 *lo_keyno,
+	i4 *hi_keyno);
+static void opc_remkor(
+	OPS_STATE *global,
+	OPC_QUAL *cqual,
+	OPC_KOR *dnf_or);
+static i4 opc_rcompare(
+	OPS_STATE *global,
+	OPC_QUAL *cqual,
+	OPC_KOR *ldnf_or,
+	i4 lside,
+	OPC_KOR *rdnf_or,
+	i4 rside);
+static void opc_complex_range(
+	OPS_STATE *global,
+	OPC_QUAL *cqual);
 
 /*
-**  Forward and/or External function references.
+** Constants:
 */
-
-static i4
-opc_rcompare(
-	OPS_STATE   *global,
-	OPC_QUAL    *cqual,
-	OPC_KOR	    *ldnf_or,
-	i4	    lside,
-	OPC_KOR	    *rdnf_or,
-	i4	    rside );
-
-static VOID
-opc_remkor(
-	OPS_STATE   *global,
-	OPC_QUAL   *cqual,
-	OPC_KOR	    *dnf_or );
-
-static VOID
-opc_kfuse(
-	OPS_STATE   *global,
-	OPC_QUAL    *cqual,
-	OPC_KOR	    *dnf_or,
-	i4	    *lo_keyno,
-	i4	    *hi_keyno );
-
-static bool
-opc_ne_bop(
-	PST_QNODE   *nodep);
-
-static VOID
-opc_orcopy(
-	OPS_STATE   *global,
-	OPC_QUAL    *cqual,
-	OPC_KOR	    *src,
-	OPC_KOR	    **pdest,
-	i4	    *lo_keyno,
-	i4	    *hi_keyno );
-
-static VOID
-opc_complex_range(
-	OPS_STATE   *global,
-	OPC_QUAL    *cqual );
-
-
 #define	    OPC_RMAX_RANGES	50
 
 /*{
@@ -396,7 +394,6 @@ opc_srange(
     i4		    compno;
     i4		    conjunct_useful;
     i4		    key_type;
-    PST_PROCEDURE   *dbp_proc;
     i4		    parmno;
     i4		    szkparm_byte =
 			    (cqual->opc_qsinfo.opc_hiparm / BITSPERBYTE) + 1;
@@ -1212,7 +1209,7 @@ opc_meqrange(
     **		hash relation and not all keys are given)
     **	    )
     */
-    if (cnf_key_list[0] == NULL || rmax_ranges > 0 && max_keys >= rmax_ranges ||
+    if (cnf_key_list[0] == NULL || rmax_ranges > 0 && max_keys >= (u_i4)rmax_ranges ||
 	    (	cqual->opc_qsinfo.opc_storage_type == DMT_HASH_TYPE && 
 		cnf_key_list[cqual->opc_qsinfo.opc_nkeys - 1] == NULL
 	    )
@@ -1624,7 +1621,6 @@ opc_range(
     OPC_QCMP	    **keyno_cnf_comp;
     OPC_QCMP	    *merged_cnf_comp;
     i4		    sz_keyno_cnf_comp;
-    i4		    removed_useless_comp;
     i4		    keyno;
     i4		    compno;
     i4		    lo_keyno, hi_keyno;

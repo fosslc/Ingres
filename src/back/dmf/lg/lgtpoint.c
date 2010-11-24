@@ -82,6 +82,8 @@
 **	    Added routines to detect on Vista OS if user is running
 **	    with elevated privileges.  This program can only be
 **	    run with elevated privileges.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add notreached return(FAIL) to silence compiler warnings.
 **	
 [@history_template@]...
 */
@@ -241,4 +243,7 @@ char	*argv[];
     }
 
     PCexit(FAIL);
+    
+    /* NOTREACHED */
+    return(FAIL);
 }

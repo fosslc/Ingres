@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -64,8 +64,14 @@
 **	11-Aug-1997 (jenjo02)
 **	    Changed ulm_streamid from (PTR) to (PTR*) so that ulm
 **	    can destroy those handles when the memory is freed.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+PTR opu_tmemory(
+	OPS_STATE *global,
+	i4 size);
 
 /*{
 ** Name: opu_tmemory	- get temporary memory buffer
@@ -143,7 +149,7 @@ opu_tmemory(
 	{
 	    if (global->ops_mstate.ops_ulmrcb.ulm_error.err_code == E_UL0005_NOMEM)
 	    {
-		opx_lerror(E_OP0002_NOMEMORY, 0);
+		opx_lerror(E_OP0002_NOMEMORY, 0, 0, 0, 0, 0);
 		opx_error( E_OP0002_NOMEMORY);  /* out of memory */
 	    }
 #ifdef E_OP0093_ULM_ERROR

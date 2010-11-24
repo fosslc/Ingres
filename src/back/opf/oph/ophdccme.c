@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -60,8 +60,15 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      14-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void oph_dccmemory(
+	OPS_SUBQUERY *subquery,
+	OPH_INTERVAL *intervalp,
+	OPH_COUNTS counts);
 
 /*{
 ** Name: oph_dccmemory	- deallocate cell count array
@@ -105,7 +112,7 @@ oph_dccmemory(
     OPH_COERCE		*coercep;   /* coercion use to traverse linked list*/
     i4			size;
 
-    if (sizeof(OPH_COERCE) > (size = intervalp->oph_numcells *
+    if ((i4)sizeof(OPH_COERCE) > (size = intervalp->oph_numcells *
 						sizeof(OPN_PERCENT)))
 	return;
 

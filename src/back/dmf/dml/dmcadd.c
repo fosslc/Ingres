@@ -19,12 +19,18 @@ NO_OPTIM=dr6_us5 i64_aix
 #include    <ulf.h>
 #include    <scf.h>
 #include    <dudbms.h>
-#include    <dmccb.h>
 #include    <dmmcb.h>
 #include    <dm.h>
 #include    <dmp.h>
 #include    <dmm.h>
 #include    <dm2d.h>
+/* these to get dml.h */
+#include    <dmccb.h>
+#include    <dmrcb.h>
+#include    <dmscb.h>
+#include    <dmtcb.h>
+#include    <dmxcb.h>
+#include    <dml.h>
 
 /**
 ** Name: DMCADD.C - Functions used to add a database to a server.
@@ -91,6 +97,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **	    dm2d_? functions converted to DB_ERROR *
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dml.h to get dmc_add_db() prototype.
 **/
 
 /*{

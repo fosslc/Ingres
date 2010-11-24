@@ -74,6 +74,8 @@
 **	    Deleted superfluous scf_call() declaration.
 **      10-Jul-2006 (hanal04) Bug 116358
 **          Added trace point QS511 to call ulm_print_pool() for the QSF pool.
+**	29-Oct-2010 (jonj) SIR 120874
+**	    Conform to use new uleFormat, DB_ERROR constructs.
 */
 
 
@@ -562,7 +564,7 @@ been written to your \nlog file.");
 	return (E_DB_WARN);	/* Unknown trace QSF info request trace point */
     }
 
-    _VOID_ ule_format(
+    _VOID_ uleFormat( NULL,
 		    E_QS0500_INFO_REQ,
 		    NULL,
 		    (i4) ULE_LOOKUP,
@@ -589,7 +591,7 @@ been written to your \nlog file.");
     scb = NULL;
     if (Qsr_scb->qsr_tracing  &&  qst_trcheck(scb, QSF_1001_LOG_INFO_REQS))
     {
-	_VOID_ ule_format(
+	_VOID_ uleFormat( NULL,
 			(i4) 0,
 			NULL,
 			(i4) ULE_MESSAGE,

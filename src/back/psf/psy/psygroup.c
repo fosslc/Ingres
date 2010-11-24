@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -101,13 +101,26 @@
 **	    Short-circuit calls to psy_secaudit() if not C2SECURE.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward static functions.
-*/
 
+/* TABLE OF CONTENTS */
+i4 psy_group(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_cgroup(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_agroup(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_dgroup(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_kgroup(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psy_group  - Dispatch group identifier qrymod routines
@@ -367,7 +380,6 @@ psy_cgroup(
     DB_USERGROUP	ugtuple;
     register DB_USERGROUP *ugtup = &ugtuple;
     PSY_TBL		*psy_tbl;
-    PSY_USR		*psy_usr;
 
     /* This code is called for SQL only */
 
@@ -714,7 +726,6 @@ psy_kgroup(
     DB_USERGROUP	ugtuple;
     register DB_USERGROUP *ugtup = &ugtuple;
     PSY_TBL		*psy_tbl;
-    PSY_USR		*psy_usr;
 
     /* This code is called for SQL only */
 

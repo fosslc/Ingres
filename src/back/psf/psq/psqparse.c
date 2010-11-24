@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -106,14 +106,32 @@
 **	    in support of flattened recursion for things such as pst_treedup.
 **      02-sep-2010 (maspa05) sir 124346
 **          ult_always_trace() uses bitmask flags now
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void print_qry_buffer(
+	PSQ_CB *psq_cb,
+	PSQ_QDESC *qdesc,
+	PSS_SESBLK *sess_cb);
+i4 psq_parseqry(
+	register PSQ_CB *psq_cb,
+	register PSS_SESBLK *sess_cb);
+i4 psq_cbinit(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+i4 psq_cbreturn(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	i4 ret_val);
+i4 psq_destr_dbp_qep(
+	PSS_SESBLK *sess_cb,
+	PTR handle,
+	DB_ERROR *err_blk);
 
-
-FUNC_EXTERN	DB_STATUS   	pslparse();
-FUNC_EXTERN	DB_STATUS   	pslsparse();
-FUNC_EXTERN	VOID	   	adu_2prvalue();
-GLOBALREF       PSF_SERVBLK    *Psf_srvblk;
-
 /*{
 ** Name: print_qry_buffer	- Output the SC930 tracing for a query
 **
@@ -129,6 +147,10 @@ GLOBALREF       PSF_SERVBLK    *Psf_srvblk;
 **	    Add in role and group to session begins line.
 **      15-feb-2010 (maspa05) SIR 123293
 **          Added server_class to output
+**      19-oct-2010 (maspa05) bug 124551
+**          use adu_sc930prtdataval to output the parameter value
+**      04-nov-2010 (maspa05) bug 124654, 124687
+**          Moved output of SC930 SESSION BEGINS line to scsinit
 **
 */
 static void
@@ -141,32 +163,6 @@ print_qry_buffer(PSQ_CB *psq_cb,
 	i2 qtype;
         if (f)
         {
-	    char val[DB_MAXSTRING + 80];
-	    char val2[DB_MAXSTRING + 1];
-	    DB_DATA_VALUE d;
-	    d.db_datatype = DB_VCH_TYPE;
-	    d.db_length = DB_MAXSTRING;
-	    d.db_data = val;
-	    if (!(sess_cb->pss_ses_flag & PSS_SESSION_STARTED))
-	    {
-                char tmp[1000];
-	        STprintf(tmp,"(DBID=%d)(%*.*s)(%*.*s)(%*.*s)(SVRCL=%*s)",
-			psq_cb->psq_udbid,
-                        sizeof(sess_cb->pss_user.db_own_name),
-                        sizeof(sess_cb->pss_user.db_own_name),
-                        sess_cb->pss_user.db_own_name,
-                        sizeof(sess_cb->pss_aplid.db_tab_own.db_own_name),
-                        sizeof(sess_cb->pss_aplid.db_tab_own.db_own_name),
-                        sess_cb->pss_aplid.db_tab_own.db_own_name,
-                        sizeof(sess_cb->pss_group.db_tab_own.db_own_name),
-                        sizeof(sess_cb->pss_group.db_tab_own.db_own_name),
-                        sess_cb->pss_group.db_tab_own.db_own_name,
-			SVR_CLASS_MAXNAME,
-			Psf_srvblk->psf_server_class
-                        );
-		sess_cb->pss_ses_flag |= PSS_SESSION_STARTED;
-                ult_print_tracefile(f,SC930_LTYPE_BEGINTRACE,tmp);
-	    }
 	    if (sess_cb->pss_dbp_flags & PSS_RECREATE)
 	    {
 		qtype = (psq_cb->psq_qlang == DB_QUEL) ? SC930_LTYPE_REQUEL : SC930_LTYPE_REQUERY;
@@ -177,10 +173,8 @@ print_qry_buffer(PSQ_CB *psq_cb,
 	    ult_print_tracefile(f, qtype, qdesc->psq_qrytext);
 	    for (i = 0; i < qdesc->psq_dnum; i++)
 	    {
-		STprintf(val,"%d:%d=%s",qdesc->psq_qrydata[i]->db_datatype,
-			i,adu_valuetomystr(val2,
-			qdesc->psq_qrydata[i],sess_cb->pss_adfcb));
-		ult_print_tracefile(f,SC930_LTYPE_PARM,val);
+		adu_sc930prtdataval(SC930_LTYPE_PARM,NULL,i,
+				qdesc->psq_qrydata[i],sess_cb->pss_adfcb,f);
 	    }
             ult_close_tracefile(f);
         }
@@ -431,7 +425,8 @@ psq_parseqry(
     {
 	(*print_qry_buffer_ptr)(psq_cb, qdesc, sess_cb);
     }
-    if (ult_check_macro(&sess_cb->pss_trace, 1, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PRINT_QRY_TRACE, &val1, &val2))
     {
 	if (psf_in_retry(sess_cb, psq_cb))
 	{
@@ -481,7 +476,7 @@ psq_parseqry(
 	    /* skip leading white space chars, if any */
 	    for (c = qdesc->psq_qrytext;
 		 c <= (char *) sess_cb->pss_endbuf && CMwhite(c);
-		 c = CMnext(c)
+		 CMnext(c)
 		)
 	    ;
 
@@ -489,7 +484,7 @@ psq_parseqry(
 	    for (;
 		 *r != EOS && c <= (char *) sess_cb->pss_endbuf &&
 		 !CMcmpnocase(c,r);
-		 c = CMnext(c), r = CMnext(r)
+		 CMnext(c), CMnext(r)
 		)	
 	    ;
 

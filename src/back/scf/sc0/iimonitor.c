@@ -90,11 +90,13 @@ NEEDLIBS = GCFLIB COMPATLIB
 **	    Removed MALLOCLIB from NEEDLIBS
 **	27-Apr-2006 (gordy)
 **	    Added support for GCF servers.  Handle GCA_ERROR messages.
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Fix prototypes
 [@history_template@]...
 */
 
-VOID	iimon_release();
-VOID	iimon_error();
+static VOID iimon_release( i4 aid );
+static VOID iimon_error( i4  aid, i4  errcod );
 
 # define    _DUMMY_AID_VALUE	-9999
 
@@ -108,6 +110,9 @@ i4	    lang_code;
 **      7-May-2009 (hanal04) Bug 122033
 **          When peer terminates the associated we need a generic message
 **          as the peer may not have been the DBMS.
+**     25-Oct-2010 (maspa05) Bug 124632
+**          Increase size of buffer for output and ensure the size of the
+**          string we're formatting with TRformat will fit in the buffer
 */
 int
 main(argc, argv)
@@ -571,16 +576,20 @@ char	    **argv;
 	    }
 	    else if (gca_parms.gca_it_parms.gca_message_type == GCA_TRACE)
 	    {
-		char	buf[ER_MAX_LEN];
+	      /* buf is sized for largest output line which is currently
+		 "Last Query" so it's size of query text (ER_MAX_LEN) +
+	        20 for "    Last Query:" */
+
+		char	buf[ER_MAX_LEN+20]; 
 
 		TRflush();
+
+		if (gca_parms.gca_it_parms.gca_d_length >= sizeof(buf))
+		    gca_parms.gca_it_parms.gca_d_length = sizeof(buf) - 1;
 
 		TRformat(0, 0, buf, sizeof(buf), "%t", 
 			 gca_parms.gca_it_parms.gca_d_length,
 			 gca_parms.gca_it_parms.gca_data_area);
-			  
-		if (gca_parms.gca_it_parms.gca_d_length >= sizeof(buf))
-		    gca_parms.gca_it_parms.gca_d_length = sizeof(buf) - 1;
 		
 		buf[gca_parms.gca_it_parms.gca_d_length] = EOS;
 
@@ -599,14 +608,14 @@ char	    **argv;
 			ele = (GCA_E_ELEMENT *)er->gca_e_element; 
 		TRflush();
 
+		if (ele->gca_error_parm[0].gca_l_value >= sizeof(buf))
+		    ele->gca_error_parm[0].gca_l_value = sizeof(buf) - 1;
+		
 		if ( ele->gca_l_error_parm )    
 			TRformat(0, 0, buf, sizeof(buf), "%t", 
 			 ele->gca_error_parm[0].gca_l_value,
 			 ele->gca_error_parm[0].gca_value );
 			  
-		if (ele->gca_error_parm[0].gca_l_value >= sizeof(buf))
-		    ele->gca_error_parm[0].gca_l_value = sizeof(buf) - 1;
-		
 		buf[ele->gca_error_parm[0].gca_l_value] = EOS;
 
 		STtrmwhite(buf);
@@ -649,10 +658,8 @@ char	    **argv;
 **	2-Jul-1993 (daveb)
 **	    removed unused variable 'error'
 */
-VOID
-iimon_error(aid, errcod)
-i4  aid;
-i4  errcod;
+static VOID
+iimon_error( i4  aid, i4  errcod )
 {
     i4			err_msg_len;
     CL_ERR_DESC		cl_err_code;
@@ -699,9 +706,8 @@ i4  errcod;
     PCexit(FAIL);
 }
 
-VOID
-iimon_release(aid)
-i4		aid;
+static VOID
+iimon_release( i4 aid )
 {
     i4			error;
     i4			status;

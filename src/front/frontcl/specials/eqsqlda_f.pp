@@ -31,6 +31,8 @@ C        18-nov-2009 (joea)    - Add IISQ_BOO_TYPE.
 C        29-Jul-2010 (hweho01) - SIR 121123
 C                                Increase the size of sqlnamec from 34 to 258,
 C                                to match with the IISQD_NAMELEN in iisqlda.h.
+C        17-aug-2010 (thich01) - Add IISQ spatial types skipped 60 for SECL
+C                                consistency.
 C
 
 C
@@ -106,3 +108,12 @@ C
 	parameter (IISQ_VBYTE_TYPE = 24)
 	parameter (IISQ_LBYTE_TYPE = 25)
 	parameter (IISQ_OBJ_TYPE = 45)
+        parameter (IISQ_GEOM_TYPE = 56)
+        parameter (IISQ_POINT_TYPE = 57)
+        parameter (IISQ_MPOINT_TYPE = 58)
+        parameter (IISQ_LINE_TYPE = 59)
+        parameter (IISQ_MLINE_TYPE = 61)
+        parameter (IISQ_POLY_TYPE = 62)
+        parameter (IISQ_MPOLY_TYPE = 63)
+        parameter (IISQ_MPOLY_TYPE = 64)
+        parameter (IISQ_GEOMC_TYPE = 65)

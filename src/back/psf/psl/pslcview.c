@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2004 Ingres Corporation
+** Copyright (c) 1985, 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -112,12 +112,22 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward static functions.
-*/
 
+/* TABLE OF CONTENTS */
+i4 psl_cv1_create_view(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *new_col_list,
+	PST_QNODE *query_expr,
+	i4 check_option,
+	PSS_YYVARS *yyvarsp);
+i4 psl_cv2_viewstmnt(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
 
 /*{
 ** Name: psl_cv1_create_view - wrap up CREATE/DEFINE VIEW processing; this
@@ -366,6 +376,9 @@
 **	11-Jun-2010 (kiria01) b123908
 **	    Initialise pointers after psf_mopen would have invalidated any
 **	    prior content.
+**	21-Jul-2010 (troal01)
+**		SRID and GeomType should now be set properly in iiattribute on
+**		creation of views with geometry types.
 */
 DB_STATUS
 psl_cv1_create_view(
@@ -383,8 +396,6 @@ psl_cv1_create_view(
     DB_TAB_ID           *tabids = (DB_TAB_ID *) NULL;
     i4			*tabtypes = (i4 *) NULL;
     DD_OBJ_TYPE         *obj_types = (DD_OBJ_TYPE *) NULL;
-    bool		wco_insert_rule = FALSE;
-    bool		wco_update_rule = FALSE;
     PST_STATEMENT	*snode = (PST_STATEMENT *) sess_cb->pss_object;
     PST_CREATE_VIEW	*crt_view = &snode->pst_specific.pst_create_view;
     PST_QTREE		*qtree;
@@ -775,11 +786,11 @@ psl_cv1_create_view(
 	attr->attr_collID = resdom->pst_sym.pst_dataval.db_collID;
         attr->attr_seqTuple = (DB_IISEQUENCE *) NULL;
 
-	/*
-	 * Put in geospatial attributes
-	 */
-	attr->attr_geomtype = -1;
-	attr->attr_srid = -1;
+    /*
+     * default geospatial values
+     */
+    attr->attr_srid = -1;
+    attr->attr_geomtype = -1;
 
 	attr->attr_encflags = 0;
 	attr->attr_encwid = 0;
@@ -833,6 +844,11 @@ psl_cv1_create_view(
 	    attr->attr_flags_mask = attribute->att_flags;
 	    attr->attr_defaultID  = attribute->att_defaultID;
 	    attr->attr_defaultTuple  = (DB_IIDEFAULT *) NULL;
+		/*
+		 * Make sure the right geospatial attributes are set
+		 */
+		attr->attr_geomtype = attribute->att_geomtype;
+		attr->attr_srid = attribute->att_srid;
 	}
     }
 
@@ -955,7 +971,6 @@ psl_cv1_create_view(
 	    PST_QNODE	    *tree_copy;
 	    PSS_DUPRB	    dup_rb;
 	    PST_J_ID	    dummy;
-	    PST_QNODE	    *tlist_start = (PST_QNODE *) NULL;
 	    i4	    qrymod_resp_mask;
 	    bool	    leave_loop;
 
@@ -1158,7 +1173,7 @@ psl_cv1_create_view(
 		PSS_RNGTAB	*rule_rng_var = (PSS_RNGTAB *) NULL, *r;
 		PSY_ATTMAP	insrt_map;
 		i4		i;
-	    
+	        u_i4		u;
 		/*
 		** make sure that the underlying table of the new view does NOT
 		** also appear in a subquery inside the qualification;
@@ -1264,7 +1279,7 @@ psl_cv1_create_view(
 		** updated, CHECK OPTION will have to be enforced dynamically
 		*/
 
-		DB_COLUMN_BITMAP_INIT(crt_view->pst_updt_cols.db_domset, i, 0);
+		DB_COLUMN_BITMAP_INIT(crt_view->pst_updt_cols.db_domset, u, 0);
 
 		wco_updt_attrs = FALSE;
 
@@ -1641,6 +1656,8 @@ cleanup:
 **	21-dec-92 (andre)
 **	    extracted previously modified semantic action of viewstmnt:
 **	    production from pslsgram.yi to form this function
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    No dmu char array any more, now dmu characteristics.
 */
 DB_STATUS
 psl_cv2_viewstmnt(
@@ -1731,7 +1748,7 @@ psl_cv2_viewstmnt(
 
     dmu_cb = (DMU_CB *) qeuq_cb->qeuq_dmf_cb;
     
-    MEfill(sizeof(DMU_CB), (u_char) 0, (PTR) dmu_cb);
+    MEfill(sizeof(DMU_CB), 0, (PTR) dmu_cb);
 
     /* Fill in the control block header */
     dmu_cb->type = DMU_UTILITY_CB;
@@ -1760,17 +1777,7 @@ psl_cv2_viewstmnt(
     dmu_cb->dmu_key_array.ptr_in_count  = 0;
     dmu_cb->dmu_key_array.ptr_size	= 0;
 
-    /* Allocate and fill in description entries */
-    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, sizeof(DMU_CHAR_ENTRY),
-	(PTR *) &dmu_cb->dmu_char_array.data_address, &psq_cb->psq_error);
-    if (DB_FAILURE_MACRO(status))
-	return(status);
-
-    ((DMU_CHAR_ENTRY *)dmu_cb->dmu_char_array.data_address)->char_id 
-						    = DMU_VIEW_CREATE;
-    ((DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address)->char_value 
-						    = DMU_C_ON;
-    dmu_cb->dmu_char_array.data_in_size = sizeof(DMU_CHAR_ENTRY);
+    BTset(DMU_VIEW_CREATE, dmu_cb->dmu_chars.dmu_indicators);
 
     /*
     ** When processing CREATE VIEW, we want to replace all references to

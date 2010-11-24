@@ -76,6 +76,8 @@
 **	    Support for long database object names.
 **	26-Oct-09 (gordy)
 **	    Added support for BOOLEAN.
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
 */	
 
 static	GCULIST	reqMap[] =
@@ -2390,10 +2392,19 @@ rqst_pinfo( GCD_PCB *pcb )
 	    break;
 
 	case IIAPI_BYTE_TYPE :	type = SQL_BINARY;		break;
+	case IIAPI_NBR_TYPE :	type = SQL_BINARY;		break;
 	case IIAPI_VBYTE_TYPE :	type = SQL_VARBINARY;		break;
 
 	case IIAPI_LBYTE_TYPE :	
 	case IIAPI_LBLOC_TYPE :
+	case IIAPI_GEOM_TYPE :
+	case IIAPI_POINT_TYPE :
+	case IIAPI_MPOINT_TYPE :
+	case IIAPI_LINE_TYPE :
+	case IIAPI_MLINE_TYPE :
+	case IIAPI_POLY_TYPE :
+	case IIAPI_MPOLY_TYPE :
+	case IIAPI_GEOMC_TYPE :
 	    type = SQL_LONGVARBINARY; 
 	    len = 0; 
 	    break;

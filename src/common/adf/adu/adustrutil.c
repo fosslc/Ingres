@@ -125,6 +125,10 @@
 **      characters and not buffer length.
 **	12-Dec-2008 (kiria01) b121366
 **	    Protect against unaligned access on Solaris
+**      16-Jun-2009 (thich01)
+**          Treat GEOM type the same as LBYTE.
+**      20-Aug-2009 (thich01)
+**          Treat all spatial types the same as LBYTE.
 **      12-Oct-2010 (horda03) b124550
 **          Improve performance of string padding.
 **/
@@ -1075,6 +1079,14 @@ i4			*size)
  
       case DB_LVCH_TYPE:
       case DB_LBYTE_TYPE:
+      case DB_GEOM_TYPE:
+      case DB_POINT_TYPE:
+      case DB_MPOINT_TYPE:
+      case DB_LINE_TYPE:
+      case DB_MLINE_TYPE:
+      case DB_POLY_TYPE:
+      case DB_MPOLY_TYPE:
+      case DB_GEOMC_TYPE:
       case DB_LNVCHR_TYPE:
       {
 	    ADP_PERIPHERAL	    *periph = (ADP_PERIPHERAL *) dv->db_data;
@@ -1395,6 +1407,14 @@ i4		    *str_len)
 
         case DB_LVCH_TYPE:
 	case DB_LBYTE_TYPE:
+	case DB_GEOM_TYPE:
+        case DB_POINT_TYPE:
+        case DB_MPOINT_TYPE:
+        case DB_LINE_TYPE:
+        case DB_MLINE_TYPE:
+        case DB_POLY_TYPE:
+        case DB_MPOLY_TYPE:
+        case DB_GEOMC_TYPE:
 	case DB_LNVCHR_TYPE:
         {
 	    ADP_PERIPHERAL	    *periph = (ADP_PERIPHERAL *) dv->db_data;

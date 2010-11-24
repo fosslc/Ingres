@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -75,8 +75,17 @@
 **	11-Aug-1997 (jenjo02)
 **	    Changed ulm_streamid from (PTR) to (PTR*) so that ulm
 **	    can destroy those handles when the memory is freed.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static i4 ops_qsfdestroy(
+	OPS_STATE *global);
+void ops_deallocate(
+	OPS_STATE *global,
+	bool report,
+	bool partial_dbp);
 
 /*{
 ** Name: ops_qsfdestroy	- destroy a query plan

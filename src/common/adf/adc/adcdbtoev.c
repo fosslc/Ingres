@@ -50,6 +50,12 @@
 **	    Jasmine & Ingres.
 **	21-May-2009 (kiria01) b122051
 **	    Reduce uninit'ed collID
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **	03-Sep-2010 (kiria01) b124352
 **	    Correct typo in previous change.
 [@history_template@]...
@@ -297,6 +303,7 @@ DB_DATA_VALUE	   *ev_value)
     switch (bdt)
     {
     case DB_BYTE_TYPE:
+    case DB_NBR_TYPE:
 	ev_value->db_length = db_value->db_length;
 	ev_value->db_datatype = db_value->db_datatype;
 	ev_value->db_prec = db_value->db_prec;
@@ -330,6 +337,14 @@ DB_DATA_VALUE	   *ev_value)
 	break;
 
     case DB_LBYTE_TYPE:
+    case DB_GEOM_TYPE:
+    case DB_POINT_TYPE:
+    case DB_MPOINT_TYPE:
+    case DB_LINE_TYPE:
+    case DB_MLINE_TYPE:
+    case DB_POLY_TYPE:
+    case DB_MPOLY_TYPE:
+    case DB_GEOMC_TYPE:
 	ev_value->db_length = db_value->db_length;
 	ev_value->db_datatype = db_value->db_datatype;
 	ev_value->db_prec = db_value->db_prec;

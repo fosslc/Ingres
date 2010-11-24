@@ -71,6 +71,8 @@
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
 **	21-Aug-2009 (kschendel) 121804
 **	    Update some of the function declarations to fix gcc 4.3 problems.
+**      04-nov-2010 (joea)
+**          Complete prototype for CSMT_setup.
 **/
 
 /*
@@ -98,12 +100,13 @@ GLOBALREF i4		      Cs_incomp;
 /* func externs -- should be ptorotyped later */
 
 FUNC_EXTERN CS_SCB *CS_xchg_thread();
-FUNC_EXTERN STATUS CSMT_admin_task();
+FUNC_EXTERN STATUS CSMT_admin_task(void);
+FUNC_EXTERN i4 CSMT_del_thread(CS_SCB *scb);
 FUNC_EXTERN void CS_event_shutdown(void);
 FUNC_EXTERN STATUS CS_find_events();
 FUNC_EXTERN STATUS CS_parse_option();
 FUNC_EXTERN STATUS CSMT_set_server_connect();
-FUNC_EXTERN VOID CSMT_setup();
+FUNC_EXTERN void CSMT_setup(void *parm);
 #ifndef CS_tas
 FUNC_EXTERN STATUS CS_tas();
 #endif
@@ -115,7 +118,6 @@ FUNC_EXTERN VOID CSMT_fmt_scb();
 FUNC_EXTERN VOID CS_mkframe();
 FUNC_EXTERN VOID CS_mo_init(void);
 FUNC_EXTERN VOID CS_move_async();
-FUNC_EXTERN VOID CSMT_swuser();
 FUNC_EXTERN VOID CS_toq_scan();
 FUNC_EXTERN VOID CSMTsigchld();
 FUNC_EXTERN VOID iiCLintrp();

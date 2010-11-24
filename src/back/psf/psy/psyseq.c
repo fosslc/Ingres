@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -52,9 +52,40 @@
 **      6-July-04 (zhahu02)
 **          Updated psy_gsequence and psy_seqperm for a user granted for 
 **          select next (INGSRV2894/b112605).
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psy_csequence(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_dsequence(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_asequence(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_gsequence(
+	PSS_SESBLK *sess_cb,
+	DB_OWN_NAME *seq_own,
+	DB_NAME *seq_name,
+	i4 seq_mask,
+	PSS_SEQINFO *seq_info,
+	DB_IISEQUENCE *seqp,
+	i4 *ret_flags,
+	i4 *privs,
+	i4 qmode,
+	i4 grant_all,
+	DB_ERROR *err_blk);
+i4 psy_seqperm(
+	RDF_CB *rdf_cb,
+	i4 *privs,
+	PSS_SESBLK *sess_cb,
+	PSS_SEQINFO *seq_info,
+	i4 qmode,
+	i4 grant_all,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: psy_csequence	- Create a sequence.
@@ -127,8 +158,7 @@ psy_csequence(
 {
     RDF_CB		rdf_cb;
     RDR_RB		*rdf_rb = &rdf_cb.rdf_rb;
-    DB_STATUS		status, loc_status;
-    i4		err_code;
+    DB_STATUS		status;
 
     /* Assign user */
     STRUCT_ASSIGN_MACRO(sess_cb->pss_user,
@@ -293,9 +323,7 @@ psy_asequence(
     RDF_CB		rdf_cb;
     RDR_RB		*rdf_rb = &rdf_cb.rdf_rb;
     DB_IISEQUENCE	*newseqp;
-    DB_STATUS		status, loc_status;
-    i4		err_code;
-    bool		ascincr;
+    DB_STATUS		status;
 
     newseqp = &psy_cb->psy_tuple.psy_sequence;	/* update values */
 
@@ -391,6 +419,8 @@ psy_asequence(
 **          to prevent delete dba's sequence by non dba.  
 **          This allows non-dba to find sequence for 
 **          updating.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Update psl-command-string call.
 */
 DB_STATUS
 psy_gsequence(
@@ -521,7 +551,7 @@ psy_gsequence(
 		char        qry[PSL_MAX_COMM_STRING];
 		i4     qry_len;
 
-		psl_command_string(qmode, sess_cb->pss_lang, qry, &qry_len);
+		psl_command_string(qmode, sess_cb, qry, &qry_len);
 		_VOID_ psf_error(6420L, 0L,
 		    PSF_USERERR, &err_code, err_blk, 2,
 		    qry_len, qry,
@@ -972,7 +1002,6 @@ saw_the_perms:
     if (*privs)
     {
 	char                buf[60];  /* buffer for missing privilege string */
-	DB_NAME	    	    *seq_name = &seq_info->pss_seqname;
 	i4		    err_code;
 
 	psy_prvmap_to_str((qmode == PSQ_GRANT) ? *privs & ~DB_GRANT_OPTION
@@ -1093,8 +1122,6 @@ seqperm_exit:
     {
 	i4		msg_id;
 	i4		accessmask = SXF_A_FAIL;
-	DB_ERROR	e_error;
-	DB_STATUS	stat;
 
 	/* determin action */
 	switch (qmode)

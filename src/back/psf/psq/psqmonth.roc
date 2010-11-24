@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2008 Ingres Corporation
+** Copyright (c) 1986, 2008, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -61,8 +61,18 @@
 **	    necessitating a whole slew of other includes.
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psq_month(
+	char *monthname,
+	i4 *monthnum,
+	DB_ERROR *err_blk);
+i4 psq_monsize(
+	i4 month,
+	i4 year);
 
 /*}
 ** Name: PSQ_MONTHTAB - Table of month names versus numbers
@@ -89,30 +99,30 @@ typedef struct _PSQ_MONTHTAB
 
 static  const PSQ_MONTHTAB Monthtab[] =   /* Table of month names vs nums */
 {
-    "jan",	    1,
-    "feb",	    2,
-    "mar",	    3,
-    "apr",	    4,
-    "may",	    5,
-    "jun",	    6,
-    "jul",	    7,
-    "aug",	    8,
-    "sep",	    9,
-    "oct",	    10,
-    "nov",	    11,
-    "dec",	    12,
-    "january",	    1,
-    "february",	    2,
-    "march",	    3,
-    "april",	    4,
-    "june",	    6,
-    "july",	    7,
-    "august",	    8,
-    "september",    9,
-    "october",	    10,
-    "november",	    11,
-    "december",	    12,
-    NULL
+    {"jan",	    1},
+    {"feb",	    2},
+    {"mar",	    3},
+    {"apr",	    4},
+    {"may",	    5},
+    {"jun",	    6},
+    {"jul",	    7},
+    {"aug",	    8},
+    {"sep",	    9},
+    {"oct",	    10},
+    {"nov",	    11},
+    {"dec",	    12},
+    {"january",	    1},
+    {"february",    2},
+    {"march",	    3},
+    {"april",	    4},
+    {"june",	    6},
+    {"july",	    7},
+    {"august",	    8},
+    {"september",   9},
+    {"october",	    10},
+    {"november",    11},
+    {"december",    12},
+    {NULL,	    0}
 };
 
 static  const i4  Dmsize[] =          /* Number of days in each month */
@@ -167,8 +177,6 @@ psq_month(
 	DB_ERROR	   *err_blk)
 {
     register PSQ_MONTHTAB *p;
-    i4                  month;
-    DB_STATUS		ret_val;
     i4		err_code;
 
     CVlower(monthname);

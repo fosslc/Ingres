@@ -84,6 +84,8 @@
 **          Added rcb to dm1cxclean prototype
 **	09-Jun-2010 (stial01)
 **          Added prototype for dm1cx_txn_get
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype dm1cx_klen()
 */
 
 /*
@@ -223,3 +225,9 @@ FUNC_EXTERN DB_STATUS dm1cx_dput(DMP_RCB *r,
 			    i4 *err_code);
 FUNC_EXTERN DB_STATUS dm1cx_txn_get(i4 pgtype,DMPP_PAGE *b, i4 child, 
 				i4 *row_low_tran, u_i2 *row_lg_id);
+FUNC_EXTERN VOID	dm1cx_klen(
+				i4		page_type,
+				i4		page_size,
+				DMPP_PAGE	*b,
+				i4		child,
+				i4		*key_size);

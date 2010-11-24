@@ -14,6 +14,7 @@
 #include    <lk.h>
 #include    <cx.h>
 #include    <cv.h>
+#include    <er.h>
 #include    <me.h>
 #include    <nm.h>
 #include    <tm.h>
@@ -827,6 +828,9 @@ rqu_relay(
 **	    added parmameter num_parms
 **	10-nov-1990 (georgeg)
 **	    added lof_error parm, if TRUE rqu_error will only log the error 
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Rewrote with variable parameters for prototyping.
+**	    Replace ule_format with uleFormat.
 */
 VOID
 rqu_error(
@@ -834,16 +838,10 @@ rqu_error(
 	i4		rqf_err,
 	PTR		os_error,
 	i4		num_parms,
-	i4		p1_len,
-	i4		*p1,
-	i4		p2_len,
-	i4		*p2,
-	i4		p3_len,
-	i4		*p3,
-	i4		p4_len,
-	i4		*p4)
+	... )
 {
     
+#define NUM_ER_ARGS	12
 
     i4	    msglen;
     i4	    ulecode;
@@ -851,6 +849,9 @@ rqu_error(
     DB_STATUS	    scf_status, status;
     SCF_CB	    scf_cb;
     RQS_CB	    *rqs = (RQS_CB *)NULL; /* For RQTRACE */
+    i4		    i;
+    va_list	    ap;
+    ER_ARGUMENT	    er_args[NUM_ER_ARGS];
 
 
     if ((num_parms < 0) || (num_parms >4))
@@ -858,39 +859,32 @@ rqu_error(
 	num_parms=0;
     }
 
-    if ( p1_len <= (i4)0 )
+    va_start( ap, num_parms );
+    for ( i = 0; i < num_parms && i < NUM_ER_ARGS; i++ )
     {
-        p1_len = (i4)0;
-        p1 = (i4 *)NULL;
-    }
-
-    if ( p2_len <= (i4)0 )
-    {
-        p2_len = (i4)0;
-        p2 = (i4 *)NULL;
-    }
-
-    if ( p3_len <= (i4)0 )
-    {
-        p3_len = (i4)0;
-        p3 = (i4 *)NULL;
-    }
-
-    if ( p4_len <= (i4)0 )
-    {
-        p4_len = (i4)0;
-        p4 = (i4 *)NULL;
+        er_args[i].er_size = (i4) va_arg( ap, i4 );
+        er_args[i].er_value = (PTR) va_arg( ap, PTR );
     }
       
-    status = ule_format(rqf_err, (CL_ERR_DESC *) os_error, ULE_LOG,
+    status = uleFormat(NULL, rqf_err, (CL_ERR_DESC *) os_error, ULE_LOG,
 		 &scf_cb.scf_aux_union.scf_sqlstate,
 		 errbuf, (i4)sizeof(errbuf),
-		 &msglen, &ulecode, num_parms,
-		 p1_len, p1, p2_len, p2, p3_len, p3, p4_len, p4);
+		 &msglen, &ulecode, i,
+		er_args[0].er_size, er_args[0].er_value,
+		er_args[1].er_size, er_args[1].er_value,
+		er_args[2].er_size, er_args[2].er_value,
+		er_args[3].er_size, er_args[3].er_value,
+		er_args[4].er_size, er_args[4].er_value,
+		er_args[5].er_size, er_args[5].er_value,
+		er_args[6].er_size, er_args[6].er_value,
+		er_args[7].er_size, er_args[7].er_value,
+		er_args[8].er_size, er_args[8].er_value,
+		er_args[9].er_size, er_args[9].er_value,
+		er_args[10].er_size, er_args[10].er_value,
+		er_args[11].er_size, er_args[11].er_value );
     if (status != E_DB_OK)
     {
 	char	    *misc_err_sqlstate = SS50000_MISC_ERRORS;
-	i4	    i;
 	
 	/*
 	** The message could not be formated 
@@ -1066,17 +1060,10 @@ rqu_gca_error(
 	else
 	    scf_cb.scf_nbr_union.scf_local_error = element->gca_local_error;
 
-	status = ule_format(scf_cb.scf_nbr_union.scf_local_error, NULL,
+	status = uleFormat(NULL, scf_cb.scf_nbr_union.scf_local_error, NULL,
 			    ULE_LOG, &scf_cb.scf_aux_union.scf_sqlstate,
 			    errbuf, (i4)sizeof(errbuf),  
-			    &msglen, &ulecode, (i4)12,
-			    0, NULL, 0, NULL,
-			    0, NULL, 0, NULL,
-			    0, NULL, 0, NULL,
-			    0, NULL, 0, NULL,
-			    0, NULL, 0, NULL,
-			    0, NULL, 0, NULL
-			   );
+			    &msglen, &ulecode, 0);
 	if (status != E_DB_OK)
 	{
 	    char    *misc_err_sqlstate = SS50000_MISC_ERRORS;
@@ -1193,7 +1180,7 @@ rqu_gca_error(
     }
 
     
-    status = ule_format(E_RQ0042_LDB_ERROR_MSG,
+    status = uleFormat(NULL, E_RQ0042_LDB_ERROR_MSG,
 			NULL,
 			0,
 			&scf_cb.scf_aux_union.scf_sqlstate,
@@ -1255,7 +1242,7 @@ rqu_gca_error(
     ** Log the message to the error log. Ignore status.
     */
 
-    status = ule_format(E_RQ004A_LDB_ERROR_MSG, NULL, ULE_LOG,
+    status = uleFormat(NULL, E_RQ004A_LDB_ERROR_MSG, NULL, ULE_LOG,
 		      (DB_SQLSTATE *) NULL,
 		      errbuf, (i4)sizeof(errbuf),  &msglen, &ulecode, 5,
 		      (i4)sizeof(generr), (PTR)&generr,

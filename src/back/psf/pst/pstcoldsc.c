@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -47,8 +47,15 @@
 **          can automate this next time.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+DMT_ATT_ENTRY *pst_coldesc(
+	PSS_RNGTAB *rngentry,
+	char *colname,
+	i4 colnamelen);
 
 /*{
 ** Name: pst_coldesc	- Look up a column description for a table.

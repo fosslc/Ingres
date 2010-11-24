@@ -441,6 +441,8 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add LK_RELLOG flag for LKrelease,
 **	    LK_CROW lock type.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype LKdeadlock_thread(), LKdist_deadlock_thread()
 */
 
 
@@ -1468,4 +1470,10 @@ FUNC_EXTERN STATUS  LKconnect(
 			LK_LLID             *lock_list_id,
 			CL_ERR_DESC	    *sys_err);
 			/* Connect to existing lock list */
+
+FUNC_EXTERN STATUS LKdeadlock_thread(
+			void		    *dmc_cb);
+
+FUNC_EXTERN STATUS LKdist_deadlock_thread(
+			void		    *dmc_cb);
 # endif /* LK_H_INCLUDED */

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -89,8 +89,13 @@
 **          initialize the scan block with default since distributed does 
 **	    not have DMF. Also initialize the scan block for different
 **	    buffer pools.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 ops_bgn_session(
+	OPF_CB *opf_cb);
 
 /*{
 ** Name: ops_bgn_session	- initialize session control block

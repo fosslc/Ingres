@@ -1,0 +1,21 @@
+/*
+** Copyright (c) 2010 Ingres Corporation
+*/
+/*
+** Generic part file for geospatial
+*/
+
+/*
+** History
+**	8-Mar-2010 (troal01)
+**		Added.
+**	23-Nov-2010 (troal)
+**	    Reanmed srid.dat to sridmap.dat
+*/
+
+PART   geo
+
+   DIRECTORY ingres!files!geo
+   BUILD_DIR (ING_BUILD)!files!geo
+      FILE sridmap.dat
+

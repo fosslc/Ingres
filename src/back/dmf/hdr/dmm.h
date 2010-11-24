@@ -42,6 +42,9 @@
 **          hard-coding those values in dm2d.c
 **      l4-May-2010 (stial01)
 **          Fix DM_RELID_FIELD_NO/DM_RELOWNER_FIELD_NO
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    dmm_message() is static in dmmfind
+**	    Prototyped dmm_del_config(), dmm_config()
 **/
 
 /*
@@ -66,6 +69,8 @@ FUNC_EXTERN DB_STATUS   dmm_destroy(DMM_CB *dmm_cb);
 FUNC_EXTERN DB_STATUS   dmm_finddbs(DMM_CB *dmm_cb);
 FUNC_EXTERN DB_STATUS	dmm_list(DMM_CB *dmm_cb);
 FUNC_EXTERN DB_STATUS	dmm_del_location(DMM_CB *dmm_cb);
+FUNC_EXTERN DB_STATUS	dmm_del_config(DMM_CB *dmm_cb);
+FUNC_EXTERN DB_STATUS	dmm_config(DMM_CB *dmm_cb);
 
 
 FUNC_EXTERN DB_STATUS	dmm_add_create(
@@ -102,8 +107,6 @@ FUNC_EXTERN DB_STATUS	dmm_do_del(
 				    u_i4		fillen,
 				    DB_ERROR		*dberr);
 
-FUNC_EXTERN DB_STATUS	dmm_message();
-
 FUNC_EXTERN DB_STATUS	dmm_makelist(
 				    DMP_DCB		*dcb,
 				    DML_XCB		*xcb,
@@ -122,5 +125,5 @@ FUNC_EXTERN DB_STATUS	dmm_putlist(
 				    i4			name_len,
 				    CL_ERR_DESC		*sys_err);
 
-FUNC_EXTERN DB_STATUS	dmm_init_catalog_templates( );
+FUNC_EXTERN DB_STATUS	dmm_init_catalog_templates(void);
 

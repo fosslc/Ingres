@@ -562,6 +562,9 @@
 **          change __CMP_STORE_LONG to __CMP_SWAP_LONG for itanium
 **      09-mar-2010 (joea)
 **          Add E_CL25F5_KPB_ALLOC_ERROR and E_CL25F6_MEM_STK_ALLOC_ERROR.
+**      06-oct-2010 (joea)
+**          Remove CScas4 and CScasptr macros since they're already defined in
+**          csnormal.h.
 */
 
 
@@ -1077,33 +1080,4 @@ FUNC_EXTERN STATUS CSterminate(i4 mode, i4 *active_count);
 #define			CS_DEFPRIORITY	(CS_LIM_PRIORITY / 2)
 #define 		CS_CURPRIORITY  -1
 
-
-#include <builtins.h>
-/*
-** Perform and atomic compare and swap on an aligned four byte
-** region.  Macro returns OK (0) if update was performed,
-** otherwise, reread oldval, recalc newval, and try again.
-*/
-#if defined(ALPHA)
-# define CScas4(target,oldval,newval) \
-   (0 == __CMP_STORE_LONG( (volatile void *)(target), \
-    (int)(oldval), (int)(newval), (volatile void *)(target) ))
-
-/*
-** Perform atomic C&S op on pointer size arg. (Change builtin func.
-** __CMP_STORE_LONG to __CMP_STORE_QUAD once ported to 64 bit ptrs.)
-*/
-# define CScasptr(target,oldval,newval) \
-   (0 == __CMP_STORE_LONG( (volatile void *)(target), \
-    (int)(oldval), (int)(newval), (volatile void *)(target) ))
-#elif defined(IA64)
-# define CScas4(target,oldval,newval) \
-   (0 == __CMP_SWAP_LONG( (volatile void *)(target), \
-    (int)(oldval), (int)(newval)))
-# define CScasptr(target,oldval,newval) \
-   (0 == __CMP_SWAP_LONG( (volatile void *)(target), \
-    (int)(oldval), (int)(newval)))
-
-#endif
 # endif /* CS_H_INCLUDED */
-

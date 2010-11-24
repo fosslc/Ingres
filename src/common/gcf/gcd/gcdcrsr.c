@@ -87,6 +87,8 @@
 **	    Expand temp buffer to support larger decimal precision.
 **	26-Oct-09 (gordy)
 **	    Added support for BOOLEAN.
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
 */	
 
 /*
@@ -553,15 +555,31 @@ crsr_fetch_sm( PTR arg )
 	     column < scb->column.max_cols; 
 	     column++ 
 	   )
-	    if ( desc[ column ].ds_dataType == IIAPI_LVCH_TYPE  ||
-		 desc[ column ].ds_dataType == IIAPI_LNVCH_TYPE ||
-		 desc[ column ].ds_dataType == IIAPI_LBYTE_TYPE )
-	    {
+	{
+            i2 blobFound = 0;
+	    switch( desc[ column ].ds_dataType )
+            {
+	    case IIAPI_LVCH_TYPE:
+	    case IIAPI_LNVCH_TYPE:
+	    case IIAPI_LBYTE_TYPE:
+	    case IIAPI_GEOM_TYPE:
+	    case IIAPI_POINT_TYPE:
+	    case IIAPI_MPOINT_TYPE:
+	    case IIAPI_LINE_TYPE:
+	    case IIAPI_MLINE_TYPE:
+	    case IIAPI_POLY_TYPE:
+	    case IIAPI_MPOLY_TYPE:
+	    case IIAPI_GEOMC_TYPE:
+	      {
 		/* Include BLOB and stop */
 		column++;
 		pcb->data.data.max_row = 1; 	/* BLOBs force single row */
+                blobFound = 1;
 		break;
-	    }
+	      }
+            }
+            if (blobFound == 1) break;
+	}
 
 	/*
 	** Only one row allowed if partial row.  Preceding loop 
@@ -977,11 +995,28 @@ crsr_cols
 	** saved below once the segment has been processed,
 	** so the saved value is FALSE on the first segment).
 	*/
-	if ( (desc[ col ].ds_dataType != IIAPI_LVCH_TYPE  &&
-	      desc[ col ].ds_dataType != IIAPI_LNVCH_TYPE &&
-	      desc[ col ].ds_dataType != IIAPI_LBYTE_TYPE)  ||
-	     ! scb->column.more_segments )
+	switch(desc[ col ].ds_dataType)
+	{
+	case IIAPI_LVCH_TYPE:
+        case IIAPI_LNVCH_TYPE:
+	case IIAPI_LBYTE_TYPE:
+	case IIAPI_GEOM_TYPE:
+	case IIAPI_POINT_TYPE:
+	case IIAPI_MPOINT_TYPE:
+	case IIAPI_LINE_TYPE:
+	case IIAPI_MLINE_TYPE:
+	case IIAPI_POLY_TYPE:
+	case IIAPI_MPOLY_TYPE:
+	case IIAPI_GEOMC_TYPE:
+            {
+		if ( !scb->column.more_segments )
+		    gcd_put_i1( rcb_ptr, 1 );
+		break;
+            }
+	default:
 	    gcd_put_i1( rcb_ptr, 1 );
+            break;
+	}
 
 	switch( desc[ col ].ds_dataType )
 	{
@@ -1110,6 +1145,7 @@ crsr_cols
 	case IIAPI_CHA_TYPE :
 	case IIAPI_CHR_TYPE :
 	case IIAPI_BYTE_TYPE :
+	case IIAPI_NBR_TYPE :
 	    gcd_put_bytes( rcb_ptr, desc[ col ].ds_length, 
 			    (u_i1 *)data[ col ].dv_value );
 	    break;
@@ -1143,6 +1179,14 @@ crsr_cols
 	case IIAPI_LVCH_TYPE :
 	case IIAPI_LNVCH_TYPE :
 	case IIAPI_LBYTE_TYPE :
+	case IIAPI_GEOM_TYPE :
+	case IIAPI_POINT_TYPE :
+	case IIAPI_MPOINT_TYPE :
+	case IIAPI_LINE_TYPE :
+	case IIAPI_MLINE_TYPE :
+	case IIAPI_POLY_TYPE :
+	case IIAPI_MPOLY_TYPE :
+	case IIAPI_GEOMC_TYPE :
 	    {
 		u_i1	*ptr;
 		u_i2	seg_len, chrs, char_size = sizeof( char );

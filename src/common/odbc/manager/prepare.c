@@ -12,6 +12,7 @@
 #include <iiodbcfn.h>
 #include "odbclocal.h"
 #include "tracefn.h"
+#include <idmseini.h>
 
 /* 
 ** Name: prepare.c - query preparation functions for the ODBC CLI.
@@ -46,6 +47,8 @@
 **      Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
 **      SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
 **      platforms.
+**   15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**      Changes to eliminate compiler prototype warnings.
 */ 
 
 /*

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2006 Ingres Corporation
+**Copyright (c) 2006, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -59,8 +59,29 @@
 **  History:
 **      21-mar-06 (dougi)
 **	    Written for the optimizer hints project.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+bool opn_index_hint(
+	OPS_SUBQUERY *subquery,
+	OPN_STLEAVES combination,
+	OPN_LEAVES numleaves);
+bool opn_nonkj_hint(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep);
+bool opn_fsmCO_hint(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *nodep);
+bool opn_kj_hint(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep,
+	bool *lkjonly,
+	bool *rkjonly);
+bool opn_order_hint(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep);
 
 /*{
 ** Name: opn_index_hint	- check current table/index combination against
@@ -175,8 +196,6 @@ opn_nonkj_hint(
 {
     i4			i, j;
     OPS_TABHINT		*hintp;
-    OPV_VARS		*varp;
-    OPV_RT		*vbase = subquery->ops_vars.opv_base;
     bool		gotone;
 
 
@@ -253,9 +272,7 @@ opn_fsmCO_hint(
 	OPS_SUBQUERY	*subquery,
 	OPO_CO		*nodep)
 {
-
-
-
+    return FALSE;
 }
 
 /*{
@@ -299,8 +316,6 @@ opn_kj_hint(
 
     i4			i, j;
     OPS_TABHINT		*hintp;
-    OPV_VARS		*varp;
-    OPV_RT		*vbase = subquery->ops_vars.opv_base;
     bool		gotone, retval;
 
 

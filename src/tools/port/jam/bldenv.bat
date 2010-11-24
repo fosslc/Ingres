@@ -86,6 +86,10 @@ REM	    - Use windows NUL: rather than MK C:/nul.
 REM	    - Only set II_JDK_HOME stuff in include/lib paths if it's set
 REM	    (by the outside, it's not normally set).
 REM	    - .NET stuff is now in dotnet2_win, fix here.
+REM	22-Mar-2010 (troal01)
+REM	     Add GEOSROOT to point to where the GEOS binaries and headers are
+REM	22-Mar-2010 (troal01)
+REM	     Add PROJROOT to point to where the Proj.4 binaries and headers are
 REM	07-Apr-2010 (drivi01)
 REM	     Add routines for setting up environment on x64.
 REM	     Use cygwin shell for the build instead of MKS shell.  MKS shell
@@ -185,6 +189,22 @@ if exist "%XERCESCROOT%\bin\xerces-c_2_8.dll" set XERCVERS=2_8
 if exist "%XERCESCROOT%\bin\xerces-c_3_0.dll" set XERCVERS=3_0
 if "%XERCVERS"=="" echo XERCVERS could not be determined
 echo XERCVERS=%XERCVERS%
+:GEOS_LOOP
+if "%GEOSROOT%"=="" SET /P GEOSROOT=Root location of GEOS source and lib (default is %ING_ROOT%\geos):
+if "%GEOSROOT%"=="" SET GEOSROOT=%ING_ROOT%\geos
+if not exist "%GEOSROOT%" echo %GEOSROOT% does not exist& SET GEOSROOT=& goto GEOS_LOOP
+SET GEOS_LOC=%GEOSROOT%\lib
+SET GEOS_INC=%GEOSROOT%\inc
+SET PATH=%GEOS_LOC%;%PATH%
+
+:PROJ_LOOP
+if "%PROJROOT%"=="" SET /P PROJROOT=Root location of PROJ source and lib (default is %ING_ROOT%\proj):
+if "%PROJROOT%"=="" SET PROJROOT=%ING_ROOT%\proj
+if not exist "%PROJROOT%" echo %PROJROOT% does not exist& SET PROJROOT=& goto PROJ_LOOP
+SET PROJ_LOC=%PROJROOT%\lib
+SET PROJ_INC=%PROJROOT%\include
+SET PATH=%PROJ_LOC%;%PATH%
+
 :KERBEROS_LOOP
 if "%KRB5HDR%"=="" SET /P KRB5HDR=Location of Kerberos header files (default is %ING_ROOT%\Kerberos5):
 if "%KRB5HDR%"=="" SET KRB5HDR=%ING_ROOT%\Kerberos5

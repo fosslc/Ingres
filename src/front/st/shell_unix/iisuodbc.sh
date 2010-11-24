@@ -97,6 +97,11 @@
 ##	14-Feb-2010 (hanje04)
 ##	    SIR 123296
 ##	    Add support for LSB builds
+##      29-Sep-2010 (thich01)
+##          Make -rmpkg run in batch mode so it doesn't prompt.  Add a check
+##          similar to the install time check, for the ini file.  Call iisetres
+##          to indicate this script ran successfully so the post install
+##          script detects its success.
 ##
 #  PROGRAM = (PROG1PRFX)suodbc
 #
@@ -141,23 +146,30 @@ elif [ "$1" = "-vbatch" ] ; then
 fi
 
 if [ "$1" = "-rmpkg" ] ; then
+BATCH=true
 NOT_DONE=true
 newPATH="/usr/local/etc"
 while $NOT_DONE ; do
+    $BATCH ||
     {
         echo "Enter the default ODBC configuration path [ $newPATH ]: "
         $BATCH || read ALTPATH junk
-        [ -z "$ALTPATH" ] && ALTPATH=$newPATH
-
-        echo ""
-        echo "The default ODBC configuration path is $ALTPATH"
-        echo ""
     }
-    prompt "Is the path information correct? " y && NOT_DONE=false
+    [ -z "$ALTPATH" ] && ALTPATH=$newPATH
+
+    echo ""
+    echo "The default ODBC configuration path is $ALTPATH"
+    echo ""
+    $BATCH || prompt "Is the path information correct? " y && NOT_DONE=false
     echo ""
 done
    
-   (PROG1PRFX)odbcinst -rmpkg -p $ALTPATH 
+   (PROG1PRFX)odbcinst -rmpkg -p $ALTPATH >> $II_LOG/install.log 2>&1
+    if [ $? -ne 0 ];then
+        echo "Cannot find default ODBC configuration path /usr/local/etc."
+        echo "Using "$cfgloc"/odbcinst.ini."
+        (PROG1PRFX)odbcinst -rmpkg -p $cfgloc >> $II_LOG/install.log 2>&1
+    fi
    cat << !
   The (PROD1NAME) ODBC Driver has been removed
 
@@ -338,6 +350,59 @@ See the (PROD1NAME) Installation Guide for more information.
   
 !
 fi # if $BATCH
+   if [ -f $II_SYSTEM/ingres/install/release.dat ] ; then
+       VERSION=`$II_SYSTEM/ingres/install/ingbuild -version=dbms` ||
+       {
+           cat << !
+   
+$VERSION
+
+!
+          exit 1
+       }
+   elif [ x"$conf_LSB_BUILD" = x"TRUE" ] ; then
+      VERSION=`head -1 /usr/share/ingres/version.rel` ||
+   {
+       cat << !
+
+Missing file /usr/share/ingres/version.rel
+
+!
+      exit 1
+   }
+   else
+       VERSION=`head -1 $II_SYSTEM/ingres/version.rel` ||
+       {
+           cat << !
+   
+Missing file $II_SYSTEM/ingres/version.rel
+   
+!
+          exit 1
+       }
+   fi
+
+   RELEASE_ID=`echo $VERSION | sed "s/[ ().\/]//g"`
+   SETUP=`iigetres ii.$CONFIG_HOST.config.odbc.$RELEASE_ID`
+   if [ "$SETUP" = "complete" ]
+   then
+        # If testing, then pretend we're not set up, otherwise scram.
+        $DEBUG_DRY_RUN ||
+        {
+            cat << !
+   
+The $VERSION version of the ODBC Driver has
+already been set up on local host "$HOSTNAME".
+   
+!
+            $BATCH || pause
+            trap : 0
+            exit 0
+        }
+        SETUP=""
+   fi
+
+iisetres ii.$CONFIG_HOST.config.odbc.$RELEASE_ID complete
 
 $BATCH || pause
 trap : 0

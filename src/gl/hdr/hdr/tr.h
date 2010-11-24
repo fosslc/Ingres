@@ -51,6 +51,10 @@
 **	    Add declare for TRwrite.
 **	25-May-2007 (jonj)
 **	    Add prototype for TRformat_to_buffer().
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    In cleaning up prototypes, renamed TRformat_to_buffer to
+**	    TRvformat to clarify what it is and realigned its parameters
+**	    with TRformat
 **/
 #ifndef TRdisplay
 #if defined(__STDARG_H__)
@@ -62,19 +66,19 @@ FUNC_EXTERN i4  TRdisplay( );
 
 #ifndef TRformat
 #if defined( __STDARG_H__)
-FUNC_EXTERN void TRformat( i4(*)(PTR, i4, char *), ...);
+FUNC_EXTERN void TRformat(STATUS(*)(PTR, i4, char *), ...);
 #else
 FUNC_EXTERN void TRformat();
 #endif
 #endif
 
-FUNC_EXTERN VOID TRformat_to_buffer(
-VOID	(*fcn)(),
-i4	*arg,
-char	*buffer,
-i4	l_buffer,
-char	*fmt,
-va_list	ap);
+FUNC_EXTERN VOID TRvformat(
+	STATUS	(*fcn)(PTR, i4, char *),
+	PTR	arg,
+	char	*buffer,
+	i4	l_buffer,
+	char	*fmt,
+	va_list	ap);
 
 FUNC_EXTERN VOID TRflush(
 #ifdef CL_PROTOTYPED

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -7,6 +7,7 @@
 #include    <cm.h>
 #include    <st.h>
 #include    <cs.h>
+#include    <cv.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
 #include    <ddb.h>
@@ -64,10 +65,6 @@
 **
 **  Description:
 **      These routines are common to the compilation of all join nodes. 
-[@comment_line@]...
-**
-{@func_list@}...
-**
 **
 **  History:
 **      25-aug-86 (eric)
@@ -196,12 +193,180 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opc_jinouter(
+	OPS_STATE *global,
+	OPC_NODE *pcnode,
+	OPO_CO *co,
+	i4 level,
+	QEN_NODE **pqen,
+	OPC_EQ **pceq,
+	OPC_EQ *oceq);
+void opc_jkinit(
+	OPS_STATE *global,
+	OPE_IEQCLS *jeqcs,
+	i4 njeqcs,
+	OPC_EQ *ceq,
+	OPE_BMEQCLS *keqcmp,
+	OPC_EQ **pkceq);
+void opc_jmerge(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_EQ *iceq,
+	OPC_EQ *oceq,
+	OPC_EQ *ceq);
+static void opc_findtjixeqcs(
+	OPS_SUBQUERY *subqry,
+	OPO_CO *co,
+	OPE_BMEQCLS *tjeqcmpp,
+	OPV_IVARS tjvarno);
+void opc_jqual(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPE_BMEQCLS *keqcmp,
+	OPC_EQ *iceq,
+	OPC_EQ *oceq,
+	QEN_ADF **qadf,
+	i4 *tidatt);
+void opc_kqual(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_EQ *iceq,
+	OPC_EQ *oceq,
+	QEN_ADF **qadf);
+void opc_iqual(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_EQ *iceq,
+	QEN_ADF **qadf,
+	i4 *tidatt);
+void opc_ijkqual(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_EQ *iceq,
+	OPC_EQ *oceq,
+	OPE_BMEQCLS *keymap,
+	QEN_ADF **qadf,
+	i4 *tidatt,
+	bool rmsflag);
+void opc_jnotret(
+	OPS_STATE *global,
+	OPO_CO *co,
+	OPC_EQ *ceq);
+void opc_jqekey(
+	OPS_STATE *global,
+	OPE_IEQCLS *jeqcs,
+	i4 njeqcs,
+	OPC_EQ *iceq,
+	OPC_EQ *oceq,
+	RDR_INFO *rel,
+	QEF_KEY **pqekey);
+bool opc_spjoin(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPO_CO *co,
+	OPC_EQ *oceq,
+	OPC_EQ *ceq);
+void opc_kjkeyinfo(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	RDR_INFO *rel,
+	PST_QNODE *key_qtree,
+	OPC_EQ *oceq,
+	OPC_EQ *iceq,
+	OPE_BMEQCLS *keymap);
+static void opc_mvkeyatt(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	QEF_KAND ***prev_kand,
+	i4 keyno,
+	ADE_OPERAND *keyvalop,
+	RDR_INFO *rel,
+	ADI_FI_ID opid,
+	i4 key_type,
+	i4 key_row,
+	i4 *key_offset,
+	i4 pmflag,
+	QEF_KOR *qekor);
+bool opc_hashatts(
+	OPS_STATE *global,
+	OPE_BMEQCLS *keqcmp,
+	OPC_EQ *oceq,
+	OPC_EQ *iceq,
+	DB_CMP_LIST **pcmplist,
+	i4 *kcount);
+void opc_ojqual(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	QEN_OJINFO *oj,
+	OPC_EQ *iceq,
+	OPC_EQ *oceq);
+void opc_speqcmp(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPO_CO *child,
+	OPE_BMEQCLS *eqcmp0,
+	OPE_BMEQCLS *eqcmp1);
+void opc_ojequal_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	QEN_OJINFO *oj,
+	OPC_EQ sceq[],
+	OPE_BMEQCLS *returnedEQCbitMap);
+void opc_emptymap(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPO_CO *cco,
+	OPE_BMEQCLS *eqcmp);
+static void opc_cojnull_adj(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPE_BMEQCLS *empeqcmp);
+static void opc_cojnull(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	QEN_ADF **oj_null,
+	OPE_BMEQCLS *sp0eqcmp,
+	OPE_BMEQCLS *sp1eqcmp,
+	OPE_BMEQCLS *empeqcmp,
+	OPC_EQ *child_ceq);
+void opc_ojnull_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	QEN_OJINFO *oj,
+	OPC_EQ *iceq,
+	OPC_EQ *oceq,
+	OPE_BMEQCLS *returnedEQCbitMap);
+void opc_ojinfo_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_EQ *iceq,
+	OPC_EQ *oceq);
+static void opc_buildTIDsort(
+	OPS_STATE *global,
+	QEN_TEMP_TABLE *tempTable);
+void opc_tisnull(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_EQ *oceq,
+	OPV_IVARS innerRelation,
+	QEN_ADF **tisnull);
+static void opc_outerJoinEQCrow(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_EQ *iceq,
+	OPC_EQ *oceq,
+	OPC_EQ *savedEQCs,
+	OPE_BMEQCLS *returnedEQCbitMap);
 
 /*
 **  Structure definitions 
 */
-
+
 /*}
 ** Name: OPC_KJCONST - Constant info for a key join
 **
@@ -212,14 +377,12 @@
 **	ADI_ISNULL_OP. This structure
 **      is used exclusivly by opc_kjkeyinfo() to be able to map from key 
 **      numbers to qtree constant info. 
-[@comment_line@]...
 **
 ** History:
 **      24-july-87 (eric)
 **          created
 **	03-jan-90 (stec)
 **	    Removed TYPEDEF keyword preceding struct definition.
-[@history_template@]...
 */
 typedef struct _OPC_KJCONST OPC_KJCONST;
 struct _OPC_KJCONST
@@ -230,71 +393,6 @@ struct _OPC_KJCONST
     OPC_KJCONST		*opc_kjnext;
     i4			opc_keytype;
 };
-
-
-/*
-**  Forward and/or External function references.
-*/
-
-static VOID
-opc_mvkeyatt(
-	OPS_STATE   *global,
-	OPC_ADF	    *cadf,
-	QEF_KAND    ***prev_kand,
-	i4	    keyno,
-	ADE_OPERAND *keyvalop,
-	RDR_INFO    *rel,
-	ADI_FI_ID   opid,
-	i4	    key_type,
-	i4	    key_row,
-	i4	    *key_offset,
-	i4	    pmflag,
-	QEF_KOR	    *qekor );
-
-static	VOID
-opc_buildTIDsort(
-		OPS_STATE	*global,
-		QEN_TEMP_TABLE	*tempTable
-);
-
-static VOID
-opc_ojequal_build(
-		OPS_STATE	*global,
-		OPC_NODE	*cnode,
-		QEN_OJINFO	*oj,
-		OPC_EQ		sceq[],
-		OPE_BMEQCLS	*returnedEQCbitMap
-);
-
-static VOID
-opc_outerJoinEQCrow(
-		OPS_STATE	*global,
-		OPC_NODE	*cnode,
-		OPC_EQ		*iceq,
-		OPC_EQ		*oceq,
-		OPC_EQ		*savedEQCs,
-		OPE_BMEQCLS	*returnedEQCbitMap
-);
-static VOID
-opc_cojnull_adj(
-		OPS_STATE	*global,
-		OPC_NODE	*cnode,
-		OPE_BMEQCLS	*empeqcmp
-);
-
-static VOID opc_cojnull(
-	OPS_STATE	*global,
-	OPC_NODE	*cnode,
-	QEN_ADF		**oj_null,
-	OPE_BMEQCLS	*sp0eqcmp,
-	OPE_BMEQCLS	*sp1eqcmp,
-	OPE_BMEQCLS	*empeqcmp,
-	OPC_EQ		*child_ceq
-);
-
-static i4
-opc_find_seltype (
-	PST_QNODE	*root);
 
 /*
 **  Defines of constants used in this file
@@ -347,7 +445,6 @@ opc_jinouter(
     OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
     OPC_NODE		cnode;
     i4			ev_size;
-    OPO_CO		*pco = pcnode->opc_cco;
     bool		left_input;
 
     /* fill in cnode to compile the inner or outer node */
@@ -573,7 +670,6 @@ opc_jmerge(
     OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
     OPO_CO		*co = cnode->opc_cco;
     OPE_IEQCLS		eqcno;
-    OPZ_IATTS		attno;
     DB_JNTYPE		jntype;
     bool		is_jneqc;
     OPE_BMEQCLS		jeqcmp;
@@ -961,9 +1057,7 @@ opc_jqual(
     OPE_BMEQCLS		notused_eqcmp;
     i4			nknum;
     PST_QNODE		*comp_tree;
-    i4			qbase;
     OPE_IEQCLS		eqcno;
-    i4			seltype = PST_NOMETA;
 
     /* figure out all the eqcs at this node. */
     MEfill(sizeof (inner_eqcmp), (u_char)0, (PTR)&inner_eqcmp);
@@ -1253,7 +1347,6 @@ opc_kqual(
 		QEN_ADF		**qadf)
 {
     OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
-    QEN_NODE		*qnode = cnode->opc_qennode;
     i4			ninstr, nops, nconst;
     i4		szconst;
     i4			max_base;
@@ -1261,11 +1354,8 @@ opc_kqual(
     OPE_BMEQCLS		inner_eqcmp;
     OPE_BMEQCLS		outer_eqcmp;
     OPE_BMEQCLS		keqcmp;
-    OPE_BMEQCLS		noteqcmp;
     i4			knum;
-    i4			qbase;
     OPE_IEQCLS		eqcno;
-    i4			tidatt;
 
     /* figure out all the eqcs at this node. */
     MEfill(sizeof (inner_eqcmp), (u_char)0, (PTR)&inner_eqcmp);
@@ -1374,7 +1464,6 @@ opc_iqual(
 		QEN_ADF		**qadf,
 		i4		*tidatt)
 {
-    OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
     QEN_NODE		*qnode = cnode->opc_qennode;
     i4			ninstr, nops, nconst;
     i4		szconst;
@@ -1383,8 +1472,6 @@ opc_iqual(
     OPE_BMEQCLS		qual_eqcmp;
     PST_QNODE		*comp_tree;
     i4			qbase;
-    OPE_IEQCLS		eqcno;
-    OPB_BMBF		bfmap;
 
     /*
     ** Get the clauses out the qtree that 
@@ -1492,7 +1579,6 @@ opc_ijkqual(
                 bool            rmsflag)
 {
     OPS_SUBQUERY        *subqry = global->ops_cstate.opc_subqry;
-    OPO_CO              *co = cnode->opc_cco;
     QEN_NODE            *qnode = cnode->opc_qennode;
     i4                  ninstr, nops, nconst;
     i4                  szconst;
@@ -1501,7 +1587,6 @@ opc_ijkqual(
     OPE_BMEQCLS         inner_eqcmp;
     OPE_BMEQCLS         outer_eqcmp;
     OPE_BMEQCLS         keqcmp;
-    OPE_BMEQCLS         noteqcmp;
     OPE_BMEQCLS         notused_eqcmp;
     OPE_BMEQCLS         iqual_eqcmp;
     PST_QNODE           *comp_tree;
@@ -1715,7 +1800,6 @@ opc_jqekey(
 		QEF_KEY		**pqekey)
 {
     OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
-    QEF_AHD		*ahd = subqry->ops_compile.opc_ahd;
     QEF_KEY		*qekey;
     OPZ_IATTS		ojattno;
     OPZ_IATTS		ijattno;
@@ -1855,7 +1939,6 @@ bool opc_spjoin (OPS_STATE	*global,
     
     OPS_SUBQUERY *subqry = global->ops_cstate.opc_subqry;
     QEF_QP_CB	*qp = global->ops_cstate.opc_qp;
-    QEF_AHD	*ahd = subqry->ops_compile.opc_ahd;
 				/* current action header */
     OPC_ADF	key_cadf;	/* key materialize ADF descriptor */
     OPC_ADF	kcomp_cadf;	/* key compare ADF descriptor */
@@ -2262,7 +2345,6 @@ opc_kjkeyinfo(
 		OPE_BMEQCLS	*keymap)
 {
     OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
-    QEF_AHD		*ahd = subqry->ops_compile.opc_ahd;
     QEN_KJOIN		*jn = &cnode->opc_qennode->node_qen.qen_kjoin;
     OPO_CO		*co = cnode->opc_cco;
     OPZ_ATTS		*jatt;
@@ -3373,16 +3455,9 @@ opc_ojqual(
 		OPC_EQ		*iceq,
 		OPC_EQ		*oceq)
 {
-    OPS_SUBQUERY    *subqry = global->ops_cstate.opc_subqry;
     OPO_CO	    *co = cnode->opc_cco;
-    QEN_NODE        *qn = cnode->opc_qennode;
     PST_QNODE	    *oqual = (PST_QNODE *) NULL;
-    QEN_SJOIN	    *sjn;
-    QEN_KJOIN	    *kjn;
-    QEN_TJOIN	    *tjn;
     OPE_BMEQCLS	    oqual_eqcmp;
-    QEN_ADF	    *qadf;
-    OPC_ADF	    cadf;
     i4		    max_base;
     PST_QNODE       *oqualp = (PST_QNODE *) NULL; 
 
@@ -3525,7 +3600,6 @@ opc_speqcmp(
     OPS_SUBQUERY    *subqry = global->ops_cstate.opc_subqry;
     OPO_CO	    *co = cnode->opc_cco;
     OPE_BMEQCLS	    *specialp;
-    OPE_BMEQCLS	    *innereqcp;
 
     specialp = co->opo_variant.opo_local->opo_special;
 
@@ -3643,7 +3717,6 @@ opc_ojequal_build(
 )
 {
     OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
-    OPO_CO		*co = cnode->opc_cco;
     OPZ_ATTS		**attnums;
     OPC_EQ		*ceq;
     OPC_ADF		cadf;
@@ -3884,7 +3957,6 @@ opc_emptymap(
 		OPO_CO		*cco,
 		OPE_BMEQCLS	*eqcmp)
 {
-    OPS_SUBQUERY    *subqry = global->ops_cstate.opc_subqry;
     OPO_CO	    *co = cnode->opc_cco;
 
     /* Initialize the output map. */
@@ -4408,7 +4480,6 @@ opc_ojnull_build(
 		OPE_BMEQCLS	*returnedEQCbitMap
 )
 {
-    OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
     OPO_CO		*co = cnode->opc_cco;
     OPO_CO		*leftChild;
     OPO_CO		*rightChild;
@@ -4416,12 +4487,10 @@ opc_ojnull_build(
     OPE_BMEQCLS		LNULLspecialEQCSto1;
     OPE_BMEQCLS		LNULLspecialEQCSto2;
     OPE_BMEQCLS		LNULLempeqcmp;
-    OPE_BMEQCLS		LNULLeqcsToRefresh;
     OPE_BMEQCLS		RNULLspecialEQCSto0;
     OPE_BMEQCLS		RNULLspecialEQCSto1;
     OPE_BMEQCLS		RNULLspecialEQCSto2;
     OPE_BMEQCLS		RNULLempeqcmp;
-    OPE_IEQCLS		eqcno;
 
     oj->oj_lnull = (QEN_ADF *)NULL;
     oj->oj_rnull = (QEN_ADF *)NULL;
@@ -4639,8 +4708,6 @@ opc_ojinfo_build(
     QEN_OJINFO	*oj;
     QEN_OJINFO	**ojp;
     OPE_BMEQCLS	returnedEQCbitMap;
-    i4		alignmentPad;
-    i4		attributeWidth;
     i4		ev_size;
 
     switch (cnode->opc_qennode->qen_type)
@@ -5172,7 +5239,6 @@ opc_outerJoinEQCrow(
 		OPE_BMEQCLS	*returnedEQCbitMap
 )
 {
-    OPS_SUBQUERY    	*subqry = global->ops_cstate.opc_subqry;
     OPO_CO		*co = cnode->opc_cco;
     OPC_EQ		*currentEQC, *innerEQC, *outerEQC;
     OPE_IEQCLS		eqcno;
@@ -5332,80 +5398,3 @@ opc_outerJoinEQCrow(
     if ( rowSize > 0 )
     { opc_ptrow( global, &ojInfo->oj_resultEQCrow, rowSize ); }
 }
-
-/*{
-** Name: opc_find_seltype -  find seltype 
-**
-** Description:
-**      This function descends the parse tree looking for the bops that have
-**	interesting pst_opmeta. 
-**
-** Inputs:
-**	root		root node
-**
-** Outputs:
-**      none
-**
-**	Returns:
-**	    seltype	as found
-**	    -1		if conflict seen.
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-**      28-Aug-2009 (kiria01)
-**	    Written.
-*/
-static i4
-opc_find_seltype (
-	PST_QNODE	*root)
-{
-    PST_QNODE	*stk[50];
-    u_i4	sp = 0;
-    i4		seltype = PST_NOMETA;
-
-    while (root)
-    {
-	switch (root->pst_sym.pst_type)
-	{
-	case PST_VAR:
-	case PST_CONST:
-	case PST_BYHEAD:
-	case PST_CASEOP:
-	case PST_QLEND:
-	case PST_ROOT:
-	case PST_AGHEAD:
-	case PST_SUBSEL:
-	    if (sp <= 0)
-		return seltype;
-	    root = stk[--sp];
-	    continue;
-
-	case PST_BOP:
-	    if (root->pst_sym.pst_value.pst_s_op.pst_opmeta != PST_NOMETA)
-	    {
-		if (seltype == PST_NOMETA)
-		    seltype = root->pst_sym.pst_value.pst_s_op.pst_opmeta;
-		else if (seltype != root->pst_sym.pst_value.pst_s_op.pst_opmeta)
-		    return -1;
-	    }
-	    /*FALLTHROUGH*/
-	default:
-	    if (root->pst_left)
-	    {
-		if (root->pst_right && sp < sizeof(stk)/sizeof(*stk))
-			stk[sp++] = root->pst_right;
-		root = root->pst_left;
-	    }
-	    else
-		root = root->pst_right;
-	    if (!root && sp > 0)
-		root = stk[--sp];
-	}
-    }
-    return seltype;
-}
-

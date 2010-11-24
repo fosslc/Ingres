@@ -164,6 +164,9 @@
 **	    Remove string length restrictions.
 **	27-Aug-10 (gordy)
 **	    Added config param for login password encoding version.
+**      16-Nov-2010 (Ralph Loen) Bug 122895
+**          Made gcn_encode(), gcn_decode() and gcn_decrypt() public so that
+**          iicvtgcn can use these functions.
 */
 
 /*
@@ -320,35 +323,47 @@ gcn_srv_init( VOID  )
 
     gcn_get_pmsym( "!.cluster_mode", ERx("OFF"), tmp, sizeof( tmp ) );
     if ( ! STcasecmp( tmp, ERx("ON") ) )
-	IIGCn_static.flags |= GCN_CLUSTERED;
-
-    gcn_get_pmsym( "!.pwd_encode_version", "-1", tmp, sizeof( tmp ) );
-
-    if ( *tmp )
     {
-	STATUS	status;
-	i4	version;
+        /*
+        ** GCN passwords in a cluster records are always encoded as GCN_VLP_V0.
+        */
+	IIGCn_static.flags |= GCN_CLUSTERED;
+        IIGCn_static.pwd_enc_vers = GCN_VLP_V0;
+    }
 
-	if ( (status = CVal( tmp, &version )) == OK )
-	    switch( version )
-	    {
-	    case GCN_VLP_V0 : IIGCn_static.pwd_enc_vers = GCN_VLP_V0;	break;
-	    case GCN_VLP_V1 : IIGCn_static.pwd_enc_vers = GCN_VLP_V1;	break;
-	    case -1         : /* Default */				break;
-	    default         : status = FAIL;				break;
-	    }
+    if (!IIGCn_static.flags & GCN_CLUSTERED)
+    {
+        gcn_get_pmsym( "!.pwd_encode_version", "-1", tmp, sizeof( tmp ) );
 
-	if ( status != OK )
-	{
-	    ER_ARGUMENT earg[2];
+        if ( *tmp )
+        {
+	    STATUS	status;
+	    i4	version;
 
-	    earg[0].er_value = ERx("pwd_encode_version");
-	    earg[0].er_size = STlength( earg[0].er_value );
-	    earg[1].er_value = tmp;
-	    earg[1].er_size = STlength( earg[1].er_value );
+	    if ( (status = CVal( tmp, &version )) == OK )
+            {
+	        switch( version )
+	        {
+	        case GCN_VLP_V0 : IIGCn_static.pwd_enc_vers = GCN_VLP_V0; break;
+	        case GCN_VLP_V1 : IIGCn_static.pwd_enc_vers = GCN_VLP_V1; break;
+	        case -1         : /* Default */				  break;
+	        default         : status = FAIL;			  break;
+	        }
 
-	    gcu_erlog( 0, 1, E_GC0106_GCN_CONFIG_VALUE, NULL, 2, (PTR)earg );
-	}
+	        if ( status != OK )
+	        {
+	            ER_ARGUMENT earg[2];
+
+	            earg[0].er_value = ERx("pwd_encode_version");
+	            earg[0].er_size = STlength( earg[0].er_value );
+	            earg[1].er_value = tmp;
+	            earg[1].er_size = STlength( earg[1].er_value );
+
+	            gcu_erlog( 0, 1, E_GC0106_GCN_CONFIG_VALUE, NULL, 2, 
+                        (PTR)earg );
+    	        }
+            }
+        }
     }
 
     gcn_get_pmsym( "!.compress_point", "", tmp, sizeof( tmp ) );

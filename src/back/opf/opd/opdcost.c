@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 #include    <compat.h>
 #include    <gl.h>
@@ -51,9 +51,7 @@
 **  Name: OPDORIG.C - initialize an ORIG node for distributed
 **
 **  Description:
-{@comment_line@}...
 **
-{@func_list@}...
 **
 **
 **  History:
@@ -93,10 +91,66 @@
 **	    in a temp floating point to get around this.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-**
-[@history_line@]...
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static OPO_COST opd_adjustcost(
+	OPS_SUBQUERY *subquery,
+	DD_COSTS *nodecostp,
+	OPO_CPU cpu,
+	OPO_BLOCKS dio);
+OPO_COST opd_msite(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	OPD_ISITE target_site,
+	bool root_flag,
+	OPO_CO *marker,
+	bool remove);
+bool opd_jcost(
+	OPS_SUBQUERY *subquery,
+	OPN_RLS *main_rlsp,
+	OPN_SUBTREE *main_subtp,
+	OPO_CO *newcop,
+	OPS_WIDTH width,
+	OPO_CPU sort_cpu,
+	OPO_BLOCKS sort_dio);
+void opd_idistributed(
+	OPS_STATE *global);
+void opd_isub_dist(
+	OPS_SUBQUERY *subquery);
+bool opd_prleaf(
+	OPS_SUBQUERY *subquery,
+	OPN_RLS *rlsp,
+	OPO_CO *cop,
+	OPS_WIDTH tuple_width,
+	OPO_CPU sort_cpu,
+	OPO_BLOCKS sort_dio);
+void opd_orig(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop);
+bool opd_bflag(
+	OPS_STATE *global);
+static bool opd_cluster(
+	OPS_STATE *global,
+	char *namep);
+static void opd_machineinfo(
+	OPS_STATE *global,
+	OPD_SITE *sitep,
+	bool target);
+void opd_addsite(
+	OPS_STATE *global,
+	OPV_GRV *gvarp);
+bool opd_bestplan(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *newcop,
+	bool sortrequired,
+	OPO_CPU sort_cpu,
+	OPO_BLOCKS sort_dio,
+	OPO_CO **sortcopp);
+void opd_recover(
+	OPS_STATE *global);
 
 /*{
 ** Name: opd_adjustcost	- adjust cost if site cost descriptor available

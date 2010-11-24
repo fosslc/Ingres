@@ -283,10 +283,12 @@ static ME_TLS_KEY	NMlockey = -1;
 **	    Added init of NMLckSymloc.
 **	06-Aug-2007 (smeke01) b118877
 **	    Set NM_static.Init = FALSE for all error return paths.
+**	15-nov-2010 (stephenb)
+**	    Correctly define funcs for prototyping.
 */
 
 STATUS
-NM_initsym()
+NM_initsym(void)
 {
 	char	*sym;
 	STATUS	status;
@@ -1086,7 +1088,7 @@ register SYM	*endsp;
 **	    If symbol.tbl is trashed, return NM_STCORRUPT.
 */
 STATUS
-NMreadsyms()
+NMreadsyms(void)
 {
 	register SYM	*sp = NULL;
 	register FILE	*fp;
@@ -1264,7 +1266,7 @@ register char	**value;
 **      10-Mar-89 (GordonW)
 */
 STATUS
-NMflushIng()
+NMflushIng(void)
 {
 	register SYM	*sp, *lsp;
 

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -72,8 +72,17 @@
 **          Moved <cs.h> for CS_SID.
 **      19-dec-94 (sarjo01) from 15-sep-94 (johna)
 **          initialize dmt_mustlock (added by markm while fixing bug (58681)
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opn_reformat(
+	OPS_SUBQUERY *subquery,
+	OPO_TUPLES tuples,
+	OPS_WIDTH width,
+	OPO_BLOCKS *diop,
+	OPO_CPU *cpup);
 
 /*{
 ** Name: opn_reformat	- cost to reformat a node
@@ -147,7 +156,7 @@ opn_reformat(
     OPO_BLOCKS          dio;		/* estimate of disk i/o used to
                                         ** reformat the relation */
     OPO_CPU             cpu;            /* estimate of cpu for reformat */
-    i4			i, first, second;
+    i4			i;
 
 #if 0
 OPN_IOMTYPE        type;

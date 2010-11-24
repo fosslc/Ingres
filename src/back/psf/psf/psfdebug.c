@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -24,7 +24,6 @@
 #include    <psfparse.h>
 #include    <psfindep.h>
 #include    <pshparse.h>
-#include    <psltrace.h>
 
 /**
 **
@@ -77,8 +76,19 @@
 **	    Added casts to quite compiler warnings
 **	10-Jan-2001 (jenjo02)
 **	    Replaced SCU_INFORMATION with psf_sesscb() call.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psf_debug(
+	DB_DEBUG_CB *debug_cb);
+void psf_relay(
+	char *msg_buffer);
+i4 psf_scctrace(
+	PTR arg1,
+	i4 msg_length,
+	char *msg_buffer);
 
 /*{
 ** Name: psf_debug	- Standard entry point for debugging PSF.
@@ -190,8 +200,6 @@ psf_debug(
 		    ULM_RCB	ulm_rcb;
 		    char	buf[512];
 		    SCF_CB	scf_cb;
-                    i4		error;
-                    i4		junk;
 
 		    ulm_rcb.ulm_poolid = Psf_srvblk->psf_poolid;
 		    ulm_rcb.ulm_facility = DB_PSF_ID;
@@ -334,7 +342,7 @@ psf_scctrace(
     char	 *p;
 
     if (msg_length == 0)
-	return;
+	return 0;
 
     /* Truncate message if necessary */
     if (msg_length > PSF_MAX_TEXT)
@@ -370,4 +378,5 @@ psf_scctrace(
 	TRdisplay("SCF error %d displaying a message to user\n",
 	    scf_cb.scf_error.err_code);
     }
+    return 0;
 }

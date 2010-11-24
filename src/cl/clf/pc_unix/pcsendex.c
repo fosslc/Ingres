@@ -36,15 +36,18 @@
  *
 **	15-jul-93 (ed)
 **	    adding <gl.h> after <compat.h>
+**	15-nov-2010 (stephenb)
+**	    move include of ex.h above pclocal.h to pull in required defines
+**	    for prototypes now in pclocal.h.
  */
  
 # include	<compat.h>
 # include	<gl.h>
 # include	<clconfig.h>
 # include	<pc.h>
+# include	<ex.h>
 # include	"pclocal.h"
 # include	<PCerr.h>
-# include	<ex.h>
 # include	<errno.h>
 
 STATUS

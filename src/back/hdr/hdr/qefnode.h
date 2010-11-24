@@ -364,6 +364,8 @@ struct	_QEN_TEMP_TABLE
 **	    they set.
 **	7-nov-95 (inkdo01)
 **	    Replaced QEN_TEMP_TABLE instance by pointer.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Corrected nested comment
 */									       
 struct _QEN_OJINFO						       
 {									       
@@ -393,7 +395,7 @@ struct _QEN_OJINFO
     QEN_TEMP_TABLE	*oj_innerJoinedTIDs;
 
 	/*								       
-	/* Oj_jntype tells whether we are doing an inner, left, right, or
+	** Oj_jntype tells whether we are doing an inner, left, right, or
 	** full join
 	*/
     DB_JNTYPE	oj_jntype;						       

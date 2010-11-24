@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -85,40 +85,45 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
-
-/* external functions that don't have prototypes
- */
-
-
-/* function prototypes for static functions
- */
-static DB_STATUS    psl_init_attrs(
-				   PSS_SESBLK	 *sess_cb,
-				   PSS_DBPINFO	 *dbpinfo,
-				   DMT_ATT_ENTRY ***attsp,
-				   i4	 *num_atts,
-				   i4	 *attr_nametot,
-				   i4	 *tot_length,
-				   DB_ERROR	 *err_blk);
-static DB_STATUS    psl_init_rdrinfo(
-				     PSS_SESBLK	  *sess_cb,
-				     PSS_DBPINFO  *dbpinfo,
-				     RDR_INFO	  **rdr_infop,
-				     DB_ERROR	  *err_blk);
-
-static DB_STATUS    psl_build_atthsh(
-				     PSS_SESBLK	*sess_cb,
-				     i4	num_atts,
-				     RDR_INFO	*rdr_info,
-				     DB_ERROR	*err_blk);
-static i4	    psl_rdf_hash(
-				char *colname,
-				i4 colnamelen);
-
-
-
+/* TABLE OF CONTENTS */
+i4 psl_cdbp_build_setrng(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_DBPINFO *dbpinfo,
+	PSS_RNGTAB **dbprngp);
+i4 psl_fill_proc_params(
+	PSS_SESBLK *sess_cb,
+	i4 num_params,
+	QUEUE *parmq,
+	i4 num_rescols,
+	QUEUE *rescolq,
+	i4 set_input_proc,
+	DB_ERROR *err_blk);
+static i4 psl_init_attrs(
+	PSS_SESBLK *sess_cb,
+	PSS_DBPINFO *dbpinfo,
+	DMT_ATT_ENTRY ***attsp,
+	i4 *num_atts,
+	i4 *attr_nametot,
+	i4 *tot_length,
+	DB_ERROR *err_blk);
+static i4 psl_rdf_hash(
+	char *colname,
+	i4 colnamelen);
+static i4 psl_build_atthsh(
+	PSS_SESBLK *sess_cb,
+	i4 num_atts,
+	RDR_INFO *rdr_info,
+	DB_ERROR *err_blk);
+static i4 psl_init_rdrinfo(
+	PSS_SESBLK *sess_cb,
+	PSS_DBPINFO *dbpinfo,
+	RDR_INFO **rdr_infop,
+	DB_ERROR *err_blk);
 
 /*
 ** Name: psl_cdbp_build_setrng  - make a (possible dummy) range table 
@@ -877,7 +882,6 @@ psl_build_atthsh(
     i4  	    bucket;
     DB_STATUS	    status;
     i4	    i;
-    DB_ATT_NAME	    hash_attname;
     
     /* allocate array of hash buckets
      */

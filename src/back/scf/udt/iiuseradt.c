@@ -7,6 +7,7 @@
 # include <dbms.h>
 # include <adf.h>
 # include <add.h>
+# include <scfudt.h>
 
 /**
 **
@@ -22,6 +23,8 @@
 **  History:
 **      4-may-1989 (fred)
 **          Created.
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include scfudt.h to get prototype.
 **/
 
 /*{
@@ -62,9 +65,9 @@
 [@history_template@]...
 */
 
-int
+STATUS
 IIudadt_register( ADD_DEFINITION  **add_block, ADD_CALLBACKS *callbacks )
 {
-    return(0);
+    return(OK);
 }
 

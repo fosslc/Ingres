@@ -104,8 +104,52 @@
 **	10-Sep-2008 (jonj)
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value DB_ERROR structure.
 **	    Use new form of uleFormat().
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes. As part of this, introduce psf_verror
+**	    to allow simpler calling from other handlers.
 **/
+
+/* TABLE OF CONTENTS */
+i4 psf_verror(
+	i4 errorno,
+	i4 detail,
+	i4 err_type,
+	i4 *err_code,
+	DB_ERROR *err_blk,
+	PTR FileName,
+	i4 LineNumber,
+	i4 num_parms,
+	va_list);
+i4 psfErrorFcn(
+	i4 errorno,
+	i4 detail,
+	i4 err_type,
+	i4 *err_code,
+	DB_ERROR *err_blk,
+	PTR FileName,
+	i4 LineNumber,
+	i4 num_parms,
+	...);
+i4 psf_errorNV(
+	i4 errorno,
+	i4 detail,
+	i4 err_type,
+	i4 *err_code,
+	DB_ERROR *err_blk,
+	i4 num_parms,
+	...);
+void psf_adf_error(
+	ADF_ERROR *adf_errcb,
+	DB_ERROR *err_blk,
+	PSS_SESBLK *sess_cb);
+void psf_rdf_error(
+	i4 rdf_opcode,
+	DB_ERROR *rdf_errblk,
+	DB_ERROR *err_blk);
+void psf_qef_error(
+	i4 qef_opcode,
+	DB_ERROR *qef_errblk,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: psfErrorFcn	- Format and report a parser facility error.
@@ -223,18 +267,18 @@
 **	    SIR 120874: Add non-variadic macros and functions for
 **	    compilers that don't support them.
 */
-/* VARARGS5 */
+
 DB_STATUS
-psfErrorFcn(
-i4		errorno,
-i4		detail,
-i4		err_type,
-i4		*err_code,
-DB_ERROR	*err_blk,
-PTR		FileName,
-i4		LineNumber,
-i4		num_parms,
-		...)
+psf_verror(
+    i4		errorno,
+    i4		detail,
+    i4		err_type,
+    i4		*err_code,
+    DB_ERROR	*err_blk,
+    PTR		FileName,
+    i4		LineNumber,
+    i4		num_parms,
+    va_list	ap)
 {
     i4             uletype;
     DB_STATUS           uleret;
@@ -248,21 +292,16 @@ i4		num_parms,
     bool		leave_loop = TRUE;
 
 #define	MAX_PARMS 5
-    va_list	ap;
     i4		psize[MAX_PARMS];
     PTR		pvalue[MAX_PARMS];
     i4		NumParms;
     DB_ERROR	localDBerror;
-
-    va_start( ap, num_parms );
 
     for ( NumParms = 0; NumParms < num_parms && NumParms < MAX_PARMS; NumParms++ )
     {
         psize[NumParms] = (i4)va_arg(ap, i4);
 	pvalue[NumParms] = (PTR)va_arg(ap, PTR);
     }
-
-    va_end( ap );
 
     do			/* Not a loop, just gives a place to break to */
     {
@@ -432,46 +471,46 @@ i4		num_parms,
     return (ret_val);
 }
 
+DB_STATUS
+psfErrorFcn(
+    i4		errorno,
+    i4		detail,
+    i4		err_type,
+    i4		*err_code,
+    DB_ERROR	*err_blk,
+    PTR		FileName,
+    i4		LineNumber,
+    i4		num_parms,
+		...)
+{
+    DB_STATUS status;
+    va_list	ap;
+    va_start(ap, num_parms);
+    status = psf_verror(errorno, detail, err_type, err_code, err_blk,
+		FileName, LineNumber, num_parms, ap);
+    va_end(ap);
+    return status;
+}
+
 /* Non-variadic function forms, insert __FILE__, __LINE__ manually */
 DB_STATUS
 psf_errorNV(
-i4		errorno,
-i4		detail,
-i4		err_type,
-i4		*err_code,
-DB_ERROR	*err_blk,
-i4		num_parms,
+    i4		errorno,
+    i4		detail,
+    i4		err_type,
+    i4		*err_code,
+    DB_ERROR	*err_blk,
+    i4		num_parms,
 		...)
 {
+    DB_STATUS status;
     va_list	ap;
-    i4		ps[MAX_PARMS];
-    PTR		pv[MAX_PARMS];
-    i4		i;
 
-    va_start( ap, num_parms );
-
-    for ( i = 0; i < num_parms && i < MAX_PARMS; i++ )
-    {
-        ps[i] = (i4)va_arg(ap, i4);
-	pv[i] = (PTR)va_arg(ap, PTR);
-    }
-
-    va_end( ap );
-
-    return ( psfErrorFcn(
-    			 errorno,
-			 detail,
-			 err_type,
-			 err_code,
-			 err_blk,
-			 __FILE__,
-			 __LINE__,
-			 i,
-			 ps[0], pv[0],
-			 ps[1], pv[1],
-			 ps[2], pv[2],
-			 ps[3], pv[3],
-			 ps[4], pv[4] ) );
+    va_start(ap, num_parms);
+    status = psf_verror(errorno, detail, err_type, err_code, err_blk,
+		__FILE__, __LINE__, num_parms, ap);
+    va_end(ap);
+    return status;
 }
 
 /*{

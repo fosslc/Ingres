@@ -24,9 +24,23 @@
 ##          set without xml2 header location.
 ##       2-Jun-2010 (maspa05)
 ##          Check for minimum version of gtk (2.4)
+##      31-Aug-2010 (troal01)
+##          Check for GEOS/Proj in /usr/local/lib otherwise set LOC to /usr/lib
+##      31-Aug-2010 (rosan01)
+##          Check /usr/lib64 for pam when on 64 bit machines
+##      31-Aug-2010 (troal01)
+##          Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
 ##    20-Sep-2010 (hanje04)
 ##	  Fix build for FC 13/ Xerces 3.x. Determine version from source
 ##	  instead of using "hard coded" xvers.
+##      21-Sep-2010 (troal01)
+##          Added GEOS_VERS, GEOSC_VERS, and PROJ_VERS
+##       5-Oct-2010 (troal01)
+##          check_for_geos and check_for_proj made a little more robust.
+##	25-Oct-2010 (kschendel)
+##	    Above change broke build environments without Xerces installed
+##	    as a system library.  Check for externally set XERCxxx vars
+##	    first, if not set look for source, but avoid errors.
 
 # check_for_file ENVVARIABLE string1 string2 ...
 # checks whether one of the given strings is a file
@@ -169,19 +183,54 @@ check_for_krb5_hdrs ()
 check_for_xerces ()
 {
   # Xerces code and library (hopefully)
-  # check system locations first
-  if [ -f /usr/include/xercesc/sax2/DefaultHandler.hpp ] ; then
-    XERCESCROOT=/usr
-  else
-    [ "$XERCESCROOT" ] || unset XERCESCROOT
-  fi
-  # library naming varies between versions
-  xmaj=`grep "^#[ \t]*define[ \t]*XERCES_VERSION_MAJOR" \
-	${XERCESCROOT}/include/xercesc/util/XercesVersion.hpp | cut -d' ' -f3`
-  xmin=`grep "^#[ \t]*define[ \t]*XERCES_VERSION_MINOR" \
-	${XERCESCROOT}/include/xercesc/util/XercesVersion.hpp | cut -d' ' -f3`
+  # Take externally specified root first, try system locations next.
+  # XercesVersion can show up in a couple different places depending on
+  # whether it's a source or installed Xerces.
 
-  case "$xmaj" in 
+  xvershpp1='/include/xercesc/util/XercesVersion.hpp'
+  xvershpp2='/src/xercesc/util/XercesVersion.hpp'
+  if [ -n "$XERCESCROOT" ] ; then
+    if [ -f ${XERCESCROOT}${xvershpp1} ] ; then
+	xvershpp=${XERCESCROOT}${xvershpp1}
+    elif [ -f ${XERCESCROOT}${xvershpp2} ] ; then
+	xvershpp=${XERCESCROOT}${xvershpp2}
+    else
+	unset XERCESCROOT
+    fi
+  fi
+  if [ -z "$XERCESCROOT" ] ; then
+    XERCESCROOT=/usr
+    if [ -f ${XERCESCROOT}${xvershpp1} ] ; then
+	xvershpp=${XERCESCROOT}${xvershpp1}
+    elif [ -f ${XERCESCROOT}${xvershpp2} ] ; then
+	xvershpp=${XERCESCROOT}${xvershpp2}
+    else
+	XERCESCROOT=`echo ${ING_ROOT}/xerces-c-src_[0-9]*`
+	if [ -d "$XERCESCROOT" ] ; then
+	    if [ -f ${XERCESCROOT}${xvershpp1} ] ; then
+		xvershpp=${XERCESCROOT}${xvershpp1}
+	    elif [ -f ${XERCESCROOT}${xvershpp2} ] ; then
+		xvershpp=${XERCESCROOT}${xvershpp2}
+	    else
+		unset XERCESCROOT
+	    fi
+	else
+	    unset XERCESCROOT
+	fi
+    fi
+  fi
+  if [ -z "$XERCESCROOT" ] ; then
+    unset XERCESCROOT
+  fi
+
+  # library naming varies between versions
+  if [ -n "$xvershpp" ] ; then
+    xmaj=`grep "^#[ \t]*define[ \t]*XERCES_VERSION_MAJOR" \
+	${xvershpp} | cut -d' ' -f3`
+    xmin=`grep "^#[ \t]*define[ \t]*XERCES_VERSION_MINOR" \
+	${xvershpp} | cut -d' ' -f3`
+
+    case "$xmaj" in 
     3)
 	xvers=${xmaj}.${xmin}
 	xlibvers=$xvers
@@ -194,31 +243,22 @@ check_for_xerces ()
 	;;
      *) xlibname=unknown
 	;;
-  esac
-  if $rhybrid ; then
-    if [ -f /usr/lib64/${xlibname} ] ; then
-        XERCESLOCHB=/usr/lib
-        XERCESLOC=/usr/lib64
-    fi
-  else
-    if [ -f /usr/lib/${xlibname} ] ; then
-        XERCESLOC=/usr/lib
-    fi
-    if [ -f /usr/lib64/${xlibname} ] ; then
-        XERCESLOCHB=/usr/lib64
+    esac
+    if $rhybrid ; then
+	if [ -f /usr/lib64/${xlibname} ] ; then
+	    XERCESLOCHB=/usr/lib
+	    XERCESLOC=/usr/lib64
+	fi
+    else
+	if [ -f /usr/lib/${xlibname} ] ; then
+	    XERCESLOC=/usr/lib
+	fi
+	if [ -f /usr/lib64/${xlibname} ] ; then
+	    XERCESLOCHB=/usr/lib64
+	fi
     fi
   fi
  
-  [ "$XERCESCROOT" ] && [ -d ${XERCESCROOT}/src/xercesc -o \
-    -f ${XERCESCROOT}/include/xercesc/sax2/DefaultHandler.hpp ] ||
-  {
-    if [ -d ${ING_ROOT}/xerces-c-src_2_7_0/src/xercesc ] ; then
-      XERCESCROOT=${ING_ROOT}/xerces-c-src_2_7_0
-    else
-      [ "$XERCESCROOT" ] || unset XERCESCROOT
-    fi
-  }
-  
   [ "$XERCESCROOT" ] && [ -d ${XERCESCROOT}/lib ] &&
     [ x"$XERCESLOC" = "x" ] && XERCESLOC=${XERCESCROOT}/lib
 
@@ -397,6 +437,116 @@ check_for_libxml2 ()
     compose_msg "libxml2-devel" "libxml2-devel" "libxml2-devel" "libxml2-devel" "libxml2-devel"
 }
 
+check_for_geos ()
+{
+    #If GEOS locations aren't specified, try to figure out reasonable values
+    if [ -z "$GEOS_LOC" ] ; then
+        if [ -e /usr/local/lib/libgeos.so ] ; then
+            export GEOS_LOC="/usr/local/lib"
+        elif [ -e /usr/lib/libgeos.so ] ; then
+            export GEOS_LOC="/usr/lib"
+        else
+            msg=${msg}"\nCouldn't find GEOS libraries, please set GEOS_LOC" 
+        fi
+        if [ ! -z "$GEOS_LOC" ] ; then
+            echo "GEOS_LOC was not set, using $GEOS_LOC"
+        fi
+    else
+        if [ ! -e $GEOS_LOC/libgeos.so ] ; then
+           msg=${msg}"\nGEOS libraries were not found in $GEOS_LOC, unsetting GEOS_LOC."
+           unset GEOS_LOC
+        fi
+    fi
+    
+    if [ -z "$GEOS_INC" ] ; then
+        if [ -e /usr/local/include/geos_c.h ] ; then
+            export GEOS_INC="/usr/local/include"
+        elif [ -e /usr/include/geos_c.h ] ; then
+            export GEOS_INC="/usr/include"
+        else
+            msg=${msg}"\nCouldn't find GEOS headers, please set GEOS_INC"
+        fi
+        if [ ! -z "$GEOS_INC" ] ; then
+            echo "GEOS_INC was not set, using $GEOS_INC"
+        fi
+    else
+        if [ ! -e $GEOS_INC/geos_c.h ] ; then
+            msg=${msg}"\nGEOS headers were not found in $GEOS_INC, unsetting GEOS_INC"
+            unset GEOS_INC
+        fi
+    fi
+    
+    #Figure out GEOS/GEOS_C version
+    if [ ! -z "$GEOS_INC" ] ; then
+        TEMP_GEOS_VERS=`grep -m 1 "#define GEOS_CAPI_VERSION " $GEOS_INC/geos_c.h | cut -d ' ' -f3 | grep -E -o "[0-9]+.[0-9]+.[0-9]+"`
+        GEOS_VERS=`echo $TEMP_GEOS_VERS | cut -d ' ' -f1` #need the whole version
+        GEOSC_VERS=`echo $TEMP_GEOS_VERS | cut -d ' ' -f2 | cut -c 1` #only need major version
+        export GEOS_VERS GEOSC_VERS
+    fi
+    [ $rhybrid = "true" ] &&
+    [ -z "$GEOSHB_LOC" ] && 
+    {
+        export GEOSHB_LOC="/usr/local/32bit/lib"
+        echo "GEOSHB_LOC was not set, using /usr/local/32bit/lib"
+    }
+}
+
+check_for_proj ()
+{
+    #If PROJ locations aren't specified, try to figure out reasonable values
+    if [ -z "$PROJ_LOC" ] ; then
+        if [ -e /usr/local/lib/libproj.so ] ; then
+            export PROJ_LOC="/usr/local/lib"
+        elif [ -e /usr/lib/libproj.so ] ; then
+            export PROJ_LOC="/usr/lib"
+        else
+            msg=${msg}"\nCouldn't find Proj.4 libraries, please set PROJ_LOC" 
+        fi
+        if [ ! -z "$PROJ_LOC" ] ; then
+            echo "PROJ_LOC was not set, using $PROJ_LOC"
+        fi
+    else
+        if [ ! -e $PROJ_LOC/libproj.so ] ; then
+           msg=${msg}"\nProj.4 libraries were not found in $PROJ_LOC, unsetting PROJ_LOC."
+           unset PROJ_LOC
+        fi
+    fi
+    
+    if [ -z "$PROJ_INC" ] ; then
+        if [ -e /usr/local/include/proj_api.h ] ; then
+            export PROJ_INC="/usr/local/include"
+        elif [ -e /usr/include/proj_api.h ] ; then
+            export PROJ_INC="/usr/include"
+        else
+            msg=${msg}"\nCouldn't find Proj.4 headers, please set PROJ_INC"
+        fi
+        if [ ! -z "$PROJ_INC" ] ; then
+            echo "PROJ_INC was not set, using $PROJ_INC"
+        fi
+    else
+        if [ ! -e $PROJ_INC/proj_api.h ] ; then
+            msg=${msg}"\nProj.4 headers were not found in $PROJ_INC, unsetting PROJ_INC"
+            unset PROJ_INC
+        fi
+    fi
+    
+    if [ ! -z "$PROJ_LOC" ] ; then
+        #Figure out Proj.4 version 
+        #unfortunately the lib version is different from the Proj.4 version
+        PROJ_VERS=`ls $PROJ_LOC/libproj.so.[0-9]`
+        PROJ_VERS=${PROJ_VERS##*.so.}
+        export PROJ_VERS
+    fi
+    
+    [ $rhybrid = "true" ] &&
+    [ -z "$PROJHB_LOC" ] && 
+    {
+        export PROJHB_LOC="/usr/local/32bit/lib"
+        echo "PROJHB_LOC was not set, using /usr/local/32bit/lib"
+    }
+}
+
+
 precheck ()
 {
   # Root of build/src tree. Must be set by hand
@@ -422,6 +572,12 @@ precheck ()
 
   # cross compiler if needed
   check_for_xcc
+
+  # check for GEOS
+  [ "$geos_need" = "true" ] && check_for_geos
+
+  # check for PROJ
+  [ "$proj_need" = "true" ] && check_for_proj
 
   # gtk if needed
   [ "$gtk_need" = "true" ] && check_for_gtk

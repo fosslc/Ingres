@@ -94,7 +94,8 @@
 **          get the pid means get THE pid. We also define the same macro
 **          in a sensible fashion for all other platforms so that we will
 **          not fall foul of build errors.
-**	    
+**      15-nov-2010 (stephenb)
+**          Add proto for PCspawn.
 */
 
 # ifndef	PID
@@ -269,4 +270,13 @@ FUNC_EXTERN STATUS  PCdoexeclp32(
 	    	bool		exitonerror
 #endif
 );
+FUNC_EXTERN STATUS PCspawn(
+	i4 		argc,
+	char		**argv,
+	i1		wait,
+	LOCATION	*in_name,
+	LOCATION	*out_name,
+	PID		*pid
+);
+i4	PCreap_withThisPid(int targetPid);
 

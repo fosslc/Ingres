@@ -49,6 +49,8 @@
 **	    replace nat and longnat with i4
 **	06-mar-2002 (somsa01)
 **	    Removed extra blank in 'PROGRAM' definition.
+**      03-nov-2010 (joea)
+**          Declare local functions static.
 */
 
 # include <compat.h>
@@ -65,6 +67,8 @@
 char *progname;
 FUNC_EXTERN char *mkprogname();
 #endif
+
+static void error(char *s1, char *s2);
 
 #ifdef DEBUG
 GLOBALREF i4  regnarrate;
@@ -133,9 +137,8 @@ char *argv[];
 	PCexit( status );
 }
 
-void
-regerror(s)
-char *s;
+static void
+regerror(char *s)
 {
 	if (errreport)
 		errseen = s;
@@ -144,9 +147,8 @@ char *s;
 }
 
 #ifndef ERRAVAIL
-error(s1, s2)
-char *s1;
-char *s2;
+static void
+error(char *s1, char *s2)
 {
 	SIfprintf(stderr, "RE_EXP: ");
 	SIfprintf(stderr, s1, s2);

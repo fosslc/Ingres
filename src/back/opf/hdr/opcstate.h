@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /**
@@ -30,7 +30,8 @@
 **	    Added opc)invoke_rule_ahd to OPC_STATE.
 **	26-aug-93 (rickh)
 **	    Added OPC_SAVE_ROWCOUNT bit to opc_flags.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
 /*
@@ -41,20 +42,6 @@ typedef struct _OPC_STATE OPC_STATE;
 typedef struct _OPC_OBJECT_ID OPC_OBJECT_ID;
 typedef struct _OPC_BASE OPC_BASE;
 
-/*
-**  Forward and/or External function references.
-*/
-FUNC_EXTERN PTR		opu_qsfmem();
-FUNC_EXTERN PTR		opu_memory();
-
-/*
-**  Defines of other constants.
-*/
-
-/*
-** References to globals variables declared in other C files.
-*/
-
 /*}
 ** Name: OPC_STATE - Session state info specific to query compilation 
 **

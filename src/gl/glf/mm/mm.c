@@ -30,16 +30,10 @@ History:
 **          Will be revisited and submitted at a later date. 
 **	14-Jul-2006 (kschendel)
 **	    MEfill no longer limited to i2.
+**      03-nov-2010 (joea)
+**          Move declaration of internal functions to mhint.h.
  */
 
-/*
- * Name: MM_xxx_alloc, MM_xxx_free, MM_xxx_rm - allocator alloc, free, remove 
- */
-
-extern MM_MK_FUNC	MM_blk_mk, MM_dfl_mk, MM_mcr_mk, MM_pag_mk;
-extern MM_ALLOC_FUNC	MM_blk_alloc, MM_dfl_alloc, MM_mcr_alloc, MM_pag_alloc;
-extern MM_FREE_FUNC	MM_blk_free, MM_dfl_free, MM_mcr_free, MM_pag_free;
-extern MM_RM_FUNC	MM_blk_rm, MM_dfl_rm, MM_mcr_rm, MM_pag_rm;
 
 /*
  * Name: MMmkpool - create a memory pool using a given strategey and parent

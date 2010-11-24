@@ -19,6 +19,8 @@
 **      20-Sep-2010 (hanje04)
 **          Fix build for FC 13/ Xerces 3.x, add XERCLIB to handle lib
 **          naming anomalies between 2.x and 3.0
+**	30-Sep-2010 (troal01)
+**	    Added GEODEPS if R_GEODEPS is defined.
 */ 
 
 PART	supp32
@@ -60,6 +62,14 @@ PART	supp32
       LINK libxerces-c.$SLSFX.$XERCVERS
       LINK libxerces-c.$SLSFX
 # endif /* xerces */
+# ifdef R_GEODEPS /* R_GEODEPS */
+      EXECUTABLE libgeos-$GEOS_VERS.$SLSFX
+      LINK libgeos.$SLSFX
+      EXECUTABLE libgeos_c.$SLSFX.$GEOSC_VERS
+      LINK libgeos_c.$SLSFX
+      EXECUTABLE libproj.$SLSFX.$PROJ_VERS
+      LINK libproj.$SLSFX
+# endif /* R_GEODEPS */
       PERMISSION s:re,o:rwed,g:re,w:re
    }
 # endif /* R_SHLIBS */

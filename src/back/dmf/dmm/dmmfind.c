@@ -10,6 +10,7 @@ Problems --
 
 #include    <compat.h>
 #include    <gl.h>
+#include    <er.h>
 #include    <cs.h>
 #include    <cv.h>
 #include    <di.h>
@@ -143,6 +144,9 @@ Problems --
 **	    cmptlvl is an integer now.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Made dmm_message() static, rewrote with a variable number
+**	    of parameters.
 **/
 
 /*
@@ -201,6 +205,12 @@ static DB_STATUS    read_config(
 				char	    *filnam,
 				i4	    fillen,
 				i4	    *ret_err);
+
+static DB_STATUS    dmm_message(
+				i4	*error,
+				i4	msg_id,
+				i4	count,
+				...);
 
 
 /* 
@@ -1023,41 +1033,18 @@ DMM_CB    *dmm_cb)
 **          initial creation (modeled from routine dm1u_talk() in dm1u.c).
 **	24-oct-92 (andre)
 **	    in SCF_CB, generic_eror hjas been replaced with SQLSTATE
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Rewrote with variable number of parameters for prototyping.
 [@history_template@]...
 */
-DB_STATUS
-dmm_message( error, msg_id, count, p1size, p1val, p2size, p2val, p3size, p3val,
-          p4size, p4val, p5size, p5val, p6size, p6val, p7size, p7val, 
-          p8size, p8val, p9size, p9val, p10size, p10val, p11size, p11val, 
-          p12size, p12val)
-i4	    *error;
-i4     msg_id;
-i4          count;
-i4     p1size;
-PTR         p1val;
-i4     p2size;
-PTR         p2val;
-i4     p3size;
-PTR         p3val;
-i4     p4size;
-PTR         p4val;
-i4     p5size;
-PTR         p5val;
-i4     p6size;
-PTR         p6val;
-i4     p7size;
-PTR         p7val;
-i4     p8size;
-PTR         p8val;
-i4     p9size;
-PTR         p9val;
-i4     p10size;
-PTR         p10val;
-i4     p11size;
-PTR         p11val;
-i4     p12size;
-PTR         p12val;
+static DB_STATUS
+dmm_message(
+i4	*error,
+i4	msg_id,
+i4	count,
+...)
 {
+#define NUM_ER_ARGS	12
     char        cbuf[DMM_MSGBUF_SIZE];
     char        *buf;
     SCF_CB      scf_cb;
@@ -1066,15 +1053,34 @@ PTR         p12val;
     char	hex_string[sizeof(i4)+1];
     char	*sqlstate_str = SS5000G_DBPROC_MESSAGE;
     i4		i;
+    va_list	ap;
+    ER_ARGUMENT er_args[NUM_ER_ARGS];
 
+    va_start( ap, count );
+    for ( i = 0; i < count && i < NUM_ER_ARGS; i++ )
+    {
+        er_args[i].er_size = (i4) va_arg( ap, i4 );
+	er_args[i].er_value = (PTR) va_arg( ap, PTR );
+    }
+    va_end( ap );
+    
     *error = E_DM0000_OK;
     buf = &cbuf[0];
+
     stat = uleFormat(NULL, msg_id, NULL, ULE_LOOKUP, (DB_SQLSTATE *) NULL, buf,
-			DMM_MSGBUF_SIZE, &mlen, error, count, 
-                        p1size, p1val, p2size, p2val, p3size, p3val, 
-                        p4size, p4val, p5size, p5val, p6size, p6val, p7size, 
-                        p7val, p8size, p8val, p9size, p9val, p10size, p10val, 
-                        p11size, p11val, p12size, p12val);
+			DMM_MSGBUF_SIZE, &mlen, error, i, 
+			er_args[0].er_size, er_args[0].er_value,
+			er_args[1].er_size, er_args[1].er_value,
+			er_args[2].er_size, er_args[2].er_value,
+			er_args[3].er_size, er_args[3].er_value,
+			er_args[4].er_size, er_args[4].er_value,
+			er_args[5].er_size, er_args[5].er_value,
+			er_args[6].er_size, er_args[6].er_value,
+			er_args[7].er_size, er_args[7].er_value,
+			er_args[8].er_size, er_args[8].er_value,
+			er_args[9].er_size, er_args[9].er_value,
+			er_args[10].er_size, er_args[10].er_value,
+			er_args[11].er_size, er_args[11].er_value );
 
     if ( (stat == E_DB_ERROR) ||
 	 ( (stat == E_DB_WARN) &&  (*error == E_UL0002_BAD_ERROR_LOOKUP) )

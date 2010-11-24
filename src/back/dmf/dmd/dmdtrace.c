@@ -644,15 +644,18 @@ i4	    state)
 ** History:
 **      01-mar-1990 (fred)
 **          Created.
+**	02-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    DMPE_RECORD pointer typed as PTR
 [@history_template@]...
 */
 VOID
 dmd_petrace(
 	char		   *operation,
-	DMPE_RECORD        *record,
+	PTR        	   rec,
 	i4		   base,
 	i4		   extension)
 {
+    DMPE_RECORD	    *record = (DMPE_RECORD*)rec;
     DML_SCB	    *scb;
     CS_SID	    sid;
     char	    buffer[132];

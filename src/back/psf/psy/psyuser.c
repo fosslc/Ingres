@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -106,24 +106,32 @@
 **	    Short-circuit calls to psy_secaudit() if not C2SECURE.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward static functions.
-*/
-static DB_STATUS psy_cprofile(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
 
-static DB_STATUS psy_aprofile(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-
-static DB_STATUS psy_kprofile(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-
+/* TABLE OF CONTENTS */
+i4 psy_user(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_cuser(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_auser(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_kuser(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+static i4 psy_cprofile(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+static i4 psy_aprofile(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+static i4 psy_kprofile(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psy_user - Dispatch user qrymod routines
@@ -473,7 +481,6 @@ psy_cuser(
     bool                encrypt;
     SCF_CB              scf_cb;
     DB_DATA_VALUE	db_data;
-    DB_DATE	        dateval;
 
     /* This code is called for SQL only */
 
@@ -747,7 +754,6 @@ psy_auser(
     SCF_CB              scf_cb;
     SCF_CB              scf_cb2;
     DB_DATA_VALUE	db_data;
-    DB_DATE	        dateval;
 
     /* This code is called for SQL only */
 
@@ -1158,17 +1164,11 @@ psy_cprofile(
 {
     DB_STATUS		status, stat;
     RDF_CB		rdf_cb;
-    i4		err_code;
     register RDR_RB	*rdf_rb = &rdf_cb.rdf_rb;
     DU_PROFILE		protuple;
     register DU_PROFILE	*protup = &protuple;
     PSY_USR		*psy_usr;
-    SCF_CB              scf_cb;
     DB_DATA_VALUE	db_data;
-    DB_DATE	        dateval;
-
-    FUNC_EXTERN DB_STATUS rdf_call();
-    FUNC_EXTERN DB_STATUS scf_call();
 
     /* This code is called for SQL only */
 
@@ -1329,7 +1329,6 @@ psy_aprofile(
 {
     DB_STATUS		status, stat;
     RDF_CB		rdf_cb;
-    i4		err_code;
     register RDR_RB	*rdf_rb = &rdf_cb.rdf_rb;
     struct
     {
@@ -1337,15 +1336,8 @@ psy_aprofile(
 	DU_PROFILE	    protuple2;
     }			usparam;
     register DU_PROFILE	*protup  = &usparam.protuple;
-    register DU_PROFILE	*protup2 = &usparam.protuple2;
     PSY_USR		*psy_usr;
-    SCF_CB              scf_cb;
-    SCF_CB              scf_cb2;
     DB_DATA_VALUE	db_data;
-    DB_DATE	        dateval;
-
-    FUNC_EXTERN DB_STATUS rdf_call();
-    FUNC_EXTERN DB_STATUS scf_call();
 
     /* This code is called for SQL only */
 
@@ -1519,8 +1511,6 @@ psy_kprofile(
     DU_PROFILE		protuple;
     register DU_PROFILE	*protup = &protuple;
     PSY_USR		*psy_usr;
-
-    FUNC_EXTERN DB_STATUS rdf_call();
 
     /* This code is called for SQL only */
 

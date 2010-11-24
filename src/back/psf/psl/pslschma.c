@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -138,13 +138,54 @@
 **	    psq_tmulti_out(), psq_1rptqry_out(), psq_tout().
 **	17-Jan-2001 (jenjo02)
 **	    Short-circuit calls to psy_secaudit() if not C2SECURE.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
-
-/* external declarations */
 
-
-/* static functions and constants declaration */
-
+/* TABLE OF CONTENTS */
+i4 psl_cs01s_create_schema(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *authid);
+i4 psl_reorder_schema(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_PROCEDURE *prnode);
+i4 psl_cs02s_create_schema_key(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+i4 psl_alloc_exec_imm(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *stmtstart,
+	i4 stmtlen,
+	PST_OBJDEP *deplist,
+	i4 qmode,
+	i4 basemode);
+i4 psl_cs03s_create_table(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *stmtstart,
+	PST_OBJDEP *deplist,
+	PSS_CONS *cons_list);
+i4 psl_cs04s_create_view(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *stmtstart,
+	PST_OBJDEP *deplist);
+i4 psl_cs05s_grant(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *stmtstart,
+	PST_OBJDEP *deplist);
+i4 psl_cs06s_obj_spec(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_OBJDEP **deplistp,
+	PSS_OBJ_NAME *obj_spec,
+	u_i4 obj_use);
 
 /*
 ** Name: psl_cs01s_create_schema	- Semantic actions for create_schema:
@@ -399,7 +440,8 @@ psl_reorder_schema(
 	i4		val1;
 	i4		val2;
 
-	if (ult_check_macro(&sess_cb->pss_trace, 15, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_DBPROC_TREE_BY_NEXT_TRACE, &val1, &val2))
 	{
 	    (VOID) pst_display("\nCREATE SCHEMA TREE (before reordering)\n");
 	    for (current_node = stmt_list;
@@ -713,7 +755,8 @@ psl_reorder_schema(
 	** Print the list of nodes that were reordered
 	*/
 
-	if (ult_check_macro(&sess_cb->pss_trace, 15, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_DBPROC_TREE_BY_NEXT_TRACE, &val1, &val2))
 	{
 	    (VOID) pst_display("\nCREATE SCHEMA TREE (after reordering)\n");
 	    for (current_node = reordered_nodes;
@@ -743,7 +786,8 @@ psl_reorder_schema(
 	    ** Print the list of nodes that failed reordering
 	    */
 
-	    if (ult_check_macro(&sess_cb->pss_trace, 15, &val1, &val2))
+	    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_DBPROC_TREE_BY_NEXT_TRACE, &val1, &val2))
 	    {
 	        (VOID) pst_display(
 			"\nCREATE SCHEMA TREE REORDERING FAILED\n");
@@ -1121,7 +1165,6 @@ psl_cs04s_create_view(
 	PST_OBJDEP	*deplist)
 {
     DB_STATUS           status;
-    DB_ERROR            *err_blk= &psq_cb->psq_error;
 
     status = psl_alloc_exec_imm(sess_cb, psq_cb, stmtstart, 0,
 				deplist, PSQ_VIEW, PSQ_VIEW);
@@ -1170,7 +1213,6 @@ psl_cs05s_grant(
 	PST_OBJDEP	*deplist)
 {
     DB_STATUS           status;
-    DB_ERROR            *err_blk= &psq_cb->psq_error;
 
     status = psl_alloc_exec_imm(sess_cb, psq_cb, stmtstart, 0,
 				deplist, PSQ_GRANT, PSQ_GRANT);

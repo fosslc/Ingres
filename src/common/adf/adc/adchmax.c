@@ -79,6 +79,8 @@
 **	    Fix AD_UTF8_ENABLED flag test && vs. & typo.
 **      14-aug-2009 (joea)
 **          	Add cases for DB_BOO_TYPE in adc_1hmax_rti and adc_2dhmax_rti.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -746,6 +748,7 @@ DB_DATA_VALUE	    *adc_max_dvdhg)
 
       case DB_BYTE_TYPE:
       case DB_VBYTE_TYPE:
+      case DB_NBR_TYPE:
 	cp = (u_char *) adc_max_dvdhg->db_data;
 	for (i = adc_max_dvdhg->db_length; i; i--)
 	    *cp++ = AD_BYTE4_DHMAX_VAL;
@@ -992,6 +995,7 @@ DB_DATA_VALUE	    *adc_max_dvhg)
 
       case DB_BYTE_TYPE:
       case DB_VBYTE_TYPE:
+      case DB_NBR_TYPE:
 	cp = (u_char *) adc_max_dvhg->db_data;
 	for (i = adc_max_dvhg->db_length; i; i--)
 	    *cp++ = AD_BYTE5_HMAX_VAL;

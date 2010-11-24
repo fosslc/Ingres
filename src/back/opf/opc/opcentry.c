@@ -1,9 +1,10 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
 #include    <gl.h>
+#include    <bt.h>
 #include    <cs.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
@@ -110,13 +111,18 @@
 **          Added check for  && global->ops_subquery
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
-static VOID
-opc_checkcons(
-PST_STATEMENT	*stmtp);
-
+/* TABLE OF CONTENTS */
+i4 opc_exhandler(
+	EX_ARGS *ex_args);
+void opc_querycomp(
+	OPS_STATE *global);
+static void opc_checkcons(
+	PST_STATEMENT *stmtp,
+	DMU_CB *dmucb);
 
 /*{
 ** Name: opc_exhandler() - Exception handler for OPC.
@@ -251,6 +257,8 @@ opc_exhandler(
 **	29-may-2009 (wanfr01) bug 122125
 **	    dbid needs to be added to QSF object name to avoid using it in
 **	    the wrong database.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Dig autostruct out of the DMU_CHARACTERISTICS.
 */
 
 
@@ -296,14 +304,20 @@ opc_querycomp(
     if (global->ops_statement &&
 	global->ops_statement->pst_type == PST_CREATE_TABLE_TYPE &&
 	global->ops_statement->pst_specific.pst_createTable.
-			pst_createTableFlags == PST_CRT_TABLE &&
-	(global->ops_statement->pst_specific.pst_createTable.
-			pst_autostruct == PST_AUTOSTRUCT ||
-	(( opt_strace(global->ops_cb, OPT_F084_TBLAUTOSTRUCT ) == TRUE || 
-	global->ops_cb->ops_alter.ops_autostruct ) &&
-	 global->ops_statement->pst_specific.pst_createTable.
-			pst_autostruct != PST_NO_AUTOSTRUCT)))
-	opc_checkcons(global->ops_statement);
+			pst_createTableFlags == PST_CRT_TABLE)
+    {
+	QEU_CB *qeucb = global->ops_statement->pst_specific.pst_createTable.pst_createTableQEUCB;
+	DMU_CB *dmucb = (DMU_CB *) qeucb->qeu_d_cb;
+	bool checkit = FALSE;
+
+	if (BTtest(DMU_AUTOSTRUCT, dmucb->dmu_chars.dmu_indicators))
+	    checkit = (dmucb->dmu_chars.dmu_flags & DMU_FLAG_AUTOSTRUCT) != 0;
+	else
+	    checkit = opt_strace(global->ops_cb, OPT_F084_TBLAUTOSTRUCT ) ||
+			global->ops_cb->ops_alter.ops_autostruct != 0;
+	if (checkit)
+	    opc_checkcons(global->ops_statement, dmucb);
+    }
 
     /* On entry for rule processing, assume ops_qpinit == TRUE. There	    */
     /* is no need to allocate a memory stream since we are contuing	    */
@@ -522,7 +536,8 @@ opc_querycomp(
 
 static VOID
 opc_checkcons(
-PST_STATEMENT	*stmtp)
+PST_STATEMENT	*stmtp,
+DMU_CB		*dmucb)
 
 {
     PST_STATEMENT	*wptr;
@@ -565,8 +580,12 @@ PST_STATEMENT	*stmtp)
 			|= PST_CONS_TABLE_STRUCT;
 	/* Hand off table compression setting too, which is in turn passed
 	** to QEF via the create integrity action.
+	** Note: only need to worry about data compression, the original
+	** table couldn't reasonably have had key compression because
+	** the whole idea here is that it is autostruct.  The table
+	** was probably originally declared heap.
 	*/
-	wptr->pst_specific.pst_createIntegrity.pst_compress =
-		stmtp->pst_specific.pst_createTable.pst_compress;
+	wptr->pst_specific.pst_createIntegrity.pst_autocompress =
+		dmucb->dmu_chars.dmu_dcompress;
     }
 }

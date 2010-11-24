@@ -1,6 +1,5 @@
-/* Copyright (c) 1995, 2005 Ingres Corporation
-**
-**
+/*
+**Copyright (c) 1995, 2005, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -300,7 +299,6 @@
 **	    Changed numerous %x's to %p's and prepended &'s to numerous 
 **	    structure function parms to make compilers generate correct 
 **	    function calls.
-[@history_line@]...
 **	26-apr-1999 (hanch04)
 **	    Added casts to quite compiler warnings
 **      04-may-1999 (hanch04)
@@ -352,7 +350,330 @@
 **          Enable segmented QEPs.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/*
+** Forward Structure Definitions:
+*/
+struct tab;
+
+/* TABLE OF CONTENTS */
+i4 opt_scc(
+	PTR global,
+	i4 length,
+	char *msg_buffer);
+static void opt_newline(
+	OPS_STATE *global);
+static void opt_map(
+	char *name,
+	PTR bitmapp,
+	i4 bitmapsize);
+static void opt_pmap(
+	char *name,
+	char *mapp,
+	i4 mapsize);
+static void opt_pvmap(
+	char *name,
+	OPV_IVARS *mapp,
+	i4 mapsize);
+static void opt_pi1map(
+	char *name,
+	i1 *mapp,
+	i4 mapsize);
+i4 opt_noblanks(
+	i4 strsize,
+	char *charp);
+static void opt_element(
+	PTR valuep,
+	DB_DATA_VALUE *datatype);
+static void opt_type(
+	DB_DT_ID type);
+static void opt_dt(
+	DB_DATA_VALUE *datatype);
+static void opt_ffat(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *qnode,
+	OPT_NAME *attname,
+	bool *found);
+void opt_catname(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *qnode,
+	OPT_NAME *attrname);
+void opt_paname(
+	OPS_SUBQUERY *subquery,
+	OPZ_IATTS attno,
+	OPT_NAME *attrname);
+static void opt_anum(
+	OPZ_IATTS attr);
+static void opt_attnums(void);
+static void opt_ftype(
+	OPZ_FACLASS fclass);
+static void opt_fattr(
+	OPZ_IFATTS fattr);
+static void opt_fall(void);
+static char *opt_relstrct(
+	OPO_STORAGE storage,
+	bool cflag);
+static void opt_rop(
+	PTR uld_control,
+	i4 operation,
+	struct tab *table);
+static void opt_interval(
+	char *valuep,
+	DB_DATA_VALUE *datatype);
+static void opt_pop(
+	i4 opid);
+static void opt_sarg(
+	i4 sarg);
+static OPB_BFKEYINFO *opt_fbi(
+	OPB_BFVALLIST *bfvp);
+static void opt_bv(
+	OPB_BFVALLIST *bfvp,
+	OPB_BFKEYINFO *bfip);
+static void opt_bvlist(
+	OPB_BFVALLIST *bfvp,
+	OPB_BFKEYINFO *bfip);
+static void opt_bi(
+	OPB_BFKEYINFO *bfinfop);
+static void opt_big(
+	OPB_BFKEYINFO *bfinfop);
+static void opt_bf(
+	OPB_IBF bfi);
+static void opt_ball(void);
+static void opt_mapit(
+	OPO_CO *cop,
+	OPV_BMVARS *map);
+static void opt_attrnm(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	OPE_IEQCLS eqcls,
+	OPT_NAME *attrname);
+bool opt_ptname(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS varno,
+	OPT_NAME *namep,
+	bool corelation);
+static void opt_codump(
+	OPO_CO *cop);
+static void opo_fparent(
+	OPO_CO *root,
+	OPO_CO *target,
+	OPO_CO **parent);
+static bool opt_onext(
+	OPS_SUBQUERY *subquery,
+	OPO_ISORT ordering,
+	OPE_IEQCLS *eqclsp,
+	i4 *levelp);
+static void opt_alist(
+	OPS_SUBQUERY *subquery,
+	PTR uld_control,
+	OPO_CO *cop,
+	OPO_ISORT ordering,
+	char *header,
+	char *prefix);
+static void opt_cdump(
+	OPO_CO *cop);
+static void opt_coprintGuts(
+	OPO_CO *cop,
+	PTR uld_control,
+	bool withStats);
+static void opt_coprintWithoutStats(
+	OPO_CO *cop,
+	PTR uld_control);
+void opt_coprint(
+	OPO_CO *cop,
+	PTR uld_control);
+void opt_tbl(
+	RDR_INFO *rdrinfop);
+void opt_prattr(
+	RDR_INFO *rdrinfop,
+	i4 dmfattr);
+void opt_rattr(
+	RDR_INFO *rdrinfop);
+static void opt_pindex(
+	RDR_INFO *rdrinfop,
+	i4 dmfindex);
+void opt_index(
+	RDR_INFO *rdrinfop);
+static void opt_key(
+	RDR_INFO *rdrinfop);
+static void opt_rdf(
+	OPV_GRV *grvp);
+static void opt_rdall(void);
+static void opt_mode(
+	i4 mode);
+static void opt_stype(
+	i4 symtype);
+static void opt_ptnode(
+	PST_QNODE *nodep);
+static void opa_pasubquery(
+	OPS_SUBQUERY *subquery,
+	bool simple);
+void opa_pconcurrent(
+	OPS_SUBQUERY *header);
+static void opt_agg(
+	i4 sqno);
+static void opt_hist(
+	OPH_HISTOGRAM *histp);
+void opt_ehistmap(
+	OPE_BMEQCLS *eqh);
+static void opt_trl(
+	OPN_RLS *trl);
+static void opt_esp(
+	OPN_EQS *eqsp);
+static void opt_stp(
+	OPN_SUBTREE *stp,
+	i4 i);
+void opt_enum(void);
+void opt_evp(
+	OPN_EVAR *evp,
+	i4 vcount);
+static void opt_rvtrl(
+	OPV_IVARS rv);
+static void opt_hrv(
+	OPV_IVARS rv);
+void opt_rv(
+	OPV_IVARS rv,
+	OPS_SUBQUERY *sq,
+	bool histdump);
+void opt_ojstuff(
+	OPS_SUBQUERY *sq1);
+void opt_rall(
+	bool histdump);
+void opt_grange(
+	OPV_IGVARS grv);
+static void opt_gtable(void);
+void opt_jnode(
+	OPN_JTREE *nodep);
+static void opt_rjtree(
+	OPN_JTREE *nodep);
+void opt_jtree(void);
+void opt_eclass(
+	OPE_IEQCLS eqcls);
+void opt_eall(void);
+void opt_jall(
+	OPS_SUBQUERY *subquery);
+PTR opt_coleft(
+	OPO_CO *cop);
+PTR opt_coright(
+	OPO_CO *cop);
+static PTR opt_jleft(
+	OPN_JTREE *jp);
+static PTR opt_jright(
+	OPN_JTREE *jp);
+static void opt_fjprint(
+	OPN_JTREE *jp,
+	PTR uld_control);
+static void opt_paop(void);
+static void opt_pbylist(void);
+static void opt_sdump(void);
+static void opt_printPlanType(
+	OPS_STATE *global,
+	bool withStats,
+	char *trailer,
+	u_i4 currfrag,
+	u_i4 bestfrag,
+	i4 planid,
+	i4 queryid,
+	char *timeout,
+	char *largetemp,
+	char *floatexp);
+void opt_printCostTree(
+	OPO_CO *cop,
+	bool withStats);
+void opt_cotree_without_stats(
+	OPS_STATE *global);
+void opt_cotree(
+	OPO_CO *cop);
+static void opt_pt_sq(
+	OPS_STATE *global,
+	PST_QTREE *header,
+	OPS_SUBQUERY *subqry,
+	i4 *nest,
+	OPS_SUBQUERY **already_done);
+void opt_pt_entry(
+	OPS_STATE *global,
+	PST_QTREE *header,
+	PST_QNODE *root,
+	char *origin);
+static void opt_pt_prmdump(
+	PST_QNODE *qnode,
+	i2 indent);
+static void opt_pt_var_node(
+	PST_VAR_NODE *vnode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_fwdvar_node(
+	PST_FWDVAR_NODE *vnode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_case_node(
+	PST_CASE_NODE *vnode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_seqop_node(
+	PST_SEQOP_NODE *snode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_gbcr_node(
+	PST_GROUP_NODE *gnode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_curval_node(
+	PST_CRVAL_NODE *cnode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_root_node(
+	PST_RT_NODE *rnode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_op_node(
+	PST_OP_NODE *onode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_resdom_node(
+	PST_RSDM_NODE *rnode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_sort_node(
+	PST_SRT_NODE *snode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_tab_node(
+	PST_TAB_NODE *tnode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_const_node(
+	PST_CNST_NODE *cnode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_rulevar_node(
+	PST_RL_NODE *rnode,
+	char *indentstr,
+	char *temp);
+static void opt_pt_hddump(
+	PST_QTREE *header,
+	bool printviews);
+void opt_qep_dump(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery);
+static void opt_qep_codump(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	OPO_CO *conode,
+	i4 indent);
+static void opt_qepd_alist(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	OPO_ISORT ordering,
+	char *prbuf);
+static void opt_1fidop(
+	ADI_OP_ID opno,
+	char *buf);
+
 struct	tab
 {
 	i4	t_opcode;
@@ -381,105 +702,6 @@ static char *mtype_array[] = {
 #undef _DEFINE
 #undef _ENDDEFINE
 };
-
-static void opt_big(
-	OPB_BFKEYINFO      *bfinfop);
-
-static VOID
-opt_pt_prmdump(
-	PST_QNODE*          node,
-	i2                 indent);
-static VOID
-opt_pt_op_node(
-	PST_OP_NODE*        node,
-	char*              indent,
-        char*              temp);
-static VOID
-opt_pt_var_node(
-	PST_VAR_NODE*       node,
-	char*              indent,
-        char*              temp);
-static VOID
-opt_pt_fwdvar_node(
-	PST_FWDVAR_NODE*   node,
-	char*              indent,
-        char*              temp);
-static VOID
-opt_pt_case_node(
-	PST_CASE_NODE    *vnode,
-        char            *indentstr,
-        char            *temp);
-static VOID
-opt_pt_seqop_node(
-	PST_SEQOP_NODE    *snode,
-        char            *indentstr,
-        char            *temp);
-static VOID
-opt_pt_gbcr_node(
-	PST_GROUP_NODE    *snode,
-        char            *indentstr,
-        char            *temp);
-static VOID
-opt_pt_root_node(
-	PST_RT_NODE*        node,
-	char*              indent,
-        char*              temp);
-static VOID
-opt_pt_resdom_node(
-	PST_RSDM_NODE*      node,
-	char*              indent,
-        char*              temp);
-static VOID
-opt_pt_const_node(
-	PST_CNST_NODE*      node,
-	char*              indent,
-        char*              temp);
-static VOID
-opt_pt_sort_node(
-	PST_SRT_NODE*       node,
-	char*              indent,
-        char*              temp);
-static VOID
-opt_pt_tab_node(
-	PST_TAB_NODE*       node,
-	char*              indent,
-        char*              temp);
-static VOID
-opt_pt_curval_node(
-	PST_CRVAL_NODE*     node,
-	char*              indent,
-        char*              temp);
-static VOID
-opt_pt_rulevar_node(
-	PST_RL_NODE*        node,
-	char*              indent,
-        char*              temp);
-static VOID
-opt_pt_hddump(
-	PST_QTREE	   *header,
-	bool		   printviews);
-static VOID
-opt_qep_codump(
-	OPS_STATE      	   *global,
-	OPS_SUBQUERY	   *subquery,
-	OPO_CO		   *conode,
-	i4		   indent);
-static VOID
-opt_qepd_alist(
-	OPS_STATE	   *global,
-	OPS_SUBQUERY       *subquery,
-	OPO_CO             *cop,
-	OPO_ISORT	   ordering,
-	char		   *prbuf);
-static VOID opt_ffat(
-                OPS_SUBQUERY       *subquery,
-                PST_QNODE          *qnode,
-                OPT_NAME           *attname,
-                bool               *found);
-
-static VOID opt_1fidop(
-        ADI_OP_ID          opno,
-        char               *buf);
 
 #if 0
 
@@ -788,7 +1010,6 @@ prBoolf ()
 **	19-Aug-2009 (kibro01) b122509
 **	    Add in check that if sc930 tracing file is open, output to that
 **	    instead of front end.
-[@history_template@]...
 */
 i4
 opt_scc(
@@ -857,6 +1078,7 @@ opt_scc(
 	if (basep != temp_ptr)
 	    TRdisplay("%s",basep);	/* print remainder with no line feed */
     }
+    return 0;
 }
 
 /*{
@@ -879,7 +1101,6 @@ opt_scc(
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_newline(
@@ -916,7 +1137,6 @@ opt_newline(
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_map(
@@ -978,7 +1198,6 @@ opt_map(
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_pmap(
@@ -1041,7 +1260,6 @@ opt_pmap(
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_pvmap(
@@ -1101,8 +1319,6 @@ opt_pvmap(
 ** History:
 **      13-sep-02 (inkdo01)
 **	    Written to display i1 arrays (as in opn_sbstruct).
-
-[@history_template@]...
 */
 static VOID
 opt_pi1map(
@@ -1161,7 +1377,6 @@ opt_pi1map(
 ** History:
 **      22-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 i4
 opt_noblanks(
@@ -1206,7 +1421,6 @@ opt_noblanks(
 **	    To save stack space, dynamically allocate space for tempbuf.
 **	26-sep-01 (inkdo01)
 **	    Fix above change to make tempbuf a simple "char *".
-[@history_template@]...
 */
 static VOID
 opt_element(
@@ -1307,7 +1521,6 @@ opt_element(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_type(
@@ -1355,7 +1568,6 @@ opt_type(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_dt(
@@ -1406,7 +1618,6 @@ opt_dt(
 ** History:
 **      26-nov-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_ffat(
@@ -1451,7 +1662,6 @@ opt_ffat(
 ** History:
 **      11-aug-93 (ed)
 **          initial creation, fixes stack overwrite problem
-[@history_template@]...
 */
 VOID
 opt_catname(
@@ -1510,7 +1720,6 @@ opt_catname(
 ** History:
 **      8-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 VOID
 opt_paname(
@@ -1529,7 +1738,6 @@ opt_paname(
     {
 	/* copy the attribute name to the output buffer */
 	DB_ATT_ID          dmfattr;
-	DB_ATT_NAME	   *att_name;
 	OPZ_ATTS           *attrp;
 	OPV_GRV            *grvp;
 
@@ -1644,7 +1852,6 @@ opt_paname(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_anum(
@@ -1709,7 +1916,6 @@ opt_anum(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_attnums()
@@ -1757,7 +1963,6 @@ opt_attnums()
 ** History:
 **      14-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_ftype(
@@ -1836,7 +2041,6 @@ opt_ftype(
 ** History:
 **      15-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_fattr(
@@ -1910,7 +2114,6 @@ opt_fattr(
 ** History:
 **      14-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_fall()
@@ -1959,7 +2162,6 @@ opt_fall()
 ** History:
 **	18-jul-86 (seputis)
 **          initial creation
-[@history_line@]...
 */
 static char *
 opt_relstrct(
@@ -2046,7 +2248,6 @@ opt_relstrct(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_storage(
@@ -2089,7 +2290,6 @@ opt_storage(
 ** History:
 **	18-jul-86 (seputis)
 **          initial creation
-[@history_line@]...
 */
 static VOID
 opt_rop(
@@ -2169,7 +2369,6 @@ opt_rop(
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_interval(
@@ -2210,7 +2409,6 @@ opt_interval(
 ** History:
 **      4-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_pop(
@@ -2259,7 +2457,6 @@ opt_pop(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_sarg(
@@ -2328,7 +2525,6 @@ opt_sarg(
 ** History:
 **      4-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static OPB_BFKEYINFO *
 opt_fbi(
@@ -2392,7 +2588,6 @@ opt_fbi(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_bv(
@@ -2464,7 +2659,6 @@ opt_bv(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_bvlist(
@@ -2498,7 +2692,6 @@ opt_bvlist(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_bi(
@@ -2555,7 +2748,6 @@ opt_bi(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_big(
@@ -2621,7 +2813,6 @@ opt_big(
 ** History:
 **      22-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_bf(
@@ -2705,7 +2896,6 @@ opt_bf(
 **	    Bug #56449
 **	    Changed TRformat calls to use %p for pointer values to
 **	    avoid integer/pointer truncation errors.
-[@history_template@]...
 */
 static VOID
 opt_ball()
@@ -2761,7 +2951,6 @@ opt_ball()
 ** History:
 **	18-jul-86 (seputis)
 **          initial creation
-[@history_line@]...
 */
 static VOID
 opt_mapit(
@@ -2808,9 +2997,8 @@ opt_mapit(
 **          initial creation
 **	9-feb-03 (inkdo01)
 **	    Catch bad eqclass passed to this func.
-[@history_line@]...
 */
-static 
+static void
 opt_attrnm(
 	OPS_SUBQUERY       *subquery,
 	OPO_CO             *cop,
@@ -2909,7 +3097,6 @@ opt_attrnm(
 **          added improved diagnostics for b35862
 **      9-jul-91 (seputis)
 **          added parameter to print corelation name
-[@history_template@]...
 */
 bool
 opt_ptname(
@@ -3005,7 +3192,6 @@ opt_ptname(
 **          initial creation
 **	06-mar-96 (nanpr01)
 **          Added pagesize parameter for printing in QP. 
-[@history_line@]...
 */
 static VOID
 opt_codump(
@@ -3216,7 +3402,6 @@ opt_codump(
 ** History:
 **      06-oct-87 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opo_fparent(
@@ -3282,8 +3467,6 @@ opo_fparent(
 ** History:
 **      29-feb-88 (seputis)
 **          initial creation
-[@history_line@]...
-[@history_template@]...
 */
 static bool
 opt_onext(
@@ -3360,10 +3543,8 @@ opt_onext(
 **      in the tree printing routines
 **
 ** Inputs:
-[@PARAM_DESCR@]...
 **
 ** Outputs:
-[@PARAM_DESCR@]...
 **	Returns:
 **	    {@return_description@}
 **	Exceptions:
@@ -3373,7 +3554,6 @@ opt_onext(
 **	    [@description_or_none@]
 **
 ** History:
-[@history_template@]...
 */
 static VOID
 opt_alist(
@@ -3434,14 +3614,12 @@ opt_alist(
 **
 ** Description:
 **      This routine will dump auxiliary information about the CO node 
-[@comment_line@]...
 **
 ** Inputs:
 **      cop                             ptr to CO node to dump
 **      uld_control                     query tree printing tree routine
 **
 ** Outputs:
-[@PARAM_DESCR@]...
 **	Returns:
 **	    VOID
 **	Exceptions:
@@ -3453,8 +3631,6 @@ opt_alist(
 ** History:
 **      1-mar-88 (seputis)
 **          initial creation
-[@history_line@]...
-[@history_template@]...
 */
 static VOID
 opt_cdump(
@@ -3614,7 +3790,6 @@ opt_cdump(
 **	    latter is correctly displayed as 'UNKNOWN'; the former should be
 **	    displayed as not yet determined or 'UNDETERMINED'. Also added in
 **	    missing opo_jtype OPO_SJCARTPROD.
-[@history_line@]...
 */
 static VOID
 opt_coprintGuts(
@@ -4207,7 +4382,6 @@ opt_coprintGuts(
 ** History:
 **	15-MAY-92 (rickh)
 **	    Created.
-[@history_line@]...
 */
 static VOID
 opt_coprintWithoutStats(
@@ -4259,7 +4433,6 @@ opt_coprintWithoutStats(
 **	15-may-92 (rickh)
 **	    Extracted the guts of this into opt_coprintGuts so that it can
 **	    be called to print statistics or not.
-[@history_line@]...
 */
 VOID
 opt_coprint(
@@ -4302,7 +4475,6 @@ opt_coprint(
 **          not tested anywhere in 2.6 and not turned off when view is dropped.
 **          qeu_cview() call to dmt_alter() to set TCB_VBASE has been removed ,
 **          removing references to TCB_VBASE, DMT_C_VIEW & DMT_BASE_VIEW.
-[@history_template@]...
 */
 VOID
 opt_tbl(
@@ -4480,7 +4652,6 @@ opt_tbl(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 VOID
 opt_prattr(
@@ -4541,7 +4712,6 @@ opt_prattr(
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 VOID
 opt_rattr(
@@ -4588,7 +4758,6 @@ opt_rattr(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_pindex(
@@ -4668,7 +4837,6 @@ opt_pindex(
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 VOID
 opt_index(
@@ -4713,7 +4881,6 @@ opt_index(
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_key(
@@ -4828,7 +4995,6 @@ opt_rdf(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_rdall()
@@ -4897,7 +5063,6 @@ opt_rdall()
 **	24-May-2006 (kschendel)
 **	    Call generic statement-name routine instead of fixing up the
 **	    big switch thing.
-[@history_template@]...
 */
 static VOID
 opt_mode(
@@ -4938,7 +5103,6 @@ opt_mode(
 **          initial creation
 **	2-sep-99 (inkdo01)
 **	    Added node types for case function.
-[@history_template@]...
 */
 static VOID
 opt_stype(
@@ -4985,7 +5149,6 @@ opt_stype(
 **          initial creation
 **	2-sep-99 (inkdo01)
 **	    Added nodes for case function.
-[@history_template@]...
 */
 static VOID
 opt_ptnode(
@@ -5039,6 +5202,8 @@ opt_ptnode(
 	}
 	opt_newline(global);
     }
+    default:
+	break;
     }
 
     switch (nodep->pst_sym.pst_type)
@@ -5144,7 +5309,9 @@ opt_ptnode(
     case PST_QLEND: 
     case PST_GSET:
     case PST_GCL:
-    case PST_TREE:;
+    case PST_TREE:
+    default:
+	break;
     }
 }
 
@@ -5175,7 +5342,6 @@ opt_ptnode(
 ** History:
 **	11-apr-86 (seputis)
 **          initial creation
-[@history_line@]...
 */
 static VOID
 opa_pasubquery(
@@ -5249,7 +5415,6 @@ opa_pasubquery(
 ** History:
 **	11-apr-86 (seputis)
 **          initial creation
-[@history_line@]...
 */
 VOID
 opa_pconcurrent(
@@ -5319,7 +5484,6 @@ opa_pconcurrent(
 ** History:
 **      24-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_agg(
@@ -5496,7 +5660,6 @@ opt_agg(
 ** History:
 **      24-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
  VOID
 opt_agall()
@@ -5539,7 +5702,6 @@ opt_agall()
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_hist(
@@ -5642,7 +5804,6 @@ opt_hist(
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 VOID
 opt_ehistmap(
@@ -5686,7 +5847,6 @@ opt_ehistmap(
 **          initial creation
 **	7-mar-96 (inkdo01)
 **	    Add display of trl->opn_relsel.
-[@history_template@]...
 */
 static VOID
 opt_trl(
@@ -5736,7 +5896,6 @@ opt_trl(
 ** History:
 **      4-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_esp(
@@ -5785,7 +5944,6 @@ opt_esp(
 ** History:
 **      4-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_stp(
@@ -5838,7 +5996,6 @@ opt_stp(
 ** History:
 **	1-oct-02 (inkdo01)
 **	    Written.
-[@history_template@]...
 */
 VOID
 opt_enum()
@@ -5902,7 +6059,6 @@ opt_enum()
 **          Written.
 **	7-Nov-2008 (kschendel) b122118
 **	    Add a little more flag info.
-[@history_template@]...
 */
 VOID
 opt_evp(
@@ -5912,7 +6068,7 @@ opt_evp(
     OPS_CB              *opscb;	    /* ptr to session control block */
     OPS_STATE           *global;    /* ptr to global state variable */
     OPS_SUBQUERY	*subquery;
-    i4			i, j;
+    i4			i;
 
     opscb = ops_getcb();            /* get the session control block
                                     ** from the SCF */
@@ -5987,7 +6143,6 @@ opt_evp(
 ** History:
 **      31-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_rvtrl(
@@ -6028,7 +6183,6 @@ opt_rvtrl(
 ** History:
 **      31-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_hrv(
@@ -6081,7 +6235,6 @@ opt_hrv(
 **	3-Sep-2005 (schka24)
 **	    Added call to print histograms - code was there but nothing
 **	    was calling it, seems to make sense to use it.
-[@history_template@]...
 */
  VOID
 opt_rv(
@@ -6176,7 +6329,6 @@ opt_rv(
 ** History:
 **      21-oct-94 (inkdo01)
 **          initial creation
-[@history_template@]...
 */
 VOID
 opt_ojstuff(OPS_SUBQUERY  *sq1)
@@ -6260,7 +6412,6 @@ opt_ojstuff(OPS_SUBQUERY  *sq1)
 **          initial creation
 **	29-aug-02 (inkdo01)
 **	    Externalize for separate invocation by tp op153.
-[@history_template@]...
 */
 VOID
 opt_rall(bool	histdump)
@@ -6322,7 +6473,6 @@ opt_rall(bool	histdump)
 **          bug 44850 - changed global to local range table mapping
 **	30-Jun-2006 (kschendel)
 **	    gcop is gone, print interesting bits of gcost.
-[@history_template@]...
 */
 VOID
 opt_grange(
@@ -6382,7 +6532,6 @@ opt_grange(
 ** History:
 **      22-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_gtable()
@@ -6434,7 +6583,6 @@ opt_gtable()
 ** History:
 **      31-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
  VOID
 opt_jnode(
@@ -6518,7 +6666,6 @@ opt_jnode(
 ** History:
 **      31-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_rjtree(
@@ -6553,7 +6700,6 @@ opt_rjtree(
 ** History:
 **      31-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
        VOID
 opt_jtree()
@@ -6589,7 +6735,6 @@ opt_jtree()
 ** History:
 **      21-jul-86 (seputis)
 **         initial creation
-[@history_template@]...
 */
 VOID
 opt_eclass(
@@ -6652,7 +6797,6 @@ opt_eclass(
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation prEqlist
-[@history_template@]...
 */
 VOID
 opt_eall()
@@ -6706,7 +6850,6 @@ opt_eall()
 ** History:
 **      21-jul-86 (seputis)
 **          initial creation prEqlist
-[@history_template@]...
 */
 VOID
 opt_jall(
@@ -6762,7 +6905,6 @@ opt_jall(
 ** History:
 **	18-jul-86 (seputis)
 **          initial creation
-[@history_line@]...
 */
 PTR
 opt_coleft(
@@ -6792,7 +6934,6 @@ opt_coleft(
 ** History:
 **	18-jul-86 (seputis)
 **          initial creation
-[@history_line@]...
 */
 PTR
 opt_coright(
@@ -6822,7 +6963,6 @@ opt_coright(
 ** History:
 **      3-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static PTR
 opt_jleft(
@@ -6852,7 +6992,6 @@ opt_jleft(
 ** History:
 **      3-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static PTR
 opt_jright(
@@ -6882,7 +7021,6 @@ opt_jright(
 ** History:
 **      3-aug-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_fjprint(
@@ -6936,7 +7074,6 @@ opt_fjprint(
 **          initial creation
 **      17-Aug-2010 (horda03) b124274
 **          Pass Segmented QEP flag to tree output routine
-[@history_template@]...
 */
 static VOID
 opt_fjtree()
@@ -6984,8 +7121,6 @@ opt_fjtree()
 **          initial creation
 **      18-aug-88 (seputis)
 **          should not send aggregate info to log file.
-[@history_line@]...
-[@history_template@]...
 */
 static VOID
 opt_paop()
@@ -7090,12 +7225,8 @@ opt_paop()
 ** History:
 **      28-nov-86 (seputis)
 **          initial creation
-**          [@comment_text@]
-[@history_line@]...
 **      18-aug-88 (seputis)
 **          SET QEP should not send aggregate info to log file
-[@history_line@]...
-[@history_template@]...
 */
 static VOID
 opt_pbylist()
@@ -7157,7 +7288,6 @@ opt_pbylist()
 ** Description:
 **      Routine which will print site cost array information for distributed 
 **      optimization 
-[@comment_line@]...
 **
 ** Inputs:
 **
@@ -7173,8 +7303,6 @@ opt_pbylist()
 ** History:
 **      16-aug-88 (seputis)
 **          initial creation
-[@history_line@]...
-[@history_template@]...
 */
 static VOID
 opt_sdump()
@@ -7268,7 +7396,6 @@ opt_sdump()
 **	    increase buffer size to accommodate new options
 **	01-mar-10 (smeke01) b123333
 **	    Add handling of plan fragment display for trace point op188.
-[@history_line@]...
 */
 static VOID
 opt_printPlanType(
@@ -7743,7 +7870,6 @@ opt_printCostTree(
 ** History:
 **	14-may-92 (rickh)
 **	    Created.
-[@history_line@]...
 */
 VOID
 opt_cotree_without_stats(
@@ -7811,7 +7937,6 @@ opt_cotree_without_stats(
 **          initial creation
 **	18-apr-91 (seputis)
 **	    print exceptions on a subquery basis
-[@history_line@]...
 */
 VOID
 opt_cotree(
@@ -7841,7 +7966,6 @@ opt_cotree(
 ** History:
 **      23-jul-86 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opt_bco()
@@ -7865,7 +7989,6 @@ opt_bco()
 **
 ** Description:
 **      Routine will print a subquery structure (incl contained parse tree)
-[@comment_line@]...
 **
 ** Inputs:
 **      root                            ptr to root of query tree
@@ -7885,7 +8008,6 @@ opt_bco()
 **	15-Dec-2004 (schka24)
 **	    Subquery can appear in multiple concurrent/next links,
 **	    only print each one once.  Fix C-precedence typo.
-[@history_template@]...
 */
 static VOID
 opt_pt_sq(global, header, subqry, nest, already_done)
@@ -7953,7 +8075,6 @@ OPS_SUBQUERY	    **already_done;
 **
 ** Description:
 **      Routine will print a query tree given the root 
-[@comment_line@]...
 **
 ** Inputs:
 **      root                            ptr to root of query tree
@@ -7975,7 +8096,6 @@ OPS_SUBQUERY	    **already_done;
 **	18-Mar-2010 (kiria01) b123438
 **	    Added the missing output of pst_ttargtype from op170
 **	    and support pst_ss_joinid
-[@history_template@]...
 */
 VOID
 opt_pt_entry(global, header, root, origin)
@@ -7984,10 +8104,7 @@ PST_QTREE          *header;
 PST_QNODE          *root;
 char               *origin;
 {
-    OPS_SUBQUERY*       subqry;
-    DB_STATUS           status;
     i4			nest = 0;
-    DB_ERROR            error;
     char                temp[OPT_PBLEN+1];
     bool                init = 0;
     OPS_SUBQUERY	*already_done[MAX_ALREADY_DONE];
@@ -8472,6 +8589,8 @@ opt_pt_rulevar_node(PST_RL_NODE   *rnode,
 ** History:
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Update resjour display.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Bunch of stuff removed from pst-restab, fix here.
 */
 static VOID
 opt_pt_hddump(
@@ -8569,12 +8688,6 @@ opt_pt_hddump(
     TRformat(opt_scc, (i4 *)NULL, temp, OPT_PBLEN,
 	"\npst_resvno: %d\n", header->pst_restab.pst_resvno);
     TRformat(opt_scc, (i4 *)NULL, temp, OPT_PBLEN,
-	"\npst_resjour: %w\n",
-	"OFF,ON,LATER",header->pst_restab.pst_resjour);
-    TRformat(opt_scc, (i4 *)NULL, temp, OPT_PBLEN,
-	"\npst_resdup: %s\n",
-	 header->pst_restab.pst_resdup ? "TRUE" : "FALSE");
-    TRformat(opt_scc, (i4 *)NULL, temp, OPT_PBLEN,
 	"\npst_cursid: (%d,%d) %32s\n",
 	 header->pst_cursid.db_cursor_id[0],header->pst_cursid.db_cursor_id[1],
 	 header->pst_cursid.db_cur_name);
@@ -8625,7 +8738,6 @@ opt_pt_hddump(
 **
 ** Description:
 **      Prints CO tree with all fields displayed (not tree style)
-[@comment_line@]...
 **
 ** Inputs:
 **      subquery		ptr to subquery anchoring CO tree of query tree
@@ -8719,7 +8831,6 @@ opt_qep_dump(
 **
 ** Description:
 **      Prints CO tree with all fields displayed (not tree style)
-[@comment_line@]...
 **
 ** Inputs:
 **      subquery		ptr to subquery anchoring CO tree of query tree
@@ -8740,7 +8851,6 @@ opt_qep_dump(
 **          Written
 **	29-oct-04 (inkdo01)
 **	    Remove display of opo_memory - deprecated.
-[@history_template@]...
 */
 static VOID
 opt_qep_codump(
@@ -8804,6 +8914,11 @@ opt_qep_codump(
 	    break;
 	 case OPO_SJNOJOIN:
 	    jointype = " (Nojoin)";
+	    break;
+	 case OPO_SEJOIN:
+	    jointype = " (SEjoin)";
+	    break;
+	 case OPO_Unused:
 	    break;
 	}
 	break;

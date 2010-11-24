@@ -15,8 +15,7 @@
 %debprereq_tag% %rpm_basename% (= %rpm_version%), %rpm_basename%-dbms (= %rpm_version%)
 %rpmprereq_tag% %rpm_basename%-dbms = %rpm_version%-%rpm_release%
 %rpmprereq_tag% %rpm_basename%-qr_run = %rpm_version%-%rpm_release%
-%replaces_tag% ca-ingres%rpm_specname%
-%replaces_tag% ingres2006%rpm_specname%
+%replaces_tag% ca-ingres%rpm_specname%, ingres2006%rpm_specname%
 %autoreq_tag% %rpm_autoreq_off%
 %define_tag% %rpm_unpack_term_off%
 %define_tag% %rpm_missing_doc_term_off%

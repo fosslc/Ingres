@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -92,12 +92,23 @@
 **          psy_kaplid is using wrong size when initializing dbap_aplid
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward static functions.
-*/
+
+/* TABLE OF CONTENTS */
+i4 psy_aplid(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_caplid(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_aaplid(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_kaplid(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psy_aplid - Dispatch role qrymod routines

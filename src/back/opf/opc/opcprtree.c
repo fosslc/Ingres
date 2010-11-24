@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 **
 */
  
@@ -11,6 +11,7 @@
 #include    <ddb.h>
 #include    <qu.h>
 #include    <cs.h>
+#include    <cv.h>
 #include    <tr.h>
 #include    <st.h>
 #include    <me.h>
@@ -116,7 +117,58 @@
 **          Use SIZE_TYPE for memory pool > 2Gig.
 **	11-Jun-2010 (kiria01) b123908
 **	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/*
+** Forward structure definitions:
+*/
+struct _PARATREE;
+struct _ULD_CONTROL;
+
+/* TABLE OF CONTENTS */
+void opc_prtree(
+	PTR root,
+	void (*printnode)(PTR, PTR),
+	PTR (*leftson)(PTR),
+	PTR (*rightson)(PTR),
+	i4 indent,
+	i4 lbl,
+	i4 facility);
+static struct _PARATREE *walk1(
+	PTR tnode,
+	i4 hh,
+	struct _ULD_CONTROL *control);
+static void walk2(
+	struct _PARATREE *pnode,
+	register struct _ULD_CONTROL *control);
+static void walk3(
+	PTR tnode,
+	struct _PARATREE *pnode,
+	i4 ch,
+	i4 ph,
+	struct _ULD_CONTROL *control);
+void opc_prnode(
+	PTR control,
+	char *frmt);
+static void opc_scctrace(
+	struct _ULD_CONTROL *control,
+	char *msg_buffer);
+static void opc_nl(
+	struct _ULD_CONTROL *control);
+static void prflsh(
+	i4 init,
+	register struct _ULD_CONTROL *control);
+static void opc_1prnode(
+	PTR node,
+	PTR control);
+static PTR opc_left(
+	PTR node);
+static PTR opc_right(
+	PTR node);
+void opc_treedump(
+	PST_QNODE *tree);
 
 /*
 **  Defines of other constants.
@@ -220,13 +272,13 @@ typedef struct _ULD_CONTROL
     char	    *next_pos;
     char	    *modifier;
     char	    *pbuf[PMX + 1];
-    PTR		    (*lson)();		/* Pointer to function that returns
+    PTR		    (*lson)(PTR);	/* Pointer to function that returns
 					** pointer to left subtree.
 					*/
-    PTR		    (*rson)();		/* Pointer to function that returns
+    PTR		    (*rson)(PTR);	/* Pointer to function that returns
 					** pointer to right subtree.
 					*/
-    VOID	    (*pnod)();
+    VOID	    (*pnod)(PTR, PTR);
     i4		    pof;
     i4              facility;		/* calling facility */
 } ULD_CONTROL;
@@ -447,9 +499,9 @@ prflsh(
 VOID
 opc_prtree(
 	PTR                root,
-	VOID		   (*printnode)(),
-	PTR		   (*leftson)(),
-	PTR		   (*rightson)(),
+	VOID		   (*printnode)(PTR, PTR),
+	PTR		   (*leftson)(PTR),
+	PTR		   (*rightson)(PTR),
 	i4		   indent,
 	i4		   lbl,
 	i4                facility )
@@ -1193,7 +1245,7 @@ opc_right(
 **	09-feb-88 (stec)
 **	    Print UNION, UNION ALL; use pst_display.
 */
-DB_STATUS
+void
 opc_treedump(
 	PST_QNODE   *tree )
 {

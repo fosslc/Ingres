@@ -24,6 +24,8 @@
 |       29-jul-2010     - Increase the size of sqlname from 34 to  
 |			  258, match with IISQD_NAMELEN in IISQLDA 
 |			  ( iisqlda.h). (hweho01) SIR 121123 
+|       17-aug-2010     - Add IISQ spatial types skipped 60 for SECL 
+|                         consistency(thich01)
 }
 
 {
@@ -96,3 +98,12 @@
 	IISQ_BYTE_TYPE = 23;	{ Byte - Input, Output }
 	IISQ_VBYTE_TYPE = 24;	{ Byte Varying - Input, Output }
 	IISQ_LBYTE_TYPE = 25;	{ Long Byte - Output }
+	IISQ_GEOM_TYPE = 56;    { Spatial types }
+	IISQ_POINT_TYPE = 57;
+	IISQ_MPOINT_TYPE = 58;
+	IISQ_LINE_TYPE = 59;
+	IISQ_MLINE_TYPE = 61;
+	IISQ_POLY_TYPE = 62;
+	IISQ_MPOLY_TYPE = 63;
+	IISQ_NBR_TYPE = 64;
+	IISQ_GEOMC_TYPE = 65;

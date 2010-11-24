@@ -18,7 +18,6 @@
 #include    <me.h>
 #include    <dmf.h>
 #include    <ulf.h>
-#include    <dmccb.h>
 #include    <dm.h>
 #include    <dmp.h>
 #include    <dmpp.h>
@@ -29,6 +28,13 @@
 #include    <lgdef.h>
 #include    <lgkdef.h>
 #include    <dm0llctx.h>
+/* these to get dml.h */
+#include    <dmccb.h>
+#include    <dmrcb.h>
+#include    <dmscb.h>
+#include    <dmtcb.h>
+#include    <dmxcb.h>
+#include    <dml.h>
 
 /**
 ** Name: DMCCPTMR.C  - The Consistency Point timer thread of the Recovery server
@@ -80,6 +86,8 @@
 **	    SIR 120874 Modified to use new DB_ERROR based uleFormat 
 **      16-nov-2008 (stial01)
 **          Redefined name constants without trailing blanks.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dml.h to get dmc_cp_timer() prototype.
 **/
 
 /*{

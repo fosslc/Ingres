@@ -94,6 +94,8 @@
 **	    Fix support for 32K strings.
 **	21-jan-2005 (abbjo03)
 **	    Remove include of stdio.h to build on VMS.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 
@@ -225,20 +227,20 @@ static INVOCATION bindfunTBL[] =
 ** Local Functions
 */
 
-static VOID	read_line();
-static VOID	line_filter();
-static VOID	input_line();
-static i4	Parser_Mode();
-static VOID	Var_Decl_Syntax();
-static VOID	Var_Decl_Semantics();
-static VOID	Var_Assgn_Syntax();
-static VOID	Fun_Call_Semantics();
-static VOID	Var_Reuse_Syntax();
-static VOID	Fun_Call_Syntax();
-static VOID	Field_Assgn_Parse();
+static VOID	read_line(void);
+static VOID	line_filter(void);
+static VOID	input_line(void);
+static i4	Parser_Mode(void);
+static VOID	Var_Decl_Syntax(void);
+static VOID	Var_Decl_Semantics(void);
+static VOID	Var_Assgn_Syntax(void);
+static VOID	Fun_Call_Semantics(void);
+static VOID	Var_Reuse_Syntax(void);
+static VOID	Fun_Call_Syntax(void);
+static VOID	Field_Assgn_Parse(void);
 static VOID	Dscrpt_Assgn_Parse( i4  maxIndex );
 static VOID	Dataval_Assgn_Parse( i4  maxIndex );
-static VOID	Var_Assgn_Semantics();
+static VOID	Var_Assgn_Semantics(void);
 static bool	isParmBlockNamDecled( struct _callTrackList *callTrackL, 
 				      char *varName );
 

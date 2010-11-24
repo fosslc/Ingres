@@ -40,6 +40,8 @@
 **	    sce_register(), sce_remove(), sce_raise().
 **      12-Apr-2004 (stial01)
 **          Define length as SIZE_TYPE.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype sce_resignal()
 **/
 
 /*
@@ -358,5 +360,7 @@ FUNC_EXTERN DB_STATUS	    sce_register( SCF_CB *cb,
 FUNC_EXTERN DB_STATUS	    sce_remove( SCF_CB *cb,
 					SCD_SCB *scb );
 FUNC_EXTERN DB_STATUS	    sce_raise( SCF_CB *cb,
+				       SCD_SCB *scb );
+FUNC_EXTERN DB_STATUS	    sce_resignal( SCF_CB *cb,
 				       SCD_SCB *scb );
 

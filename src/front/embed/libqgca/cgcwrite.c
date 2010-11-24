@@ -70,6 +70,10 @@
 **	    The embeded length in NVCHR is number of characters, not bytes.
 **      12-sep-2001 (stial01)
 **          Added DB_NVCHR_TYPE handling
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **	 1-Oct-09 (gordy)
 **	    Added GCA2_INVPROC message.
 **/
@@ -837,6 +841,14 @@ DB_DATA_VALUE	*put_dbv;
 		    || basetype == DB_BYTE_TYPE
 		    || basetype == DB_LVCH_TYPE
 		    || basetype == DB_LBYTE_TYPE
+		    || basetype == DB_GEOM_TYPE
+		    || basetype == DB_POINT_TYPE
+		    || basetype == DB_MPOINT_TYPE
+		    || basetype == DB_LINE_TYPE
+		    || basetype == DB_MLINE_TYPE
+		    || basetype == DB_POLY_TYPE
+		    || basetype == DB_MPOLY_TYPE
+		    || basetype == DB_GEOMC_TYPE
 		    || basetype == DB_LBIT_TYPE
 		    || basetype == DB_QTXT_TYPE) ? TRUE : FALSE;
 

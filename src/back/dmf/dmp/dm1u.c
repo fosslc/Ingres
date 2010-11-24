@@ -10,6 +10,7 @@
 #include    <cs.h>
 #include    <di.h>
 #include    <ex.h>
+#include    <er.h>
 #include    <me.h>
 #include    <pc.h>
 #include    <tm.h>
@@ -414,6 +415,8 @@
 **          Changes for Long IDs
 **	4-May-2010 (kschendel)
 **	    DM9026 can't take parameters, fix here.
+**	01-Nov-2010 (frima01) BUG 124670
+**	    Enforce 8 Byte alignment for dm1u_colbuf to avoid BUS errors.
 */
 
 #define MAXUI2    (2 * MAXI2 + 1)    /* Largest u_i2 */
@@ -545,9 +548,6 @@ static VOID      unfix_page(
 static VOID	 clean_bmap(
     i4		   size,
     char	   *map);
-
-/* really a varargs routine, should get converted */
-void dm1u_talk();
 
 static PTR       tmtz_cb=0;
 
@@ -779,7 +779,7 @@ DB_ERROR	*dberr)
 	    t->tcb_atts_ptr[i+1].precision;
 	adf->dm1u_dv[i].db_data = 
 #ifdef BYTE_ALIGN
-	    adf->dm1u_colbuf;
+	    adf->dm1u_colbuf.colbuf;
 #else
 	    (PTR) &adf->dm1u_record[t->tcb_atts_ptr[i+1].offset];
 #endif
@@ -5397,37 +5397,17 @@ DB_ERROR	*dberr)
 **	    Rename to dm1u_talk.
 **	24-Oct-2008 (jonj)
 **	    Replace ule_doformat with ule_format.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Rewrote with variable number of params for prototyping.
 */
 VOID
 dm1u_talk(
-DM1U_CB	    *dm1u,
-i4	    msg_id,
-i4	    count,
-i4	    p1size,
-PTR	    p1val,
-i4	    p2size,
-PTR	    p2val,
-i4	    p3size,
-PTR	    p3val,
-i4	    p4size,
-PTR	    p4val,
-i4	    p5size,
-PTR	    p5val,
-i4	    p6size,
-PTR	    p6val,
-i4	    p7size,
-PTR	    p7val,
-i4	    p8size,
-PTR	    p8val,
-i4	    p9size,
-PTR	    p9val,
-i4	    p10size,
-PTR	    p10val,
-i4	    p11size,
-PTR	    p11val,
-i4	    p12size,
-PTR	    p12val)
+DM1U_CB *dm1u,
+i4	msg_id,
+i4	count,
+... )
 {
+#define NUM_ER_ARGS	12
     char        cbuf[DM1U_MSGBUF_SIZE];
     SCF_CB      scf_cb;
     DB_STATUS   status;
@@ -5435,6 +5415,8 @@ PTR	    p12val)
     i4	mlen;
     char	*sqlstate_str = SS5000G_DBPROC_MESSAGE;
     i4		i;
+    va_list	ap;
+    ER_ARGUMENT er_args[NUM_ER_ARGS];
 
     /* suppress the message if its informative (5201 - 53ff) and the
     ** the verbose optiion is not specified. (SIR 42498)
@@ -5446,12 +5428,28 @@ PTR	    p12val)
        )
 	    return;
 
+    va_start( ap, count );
+    for ( i = 0; i < count && i < NUM_ER_ARGS; i++ )
+    {
+        er_args[i].er_size = (i4) va_arg( ap, i4 );
+	er_args[i].er_value = (PTR) va_arg( ap, PTR );
+    }
+    va_end( ap );
+
     status = uleFormat(NULL, msg_id, NULL, ULE_LOOKUP, NULL, cbuf, DM1U_MSGBUF_SIZE, 
-	&mlen, &err_code, count, 
-	p1size, p1val, p2size, p2val, p3size, p3val, 
-	p4size, p4val, p5size, p5val, p6size, p6val, p7size, 
-	p7val, p8size, p8val, p9size, p9val, p10size, p10val, 
-	p11size, p11val, p12size, p12val);
+	&mlen, &err_code, i, 
+	er_args[0].er_size, er_args[0].er_value,
+	er_args[1].er_size, er_args[1].er_value,
+	er_args[2].er_size, er_args[2].er_value,
+	er_args[3].er_size, er_args[3].er_value,
+	er_args[4].er_size, er_args[4].er_value,
+	er_args[5].er_size, er_args[5].er_value,
+	er_args[6].er_size, er_args[6].er_value,
+	er_args[7].er_size, er_args[7].er_value,
+	er_args[8].er_size, er_args[8].er_value,
+	er_args[9].er_size, er_args[9].er_value,
+	er_args[10].er_size, er_args[10].er_value,
+	er_args[11].er_size, er_args[11].er_value);
 
     /* Format SCF request block */
 

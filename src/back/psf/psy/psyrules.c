@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -122,8 +122,25 @@
 **          then set PST_DEL_PREFETCH bit in the pst_pmask. (B116355)
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psy_drule(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_krule(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+void psy_rl_coalesce(
+	PST_STATEMENT **list1p,
+	PST_STATEMENT *list2);
+i4 psy_rules(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	PST_QNODE *root,
+	DB_ERROR *err_blk);
 
 /* To turn QUEL rules off remove this closing comment 	     ---> */
 #define	    PSY_QUEL_RULES	/* Rules in QUEL - can turn off ^ */
@@ -1018,7 +1035,7 @@ psy_rules(
 		    || tbl_descr->psc_stmt_lvl_usr_before_rules
 		    || tbl_descr->psc_stmt_lvl_sys_before_rules)
 		{
-		    i4	    i;
+		    u_i4 u;
 		    
 		    /*
 		    ** If cursor UPDATE then prepare column bit mask for
@@ -1031,7 +1048,7 @@ psy_rules(
 			** zero out the map, then run down the RESDOM list
 			** setting bits corresponding to resdom numbers
 			*/
-			DB_COLUMN_BITMAP_INIT(upd_cols.db_domset, i, 0);
+			DB_COLUMN_BITMAP_INIT(upd_cols.db_domset, u, 0);
 
 			for (pnode = root->pst_left;
 			     pnode && pnode->pst_sym.pst_type == PST_RESDOM;
@@ -1046,8 +1063,7 @@ psy_rules(
 		    {
 			/* set all the bits in the column bitmap for DELETE
 			 */
-			DB_COLUMN_BITMAP_INIT(upd_cols.db_domset, i,
-			    ~((u_i4) 0));
+			DB_COLUMN_BITMAP_INIT(upd_cols.db_domset, u, ~((u_i4)0));
 		    }
 
 		    /*

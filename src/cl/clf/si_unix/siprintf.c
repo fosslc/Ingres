@@ -132,6 +132,8 @@
 **	    the double-byte macro might refer past the end of a constant, and
 **	    indeed past the end of an object section, causing "local relocation
 **	    in section __text does not target section __const" on MacOS x86_64.
+**	15-nov-2010 (stephenb)
+**	    Correctly define SIdofrmt() for prototyping.
 */
 
 # define	LEFTADJUST	0x01
@@ -142,7 +144,6 @@
 # define	LLGIVEN		0x20
 # define	UNSIGNED	0x40
 
-VOID	SIdofrmt();
 
 /*VARARGS1*/
 
@@ -171,11 +172,7 @@ SIfprintf( FILE *ioptr, const char *fmt, ... )
 /*VARARGS2*/
 
 VOID
-SIdofrmt(putfunc, outarg, fmt, ap)
-i4		putfunc;
-void		*outarg;
-char	 	*fmt;
-va_list		ap;
+SIdofrmt(i4 putfunc, void *outarg, const char *fmt, va_list ap)
 {
 	register uchar	*p;
 	register uchar	*r;

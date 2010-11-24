@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -154,9 +154,57 @@
 **	    Allow alter table alter column with lob only if type doesn't change.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Change how we store DMU characteristics
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
-static DB_STATUS psl_atbl_alter_lob(
+/* TABLE OF CONTENTS */
+i4 psl_alter_table(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_CONS *cons_list);
+i4 psl_alt_tbl(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *tbl_spec,
+	PSS_RNGTAB **rngvarp);
+i4 psl_d_cons(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_RNGTAB *rngvar,
+	char *cons_name,
+	bool drop_cascade);
+i4 psl_alt_tbl_col(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+i4 psl_alt_tbl_col_drop(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DB_ATT_NAME attname,
+	bool cascade);
+i4 psl_alt_tbl_col_add(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DB_ATT_NAME attname,
+	PSS_CONS *cons_list,
+	i4 altopts);
+i4 psl_alt_tbl_col_rename(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DB_ATT_NAME attname,
+	DB_ATT_NAME *newattname);
+i4 psl_alt_tbl_rename(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *newTabName);
+static i4 psl_atbl_partcheck(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DMT_ATT_ENTRY *dmt_attr);
+static i4 psl_atbl_alter_lob(
 	PSS_SESBLK *sess_cb,
 	PSQ_CB *psq_cb,
 	DMT_ATT_ENTRY *dmt_att,
@@ -220,6 +268,8 @@ static DB_STATUS psl_atbl_alter_lob(
 **          once the constraint being created has been verified to prevent
 **          creation of duplicate primary keys due to stale cache info being
 **          checked.
+**	9-Nov-2010 (kschendel)
+**	    Change verify-cons call again.
 */
 DB_STATUS
 psl_alter_table(
@@ -236,7 +286,7 @@ psl_alter_table(
     ** and convert it into a CREATE INTEGRITY statement
     */
     status = psl_verify_cons(sess_cb, psq_cb,
-			     FALSE, (struct _DMU_CB *) NULL, rngvar,
+			     (struct _DMU_CB *) NULL, rngvar,
 			     cons_list, &cr_integ_stmt);
     if (DB_FAILURE_MACRO(status))
 	return(status);
@@ -678,6 +728,8 @@ psl_d_cons(
 **	    resjour values expanded, fix here.
 **	30-Mar-2009 (inkdo01, gupsh01)
 **	    Add support for "rename column"
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Change the way the DMU CB is set up.
 */
 DB_STATUS
 psl_alt_tbl_col(
@@ -687,11 +739,10 @@ psl_alt_tbl_col(
     DB_STATUS	status;
     DB_ERROR	*err_blk = &psq_cb->psq_error;
     PSS_RNGTAB	*rngvar;
-    QEU_CB	*qeu_cb;	
+    QEU_CB	*qeu_cb;
     DMU_CB	*dmu_cb;
-    DMU_CHAR_ENTRY  *chr;
     i4	err_code;
-    
+
 
     rngvar = (PSS_RNGTAB *) sess_cb->pss_resrng;
 
@@ -753,7 +804,7 @@ psl_alt_tbl_col(
 
     qeu_cb->qeu_d_cb = (PTR) dmu_cb;
 
-    MEfill(sizeof(DMU_CB), NULLCHAR, (PTR) dmu_cb);
+    MEfill(sizeof(DMU_CB), 0, (PTR) dmu_cb);
 
     /* fill in the DMU control block header */
     dmu_cb->type = DMU_UTILITY_CB;
@@ -763,12 +814,6 @@ psl_alt_tbl_col(
     STRUCT_ASSIGN_MACRO(rngvar->pss_tabid, dmu_cb->dmu_tbl_id);
     STRUCT_ASSIGN_MACRO(rngvar->pss_tabname, dmu_cb->dmu_table_name);
     dmu_cb->dmu_nphys_parts = rngvar->pss_tabdesc->tbl_nparts;
-
-    /* default for journaling is NOJOURNALING */
-    sess_cb->pss_restab.pst_resjour = PST_RESJOUR_OFF;
-
-    /* default for session table recovery is False */
-    sess_cb->pss_restab.pst_recovery = FALSE;
 
     /* allocate attribute entry.  Only 1 (or 2 for RENAME COLUMN) required 
     ** as ALTER TABLE ADD/DROP COLUMN only supports altering one column 
@@ -794,28 +839,18 @@ psl_alt_tbl_col(
       dmu_cb->dmu_attr_array.ptr_size = 0;
     }
 
-    status = psf_malloc(sess_cb, &sess_cb->pss_ostream, (sizeof(DMU_CHAR_ENTRY) * 2),
-			(PTR *) &dmu_cb->dmu_char_array.data_address,
-			err_blk);
-    if (DB_FAILURE_MACRO(status))
-       return (status);
-
-    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-    chr->char_id = DMU_ALTER_TYPE;
     if (psq_cb->psq_mode == PSQ_ATBL_ADD_COLUMN)
-       chr->char_value = DMU_C_ADD_ALTER;
+	dmu_cb->dmu_action = DMU_ALT_ADDCOL;
     if (psq_cb->psq_mode == PSQ_ATBL_DROP_COLUMN)
-       chr->char_value = DMU_C_DROP_ALTER;
+	dmu_cb->dmu_action = DMU_ALT_DROPCOL;
     if (psq_cb->psq_mode == PSQ_ATBL_ALTER_COLUMN)
-       chr->char_value = DMU_C_ALTCOL_ALTER;
+	dmu_cb->dmu_action = DMU_ALT_ALTERCOL;
     if (psq_cb->psq_mode == PSQ_ATBL_RENAME_TABLE)
-       chr->char_value = DMU_C_ALTTBL_RENAME;
+	dmu_cb->dmu_action = DMU_ALT_TBL_RENAME;
     if (psq_cb->psq_mode == PSQ_ATBL_RENAME_COLUMN)
-       chr->char_value = DMU_C_ALTCOL_RENAME;
-    chr++;
-    chr->char_id = DMU_CASCADE;
-    chr->char_value = DMU_C_OFF;
-    dmu_cb->dmu_char_array.data_in_size = (sizeof(DMU_CHAR_ENTRY) * 2);
+	dmu_cb->dmu_action = DMU_ALT_COL_RENAME;
+
+    /* "cascade" is initially OFF thanks to zeroing the DMU CB */
 
     /* Allocate the location entries.  Assume DM_LOC_MAX */
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream,
@@ -874,10 +909,9 @@ psl_alt_tbl_col_drop(
 {
     DB_STATUS	status;
     DB_ERROR	*err_blk = &psq_cb->psq_error;
-    QEU_CB	*qeu_cb;			
+    QEU_CB	*qeu_cb;
     DMU_CB	*dmu_cb;
     DMF_ATTR_ENTRY **dmu_attr;
-    DMU_CHAR_ENTRY *chr;
     DMT_ATT_ENTRY  *dmt_attr;
     RDF_CB	rdf_cb;
     i4	err_code;
@@ -937,10 +971,8 @@ psl_alt_tbl_col_drop(
     dmu_attr[0]->attr_size = dmt_attr->att_number;
     dmu_cb->dmu_attr_array.ptr_in_count = 1;
 
-    chr = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-    chr++;
-    chr->char_value = DMU_CASCADE;
-    chr->char_value = (cascade ? DMU_C_ON : DMU_C_OFF);
+    if (cascade)
+	BTset(DMU_CASCADE, dmu_cb->dmu_chars.dmu_indicators);
 
     /* Invalidate base table information from RDF cache */
     pst_rdfcb_init(&rdf_cb, sess_cb);
@@ -1015,6 +1047,8 @@ psl_alt_tbl_col_drop(
 **          duplicate column error.
 **	22-Mar-2010 (toumi01) SIR 122403
 **	    Add encflags and encwid for encryption.
+**	9-Nov-2010 (kschendel)
+**	    Change psl-verify-cons call again.
 */
 DB_STATUS
 psl_alt_tbl_col_add(
@@ -1026,10 +1060,9 @@ psl_alt_tbl_col_add(
 {
     DB_STATUS	status;
     DB_ERROR	*err_blk = &psq_cb->psq_error;
-    QEU_CB	*qeu_cb;	
+    QEU_CB	*qeu_cb;
     DMU_CB	*dmu_cb;
     DMF_ATTR_ENTRY **dmu_attr;
-    DMU_CHAR_ENTRY *chr;
     DMT_ATT_ENTRY  *dmt_attr;
     PST_STATEMENT  *stmt_list;
     PST_CREATE_INTEGRITY *cr_integ;
@@ -1130,7 +1163,7 @@ psl_alt_tbl_col_add(
 
     if (cons_list != (PSS_CONS *) NULL)
     {
-       status = psl_verify_cons(sess_cb, psq_cb, FALSE, dmu_cb,
+       status = psl_verify_cons(sess_cb, psq_cb, dmu_cb,
 				(PSS_RNGTAB *) sess_cb->pss_resrng,
 				cons_list, &stmt_list);
 
@@ -1223,15 +1256,11 @@ psl_alt_tbl_col_rename(
 {
     DB_STATUS	status;
     DB_ERROR	*err_blk = &psq_cb->psq_error;
-    QEU_CB	*qeu_cb;	
+    QEU_CB	*qeu_cb;
     DMU_CB	*dmu_cb;
     DMF_ATTR_ENTRY **dmu_attr;
-    DMU_CHAR_ENTRY *chr;
     DMT_ATT_ENTRY  *dmt_attr;
     DMT_ATT_ENTRY  *newdmt_attr;
-    PST_STATEMENT  *stmt_list;
-    PST_CREATE_INTEGRITY *cr_integ;
-    DB_COLUMN_BITMAP *integ_cols;
     RDF_CB	rdf_cb;
     i4		err_code;
     PST_PROCEDURE 	*proc_node; 
@@ -1374,14 +1403,12 @@ psl_alt_tbl_rename(
 {
     DB_STATUS		status;
     DB_ERROR		*err_blk = &psq_cb->psq_error;
-    QEU_CB		*qeu_cb;	
+    QEU_CB		*qeu_cb;
     DMU_CB		*dmu_cb;
-    DMU_CHAR_ENTRY 	*chr;
     RDF_CB		rdf_cb;
-    i4			err_code;
-    PST_PROCEDURE 	*proc_node; 
-    PST_STATEMENT  	*rename_stmt; 
-    PST_RENAME		*pst_rename; 
+    PST_PROCEDURE 	*proc_node;
+    PST_STATEMENT  	*rename_stmt;
+    PST_RENAME		*pst_rename;
 
     proc_node = (PST_PROCEDURE *) sess_cb->pss_qsf_rcb.qsf_root;
     rename_stmt = proc_node->pst_stmts;
@@ -1441,7 +1468,7 @@ psl_alt_tbl_rename(
 **	15-nov-2006 (dougi)
 **	    Written to validate partitioned tables.
 */
-DB_STATUS
+static DB_STATUS
 psl_atbl_partcheck(
 	PSS_SESBLK    *sess_cb,
 	PSQ_CB        *psq_cb,
@@ -1545,7 +1572,9 @@ psl_atbl_alter_lob(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
     ** combination rejects the alter.
     */
     if (old_bits & AD_PERIPHERAL && new_bits & AD_PERIPHERAL
-      && dmt_att->att_type == dmu_att->attr_type)
+      && (dmt_att->att_type == dmu_att->attr_type
+      || abs(dmt_att->att_type) == DB_GEOM_TYPE
+      || abs(dmu_att->attr_type) == DB_GEOM_TYPE))
 	return (E_DB_OK);
 
     (void) psf_error(3859, 0, PSF_USERERR, &err_code, &psq_cb->psq_error, 0);

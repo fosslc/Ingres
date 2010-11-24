@@ -101,6 +101,8 @@
 **          being released, leading to memory access errors.
 **	11-Jun-2010 (kiria01) b123908
 **	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
+**	29-Oct-2010 (jonj) SIR 120874
+**	    Conform to use new uleFormat, DB_ERROR constructs.
 **/
 
 
@@ -224,7 +226,6 @@ qsr_startup( QSF_RCB *qsf_rb )
 {
     ULM_RCB             ulm_rcb;
     DB_STATUS           status;
-    i4             *err_code = &qsf_rb->qsf_error.err_code;
     PTR			poolid;
     SIZE_TYPE		memtot;
     SIZE_TYPE		memleft;
@@ -235,6 +236,8 @@ qsr_startup( QSF_RCB *qsf_rb )
 #define	QS0_EST_QP_SIZE		10000	/* Est. size of average named QP */
 #define	QS0_MIN_HASH_BUCKETS	 100	/* Smallest # hash buckets allowed */
 #define	QS0_MAX_HASH_BUCKETS   MAXI2	/* Largest # hash buckets allowed */
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
     /* Calculate size of memory pool to ask ULM for */
     /* -------------------------------------------- */
@@ -257,11 +260,11 @@ qsr_startup( QSF_RCB *qsf_rb )
     {
         if (ulm_rcb.ulm_error.err_code == E_UL0005_NOMEM)
         {
-	    *err_code = E_QS0001_NOMEM;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0001_NOMEM);
         }
         else
         {
-	    *err_code = E_QS9999_INTERNAL_ERROR;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS9999_INTERNAL_ERROR);
 	    status = E_DB_FATAL;
         }
         return (status);
@@ -284,11 +287,11 @@ qsr_startup( QSF_RCB *qsf_rb )
     {
         if (ulm_rcb.ulm_error.err_code == E_UL0005_NOMEM)
         {
-	    *err_code = E_QS0001_NOMEM;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0001_NOMEM);
         }
         else
         {
-	    *err_code = E_QS9999_INTERNAL_ERROR;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS9999_INTERNAL_ERROR);
 	    status = E_DB_FATAL;
         }
         return (status);
@@ -321,7 +324,7 @@ qsr_startup( QSF_RCB *qsf_rb )
     if (CSw_semaphore(&Qsr_scb->qsr_psem, CS_SEM_SINGLE,
     			"QSR sem" ) != OK)
     {
-	*err_code = E_QS0002_SEMINIT;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0002_SEMINIT);
 	return (E_DB_ERROR);
     }
 
@@ -359,11 +362,11 @@ qsr_startup( QSF_RCB *qsf_rb )
     {
         if (ulm_rcb.ulm_error.err_code == E_UL0005_NOMEM)
         {
-	    *err_code = E_QS0001_NOMEM;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS0001_NOMEM);
         }
         else
         {
-	    *err_code = E_QS9999_INTERNAL_ERROR;
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS9999_INTERNAL_ERROR);
 	    status = E_DB_FATAL;
         }
         return (status);
@@ -398,13 +401,12 @@ qsr_startup( QSF_RCB *qsf_rb )
     /* ----------------------------------------------------------- */
     if (qsf_mo_attach() != OK)
     {
-	*err_code = E_QS0020_QS_INIT_MO_ERROR;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0020_QS_INIT_MO_ERROR);
 	status = E_DB_FATAL;
     }
 
     /* "All is well" */
     /* ------------- */
-    *err_code = E_QS0000_OK;
     return (E_DB_OK);
 }
 
@@ -499,12 +501,13 @@ qsr_shutdown( QSF_RCB *qsf_rb )
 {
     ULM_RCB             ulm_rcb;
     i4			*force = &qsf_rb->qsf_force;
-    i4             *err_code = &qsf_rb->qsf_error.err_code;
     QSO_MASTER_HDR	*master;
     QSO_OBJ_HDR		*obj;
     QSO_HASH_BKT	*bucket;
     i4			i;
     i4		error;
+
+    CLRDBERR(&qsf_rb->qsf_error);
 
 
     /* See if object list is empty */
@@ -513,8 +516,9 @@ qsr_shutdown( QSF_RCB *qsf_rb )
     {
 	if (Qsr_scb->qsr_no_unnamed && !*force)
 	{
-	    *err_code = E_QS0005_ACTIVE_OBJECTS;
-	    ule_format( *err_code, NULL, (i4) ULE_LOG, NULL, NULL,
+	    uleFormat( &qsf_rb->qsf_error, E_QS0005_ACTIVE_OBJECTS, 
+	    		(CL_ERR_DESC*)NULL,
+	    		ULE_LOG, NULL, NULL,
 			(i4) 0, NULL, &error, 0);
 	    return (E_DB_WARN);
 	}
@@ -539,10 +543,10 @@ qsr_shutdown( QSF_RCB *qsf_rb )
 			{
 			    if (obj->qso_lk_state != QSO_FREE && !*force)
 			    {
-				*err_code = E_QS0005_ACTIVE_OBJECTS;
-				ule_format( *err_code, NULL, (i4) ULE_LOG,
-					    NULL, NULL, (i4) 0, NULL, &error,
-					    0);
+				uleFormat( &qsf_rb->qsf_error, E_QS0005_ACTIVE_OBJECTS, 
+					    (CL_ERR_DESC*)NULL,
+					    ULE_LOG, NULL, NULL,
+					    (i4) 0, NULL, &error, 0);
 				return (E_DB_WARN);
 			    }
 			    obj = obj->qso_monext;
@@ -560,8 +564,9 @@ qsr_shutdown( QSF_RCB *qsf_rb )
     /* ------------------------------------------ */
     if (Qsr_scb->qsr_se1st != (QSF_CB *) NULL  &&  !*force)
     {
-	*err_code = E_QS0006_ACTIVE_SESSIONS;
-	ule_format( *err_code, NULL, (i4) ULE_LOG, NULL, NULL,
+	uleFormat( &qsf_rb->qsf_error, E_QS0006_ACTIVE_SESSIONS, 
+		    (CL_ERR_DESC*)NULL,
+		    ULE_LOG, NULL, NULL,
 		    (i4) 0, NULL, &error, 0);
 	return (E_DB_WARN);
     }
@@ -586,7 +591,7 @@ qsr_shutdown( QSF_RCB *qsf_rb )
     ulm_rcb.ulm_poolid = Qsr_scb->qsr_poolid;
     if (ulm_shutdown(&ulm_rcb) != E_DB_OK)
     {
-	*err_code = E_QS0007_MEMPOOL_RELEASE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0007_MEMPOOL_RELEASE);
         return (E_DB_ERROR);
     }
 
@@ -594,6 +599,5 @@ qsr_shutdown( QSF_RCB *qsf_rb )
     /* "All is well" */
     /* ------------- */
     Qsr_scb = NULL;
-    *err_code = E_QS0000_OK;
     return (E_DB_OK);
 }

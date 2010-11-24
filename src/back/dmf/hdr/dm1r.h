@@ -93,6 +93,8 @@
 **          Added row_is_consistent() prototype.
 **      15-Sep-2010 (stial01) (SIR 121619 MVCC, SD 146756, B124453)
 **          Moved row_is_consistent() prototype to dmp.h
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype dbg_dm723()
 **/
 
 /*
@@ -253,3 +255,10 @@ FUNC_EXTERN DB_STATUS dm1r_get_segs(
 FUNC_EXTERN DB_STATUS dm1r_check_lock(
 				DMP_RCB		*rcb,
 				DM_TID		*tid);
+
+FUNC_EXTERN DB_STATUS dbg_dm723(
+				DMP_RCB		*rcb,
+				DM_TID		*tid,
+				DM_TID		*base_tid,
+				i4		dm0l_flags,
+				i4		*err_code);

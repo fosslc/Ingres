@@ -227,7 +227,9 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
 **      09-Jun-2010 (stial01)
-**          Init new position information fields.
+**          init new position information fields.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype dm1b_bulk_put().
 **/
 
 
@@ -1049,6 +1051,18 @@ FUNC_EXTERN VOID	dm1b_position_save_fcn(
 			DM_TID *bidp,
 			i4 pop,
 			i4 line);
+
+FUNC_EXTERN DB_STATUS	dm1b_bulk_put(
+			DMP_RCB		*rcb,
+			DMP_PINFO	*leafPinfo,
+			DMP_PINFO	*dataPinfo,
+			DM_TID		*bid,
+			DM_TID		*tid,
+			char		*record,
+			char		*key,
+			i4		record_size,
+			i4		opflag,
+			DB_ERROR	*dberr);
 
 /*
 **  Macros for accessing index page fields.

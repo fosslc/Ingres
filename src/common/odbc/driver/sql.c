@@ -681,6 +681,8 @@
 **          GetServerInfo(), set the release version to the same as Ingres 
 **          10.0 for Vectorwise servers, and disable OPT_INGRESDATE and
 **          OPT_BLANKDATEisNULL for Vectorwise servers.
+**    17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
 **    12-Oct-2010 (Ralph Loen) Bug 124581
 **          Removal of QST_DESCRIBE resulted in a memory leak for
 **          prepared select queries using select loops.
@@ -688,6 +690,8 @@
 **          PrepareSqldaAndBuffer() with the prepare_or_describe argument set 
 **          to SQLDESCRIB if the select query is prepared: in this case, only 
 **          the sqlda needs to be allocated, not the fetch buffer.
+**    15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 /*
@@ -737,11 +741,12 @@ static void GetCapabilitiesFromDSN(char * pDSN, LPDBC pdbc);
 static BOOL GetProcParamNames(SESS * pSession, LPSTMT pstmt, LPDESC pLitIPD,
                                  char *szProcName, char *szSchema);
 
-RETCODE odbc_AutoCommit(LPSQB pSqb, BOOL bFlag);
-RETCODE odbc_query_sm( QRY_CB *qry_cb );
-RETCODE exitPutSeg(RETCODE, IIAPI_PUTPARMPARM *, IIAPI_PUTPARMPARM *);
-BOOL    stripOffQuotes( CHAR *);
-void odbc_print_qry( i2, i2 );
+static BOOL odbc_execute(SESS* pSession,
+				LPSTMT  pstmt, IIAPI_QUERYTYPE apiQueryType);
+static RETCODE odbc_query_sm( QRY_CB *qry_cb );
+static RETCODE exitPutSeg(RETCODE, IIAPI_PUTPARMPARM *, IIAPI_PUTPARMPARM *);
+static BOOL    stripOffQuotes( CHAR *);
+static void odbc_print_qry( i2, i2 );
 
 static const char nt[] = "\0"; 
 #define MAGIC_1980  1980
@@ -1288,6 +1293,7 @@ static BOOL PutProcLiteralParm(LPDESCFLD pipd,
 		break;
 
 	case IIAPI_BYTE_TYPE:
+	case IIAPI_NBR_TYPE:
 		cbData = cbData / 2;
 		pipd->OctetLength = cbData; 
 		pipd->DataPtr = odbc_malloc((size_t)(pipd->OctetLength));
@@ -1625,9 +1631,17 @@ static BOOL hasLongDataColumn(LPSTMT  pstmt)
     for (i = 0, pird = pIRD->pcol + 1;  /* pird -> 1st IRD (after bookmark) */
          i < IRDCount;  i++, pird++)    /* loop through the result columns */
     {
-        if (pird->fIngApiType == IIAPI_LVCH_TYPE  ||
+        if (pird->fIngApiType == IIAPI_LVCH_TYPE   ||
+            pird->fIngApiType == IIAPI_GEOM_TYPE   ||
+            pird->fIngApiType == IIAPI_POINT_TYPE  ||
+            pird->fIngApiType == IIAPI_MPOINT_TYPE ||
+            pird->fIngApiType == IIAPI_LINE_TYPE   ||
+            pird->fIngApiType == IIAPI_MLINE_TYPE  ||
+            pird->fIngApiType == IIAPI_POLY_TYPE   ||
+            pird->fIngApiType == IIAPI_MPOLY_TYPE  ||
+            pird->fIngApiType == IIAPI_GEOMC_TYPE  ||
 # ifdef IIAPI_LNVCH_TYPE
-            pird->fIngApiType == IIAPI_LBYTE_TYPE ||
+            pird->fIngApiType == IIAPI_LBYTE_TYPE  ||
             pird->fIngApiType == IIAPI_LNVCH_TYPE)
 # else
             pird->fIngApiType == IIAPI_LBYTE_TYPE)
@@ -1992,6 +2006,7 @@ static BOOL odbc_setDescr( LPSTMT pstmt, IIAPI_QUERYTYPE apiQueryType )
             {
             case IIAPI_CHA_TYPE:
             case IIAPI_BYTE_TYPE:
+            case IIAPI_NBR_TYPE:
                 OctetLength = sizeof(SQLCHAR);
                 break;
 
@@ -3075,6 +3090,14 @@ static void MoveData(LPSTMT pstmt, LPDESCFLD pard, LPDESCFLD pird)
                 break;
 
         case IIAPI_LBYTE_TYPE:
+        case IIAPI_GEOM_TYPE :
+        case IIAPI_POINT_TYPE :
+        case IIAPI_MPOINT_TYPE :
+        case IIAPI_LINE_TYPE :
+        case IIAPI_MLINE_TYPE :
+        case IIAPI_POLY_TYPE :
+        case IIAPI_MPOLY_TYPE :
+        case IIAPI_GEOMC_TYPE :
                 rc2 = MoveBinChar(pstmt, pard, rgbData, cbData); 
                 break;
 
@@ -3089,6 +3112,14 @@ static void MoveData(LPSTMT pstmt, LPDESCFLD pard, LPDESCFLD pird)
         {
         case IIAPI_LVCH_TYPE:
         case IIAPI_LBYTE_TYPE:
+        case IIAPI_GEOM_TYPE :
+        case IIAPI_POINT_TYPE :
+        case IIAPI_MPOINT_TYPE :
+        case IIAPI_LINE_TYPE :
+        case IIAPI_MLINE_TYPE :
+        case IIAPI_POLY_TYPE :
+        case IIAPI_MPOLY_TYPE :
+        case IIAPI_GEOMC_TYPE :
 # ifdef IIAPI_LNVCH_TYPE
         case IIAPI_LNVCH_TYPE:
 # endif
@@ -3430,9 +3461,17 @@ static BOOL odbc_getColumnsLong(SESS * pSession, LPSTMT pstmt)
         { 
             pirdSave = pird;
             pardSave = pard;
-            if (pird->fIngApiType == IIAPI_LVCH_TYPE  ||  /* break on blob */
+            if (pird->fIngApiType == IIAPI_LVCH_TYPE   ||  /* break on blob */
+                pird->fIngApiType == IIAPI_GEOM_TYPE   ||
+                pird->fIngApiType == IIAPI_POINT_TYPE  ||
+                pird->fIngApiType == IIAPI_MPOINT_TYPE ||
+                pird->fIngApiType == IIAPI_LINE_TYPE   ||
+                pird->fIngApiType == IIAPI_MLINE_TYPE  ||
+                pird->fIngApiType == IIAPI_POLY_TYPE   ||
+                pird->fIngApiType == IIAPI_MPOLY_TYPE  ||
+                pird->fIngApiType == IIAPI_GEOMC_TYPE  ||
 # ifdef IIAPI_LNVCH_TYPE
-                pird->fIngApiType == IIAPI_LBYTE_TYPE ||
+                pird->fIngApiType == IIAPI_LBYTE_TYPE  ||
                 pird->fIngApiType == IIAPI_LNVCH_TYPE)
 # else
                 pird->fIngApiType == IIAPI_LBYTE_TYPE)
@@ -3722,8 +3761,16 @@ static BOOL odbc_getUnboundColumnsLong(SESS * pSession, LPSTMT pstmt)
         { 
             pirdSave = pird;
             pardSave = pard;
-            if (pird->fIngApiType == IIAPI_LVCH_TYPE  ||  /* break on blob */
-                pird->fIngApiType == IIAPI_LBYTE_TYPE ||
+            if (pird->fIngApiType == IIAPI_LVCH_TYPE   ||  /* break on blob */
+                pird->fIngApiType == IIAPI_LBYTE_TYPE  ||
+                pird->fIngApiType == IIAPI_GEOM_TYPE   ||
+                pird->fIngApiType == IIAPI_POINT_TYPE  ||
+                pird->fIngApiType == IIAPI_MPOINT_TYPE ||
+                pird->fIngApiType == IIAPI_LINE_TYPE   ||
+                pird->fIngApiType == IIAPI_MLINE_TYPE  ||
+                pird->fIngApiType == IIAPI_POLY_TYPE   ||
+                pird->fIngApiType == IIAPI_MPOLY_TYPE  ||
+                pird->fIngApiType == IIAPI_GEOMC_TYPE  ||
                 pird->fIngApiType == IIAPI_LNVCH_TYPE)
             {
                 break;
@@ -4965,7 +5012,8 @@ static RETCODE odbc_putSegment(LPSTMT pstmt, IIAPI_QUERYTYPE
         return exitPutSeg(rc, &putParmParm, serviceParms);
 }
 
-RETCODE exitPutSeg(RETCODE rc, IIAPI_PUTPARMPARM
+static RETCODE
+exitPutSeg(RETCODE rc, IIAPI_PUTPARMPARM
     *putParmParm, IIAPI_PUTPARMPARM *serviceParms)
 {
 	odbc_free((VOID *)putParmParm->pp_parmData );
@@ -5165,8 +5213,9 @@ static BOOL odbc_describe_input(SESS* pSession, LPSTMT pstmt)
 ** Returns: 
 **      
 */
-BOOL odbc_execute(SESS* pSession,
-					LPSTMT  pstmt, IIAPI_QUERYTYPE apiQueryType)
+static BOOL
+odbc_execute(SESS* pSession,
+		LPSTMT  pstmt, IIAPI_QUERYTYPE apiQueryType)
 {
     IIAPI_QUERYPARM   	queryParm;
     BOOL rc = TRUE;
@@ -7288,7 +7337,7 @@ static void GetCapabilitiesFromDSN(char * pDSN, LPDBC pdbc)
 **          to be allocated, not the fetch buffer.
 */
 
-RETCODE odbc_query_sm( QRY_CB *qry_cb )
+static RETCODE odbc_query_sm( QRY_CB *qry_cb )
 {
 
     LPSTMT pstmt = qry_cb->pstmt;
@@ -7709,7 +7758,7 @@ supported in scrollable result sets","HY000",TRUE);
 }
 
 
-BOOL
+static BOOL
 stripOffQuotes( char *s)
 {
   BOOL ret = FALSE;
@@ -7753,7 +7802,7 @@ stripOffQuotes( char *s)
 **	 20-Nov-2009 (Ralph Loen) Bug 122945
 **	    Created.
 */
-void
+static void
 odbc_print_qry( i2 sequence, i2 sequence_type )
 {
     i2 seq;

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 /*
 NO_OPTIM=sos_us5
@@ -67,9 +67,6 @@ NO_OPTIM=sos_us5
 **  Name: OPCRAN.C - Routines to compile remote action node (ie. QEN_QP).
 **
 **  Description:
-{@comment_line@}...
-**
-{@func_list@}...
 **
 **
 **  History:
@@ -136,34 +133,27 @@ NO_OPTIM=sos_us5
 **	    to allow for extra flags in PST_RSDM_NODE
 **	3-Jun-2009 (kschendel) b122118
 **	    Minor cleanup, delete unused gtqual parameters.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-
-/*
-**  Forward and/or External function references.
-*/
-static VOID	
-opc_qfatt_search(
-	OPS_STATE	*global, 
-	OPC_NODE	*cnode, 
-	PST_QNODE	**orig_qual, 
-	OPE_BMEQCLS	*fattmap);
-
-VOID
-opc_lsahd_build(
-		OPS_STATE	*global,
-		OPS_SUBQUERY	*subqry_list,
-		QEF_AHD		**pahd_list,
-		i4		is_top_ahd);
-
-VOID	    opc_qtqnatts();
-
-static void opc_set_resettable(QEN_NODE *node, bool resettable);
-
-/*
-**  Defines of other constants.
-*/
+/* TABLE OF CONTENTS */
+void opc_ran_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+void opc_lsahd_build(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subqry_list,
+	QEF_AHD **pahd_list,
+	i4 is_top_ahd);
+static void opc_qfatt_search(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE **orig_qual,
+	OPE_BMEQCLS *fattmap);
+static void opc_set_resettable(
+	QEN_NODE *node,
+	bool resettable);
 
 
 /*{
@@ -862,7 +852,7 @@ static void
 opc_set_resettable(QEN_NODE *node, bool resettable)
 {
     QEF_AHD *act;
-    QEN_NODE *inner, *outer;
+    QEN_NODE *outer;
 
     /* Loop on outer, recurse on inner / only - helps reduce recursion depth */
     do

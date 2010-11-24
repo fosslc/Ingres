@@ -29,7 +29,11 @@
 ##	02-Jun-2010 (hanje04)
 ##	    BUG 123856
 ##	    Use su if we can't find runuser
+##      29-Sep-2010 (thich01)
+##          Add ingres/bin and ingres/utility to the path so scripts called
+##          from this script are found correctly.
 
+PATH=$II_SYSTEM/ingres/bin:$II_SYSTEM/ingres/utility:$PATH
 (LSBENV)
 
 . iishlib

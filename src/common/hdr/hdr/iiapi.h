@@ -48,6 +48,9 @@
 **	    Boolean data type.
 **	    Batch processing: IIapi_batch().
 **	    Positional (unnamed) DB procedure parameeters.
+**
+**	IIAPI_VERSION_8
+**	    Spatial data types.
 ##
 ## History:
 ##      01-sep-93 (ctham)
@@ -186,11 +189,18 @@
 ##	26-Oct-09 (gordy)
 ##	    Added IIAPI_VERSION_7, IIAPI_LEVEL_6, and E_AP002D_LVL6_DATA_TYPE
 ##	    for Boolean type.
+##      16-Feb-10 (thich01)
+##	    Added IIAPI_VERSION_8, IIAPI_LEVEL_7, and E_AP002E_LVL7_DATA_TYPE
+##	    for Spatial types.
 ##	25-Mar-10 (gordy)
 ##	    Added IIapi_batch() function and parameter structure.
 ##	15-Apr-10 (gordy)
 ##	    Noted that positional database procedure parameters are
 ##	    are supported at IIAPI_VERSION_7/IIAPI_LEVEL_6.
+##      17-Aug-2010 (thich01)
+##          Added IIAPI_NBR_TYPE and II_API_GEOMC_TYPE
+##      19-Aug-2010 (thich01)
+**          Left a space at 60 for GCA SECL TYPE.
 */
 
 # ifndef __IIAPI_H__
@@ -474,6 +484,7 @@
 # define E_AP002B_LVL4_DATA_TYPE	(II_ULONG)(E_AP_MASK + 0x002B)
 # define E_AP002C_LVL5_DATA_TYPE	(II_ULONG)(E_AP_MASK + 0x002C)
 # define E_AP002D_LVL6_DATA_TYPE	(II_ULONG)(E_AP_MASK + 0x002D)
+# define E_AP002E_LVL7_DATA_TYPE	(II_ULONG)(E_AP_MASK + 0x002E)
 
 
 /*
@@ -542,6 +553,8 @@
 ##	    Added data type lengths.
 ##	24-Oct-06 (gordy)
 ##	    Added Blob/Clob locator types.
+##      16-Fev-10 (thich01)
+##          Added spatial types.
 */
 
 typedef II_INT2 IIAPI_DT_ID;
@@ -579,7 +592,15 @@ typedef II_INT2 IIAPI_DT_ID;
 # define IIAPI_INTDS_TYPE   ((IIAPI_DT_ID) 34)	/* Interval Day to Second */
 # define IIAPI_LOGKEY_TYPE  ((IIAPI_DT_ID) 11)	/* Logical Key */
 # define IIAPI_TABKEY_TYPE  ((IIAPI_DT_ID) 12)	/* Table Key */
-
+# define IIAPI_GEOM_TYPE    ((IIAPI_DT_ID) 56)  /* Spatial Long Byte */
+# define IIAPI_POINT_TYPE   ((IIAPI_DT_ID) 57)  /* Point Long Byte */
+# define IIAPI_MPOINT_TYPE  ((IIAPI_DT_ID) 58)  /* MPoint Long Byte */
+# define IIAPI_LINE_TYPE    ((IIAPI_DT_ID) 59)  /* Line Long Byte */
+# define IIAPI_MLINE_TYPE   ((IIAPI_DT_ID) 61)  /* MLine Long Byte */
+# define IIAPI_POLY_TYPE    ((IIAPI_DT_ID) 62)  /* Poly Long Byte */
+# define IIAPI_MPOLY_TYPE   ((IIAPI_DT_ID) 63)  /* Mpoly Long Byte */
+# define IIAPI_NBR_TYPE     ((IIAPI_DT_ID) 64)  /* NBR Byte */
+# define IIAPI_GEOMC_TYPE   ((IIAPI_DT_ID) 65)	/* Geomc Long Byte */
 # define IIAPI_IDATE_TYPE	IIAPI_DTE_TYPE
 # define IIAPI_ADATE_TYPE	IIAPI_DATE_TYPE
 
@@ -1586,6 +1607,8 @@ typedef struct _IIAPI_COMMITPARM
 ##	    Level 5: LOB Locators.
 ##	26-Oct-09 (gordy)
 ##	    Level 6: Boolean.
+##	16-Feb-10 (thich01)
+##	    Level 7: Spatial.
 */
 
 typedef struct _IIAPI_CONNPARM
@@ -1619,6 +1642,7 @@ typedef struct _IIAPI_CONNPARM
 # define IIAPI_LEVEL_4		4	/* ANSI date/time types */
 # define IIAPI_LEVEL_5		5	/* Blob/Clob locator types */
 # define IIAPI_LEVEL_6		6	/* Boolean type */
+# define IIAPI_LEVEL_7		7	/* Spatial types */
     
     /* Version 2 parameters */
 
@@ -2209,6 +2233,8 @@ typedef struct _IIAPI_GETQINFOPARM
 ##	    API Version 6: support for LOB locators.
 ##	26-Oct-09 (gordy)
 ##	    API Version 7: support for boolean.
+##	16-Oct-10 (thich01)
+##	    API Version 8: support for spatial.
 */
 
 typedef struct _IIAPI_INITPARM
@@ -2226,7 +2252,8 @@ typedef struct _IIAPI_INITPARM
 # define IIAPI_VERSION_5	5	/* ANSI date/time types */
 # define IIAPI_VERSION_6	6	/* Blob/Clob locator types */
 # define IIAPI_VERSION_7	7	/* Boolean type */
-# define IIAPI_VERSION		IIAPI_VERSION_7
+# define IIAPI_VERSION_8	8	/* Spatial types */
+# define IIAPI_VERSION		IIAPI_VERSION_8
 
     /* Specific output parameters */
 

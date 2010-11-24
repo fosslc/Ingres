@@ -24,6 +24,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing function prototypes.
 **/
 
 
@@ -307,4 +309,16 @@ FUNC_EXTERN DB_STATUS dmckp_pre_save_file(
 FUNC_EXTERN DB_STATUS dmckp_save_file(
 		DMCKP_CB    *dmckp,
 		DMP_DCB     *d,
+		i4     *err_code) ;
+
+FUNC_EXTERN DB_STATUS dmckp_begin_dump_phase(
+		DMCKP_CB    *dmckp,
+		i4     *err_code) ;
+
+FUNC_EXTERN DB_STATUS dmckp_end_dump_phase(
+		DMCKP_CB    *dmckp,
+		i4     *err_code) ;
+
+FUNC_EXTERN DB_STATUS dmckp_work_dump_phase(
+		DMCKP_CB    *dmckp,
 		i4     *err_code) ;

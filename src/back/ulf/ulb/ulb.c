@@ -2,6 +2,7 @@
 **Copyright (c) 2004 Ingres Corporation
 */
 #include    <compat.h>
+#include    <ulb.h>
 
 /**
 **
@@ -60,6 +61,8 @@
 **			((u_i4) flip_byte[val >> 24]));
 **		However, as it stands right now, changing it should
 **		be avoided!
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include ulb.h to get prototype.
 **		   
 */
 #ifdef NT_GENERIC	

@@ -12,6 +12,7 @@
 #include    <tr.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
+#include    <dmf.h>
 #include    <dm.h>
 #include    <dm2rep.h>
 
@@ -40,6 +41,9 @@
 **	10-Dec-2008 (jonj)
 **	    SIR 120874: Remove last vestiges of CL_SYS_ERR,
 **	    old form uleFormat.
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Added include of dmf.h
+**	    Return int instead of VOID to agree with function prototype.
 */
 
 /*
@@ -99,9 +103,9 @@ static STATUS repstat(
 **	    to make sence on Vista.
 */
 # ifdef II_DMF_MERGE
-VOID MAIN(argc, argv)
+int MAIN(argc, argv)
 # else
-VOID
+int
 main(argc, argv)
 # endif
 int     argc;
@@ -111,6 +115,9 @@ char    *argv[];
     MEadvise(ME_INGRES_ALLOC);
 # endif
     PCexit(repstat(argc, argv));
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 static STATUS 

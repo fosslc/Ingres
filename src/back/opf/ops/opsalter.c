@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -74,8 +74,22 @@
 **      17-Aug-2010 (horda03) b124274
 **          For SET [NO]QEP [SEGMENTED] ops_qep_flag. Needed uld.h for flag
 **          values.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static i4 ops_change(
+	OPF_CB *opf_cb,
+	OPS_ALTER *altercb);
+i4 ops_exlock(
+	OPF_CB *opf_cb,
+	SCF_SEMAPHORE *semaphore);
+i4 ops_unlock(
+	OPF_CB *opf_cb,
+	SCF_SEMAPHORE *semaphore);
+i4 ops_alter(
+	OPF_CB *opf_cb);
 
 /*{
 ** Name: ops_change	- change characteristics for SET command
@@ -115,7 +129,8 @@
 **      17-Aug-2010 (horda03) b124274
 **          IF SET QEP and opf_value set then enable Segmented QEP
 **          displays. disable otherwise.
-[@history_line@]...
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Delete ret-into function, not needed any more.
 */
 static DB_STATUS
 ops_change(
@@ -172,15 +187,6 @@ ops_change(
 	{
 	    altercb->ops_qep = FALSE;	        /* print qep */
             altercb->ops_qep_flag = ULD_FLAG_NONE;
-	    break;
-	}
-	case OPF_RET_INTO:
-	{
-	    altercb->ops_storage = opf_cb->opf_value;	/* default storage 
-						** structure for temps */
-	    altercb->ops_compressed = opf_cb->opf_compressed;	/* default
-						** compressed mode structure
-						** for temps */
 	    break;
 	}
 	case OPF_SUBSELECT:
@@ -411,7 +417,6 @@ ops_unlock(
 **      SET [[SESSION] | SERVER] TIMEOUT   <value>
 **      SET [[SESSION] | SERVER] QEP
 **      SET [[SESSION] | SERVER] NOQEP
-**      SET [[SESSION] | SERVER] RET_INTO <storage_structure>
 **
 **      FIXME need to use semaphores to access global structures.
 **

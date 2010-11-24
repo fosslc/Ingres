@@ -452,6 +452,9 @@ effective setting */
 **	01-Jun-2009 (hanje04)
 **	    Make opf_level an i2 instead of a bool. bools are an enum on
 **	    OSX and therefore cannot differentiate between 1 & 2
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Delete RET-INTO and result structure stuff;  it's all done inside
+**	    PSF now.
 */
 typedef struct _OPF_CB
 {
@@ -510,15 +513,9 @@ typedef struct _OPF_CB
 /* SET JOINOP NOTIMEOUT 
 ** - causes optimizer to find the best plan without timing out
 */
-#define                 OPF_RET_INTO  4
-/* SET RET_INTO - opf_value and opf_compressed are required parameters
-** This value is used by the optimizer when building the query execution plan,
-** to determine the result storage structure of a retrieve into command.  
-** It is also used for temporary relations produced by aggregate processing.
-** i.e. value is one the storage structures  (DB_HEAP_STORE etc.)
-** - the opf_compressed flag is set if a compressed storage structure is
-** requested
-*/
+
+/*	notused -- 4 */
+
 #define                 OPF_QEP       5
 /* SET QEP - no opf_value required
 **  - enable the display of the query execution plan
@@ -600,9 +597,6 @@ typedef struct _OPF_CB
 */
 
     i4         opf_value;          /* alter value (if any)               */
-    bool            opf_compressed;     /* used for OPF_RET_INIT option only
-                                        ** TRUE - if compressed structure used
-                                        */
     bool	    opf_autostruct;	/* defines server default for table
 					** auto structure option */
 /* I/O parameters for OPF_STARTUP - note ADF needs to be initialized!!        */

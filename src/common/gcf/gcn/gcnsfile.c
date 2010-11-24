@@ -218,6 +218,12 @@
 **         LOG and read-only under FILES location.
 **	23-Apr-2010 (wanfr01) b123139
 **	   Add cv.h for CV function definitions
+**      20-Oct-2010 (Ralph Loen) Bug 122895
+**          For gcn_nq_lock(), on VMS, open files as GCN_RACC_FILE for 
+**          optimized file access.  See bug 102423.
+**      22-Nov-2010 (Ralph Loen) Bug 122895
+**          Cleaned up some cruft in the documentation header left over
+**          from cross-integrating.  
 */
 
 static VOID	gcn_rewrite( GCN_QUE_NAME * );
@@ -664,6 +670,8 @@ gcn_nq_find( char *type )
 **	8-Sep-09 (bonro01)
 **	    Fix syntax error introduced by previous change which fails
 **	    on Solaris.
+**      20-Oct-2010 (Ralph Loen) Bug 122895
+**          On VMS, open files as GCN_RACC_FILE for optimized file access.
 */
 
 STATUS
@@ -2283,7 +2291,11 @@ gcn_fopen( char *name, char *mode, FILE **file, i4  reclen )
 	goto error;
 		
     if ( reclen )
+#ifdef VMS
+	status = SIfopen( &loc, mode, GCN_RACC_FILE, reclen, file );
+#else
 	status = SIfopen( &loc, mode, SI_RACC, reclen, file );
+#endif
     else
 #ifndef hp9_mpe
 	status = SIopen( &loc, mode, file );

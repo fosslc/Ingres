@@ -22,6 +22,18 @@
 ##	GTKHDR - Headers needed to build GTK appllications. (uses pkg-config)
 ##	PAXLOC - Location pax binary
 ##
+##	Geospatial Ingres uses the GEOS and PROJ.4 libraries.  The following 
+##	variables can be used to specify the locations.
+##
+##	GEOS_INC - Location of the GEOS headers.
+##	GEOS_LOC - Location of the GEOS libraries.
+##	GEOSHB_LOC - If building hybrid, both 64 and 32 bit versions of 
+##			the GEOS libraries are required.
+##	PROJ_INC - Location of the PROJ.4 headers.
+##	PROJ_LOC - Location of the PROJ.4 libraries.
+##	PROJHB_LOC - If building hybrid, both 64 and 32 bit versions of 
+##			the PROJ.4 libraries are required.
+##
 ########################################################3
 ##
 ##	History:
@@ -142,6 +154,8 @@
 ##    10-Aug-2009 (hanje04)
 ##	  Bug 122571
 ##	  Fix for Fedora 10 and up as part of RPM 4.6+ installer changes
+##    20-Nov-2009 (thich01)
+##        Added locations for GEOS library and headers for geospatial.
 ##	19-feb-2010 (stephenb)
 ##		Don't re-set ING_TST if it's set already; this allows using
 ##		alternate tests or test location.
@@ -159,9 +173,17 @@
 ##	  Trac #570
 ##	  Building in 'mock' (chroot build tool) revealed some minor
 ##	  issues with the LSB build. Make sure installcmd gets set.
+##    11-Jun-2010 (warmerdam)
+##        Added locations for PROJ library and headers for geospatial.
+##    31-Aug-2010 (rosan01)
+##        Enhance logic for how we set Fedora xerces version (F13 = xerces 3.0)
+##    31-Aug-2010 (troal01)
+##        Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
 ##    20-Sep-2010 (hanje04)
 ##	  Fix build for FC 13/ Xerces 3.x, remove "hard coded" xvers in
 ##	  favour of determining version from source in precheck_functions
+##    5-Oct-2010 (troal01)
+##        Removed proj64_need and geos64_need, rhybrid used instead.
 ##
 
 umask 002
@@ -169,6 +191,8 @@ set +u
 PATH=$PATH:/usr/local/bin
 
 config_string=unknown
+geos_need=false
+proj_need=false
 gtk_need=false
 rpm_need=false
 libxml2_need=false
@@ -263,7 +287,9 @@ case ${unames} in
 	gtk_need=true
 	libxml2_need=true
 	include_flag=-I
-	
+        geos_need=true
+        proj_need=true
+
 	case ${unamem} in
           i*86)
 		unamem=i386

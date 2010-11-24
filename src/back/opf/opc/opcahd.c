@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -27,6 +27,7 @@
 #include    <qefrcb.h>
 #include    <rdf.h>
 #include    <psfparse.h>
+#include    <spatial.h>
 #include    <qefnode.h>
 #include    <qefact.h>
 #include    <qefqp.h>
@@ -78,7 +79,6 @@
 **      QEF_AHD then opc_adf_build() and opc_qnode_build() will be called.
 **
 **          opc_ahd_build() - Entry point for building QEF_AHD structs
-[@func_list@]...
 **
 **
 **  History:
@@ -350,187 +350,243 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	24-Feb-2010 (troal01)
+**	    Fix opc_dmuahd to properly set geomtype and srid when a geospatial
+**	    column is part of a CREATE TABLE AS SELECT
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_template@]...
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Parser now generates a DMU_CB for create as well as create table
+**	    as select (and quel retinto);  DMU characteristics are in a
+**	    sub-structure, simplifies code generation.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Forward and/or External function references.
-*/
 
-static VOID
-opc_build_call_deferred_proc_ahd(
-    OPS_STATE	*global,
-    QEF_AHD	*proc_insert_ahd);
-
-static QEF_AHD *	
-opc_qepahd(
-	OPS_STATE   *global,
-	QEF_AHD	    **proj_ahd );
-
-static void
-opc_keyset_build(
-	OPS_STATE   *global,
-	QEF_AHD	    *ahd,
-	OPC_NODE    *cnode);
-
-static OPO_CO *
-opc_keyset_co(
-	OPO_CO	*cop,
+/* TABLE OF CONTENTS */
+void opc_ahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd,
+	QEF_AHD **proj_ahd);
+static QEF_AHD *opc_qepahd(
+	OPS_STATE *global,
+	QEF_AHD **proj_ahd);
+static void opc_keyset_build(
+	OPS_STATE *global,
+	QEF_AHD *ahd,
+	OPC_NODE *cnode);
+static OPO_CO *opc_keyset_co(
+	OPO_CO *cop,
 	OPS_SUBQUERY *subquery,
-	i4	resvno,
-	i4	*rowsz);
-
-static VOID
-opc_saggopt(
-        OPS_SUBQUERY *sq,
-	QEF_AHD      *ahd,
-	PST_QNODE    *root);
-
-static QEF_AHD *	
-opc_dmuahd(
-	OPS_STATE   *global,
-	i4	    dmu_func,
-	PST_QTREE   *qtree,
-	OPV_IGVARS  gresvno,
-	i4	    structure,
-	i4	    compressed,
-	i4	    index_compressed );
-
-static QEF_AHD *	
-opc_dmtahd(
-	OPS_STATE   *global,
-	PST_QNODE   *root,
-	i4	    flags_mask,
-	OPV_IGVARS  gresvno );
-
-static QEF_AHD *	
-opc_rupahd(
-	OPS_STATE   *global );
-
-static QEF_AHD *	
-opc_rdelahd(
-	OPS_STATE   *global );
-
-static i4
-opc_cposition(
-	OPS_STATE	*global,
-	OPO_CO		*co,
-	OPV_IVARS	lresno);
-
-static i4
-opc_btmleft_dmrcbno(
-	OPS_STATE   *global,
-	QEN_NODE    * qen);
-
-static VOID
-opc_addrules(
-	OPS_STATE   *global,
-	QEF_AHD	    *ahd,
-	RDR_INFO    *rel );
-
-static void
-opc_gtrowno(
-	OPS_STATE	*global,
-	QEF_QEP		*qhd,
-	QEN_NODE	*qn,
-	QEF_VALID	*valid );
-
-static VOID
-opc_gtt_proc_parm(
-    OPS_STATE	*global,
-    QEF_AHD	*ahd,
-    PST_TAB_NODE *tabnode);
-
-static void 
-opc_copy_info(
-	OPS_STATE	       *global,
-        PST_INFO               *pst_info,
-        PST_INFO               **target_info);
-
-static VOID
-copyIntegrityDetails(
-		OPS_STATE			*global,
-		PST_CREATE_INTEGRITY		*psfDetails,
-		QEF_CREATE_INTEGRITY_STATEMENT	*qefDetails );
-
-static VOID
-allocateAndCopyStruct(
-		OPS_STATE	*global,
-		PTR		source,
-		PTR		*target,
-		i4		size );
-
-static VOID
-allocateAndCopyColumnList(
-		OPS_STATE	*global,
-		PST_COL_ID	*source,
-		PST_COL_ID	**target );
-
-static VOID
-opc_alloc_and_copy_QEUQ_CB(
-	OPS_STATE       *global,
-	QEUQ_CB		*source,
-	QEUQ_CB         **target,
-	i4		action);
-
-static VOID
-allocate_and_copy_QEUCB(
-		OPS_STATE	*global,
-		QEU_CB		*source,
-		QEU_CB		**target );
-
-static VOID
-allocate_and_copy_DMUCB(
-		OPS_STATE	*global,
-		DMU_CB		*source,
-		DMU_CB		**target );
-
-static VOID
-allocate_and_copy_a_dm_data(
-		OPS_STATE	*global,
-		DM_DATA		*source,
-		DM_DATA		*target );
-static VOID
-allocate_and_copy_a_dm_ptr(
-		OPS_STATE	*global,
-		i4		flags,
-		DM_PTR		*source,
-		DM_PTR		*target );
-static VOID
-opc_updcolmap(
-		OPS_STATE	*global,
-		QEF_QEP		*upd_ahd,
-		PST_QNODE	*setlist,
-		DB_PART_DEF	*partp);
-
-/* Full partition copy including all value text, partition names */
-static VOID opc_full_partdef_copy(
-	OPS_STATE	*global,
-	DB_PART_DEF	*pdefp,
-	i4		pdefsize,
-	DB_PART_DEF	**outppp);
-
-static DB_STATUS opc_qsfmalloc(
+	i4 resvno,
+	i4 *rowsz);
+static void opc_saggopt(
+	OPS_SUBQUERY *sq,
+	QEF_AHD *ahd,
+	PST_QNODE *root);
+static i4 opc_cposition(
+	OPS_STATE *global,
+	OPO_CO *co,
+	OPV_IVARS lresno);
+static i4 opc_btmleft_dmrcbno(
+	OPS_STATE *global,
+	QEN_NODE *qen);
+static void opc_gtrowno(
+	OPS_STATE *global,
+	QEF_QEP *qhd,
+	QEN_NODE *qn,
+	QEF_VALID *valid);
+#ifdef xDEV_TEST
+static VOID opc_chktarget(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *root);
+#endif /* xDEV_TEST */
+static QEF_AHD *opc_dmuahd(
+	OPS_STATE *global,
+	i4 dmu_func,
+	PST_QTREE *qtree,
+	OPV_IGVARS gresvno);
+static QEF_AHD *opc_dmtahd(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	i4 flags_mask,
+	OPV_IGVARS gresvno);
+static QEF_AHD *opc_rupahd(
+	OPS_STATE *global);
+static QEF_AHD *opc_rdelahd(
+	OPS_STATE *global);
+void opc_dvahd_build(
+	OPS_STATE *global,
+	PST_DECVAR *decvar);
+void opc_ifahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_forahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_rtnahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_msgahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_cmtahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_rollahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_emsgahd_build(
+	OPS_STATE *global,
+	QEF_AHD **new_ahd);
+void opc_cpahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+static void opc_gtt_proc_parm(
+	OPS_STATE *global,
+	QEF_AHD *ahd,
+	PST_TAB_NODE *tabnode);
+void opc_build_cp_attribute_list(
+	OPS_STATE *global,
+	DB_TAB_ID *procedureID,
+	DMF_ATTR_ENTRY **p_attr_list[],
+	i4 *p_offset_list[]);
+void opc_build_proc_insert_ahd(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_attach_ahd_to_trigger(
+	OPS_STATE *global,
+	QEF_AHD *new_ahd);
+static void opc_build_call_deferred_proc_ahd(
+	OPS_STATE *global,
+	QEF_AHD *proc_insert_ahd);
+void opc_build_closetemp_ahd(
+	OPS_STATE *global,
+	QEF_AHD *proc_insert_ahd);
+void opc_deferred_cpahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_iprocahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+void opc_rprocahd_build(
+	OPS_STATE *global,
+	QEF_AHD **pahd);
+static void opc_addrules(
+	OPS_STATE *global,
+	QEF_AHD *ahd,
+	RDR_INFO *rel);
+void opc_eventahd_build(
+	OPS_STATE *global,
+	QEF_AHD **new_ahd);
+void opc_shemaahd_build(
+	OPS_STATE *global,
+	QEF_AHD **sahd);
+void opc_eximmahd_build(
+	OPS_STATE *global,
+	QEF_AHD **new_ahd);
+static void opc_copy_info(
+	OPS_STATE *global,
+	PST_INFO *pst_info,
+	PST_INFO **target_info);
+void opc_createTableAHD(
+	OPS_STATE *global,
+	QEU_CB *createTableQEUCB,
+	i4 IDrow,
+	QEF_AHD **new_ahd);
+void opc_renameAHD(
+	OPS_STATE *global,
+	PST_STATEMENT *pst_statement,
+	i4 IDrow,
+	QEF_AHD **new_ahd);
+void opc_createIntegrityAHD(
+	OPS_STATE *global,
+	PST_STATEMENT *pst_statement,
+	i4 IDrow,
+	QEF_AHD **new_ahd);
+static void copyIntegrityDetails(
+	OPS_STATE *global,
+	PST_CREATE_INTEGRITY *psfDetails,
+	QEF_CREATE_INTEGRITY_STATEMENT *qefDetails);
+static void allocateAndCopyStruct(
+	OPS_STATE *global,
+	PTR source,
+	PTR *target,
+	i4 size);
+static void allocateAndCopyColumnList(
+	OPS_STATE *global,
+	PST_COL_ID *source,
+	PST_COL_ID **target);
+static void allocate_and_copy_QEUCB(
+	OPS_STATE *global,
+	QEU_CB *source,
+	QEU_CB **target);
+static void opc_supress_qryTxt(
+	QEF_DATA *tuplesPtr,
+	PTR targetTxt);
+void opc_crt_view_ahd(
+	OPS_STATE *global,
+	PST_STATEMENT *pst_statement,
+	i4 IDrow,
+	QEF_AHD **new_ahd);
+void opc_d_integ(
+	OPS_STATE *global,
+	PST_STATEMENT *pst_statement,
+	QEF_AHD **new_ahd);
+static void opc_alloc_and_copy_QEUQ_CB(
+	OPS_STATE *global,
+	QEUQ_CB *source,
+	QEUQ_CB **target,
+	i4 action);
+static void allocate_and_copy_DMUCB(
+	OPS_STATE *global,
+	DMU_CB *source,
+	DMU_CB **target,
+	bool copy_keys,
+	bool copy_attrs);
+static void allocate_and_copy_a_dm_data(
+	OPS_STATE *global,
+	DM_DATA *source,
+	DM_DATA *target);
+static void allocate_and_copy_a_dm_ptr(
+	OPS_STATE *global,
+	i4 flags,
+	DM_PTR *source,
+	DM_PTR *target);
+i4 opc_pagesize(
+	OPG_CB *opg_cb,
+	OPS_WIDTH width);
+static void opc_updcolmap(
+	OPS_STATE *global,
+	QEF_QEP *upd_ahd,
+	PST_QNODE *setlist,
+	DB_PART_DEF *partp);
+void opc_partdef_copy(
+	OPS_STATE *global,
+	DB_PART_DEF *pdefp,
+	PTR (*getmem)(OPS_STATE *, i4),
+	DB_PART_DEF **outppp);
+void opc_partdim_copy(
+	OPS_STATE *global,
+	DB_PART_DEF *pdefp,
+	u_i2 dimno,
+	DB_PART_DIM **outppp);
+static void opc_full_partdef_copy(
+	OPS_STATE *global,
+	DB_PART_DEF *pdefp,
+	i4 pdefsize,
+	DB_PART_DEF **outppp);
+static i4 opc_qsfmalloc(
 	OPS_STATE *global,
 	i4 psize,
 	void *pptr);
-
 static void opc_loadopt(
 	OPS_STATE *global,
 	QEF_AHD *ahd,
 	QEF_VALID *valid);
-
-#ifdef xDEV_TEST
-static VOID
-opc_chktarget(
-	OPS_STATE   *global,
-	OPC_NODE    *cnode,
-	PST_QNODE   *root );
-#endif /* xDEV_TEST */
 
 /*
 **  Defines of other constants.
@@ -591,6 +647,10 @@ opc_chktarget(
 **          Optimizer changes for 256K rows, rows spanning pages
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    pst-resjour expanded, reflect here.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    CTAS (and quel RETINTO, and DGTTAS) now builds a DMU_CB just
+**	    like ordinary create.  Use it as a prototype for the DMU_CB's
+**	    in the query plan.  Most of the PST_RESTAB is gone.
 */
 VOID
 opc_ahd_build(
@@ -599,16 +659,16 @@ opc_ahd_build(
 		QEF_AHD	    **proj_ahd)
 {
     OPS_SUBQUERY	*subqry = global->ops_cstate.opc_subqry;
-    QEF_AHD		*ahd = NULL;
-    QEF_AHD		*ahd_list = NULL;
-    QEF_VALID		**retinto_alt = NULL;
-    i4		compressed;
-    i4		index_compressed;
+    QEF_AHD	*ahd = NULL;
+    QEF_AHD	*ahd_list = NULL;
+    QEF_VALID	**retinto_alt = NULL;
     i4		storage_type;
-    OPV_GRV		*grv;
-    i4			journaled;
-    DMU_CB              *mod_dmucb;
+    OPV_GRV	*grv;
+    i4		journaled;
+    DMU_CB	*mod_dmucb;
+    DMU_CB	*qt_dmucb;		/* parser-output DMU_CB in qtree */
     bool	modify_pre_load;	/* MODIFY before load, not after */
+    bool	modify_post_load;	/* MODIFY after load */
 
     global->ops_cstate.opc_relation = NULL;
 
@@ -633,92 +693,48 @@ opc_ahd_build(
 		 global->ops_qheader->pst_mode == PSQ_DGTT_AS_SELECT)
 	    )
 	{
+	    qt_dmucb = (DMU_CB *) global->ops_qheader->pst_qeucb->qeu_d_cb;
+
 	    /* make an action to create the relation */
 	    ahd_list = 
 		    opc_dmuahd(global, DMU_CREATE_TABLE, global->ops_qheader, 
-			subqry->ops_result, (i4)DB_HEAP_STORE, DMU_C_OFF,
-			DMU_C_OFF);
+			subqry->ops_result);
 
-	    index_compressed = DMU_C_OFF;
-
-	    /*
-	    ** Modify the table to the desired storage structure if that
-	    ** structure is not HEAP (the table is created as a heap) or
-	    ** HASH/CHASH (we modify to hash after load).
+	    /* Modify before the load if the storage structure is ISAM
+	    ** or BTREE and not journaled.  Otherwise do the load into
+	    ** the created HEAP.
+	    ** (A journaled load has to be done row by row;  HASH load
+	    ** into too few buckets is very slow.  Both of these will run
+	    ** faster if we load into a heap and modify afterwards.)
+	    **
+	    ** Modify after the load if the storage structure is anything
+	    ** other than HEAP and we didn't modify pre-load.  (Note that
+	    ** HEAPSORT doesn't count as HEAP, it modifies post-load.) If
+	    ** the result structure is HEAP, we don't modify at all.
+	    **
+	    ** A plausible change would be to modify to HASH pre-load but
+	    ** only if non-journaled and an explicit MINPAGES was given.
+	    **
+	    ** We no longer have to consider compression, since
+	    ** DMF can now create a compressed heap.
 	    */
-	    journaled = (global->ops_qheader->pst_restab.pst_resjour == PST_RESJOUR_ON);
-	    if (global->ops_qheader->pst_restab.pst_struct == 0)
-	    {
-		storage_type = global->ops_cb->ops_alter.ops_storage;
-		if (global->ops_cb->ops_alter.ops_compressed == TRUE)
-		{
-		    compressed = DMU_C_ON;
-		}
-		else
-		{
-		    compressed = DMU_C_OFF;
-		}
-	    }
-	    else
-	    {
-		storage_type = global->ops_qheader->pst_restab.pst_struct;
-		if (global->ops_qheader->pst_restab.pst_compress &
-				    (PST_NO_COMPRESSION | PST_COMP_DEFERRED))
-		{
-		    i4 err_code;
-		    /*
-		    ** This indicates an error in the parser -- it passed
-		    ** some junk to us which it should have handled itself.
-		    ** Handle this error by logging a complaint, then just
-		    ** using no compression.
-		    */
-		    ule_format(E_OP0AA0_BAD_COMP_VALUE, (CL_ERR_DESC *)0,
-			ULE_LOG , (DB_SQLSTATE *)NULL, (char * )0, 0L, 
-			(i4 *)0, &err_code, 1, 
-			sizeof(global->ops_qheader->pst_restab.pst_compress),
-			&global->ops_qheader->pst_restab.pst_compress);
 
-		    global->ops_qheader->pst_restab.pst_compress = 0; 
-		}
-		if (global->ops_qheader->pst_restab.pst_compress & 
-				    PST_DATA_COMP)
-		{
-		    compressed = DMU_C_ON;
-		}
-		else
-		{
-		    compressed = DMU_C_OFF;
-		}
-		if (global->ops_qheader->pst_restab.pst_compress & 
-				    PST_INDEX_COMP)
-		{
-		    index_compressed = DMU_C_ON;
-		}
-		else
-		{
-		    index_compressed = DMU_C_OFF;
-		}
-	    }
+	    journaled = BTtest(DMU_JOURNALED, qt_dmucb->dmu_chars.dmu_indicators)
+		&& qt_dmucb->dmu_chars.dmu_journaled == DMU_JOURNAL_ON;
 
-	    /* If the table is journalled, qepahd is going to compile a
-	    ** row-by-row insert, else it's going to do a LOAD.
-	    ** Row-by-row is best done into a heap, which is what the
-	    ** table is now.  If the result will be heap compressed,
-	    ** go ahead and make it compressed now.
-	    ** If we're going to do a bulk load, and it's a tree structure,
-	    ** modify now.  For hash, don't modify, as hash bulk load needs
-	    ** to know the bucket count.
-	    ** Summary:
-	    ** Modify now if: non-journalled isam/btree,
-	    **		or result is compressed heap.
-	    ** Modify post-load under all other conditions.
+	    /* PSF always specifies a storage structure, don't bother
+	    ** checking the indicator
 	    */
-	    modify_pre_load = (storage_type == DB_HEAP_STORE
-					&& (compressed == DMU_C_ON
-					    || index_compressed == DMU_C_ON))
-			    ||
-			      (! journaled && (storage_type == DB_ISAM_STORE
-					      || storage_type == DB_BTRE_STORE));
+
+	    storage_type = qt_dmucb->dmu_chars.dmu_struct;
+
+	    modify_pre_load = 
+		(! journaled && (storage_type == DB_ISAM_STORE
+				      || storage_type == DB_BTRE_STORE));
+	    modify_post_load = (!modify_pre_load)
+		&& (storage_type != DB_HEAP_STORE
+			|| global->ops_qheader->pst_restab.pst_heapsort);
+
 	    if (modify_pre_load)
 	    {
 		/* Remember the DMU action header fixup for the CREATE
@@ -728,26 +744,17 @@ opc_ahd_build(
 		** opc-dmuahd sets the fixup pointer, so save it for
 		** use below after we compile the query body.
 		*/
-		grv = 
+		grv =
 		    global->ops_rangetab.opv_base->opv_grv[subqry->ops_result];
 		retinto_alt = grv->opv_ptrvalid;
 
-		if (storage_type == DB_HASH_STORE || journaled )
-		{
-		    ahd = opc_dmuahd(global, DMU_MODIFY_TABLE, 
-				    global->ops_qheader, subqry->ops_result, 
-				    (i4)DB_HEAP_STORE, compressed,
-				    index_compressed);
-		}
-		else
-		{
-		    ahd = opc_dmuahd(global, DMU_MODIFY_TABLE, 
-				    global->ops_qheader, subqry->ops_result, 
-				    (i4)storage_type, compressed,
-				    index_compressed);
-		}
+		ahd = opc_dmuahd(global, DMU_MODIFY_TABLE,
+				    global->ops_qheader, subqry->ops_result);
+
 		mod_dmucb = (DMU_CB *)ahd->qhd_obj.qhd_dmu.ahd_cb;
 		/* Tell modify it's allowed to pick a page size if needed */
+	/* ********FIXME!  Why here?  Why not the create?  and why not
+	****** if the modify is post-load?  */
 		mod_dmucb->dmu_flags_mask |= DMU_RETINTO;
 		ahd->ahd_prev = ahd_list->ahd_prev;
 		ahd->ahd_next = ahd_list;
@@ -790,20 +797,19 @@ opc_ahd_build(
 	    *retinto_alt = grv->opv_topvalid;
 	}
 
-	if (subqry->ops_sqtype == OPS_MAIN && 
+	if (subqry->ops_sqtype == OPS_MAIN &&
 		(global->ops_qheader->pst_mode == PSQ_RETINTO ||
 		 global->ops_qheader->pst_mode == PSQ_DGTT_AS_SELECT) &&
-		! modify_pre_load
+		 modify_post_load
 	    )
 	{
 	    /* Didn't modify before, apply storage structure now.
-	    ** Don't do it here either if result is uncompressed heap.
+	    ** Don't do it here either if result is unsorted heap.
 	    */
-	    if (storage_type != DB_HEAP_STORE || compressed == DMU_C_ON)
+	    if (storage_type != DB_HEAP_STORE || global->ops_qheader->pst_restab.pst_heapsort)
 	    {
-		ahd = opc_dmuahd(global, DMU_MODIFY_TABLE, 
-			    global->ops_qheader, subqry->ops_result,
-			    (i4) storage_type, compressed, DMU_C_OFF);
+		ahd = opc_dmuahd(global, DMU_MODIFY_TABLE,
+			    global->ops_qheader, subqry->ops_result);
 		ahd->ahd_prev = ahd_list->ahd_prev;
 		ahd->ahd_next = ahd_list;
 		ahd_list->ahd_prev->ahd_next = ahd;
@@ -1037,7 +1043,6 @@ opc_qepahd(
     i4			cpos_ret;
     i4			unspec_updtmode;
     i4			res_dmrcbno;
-    bool	    pcolsupd = FALSE;
 
     /* First, lets allocate the action header */
     ahd = sq->ops_compile.opc_ahd = 
@@ -1940,7 +1945,7 @@ opc_keyset_build(
     OPE_IEQCLS	eqcno;
     i4		kcnt, rcnt, memsize, evsize, rowsz, rrowsz, rowno;
     i4		*koff1, *koff2;
-    i4		off1, off2;
+    i4		off1;
     i4		i;
 
 
@@ -2792,16 +2797,22 @@ opc_chktarget(
 **	16-Jan-2007 (kschendel)
 **	    Fix stupid in last change:  automatic partitioning doesn't have
 **	    any column info, caused segv.
+**	24-Feb-2010 (troal01)
+**	    Propagate geomtype and SRID properly when a geospatial column is
+**	    part of a CREATE TABLE AS SELECT statement.
+**	14-Oct-2010 (kschendel) SIR 134544
+**	    Parse now sets up a DMU_CB we can copy (even if quel!), so
+**	    get rid of a bunch of diddling around here.  Delete "PST_HIDDEN"
+**	    code, nothing ever sets ttargtype to hidden, must be a B1 leftover
+**	    that didn't get cleaned out.
 */
+
 static QEF_AHD *
 opc_dmuahd(
 	OPS_STATE   *global,
 	i4	    dmu_func,
 	PST_QTREE   *qtree,
-	OPV_IGVARS  gresvno,
-	i4	    structure,
-	i4	    compressed,
-	i4	    index_compressed)
+	OPV_IGVARS  gresvno)
 {
     OPS_SUBQUERY	*sq = global->ops_cstate.opc_subqry;
     QEF_AHD		*ahd;
@@ -2812,109 +2823,63 @@ opc_dmuahd(
     DMF_ATTR_ENTRY	**attrs;
     DMF_ATTR_ENTRY	*attr;
     DMT_ATT_ENTRY	*att;
-    DMU_KEY_ENTRY	**keys;
-    DMU_KEY_ENTRY	*key;
-    DMU_CHAR_ENTRY	*chars;
     RDR_INFO		*rel;
     i4		tupsize;
     i4			attno;
-    i4			hidden_atts = 0;
     OPV_GRV		*grv;
-    i4			char_no;
-    i4			keyno;
-    PST_RESKEY		*reskey;
     OPC_PST_STATEMENT	*opc_pst;
     QEF_RESOURCE	*resource;
-    i4			char_array_idx;
+    i4 			i;
     i4			namelen;
 
-    if (structure == DB_SORT_STORE)
-    {
-	structure = DB_HEAP_STORE;
-    }
+    qeucb = qtree->pst_qeucb;
+    psf_dmucb = (DMU_CB *) qeucb->qeu_d_cb;
 
-    /* First, lets allocate and init a DMU_CB. To start with, we will do the
-    ** stuff common to create and modify.
+    /* Start by duplicating the parser generated DMU_CB.  For CREATE,
+    ** we duplicate everything but the key array.  For MODIFY, we need
+    ** the key array, but don't need the attribute array.
+    ** After we have a query plan DMU_CB to work with, we'll futz
+    ** around with it as needed.
     */
-    dmucb = (DMU_CB *) opu_qsfmem(global, sizeof (DMU_CB));
-    dmucb->type = DMU_UTILITY_CB;
-    dmucb->length = sizeof (DMU_CB);
+
+    if (dmu_func == DMU_CREATE_TABLE)
+	allocate_and_copy_DMUCB(global, psf_dmucb, &dmucb, FALSE, TRUE);
+    else
+	allocate_and_copy_DMUCB(global, psf_dmucb, &dmucb, TRUE, FALSE);
+
+    /* Do some stuff common to create and modify. */
     dmucb->dmu_tran_id = 0;
     dmucb->dmu_flags_mask = 0;
     dmucb->dmu_db_id = global->ops_cb->ops_dbid;
     STRUCT_ASSIGN_MACRO(qtree->pst_restab.pst_resname, dmucb->dmu_table_name);
     STRUCT_ASSIGN_MACRO(qtree->pst_restab.pst_resown, dmucb->dmu_owner);
-    STRUCT_ASSIGN_MACRO(qtree->pst_restab.pst_resloc, dmucb->dmu_location);
-    if (dmucb->dmu_location.data_in_size != 0)
-    {
-	dmucb->dmu_location.data_address = 
-	    (char *) opu_qsfmem(global, (i4)dmucb->dmu_location.data_in_size);
-	MEcopy((PTR)qtree->pst_restab.pst_resloc.data_address, 
-			dmucb->dmu_location.data_in_size,
-			    (PTR)dmucb->dmu_location.data_address);
-    }
-
-    /* Get the partition definition, if any, for this table.
-    ** Notice that PSF has constructed a QEU_CB and DMU_CB and attached
-    ** them to the query tree header.  Perhaps someday the parser will
-    ** fill in more "stuff" and reduce the amount of work needed above.
-    ** For now, the only thing that should be relied on in the parser
-    ** QEU_CB and DMU_CB is the partitioning info.
-    ** QUEL doesn't create/store the qeucb, so be careful.
-    */
-    psf_dmucb = NULL;
-    qeucb = qtree->pst_qeucb;
-    if (qeucb != NULL)
-	psf_dmucb = (DMU_CB *) qeucb->qeu_d_cb;
 
     if (dmu_func == DMU_CREATE_TABLE)
     {
-	i4	attr_array_sz = 0;
+	char	*name_ptr;
+	DMT_ATT_ENTRY *att_base;
+	DMT_ATT_ENTRY **attptrs;
+	i4	attr_count;
+	i4	attr_idx;
 
-	/* now lets allocate and init an RDR_INFO struct for this 
+	/* now lets allocate and init an RDR_INFO struct for this
 	** table being created.
 	*/
 	rel = (RDR_INFO *) opu_memory(global, sizeof (RDR_INFO));
 	MEfill(sizeof (RDR_INFO), (u_char)0, (PTR)rel);
-	rel->rdr_rel = 
+	rel->rdr_rel =
 		(DMT_TBL_ENTRY *) opu_memory(global, sizeof (DMT_TBL_ENTRY));
 	MEfill(sizeof (DMT_TBL_ENTRY), (u_char)0, (PTR)rel->rdr_rel);
-	STRUCT_ASSIGN_MACRO(qtree->pst_restab.pst_resname, 
+	STRUCT_ASSIGN_MACRO(qtree->pst_restab.pst_resname,
 						    rel->rdr_rel->tbl_name);
-	STRUCT_ASSIGN_MACRO(qtree->pst_restab.pst_resown, 
+	STRUCT_ASSIGN_MACRO(qtree->pst_restab.pst_resown,
 						    rel->rdr_rel->tbl_owner);
-	STRUCT_ASSIGN_MACRO(*((DB_LOC_NAME *) qtree->
-	    pst_restab.pst_resloc.data_address), rel->rdr_rel->tbl_location);
-	rel->rdr_rel->tbl_attr_count = 0;
-	rel->rdr_rel->tbl_attr_nametot = 0;
-	for (resdom = qtree->pst_qtree->pst_left;
-		resdom != NULL && resdom->pst_sym.pst_type == PST_RESDOM;
-		resdom = resdom->pst_left
-	    )
-	{
-	    if (attr_array_sz < resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsno)
-		    attr_array_sz = resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
-	    if ((resdom->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype !=	PST_HIDDEN )
-                && !(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsflags&PST_RS_PRINT))
-	    {
-		continue;
-	    }
+	STRUCT_ASSIGN_MACRO(*((DB_LOC_NAME *) dmucb->dmu_location.data_address),
+						rel->rdr_rel->tbl_location);
 
-	    namelen = cui_trmwhite(
-		sizeof(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname), 
-		resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
-
-	    rel->rdr_rel->tbl_attr_count += 1;
-	    rel->rdr_rel->tbl_attr_nametot += (namelen+1);
-
-	    if (resdom->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype ==
-		PST_HIDDEN)
-	    {
-		hidden_atts++;
-	    }
-	}
-	rel->rdr_rel->tbl_storage_type = DMT_HEAP_TYPE;
-	rel->rdr_rel->tbl_temporary = qtree->pst_restab.pst_temporary;
+	rel->rdr_rel->tbl_attr_count = dmucb->dmu_attr_array.ptr_in_count;
+	rel->rdr_rel->tbl_storage_type = psf_dmucb->dmu_chars.dmu_struct;
+	rel->rdr_rel->tbl_temporary = (qeucb->qeu_flag & QEU_TMP_TBL) != 0;
 	global->ops_rangetab.opv_base->
 				opv_grv[sq->ops_result]->opv_relation = rel;
 
@@ -2923,267 +2888,172 @@ opc_dmuahd(
 	*/
 	dmucb->dmu_qry_id.db_qry_high_time = 0;
 	dmucb->dmu_qry_id.db_qry_low_time = 0;
-	dmucb->dmu_key_array.ptr_address = NULL;
-	dmucb->dmu_key_array.ptr_size = 0;
-	dmucb->dmu_key_array.ptr_in_count = 0;
+	dmucb->dmu_action = DMU_ACT_NONE;
 
-	/* *** WARNING *** hardcoded attr count here.
-	** Dups, journaling, sec-audit, sys-maintained.
-	** Plus temporary if gtt, plus page-size if given.
-	** Also include extend= and allocate= if given.
-	*/
-	if (qtree->pst_restab.pst_temporary)
-	    dmucb->dmu_char_array.data_in_size = 6 * sizeof (DMU_CHAR_ENTRY);
-	else
-	    dmucb->dmu_char_array.data_in_size = 4 * sizeof (DMU_CHAR_ENTRY);
-
-	if (qtree->pst_restab.pst_page_size)
-	    dmucb->dmu_char_array.data_in_size += sizeof (DMU_CHAR_ENTRY);
-	if (qtree->pst_restab.pst_alloc > 0
-	  && (structure == DB_HEAP_STORE && compressed == DMU_C_OFF))
-	    dmucb->dmu_char_array.data_in_size += sizeof (DMU_CHAR_ENTRY);
-	if (qtree->pst_restab.pst_extend > 0)
-	    dmucb->dmu_char_array.data_in_size += sizeof (DMU_CHAR_ENTRY);
-
-	dmucb->dmu_char_array.data_address = 
-	   (char *) opu_qsfmem(global, (i4)dmucb->dmu_char_array.data_in_size);
-	chars = (DMU_CHAR_ENTRY *) dmucb->dmu_char_array.data_address;
-	char_array_idx = 0;
-	chars[char_array_idx].char_id = DMU_DUPLICATES;
-	if (qtree->pst_restab.pst_resdup == TRUE)
-	{
-	    chars[char_array_idx].char_value = DMU_C_ON;
-	}
-	else
-	{
-	    chars[char_array_idx].char_value = DMU_C_OFF;
-	}
-	char_array_idx++;
-	/* Beware here:  both "on" and "later" compile to DMF journaling ON */
-	chars[char_array_idx].char_id = DMU_JOURNALED;
-	if (qtree->pst_restab.pst_resjour == PST_RESJOUR_OFF)
-	{
-	    chars[char_array_idx].char_value = DMU_C_OFF;
-	}
-	else
-	{
-	    chars[char_array_idx].char_value = DMU_C_ON;
-	}
-	char_array_idx++;
-	chars[char_array_idx].char_id = DMU_ROW_SEC_AUDIT;
-	if (qtree->pst_restab.pst_flags&PST_ROW_SEC_AUDIT)
-	    chars[char_array_idx].char_value = DMU_C_ON;
-	else
-	    chars[char_array_idx].char_value = DMU_C_OFF;
-
-	char_array_idx++;
-	chars[char_array_idx].char_id = DMU_SYS_MAINTAINED;
-	if (qtree->pst_restab.pst_flags&PST_SYS_MAINTAINED)
-	    chars[char_array_idx].char_value = DMU_C_ON;
-	else
-	    chars[char_array_idx].char_value = DMU_C_OFF;
-
-	if (qtree->pst_restab.pst_temporary)
-	{
-	    char_array_idx++;
-	    chars[char_array_idx].char_id    = DMU_TEMP_TABLE;
-	    chars[char_array_idx].char_value = DMU_C_ON;
-	    char_array_idx++;
-	    chars[char_array_idx].char_id    = DMU_RECOVERY;
-	    chars[char_array_idx].char_value = 
-				    (qtree->pst_restab.pst_recovery ? DMU_C_ON :
-				    DMU_C_OFF);
-	   
-	}
-
-	if (qtree->pst_restab.pst_page_size)
-	{
-	    char_array_idx++;
-	    chars[char_array_idx].char_id    = DMU_PAGE_SIZE;
-	    chars[char_array_idx].char_value = qtree->pst_restab.pst_page_size;
-	}
-	/* Only do create-time allocation if uncompressed heap because in
+	/* Do not do create-time allocation unless heap, in
 	** that case there will not be any modify later on.
 	*/
-	if (qtree->pst_restab.pst_alloc > 0
-	  && (structure == DB_HEAP_STORE && compressed == DMU_C_OFF))
-	{
-	    char_array_idx++;
-	    chars[char_array_idx].char_id    = DMU_ALLOCATION;
-	    chars[char_array_idx].char_value = qtree->pst_restab.pst_alloc;
-	}
-	if (qtree->pst_restab.pst_extend)
-	{
-	    char_array_idx++;
-	    chars[char_array_idx].char_id    = DMU_EXTEND;
-	    chars[char_array_idx].char_value = qtree->pst_restab.pst_extend;
-	}
+	if (psf_dmucb->dmu_chars.dmu_struct != DB_HEAP_STORE
+	  || qtree->pst_restab.pst_heapsort)
+	    BTclear(DMU_ALLOCATION, dmucb->dmu_chars.dmu_indicators);
 
-	/* fill in the list of attributes to create */
-	dmucb->dmu_attr_array.ptr_in_count =
-	    rel->rdr_rel->tbl_attr_count - hidden_atts;
-	dmucb->dmu_attr_array.ptr_size = sizeof (DMF_ATTR_ENTRY);
-	dmucb->dmu_attr_array.ptr_address = 
-		    (PTR) opu_qsfmem(global, (i4)(sizeof (DMF_ATTR_ENTRY *) * 
-					dmucb->dmu_attr_array.ptr_in_count));
+	/* Make sure that CREATE sees a heap! */
+	dmucb->dmu_chars.dmu_struct = DB_HEAP_STORE;
+
+	/* Generate a set of RDF style attributes from the resdom list.
+	** And why not from the DMU_CB's attr array?  because OPF
+	** may have adjusted the query result types, in particular
+	** nullability because of outer join analysis.  So we need
+	** to adjust both the existing DMU attribute array list, and
+	** the RDF style attribute list we're building.
+	**
+	** There is no need to fix up the parser's DMU-CB attribute
+	** array;  we won't refer to it again anyway.
+	*/
+
+	attr_count = rel->rdr_rel->tbl_attr_count;
 	attrs = (DMF_ATTR_ENTRY **) dmucb->dmu_attr_array.ptr_address;
-
-	/* Now let's fill in the array of attributes for our descriptor. */
-	if (rel->rdr_rel->tbl_attr_count > attr_array_sz)
-		attr_array_sz = rel->rdr_rel->tbl_attr_count;
-				/* assure attr array is big enough */
 	rel->rdr_attr = (DMT_ATT_ENTRY **) opu_memory(global,
-						      (i4) 
-                                          (sizeof (DMT_ATT_ENTRY *) *
-					   (attr_array_sz + 1)));
+		sizeof(DMT_ATT_ENTRY *) * (attr_count + 1) );
 	rel->rdr_attr[0] = NULL;
 
+	att_base = (DMT_ATT_ENTRY *) opu_memory(global,
+				sizeof(DMT_ATT_ENTRY) * attr_count);
+	attptrs = rel->rdr_attr;
+	/* First pass to count up name lengths so we know how much there is */
 	for (	resdom = qtree->pst_qtree->pst_left;
-	        resdom != NULL && resdom->pst_sym.pst_type != PST_TREE; 
+	        resdom != NULL && resdom->pst_sym.pst_type != PST_TREE;
 		resdom = resdom->pst_left
 	    )
 	{
 	    /* Skip non-printing attributes */
-
 	    if (!(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsflags&PST_RS_PRINT))
 		continue;
-
-	    /* First, fill in the fake RDF entry for this attribute */
-
 	    namelen = cui_trmwhite(
-		sizeof(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname), 
+		sizeof(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname),
 		resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
 
-	    rel->rdr_attr[resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsno] =
-		att = 
-		(DMT_ATT_ENTRY *) opu_memory(global, 
-		sizeof (DMT_ATT_ENTRY) + namelen + 1);
+	    rel->rdr_rel->tbl_attr_nametot += (namelen+1);
+	}
 
-	    att->att_nmstr = (char *)att + sizeof(DMT_ATT_ENTRY);
-	    att->att_nmlen = namelen;
-	    cui_move(namelen, resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-			'\0', namelen + 1, att->att_nmstr);
-
-	    att->att_number = 1;
-	    att->att_type   = resdom->pst_sym.pst_dataval.db_datatype;
-	    att->att_width  = resdom->pst_sym.pst_dataval.db_length;
-	    att->att_prec   = resdom->pst_sym.pst_dataval.db_prec;
-	    att->att_collID = resdom->pst_sym.pst_dataval.db_collID;
-	    att->att_key_seq_number = 0;
-	    att->att_flags   = 0;
-	    att->att_default = NULL;
-
-	    /* copy default id from resdom
-	     */
-	    COPY_DEFAULT_ID(resdom->pst_sym.pst_value.pst_s_rsdm.pst_defid,
-			    att->att_defaultID);
-
-	    if (EQUAL_CANON_DEF_ID(att->att_defaultID,
-				   DB_DEF_NOT_DEFAULT))
+	/* Second pass actually builds the att entries */
+	name_ptr = (char *) opu_memory(global, rel->rdr_rel->tbl_attr_nametot);
+	for (	resdom = qtree->pst_qtree->pst_left;
+	        resdom != NULL && resdom->pst_sym.pst_type != PST_TREE;
+		resdom = resdom->pst_left
+	    )
+	{
+	    /* Skip non-printing attributes */
+	    if (!(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsflags&PST_RS_PRINT))
+		continue;
+	    /* rsno counts from 1 */
+	    attr_idx = resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
+	    if (attr_idx > attr_count)
 	    {
-		att->att_flags |= DMU_F_NDEFAULT;
+		TRdisplay("%@ Bogus rsno %d more than max %d\n",attr_idx, attr_count);
+		opx_1perror(E_OP009D_MISC_INTERNAL_ERROR, "Bad resdom number in CTAS");
 	    }
+	    att = &att_base[attr_idx-1];
+	    attptrs[attr_idx] = att;
+	    attr = attrs[attr_idx-1];
+	    /* Name storage doesn't have to be in order... */
+	    att->att_nmstr = name_ptr;
+	    att->att_nmlen = cui_trmwhite(
+		sizeof(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname),
+		resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
+	    cui_move(att->att_nmlen,
+			resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
+			'\0', att->att_nmlen + 1, name_ptr);
+	    name_ptr = name_ptr + att->att_nmlen;
 
+	    att->att_number = attr_idx;
+	    att->att_type = attr->attr_type = resdom->pst_sym.pst_dataval.db_datatype;
+	    att->att_width = attr->attr_size = resdom->pst_sym.pst_dataval.db_length;
+	    att->att_prec = attr->attr_precision = resdom->pst_sym.pst_dataval.db_prec;
+	    att->att_collID = attr->attr_collID = resdom->pst_sym.pst_dataval.db_collID;
+	    att->att_key_seq_number = 0;
+	    att->att_flags = attr->attr_flags_mask;
+	    att->att_flags &= ~DMU_F_KNOWN_NOT_NULLABLE;
+	    attr->attr_flags_mask &= ~DMU_F_KNOWN_NOT_NULLABLE;
 	    if (att->att_type > 0)
 	    {
 		att->att_flags |= DMU_F_KNOWN_NOT_NULLABLE;
+		attr->attr_flags_mask |= DMU_F_KNOWN_NOT_NULLABLE;
 	    }
-	    /*
-	    ** Copy over any special flags for the resdom, mainly
-	    ** for hidden or system maintained
-	    */
-	    if (resdom->pst_sym.pst_value.pst_s_rsdm.pst_dmuflags!=0)
-	    {
-		/*
-		** The dmuflags should match exactly with the DMF attribute
-		** flags required. 
-		** The DMU_F_LEGAL_ATTR_BITS mask is a hack to remove
-		** excess bits, really code should be cleaned up to
-		** ensure only legal bits get set
-		*/
-		att->att_flags|= 
-			(resdom->pst_sym.pst_value.pst_s_rsdm.pst_dmuflags &
-				DMU_F_LEGAL_ATTR_BITS);
-	    }
-	    
+	    att->att_default = NULL;
+	    att->att_defaultID = attr->attr_defaultID;
 
-	    if ((att->att_width == ADE_LEN_UNKNOWN) ||
-		(att->att_width == ADE_LEN_LONG))
+	    if (att->att_width == ADE_LEN_UNKNOWN
+	      || att->att_width == ADE_LEN_LONG)
 	    {
 		DB_STATUS         status;
 		i4           bits;
 		DB_DATA_VALUE     pdv;
 		DB_DATA_VALUE     rdv;
 
-		status = adi_dtinfo(global->ops_adfcb,
-				    att->att_type,
+		status = adi_dtinfo(global->ops_adfcb, attr->attr_type,
 				    &bits);
-
 		if (bits & AD_PERIPHERAL)
 		{
-		    pdv.db_datatype = att->att_type;
+		    pdv.db_datatype = attr->attr_type;
 		    pdv.db_length = 0;
 		    pdv.db_prec = 0;
 		    STRUCT_ASSIGN_MACRO(pdv, rdv);
 
 		    status = adc_lenchk(global->ops_adfcb,
-					TRUE,
-					&pdv,
-					&rdv);
-		    att->att_width = rdv.db_length;
-		    att->att_prec = rdv.db_prec;
+					TRUE, &pdv, &rdv);
+		    att->att_width = attr->attr_size = rdv.db_length;
+		    att->att_prec = attr->attr_precision = rdv.db_prec;
+		    attr->attr_flags_mask |= DMU_F_PERIPHERAL;
 		    att->att_flags |= DMU_F_PERIPHERAL;
 		}
 	    }
-
-	    if (resdom->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype ==
-		PST_HIDDEN)
-	    {
-		att->att_flags |= DMU_F_HIDDEN;
-
-		/*	
-		**	Skip hidden attributes for table creation 
-		**      because DMU_CREATE_TABLE will always supply
-		**      them.
-		*/
-		continue;
-	    }
-
-	    if (!(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsflags&PST_RS_PRINT))
-	    {
-		continue;
-	    }
-
-	    attr =
-		attrs[resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsno
-		    - hidden_atts - 1] = 
-		(DMF_ATTR_ENTRY *) opu_qsfmem(global, sizeof (DMF_ATTR_ENTRY));
-
-	    MEcopy((PTR)resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname, 
-			sizeof(attr->attr_name.db_att_name), 
-			(PTR)attr->attr_name.db_att_name);
-	    attr->attr_type      = att->att_type;
-	    attr->attr_size      = att->att_width;
-	    attr->attr_precision = att->att_prec;
-	    attr->attr_collID    = att->att_collID;
-	    attr->attr_flags_mask =att->att_flags;
-	    attr->attr_defaultTuple = (DB_IIDEFAULT *) NULL;
-
-	    /* copy default id from resdom
+	    /*
+	     * First set geospatial attributes to something reasonable
 	     */
-	    COPY_DEFAULT_ID(resdom->pst_sym.pst_value.pst_s_rsdm.pst_defid,
-			    attr->attr_defaultID);
+	    attr->attr_srid = SRID_UNDEFINED;
+	   	for(i = 0; geom_type_mapping[i].geom_type != GEOM_TYPE_UNDEFINED; i++)
+	   	{
+	   		if(geom_type_mapping[i].db_type == abs(attr->attr_type))
+	   		{
+	   			break;
+	   		}
+	   	}
+	    attr->attr_geomtype = geom_type_mapping[i].geom_type;
 
-	    if (EQUAL_CANON_DEF_ID(attr->attr_defaultID,
-				   DB_DEF_NOT_DEFAULT))
+	    /*
+	     * Do we have an SRID that we can look for?
+	     */
+	    if(resdom->pst_right->pst_sym.pst_type == PST_VAR &&
+	    		global->ops_rangetab.opv_base->opv_grv
+	    		[resdom->pst_right->pst_sym.pst_value.pst_s_var.pst_vno]->opv_relation != NULL)
 	    {
-		attr->attr_flags_mask |= DMU_F_NDEFAULT;
+	    	i4 vno = resdom->pst_right->pst_sym.pst_value.pst_s_var.pst_vno;
+	    	i4 attr_count = global->ops_rangetab.opv_base->opv_grv[vno]->opv_relation->rdr_no_attr;
+	    	/*
+	    	 * Find attribute number
+	    	 */
+	    	for(i = 1;
+	    			i <= attr_count;
+	    			i++)
+	    	{
+	    		if(!strncmp(resdom->pst_right->pst_sym.pst_value.pst_s_fwdvar.pst_atname.db_att_name,
+	    				global->ops_rangetab.opv_base->opv_grv[vno]->opv_relation->rdr_attr[i]->att_nmstr,
+	    				DB_MAXNAME))
+	    		{
+	    			break;
+	    		}
+	    	}
+	    	/*
+	    	 * If attribute is found, let's fix the new DMF_ATTR_ENTRY
+	    	 */
+	    	if(i <= attr_count)
+	    	{
+				attr->attr_srid =
+						global->ops_rangetab.opv_base->opv_grv[vno]->opv_relation->rdr_attr[i]->att_srid;
+	    	}
 	    }
 
-	    if (attr->attr_type > 0)
-	    {
-		attr->attr_flags_mask |= DMU_F_KNOWN_NOT_NULLABLE;
-	    }
 	}  /* end for resdom->pst_sym.pst_type != PST_TREE */
 
 	tupsize = 0;
@@ -3199,15 +3069,14 @@ opc_dmuahd(
 	** QEF will use to write all the partitioning catalogs from.  The
 	** faked up RDF CB will get a trimmed copy just in case someone else
 	** in opf looks there for partitioning info.
-	** Watch out for QUEL, doesn't attach qeu/dmu to header..
 	*/
-	if (psf_dmucb != NULL && psf_dmucb->dmu_part_def != NULL)
+	if (psf_dmucb->dmu_part_def != NULL)
 	{
 	    DMT_PHYS_PART *pp_array;
 	    DB_PART_DIM	*wdimp;
 	    DB_PART_LIST *part_entryp;
 	    i4 nparts;
-	    i4	i, j;
+	    i4	i;
 
 	    /* If this is "create table ... as select ...", we must 
 	    ** first fill "row_offset" values into the faked up
@@ -3269,201 +3138,17 @@ opc_dmuahd(
     }
     else if (dmu_func == DMU_MODIFY_TABLE)
     {
-	if (structure == DB_HEAP_STORE)
+	/* No keys if heap (shouldn't be any, but make sure) */
+	if (dmucb->dmu_chars.dmu_struct == DB_HEAP_STORE
+	  && ! qtree->pst_restab.pst_heapsort)
 	{
 	    dmucb->dmu_key_array.ptr_address = NULL;
 	    dmucb->dmu_key_array.ptr_size = 0;
 	    dmucb->dmu_key_array.ptr_in_count = 0;
 	}
-	else
-	{
-	    if (qtree->pst_restab.pst_reskey == NULL)
-	    {
-		dmucb->dmu_key_array.ptr_in_count = 1;
-	    }
-	    else
-	    {
-		dmucb->dmu_key_array.ptr_in_count = 0;
-		for (reskey = qtree->pst_restab.pst_reskey; 
-			reskey != NULL; 
-			reskey = reskey->pst_nxtkey
-		    )
-		{
-		    dmucb->dmu_key_array.ptr_in_count += 1;
-		}
-	    }
 
-	    dmucb->dmu_key_array.ptr_address = 
-			opu_qsfmem(global, (i4)(sizeof (DMU_KEY_ENTRY *) * 
-					    dmucb->dmu_key_array.ptr_in_count));
-	    keys = (DMU_KEY_ENTRY **) dmucb->dmu_key_array.ptr_address;
-	    dmucb->dmu_key_array.ptr_size = sizeof (DMU_KEY_ENTRY);
+	dmucb->dmu_action = DMU_ACT_STORAGE;
 
-	    if (qtree->pst_restab.pst_reskey == NULL)
-	    {
-		for (resdom = qtree->pst_qtree->pst_left;
-			(resdom != NULL && 
-			    resdom->pst_sym.pst_type == PST_RESDOM &&
-			    resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsno != 1
-			);
-			resdom = resdom->pst_left
-		    )
-		{
-		    /* NULL body */
-		}
-		key = (DMU_KEY_ENTRY *)opu_qsfmem(global,sizeof(DMU_KEY_ENTRY));
-
-		MEcopy((PTR)resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname, 
-			sizeof(key->key_attr_name.db_att_name), 
-			(PTR)key->key_attr_name.db_att_name);
-		key->key_order = DMU_ASCENDING;
-		keys[0] = key;
-	    }
-	    else
-	    {
-		for (reskey = qtree->pst_restab.pst_reskey, keyno = 0;
-			reskey != NULL; 
-			reskey = reskey->pst_nxtkey, keyno += 1
-		    )
-		{
-		    key = (DMU_KEY_ENTRY *) 
-				opu_qsfmem(global, sizeof (DMU_KEY_ENTRY));
-
-		    MEcopy((PTR)reskey->pst_attname.db_att_name, 
-				sizeof(key->key_attr_name.db_att_name), 
-				(PTR)key->key_attr_name.db_att_name);
-		    key->key_order = DMU_ASCENDING;
-		    keys[keyno] = key;
-		}
-	    }
-	}
-
-	dmucb->dmu_attr_array.ptr_address = NULL;
-	dmucb->dmu_attr_array.ptr_size = 0;
-	dmucb->dmu_attr_array.ptr_in_count = 0;
-
-	/*
-	** Characteristics 'structure', 'compressed', and 'index compressed'
-	** are always provided. Others may or may not be.
-	*/
-	char_no = 3;
-	if (qtree->pst_restab.pst_fillfac != 0)
-	{
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_leaff != 0)
-	{
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_nonleaff != 0)
-	{
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_minpgs != 0)
-	{
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_maxpgs != 0)
-	{
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_alloc != 0 )
-	{
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_extend !=0 )
-	{
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_temporary)
-	{
-	    char_no += 2;
-	}
-	if (qtree->pst_restab.pst_page_size)
-	{
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_clustered)
-	{
-	    char_no += 1;
-	}
-
-	dmucb->dmu_char_array.data_in_size = char_no * sizeof (DMU_CHAR_ENTRY);
-	dmucb->dmu_char_array.data_address = (char *) opu_qsfmem(global, 
-	    (i4)(dmucb->dmu_char_array.data_in_size));
-	chars = (DMU_CHAR_ENTRY *) dmucb->dmu_char_array.data_address;
-	chars[0].char_id = DMU_STRUCTURE;
-	chars[0].char_value = structure;
-	chars[1].char_id = DMU_COMPRESSED;
-	chars[1].char_value = compressed;
-	chars[2].char_id = DMU_INDEX_COMP;
-	chars[2].char_value = index_compressed;
-
-	char_no = 3;
-
-	if (qtree->pst_restab.pst_fillfac != 0)
-	{
-	    chars[char_no].char_id = DMU_DATAFILL;
-	    chars[char_no].char_value = qtree->pst_restab.pst_fillfac;
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_leaff != 0)
-	{
-	    chars[char_no].char_id = DMU_LEAFFILL;
-	    chars[char_no].char_value = qtree->pst_restab.pst_leaff;
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_nonleaff != 0)
-	{
-	    chars[char_no].char_id = DMU_IFILL;
-	    chars[char_no].char_value = qtree->pst_restab.pst_nonleaff;
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_minpgs > 0)
-	{
-	    chars[char_no].char_id = DMU_MINPAGES;
-	    chars[char_no].char_value = qtree->pst_restab.pst_minpgs;
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_maxpgs > 0)
-	{
-	    chars[char_no].char_id = DMU_MAXPAGES;
-	    chars[char_no].char_value = qtree->pst_restab.pst_maxpgs;
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_alloc > 0)
-	{
-	    chars[char_no].char_id = DMU_ALLOCATION;
-	    chars[char_no].char_value = qtree->pst_restab.pst_alloc;
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_extend > 0)
-	{
-	    chars[char_no].char_id = DMU_EXTEND;
-	    chars[char_no].char_value = qtree->pst_restab.pst_extend;
-	    char_no += 1;
-	}
-	if (qtree->pst_restab.pst_temporary)
-	{
-	    chars[char_no].char_id    = DMU_TEMP_TABLE;
-	    chars[char_no].char_value = DMU_C_ON;
-	    chars[char_no+1].char_id    = DMU_RECOVERY;
-	    chars[char_no+1].char_value = (qtree->pst_restab.pst_recovery ?
-				DMU_C_ON : DMU_C_OFF);
-	    char_no += 2;
-	}
-	if (qtree->pst_restab.pst_page_size)
-	{
-	    chars[char_no].char_id    = DMU_PAGE_SIZE;
-	    chars[char_no].char_value = qtree->pst_restab.pst_page_size;
-	    char_no += 1;
-	}
-	if ( qtree->pst_restab.pst_clustered )
-	{
-	    chars[char_no].char_id    = DMU_CLUSTERED;
-	    chars[char_no].char_value = DMU_C_ON;
-	    char_no += 1;
-	}
 	/* The MODIFY step of create-as-select does not get any partitioning
 	** info.  It will not be a partition-changing MODIFY, it will simply
 	** restructure the partitions individually (if the table is partitioned
@@ -3528,10 +3213,9 @@ opc_dmuahd(
     ** action header instead.
     ** This is only done for the CREATE step.  Once created, the modify
     ** step does not need to fool with the partitioning.
-    ** Watch out for QUEL, doesn't set any of this up.
     */
     ahd->qhd_obj.qhd_dmu.ahd_logpart_list = NULL;
-    if (dmu_func == DMU_CREATE_TABLE && qeucb != NULL)
+    if (dmu_func == DMU_CREATE_TABLE)
     {
 	QEU_LOGPART_CHAR *ahd_lpl_ptr;	/* Copied entry */
 	QEU_LOGPART_CHAR *psf_lpl_ptr;	/* Original psf-generated entry */
@@ -3946,7 +3630,6 @@ opc_rupahd(
     RDR_INFO		*rel;
     PST_QNODE		*root = global->ops_qheader->pst_qtree;
     OPC_PST_STATEMENT	*opc_pst;
-    bool		pcolsupd = FALSE;
 
     /* First, lets allocate the action header */
     ahd = global->ops_cstate.opc_subqry->ops_compile.opc_ahd = 
@@ -4183,7 +3866,6 @@ opc_rdelahd(
     QEF_VALID		*vl;
     DB_STATUS		status;
     RDR_INFO		*rel;
-    PST_QNODE		*root = global->ops_qheader->pst_qtree;
     OPC_PST_STATEMENT	*opc_pst;
 
     /* First, lets allocate the action header */
@@ -4631,9 +4313,6 @@ opc_forahd_build(
 		OPS_STATE	*global,
 		QEF_AHD		**pahd)
 {
-    i4			ninstr, nops, nconst;
-    i4			szconst;
-    i4			max_base;
     OPC_ADF		cadf;
     OPC_PST_STATEMENT	*opc_pst;
     QEF_AHD		*ahd;
@@ -5851,7 +5530,7 @@ opc_build_cp_attribute_list(
 
     tuples_to_fill = (i4) ptuple->db_parameterCount;
     /* if (tuples_to_fill == 0)
-	opx_error(E_OP0880_NOT_READY); /* To be general purpose should allow this */
+	opx_error(E_OP0880_NOT_READY); */ /* To be general purpose should allow this */
     attr_list = *p_attr_list = (DMF_ATTR_ENTRY **)
 	opu_qsfmem(global, sizeof(DMF_ATTR_ENTRY *) * tuples_to_fill);
     offset_list = *p_offset_list = (i4 *)
@@ -6833,6 +6512,8 @@ opc_addrules(
 		    global->ops_cstate.opc_bef_tid;
 	    
 		break;
+	    default:
+		break;
 	}
 
 	/* Do some bookkeeping so that OPC has enough information to	    */
@@ -6959,6 +6640,8 @@ opc_eventahd_build(
 	break;
       case PST_EVRAISE_TYPE:
 	ahd->ahd_atype = QEA_EVRAISE;
+	break;
+      default:
 	break;
     }
 
@@ -7643,6 +7326,9 @@ opc_createIntegrityAHD(
 **	    if qef decides to do a modify (e.g. for autostruct).
 **       8_Oct-2010 (hanal04) Bug 124561
 **          If QCI_INDEX_WITH_OPTS pass along the idx's compression setting.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Index opts are now in a DMU_CHARACTERISTICS.  Ideally we
+**	    would pass it all the way to QEF, but one step at a time...
 */
 
 #define	COPY_STRUCT( a, b )	\
@@ -7791,28 +7477,18 @@ copyIntegrityDetails(
     ** Copy the various bits and pieces of index with options (if any).
     */
 
+    MEfill(sizeof(DMU_CHARACTERISTICS), 0, &qefDetails->qci_dmu_chars);
     if (qefDetails->qci_flags & QCI_INDEX_WITH_OPTS)
     {
-	COPY_STRUCT( pst_indexopts.pst_resname, qci_idxname );
-	allocate_and_copy_a_dm_data( global, 
-		&psfDetails->pst_indexopts.pst_resloc,
+	COPY_STRUCT( pst_indexres.pst_resname, qci_idxname );
+	STRUCT_ASSIGN_MACRO( psfDetails->pst_indexopts, qefDetails->qci_dmu_chars);
+	allocate_and_copy_a_dm_data( global,
+		&psfDetails->pst_indexres.pst_resloc,
 		&qefDetails->qci_idxloc );
-	qefDetails->qci_idx_fillfac = psfDetails->pst_indexopts.pst_fillfac;
-	qefDetails->qci_idx_leaff   = psfDetails->pst_indexopts.pst_leaff;
-	qefDetails->qci_idx_nonleaff= psfDetails->pst_indexopts.pst_nonleaff;
-	qefDetails->qci_idx_page_size= psfDetails->pst_indexopts.pst_page_size;
-	qefDetails->qci_idx_minpgs  = psfDetails->pst_indexopts.pst_minpgs;
-	qefDetails->qci_idx_maxpgs  = psfDetails->pst_indexopts.pst_maxpgs;
-	qefDetails->qci_idx_alloc   = psfDetails->pst_indexopts.pst_alloc;
-	qefDetails->qci_idx_extend  = psfDetails->pst_indexopts.pst_extend;
-	qefDetails->qci_idx_struct  = psfDetails->pst_indexopts.pst_struct;
-        qefDetails->qci_compress    = psfDetails->pst_indexopts.pst_compress;
     }
-    else
-    {
-        /* Copy the compression setting, just in case we have autostruct */
-        qefDetails->qci_compress = psfDetails->pst_compress;
-    }
+
+    /* Copy original base table compression in case autostructure */
+    qefDetails->qci_autocompress = psfDetails->pst_autocompress;
 
     return;
 } /* copyIntegrityDetails */
@@ -7998,7 +7674,8 @@ allocate_and_copy_QEUCB(
     /* copy the DMUCB out of the parser's QEU_CB into ours */
 
     allocate_and_copy_DMUCB( global, ( DMU_CB * ) source->qeu_d_cb,
-			     ( DMU_CB ** ) &qeu_cb->qeu_d_cb );
+			( DMU_CB ** ) &qeu_cb->qeu_d_cb,
+			TRUE, TRUE );
 
     /* If there is a list of physical structuring info blocks, copy them
     ** to the target plan so that QEF can follow the instructions.
@@ -8831,19 +8508,19 @@ opc_alloc_and_copy_QEUQ_CB(
 	    }
 
 	    /* copy the DMUCB out of the parser's QEUQ_CB into ours */
-	    
+
 	    allocate_and_copy_DMUCB(global, (DMU_CB *) source->qeuq_dmf_cb,
-		(DMU_CB **) &qeuq_cb->qeuq_dmf_cb);
-		
+		(DMU_CB **) &qeuq_cb->qeuq_dmf_cb, TRUE, TRUE);
+
 	    break;
 	}
-	
+
 	default:
 	{
 	    break;
 	}
     }
-    
+
     return;
 }
 
@@ -8855,10 +8532,17 @@ opc_alloc_and_copy_QEUQ_CB(
 **	involves allocating DMUCB of the same size in the target object
 **	and filling it it.
 **
+**	The copy of the key and/or attribute arrays can selectively be
+**	turned off.  For create table as select, we omit the key array
+**	for the CREATE TABLE step, and omit the attribute array if there
+**	is a MODIFY step.
+**
 ** Inputs:
-**	global	    		Global control block for compilation.
+**	global			Global control block for compilation.
 **	source			DMUCB to copy from
 **	target			DMUCB to copy to
+**	copy_keys		Copy the dmu-key-array or not?
+**	copy_attrs		Copy the dmu-attr-array or not?
 **
 **
 ** Outputs:
@@ -8874,7 +8558,9 @@ opc_alloc_and_copy_QEUQ_CB(
 **	    Make sure we copy the default tuple if provided.
 **	10-Feb-2004 (schka24)
 **	    Copy partition definition if source has one.
-**
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array gone (embedded in DMU_CB now).
+**	    Add params to selectively omit copying key or attr arrays.
 */
 
 
@@ -8903,7 +8589,9 @@ static VOID
 allocate_and_copy_DMUCB(
 		OPS_STATE	*global,
 		DMU_CB		*source,
-		DMU_CB		**target )
+		DMU_CB		**target,
+		bool		copy_keys,
+		bool		copy_attrs)
 {
     DMU_CB	*dmu_cb;
 
@@ -8911,15 +8599,34 @@ allocate_and_copy_DMUCB(
     *target = dmu_cb;
     MEcopy( ( PTR ) source, ( u_i2 ) sizeof( DMU_CB ), ( PTR ) dmu_cb );
 
-    /* now we have to find every field in the DMUCB that is a pointer, and 
+    /* now we have to find every field in the DMUCB that is a pointer, and
     ** copy what it points to to our memory stream.  sheesh!
     */
 
     ALLOCATE_AND_COPY_A_DM_DATA( dmu_location );
     ALLOCATE_AND_COPY_A_DM_DATA( dmu_olocation );
-    ALLOCATE_AND_COPY_A_DM_PTR( dmu_key_array );
-    ALLOCATE_AND_COPY_DMU_ATTR( dmu_attr_array );
-    ALLOCATE_AND_COPY_A_DM_DATA( dmu_char_array );
+    if (copy_keys)
+    {
+	ALLOCATE_AND_COPY_A_DM_PTR( dmu_key_array );
+    }
+    else
+    {
+	dmu_cb->dmu_key_array.ptr_in_count = 0;
+	dmu_cb->dmu_key_array.ptr_out_count = 0;
+	dmu_cb->dmu_key_array.ptr_address = NULL;
+	dmu_cb->dmu_key_array.ptr_size = 0;
+    }
+    if (copy_attrs)
+    {
+	ALLOCATE_AND_COPY_DMU_ATTR( dmu_attr_array );
+    }
+    else
+    {
+	dmu_cb->dmu_attr_array.ptr_in_count = 0;
+	dmu_cb->dmu_attr_array.ptr_out_count = 0;
+	dmu_cb->dmu_attr_array.ptr_address = NULL;
+	dmu_cb->dmu_attr_array.ptr_size = 0;
+    }
     ALLOCATE_AND_COPY_A_DM_DATA( dmu_conf_array );
     ALLOCATE_AND_COPY_A_DM_PTR( dmu_gwattr_array );
     ALLOCATE_AND_COPY_A_DM_DATA( dmu_gwchar_array );
@@ -9032,6 +8739,7 @@ allocate_and_copy_a_dm_ptr(
     i4		i;
     char		**sourceObjectAddress;
     char		**targetObjectAddress;
+    char		*targetObjects;
     DMF_ATTR_ENTRY	*sourceAttr;
     DMF_ATTR_ENTRY	*targetAttr;
 
@@ -9047,17 +8755,17 @@ allocate_and_copy_a_dm_ptr(
     {
 	target->ptr_address =
 		opu_qsfmem( global, sizeof( PTR ) * objectCount );
-
+	targetObjects = opu_qsfmem(global, objectSize * objectCount);
 	for ( i = 0,
 		sourceObjectAddress = ( char ** ) source->ptr_address,
 		targetObjectAddress = ( char ** ) target->ptr_address;
 	      i < objectCount; i++ )
 	{
-	    targetObjectAddress[ i ] =
-		( char * ) opu_qsfmem( global, objectSize );
+	    targetObjectAddress[ i ] = targetObjects;
 	    MEcopy( ( PTR ) sourceObjectAddress[ i ],
 		    ( u_i2 ) objectSize,
-		    ( PTR ) targetObjectAddress[ i ] );
+		    ( PTR ) targetObjects);
+	    targetObjects += objectSize;
 
 	    /*
 	    ** if this is an attribute entry, make sure you copy the
@@ -9131,7 +8839,6 @@ opc_pagesize(
         OPG_CB          *opg_cb,
         OPS_WIDTH       width)
 {
-        DB_STATUS       status;
         i4         page_sz, pagesize;
         i4             i;
         OPO_TUPLES	noofrow, prevnorow;
@@ -9631,11 +9338,15 @@ opc_loadopt(OPS_STATE *global, QEF_AHD *ahd, QEF_VALID *valid)
 
     if (qmode != PSQ_APPEND)
     {
+	QEU_CB *qeucb = global->ops_qheader->pst_qeucb;
+	DMU_CB *dmucb = (DMU_CB *) qeucb->qeu_d_cb;
+
 	/* RETINTO and DGTT-AS-SELECT can compile a LOAD unless the
 	** target is journaled.  A new table necessarily satisfies the
 	** other load conditions.
 	*/
-	if (global->ops_qheader->pst_restab.pst_resjour == PST_RESJOUR_ON)
+	if (BTtest(DMU_JOURNALED,dmucb->dmu_chars.dmu_indicators)
+	  && dmucb->dmu_chars.dmu_journaled == DMU_JOURNAL_ON)
 	    return;
 	/* We'll do this one with LOAD.  Flag it as a CTAS so that QEF
 	** knows to tell DMF that the table is known to be empty.

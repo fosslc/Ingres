@@ -93,8 +93,14 @@
 **	08-Feb-2008 (kiria01) b119885
 **	    Change dn_time to dn_seconds to avoid the inevitable confusion with
 **	    the dn_time in AD_DATENTRNL.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
 **      10-aug-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1getempty_rti.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -577,6 +583,14 @@ DB_DATA_VALUE       *adc_emptydv)	/* Ptr to empty data value */
 
       case DB_LVCH_TYPE:
       case DB_LBYTE_TYPE:
+      case DB_GEOM_TYPE:
+      case DB_POINT_TYPE:
+      case DB_MPOINT_TYPE:
+      case DB_LINE_TYPE:
+      case DB_MLINE_TYPE:
+      case DB_POLY_TYPE:
+      case DB_MPOLY_TYPE:
+      case DB_GEOMC_TYPE:
       case DB_LBIT_TYPE:
       case DB_LNVCHR_TYPE:
 	{
@@ -606,6 +620,7 @@ DB_DATA_VALUE       *adc_emptydv)	/* Ptr to empty data value */
 
       case DB_BIT_TYPE:
       case DB_BYTE_TYPE:
+      case DB_NBR_TYPE:
 	MEfill(adc_emptydv->db_length, (u_char)0, adc_emptydv->db_data);
 	break;
 

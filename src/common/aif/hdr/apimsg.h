@@ -11,6 +11,8 @@
 ** History:
 **	25-Mar-10 (gordy)
 **	    Created.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 # ifndef __APIMSG_H__
@@ -94,6 +96,8 @@ II_EXTERN IIAPI_MSG_BUFF	*IIapi_createMsgXA( IIAPI_HNDL *, i4,
 II_EXTERN IIAPI_STATUS	IIapi_beginMessage( IIAPI_STMTHNDL *, i4 );
 II_EXTERN IIAPI_STATUS	IIapi_extendMessage( IIAPI_STMTHNDL * );
 II_EXTERN II_VOID	IIapi_endMessage( IIAPI_STMTHNDL *, u_i2 );
+II_EXTERN IIAPI_STATUS IIapi_createMsgTuple( IIAPI_STMTHNDL *stmtHndl, 
+				IIAPI_PUTCOLPARM *putColParm );
 II_EXTERN IIAPI_STATUS	IIapi_initMsgQuery( IIAPI_STMTHNDL *, bool );
 II_EXTERN IIAPI_STATUS	IIapi_addMsgParams( IIAPI_STMTHNDL *, 
 					    IIAPI_PUTPARMPARM * );

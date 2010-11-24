@@ -6,6 +6,7 @@
 # include	<gl.h>
 # include	<systypes.h>
 # include	<pwd.h>
+# include	<id.h>
 
 /*
 **	IDsetsys
@@ -27,6 +28,8 @@
 ** History:
 **	10-oct-1996 (canor01)
 **	    Created.
+**	15-nov-2010 (stephenb)
+**	    Include id.h for prototypes.
 */
 
 VOID

@@ -76,6 +76,8 @@
 **	    Cleaned up code for Open Source.
 **	29-Sep-2004 (drivi01)
 **	    Removed MALLOCLIB from NEEDLIBS
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 /*
@@ -101,7 +103,7 @@ GLOBALREF	i4	CMdefcs;
 
 FUNC_EXTERN	i4	GCX_exit_handler();
 static		STATUS	initialize( i4 argc, char **argv );
-static		VOID	jdbc_exit();
+static		VOID	jdbc_exit( void );
 
 
 /*
