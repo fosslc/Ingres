@@ -5907,7 +5907,6 @@ FUNC_EXTERN i4 psl_fill_proc_params(
 FUNC_EXTERN i4 psl_verify_cons(
 	PSS_SESBLK *sess_cb,
 	PSQ_CB *psq_cb,
-	i4 newtbl,
 	DMU_CB *dmu_cb,
 	PSS_RNGTAB *rngvar,
 	PSS_CONS *cons_list,

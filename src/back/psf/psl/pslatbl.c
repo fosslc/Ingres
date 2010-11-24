@@ -268,6 +268,8 @@ static i4 psl_atbl_alter_lob(
 **          once the constraint being created has been verified to prevent
 **          creation of duplicate primary keys due to stale cache info being
 **          checked.
+**	9-Nov-2010 (kschendel)
+**	    Change verify-cons call again.
 */
 DB_STATUS
 psl_alter_table(
@@ -284,7 +286,7 @@ psl_alter_table(
     ** and convert it into a CREATE INTEGRITY statement
     */
     status = psl_verify_cons(sess_cb, psq_cb,
-			     FALSE, (struct _DMU_CB *) NULL, rngvar,
+			     (struct _DMU_CB *) NULL, rngvar,
 			     cons_list, &cr_integ_stmt);
     if (DB_FAILURE_MACRO(status))
 	return(status);
@@ -1045,6 +1047,8 @@ psl_alt_tbl_col_drop(
 **          duplicate column error.
 **	22-Mar-2010 (toumi01) SIR 122403
 **	    Add encflags and encwid for encryption.
+**	9-Nov-2010 (kschendel)
+**	    Change psl-verify-cons call again.
 */
 DB_STATUS
 psl_alt_tbl_col_add(
@@ -1159,7 +1163,7 @@ psl_alt_tbl_col_add(
 
     if (cons_list != (PSS_CONS *) NULL)
     {
-       status = psl_verify_cons(sess_cb, psq_cb, FALSE, dmu_cb,
+       status = psl_verify_cons(sess_cb, psq_cb, dmu_cb,
 				(PSS_RNGTAB *) sess_cb->pss_resrng,
 				cons_list, &stmt_list);
 

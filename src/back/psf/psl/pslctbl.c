@@ -618,6 +618,8 @@ static char *psl_seckey_attr_name(
 **	    can be passed along to auto-structure.
 **	13-Oct-2010 (kschendel) SIR 124544
 **	    Replace dmu-char-array with dmu characteristics.
+**	9-Nov-2010 (kschendel)
+**	    Change psl-verify-cons call again.
 */
 DB_STATUS
 psl_ct1_create_table(
@@ -686,7 +688,7 @@ psl_ct1_create_table(
 	** and convert them into CREATE INTEGRITY statements
 	*/
 	status = psl_verify_cons(sess_cb, psq_cb,
-				 TRUE, dmu_cb, (PSS_RNGTAB *) NULL,
+				 dmu_cb, (PSS_RNGTAB *) NULL,
 				 cons_list, &stmt_list);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -1441,6 +1443,8 @@ psl_crtas_fixup_columns(
 **	    check constraint.  Move a bunch of stuff into crtas-fixup
 **	    so that it happens soon enough that we can generate a
 **	    dmucb attr array before WITH-options happen.
+**	9-Nov-2010 (kschendel)
+**	    Change psl-verify-cons call again.
 */
 DB_STATUS
 psl_ct2s_crt_tbl_as_select(
@@ -1659,7 +1663,7 @@ psl_ct2s_crt_tbl_as_select(
 	/* convert constraints into CREATE INTEGRITY statements
 	 */
 	status = psl_verify_cons(sess_cb, psq_cb,
-				 TRUE, dmu_cb, (PSS_RNGTAB *) NULL,
+				 dmu_cb, (PSS_RNGTAB *) NULL,
 				 cons_list, &stmt_list);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
