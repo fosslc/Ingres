@@ -75,6 +75,8 @@
 **	    Add "send_integer_booleans" driver properties.
 **      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
 **          Changes to eliminate compiler prototype warnings.
+**	17-Nov-10 (gordy)
+**	    Add "lob.locators.stream.enabled" driver property.
 */
 
 
@@ -202,11 +204,12 @@
 #define PROP_SYS_LOB_LOCATORS_ID	3
 #define PROP_SYS_LOB_LOCATORS_AUTO_ID	4	
 #define PROP_SYS_LOB_LOCATORS_SLP_ID	5	
-#define PROP_SYS_DATE_EMPTY_ID          6
-#define PROP_SYS_SCROLL_ID		7
-#define PROP_SYS_BATCH_ID		8
+#define PROP_SYS_LOB_LOCATORS_STRM_ID	6
+#define PROP_SYS_DATE_EMPTY_ID          7
+#define PROP_SYS_SCROLL_ID		8
+#define PROP_SYS_BATCH_ID		9
 
-#define PROP_SYS_MAX			9
+#define PROP_SYS_MAX			10
 
 
 #define PROP_SYS_PROP_FILE_NAME		"ingres.jdbc.property_file"
@@ -215,6 +218,7 @@
 #define PROP_SYS_LOB_LOCATORS_NAME	"ingres.jdbc.lob.locators.enabled"
 #define PROP_SYS_LOB_LOCATORS_AUTO_NAME	"ingres.jdbc.lob.locators.autocommit.enabled"
 #define PROP_SYS_LOB_LOCATORS_SLP_NAME	"ingres.jdbc.lob.locators.select_loop.enabled"
+#define PROP_SYS_LOB_LOCATORS_STRM_NAME	"ingres.jdbc.lob.locators.stream.enabled"
 #define PROP_SYS_DATE_EMPTY_NAME	"ingres.jdbc.date.empty"
 #define PROP_SYS_SCROLL_NAME		"ingres.jdbc.scroll.enabled"
 #define PROP_SYS_BATCH_NAME		"ingres.jdbc.batch.enabled"
@@ -225,6 +229,7 @@
 #define PROP_SYS_LOB_LOCATORS_VAL	"true/false (default:true)"
 #define PROP_SYS_LOB_LOCATORS_AUTO_VAL	"true/false (default:false)"	
 #define PROP_SYS_LOB_LOCATORS_SLP_VAL	"true/false (default:false)"	
+#define PROP_SYS_LOB_LOCATORS_STRM_VAL	"true/false (default:true)"
 #define PROP_SYS_DATE_EMPTY_VAL		"default/null/empty"
 #define PROP_SYS_SCROLL_VAL		"true/false (default:true)"
 #define PROP_SYS_BATCH_VAL		"true/false (default:true)"
@@ -252,6 +257,8 @@ static struct
 					PROP_SYS_LOB_LOCATORS_AUTO_VAL },
     { PROP_SYS_LOB_LOCATORS_SLP_ID,	PROP_SYS_LOB_LOCATORS_SLP_NAME,
 					PROP_SYS_LOB_LOCATORS_SLP_VAL },
+    { PROP_SYS_LOB_LOCATORS_STRM_ID,	PROP_SYS_LOB_LOCATORS_STRM_NAME,
+    					PROP_SYS_LOB_LOCATORS_STRM_VAL },
     { PROP_SYS_DATE_EMPTY_ID,		PROP_SYS_DATE_EMPTY_NAME,
 					PROP_SYS_DATE_EMPTY_VAL },
     { PROP_SYS_SCROLL_ID,		PROP_SYS_SCROLL_NAME,
