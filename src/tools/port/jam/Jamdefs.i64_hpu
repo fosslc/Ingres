@@ -23,6 +23,9 @@
 #           Create server using iimerge.a
 #	24-Jun-2009 (kschendel) SIR 122138
 #	    Hybridization scheme changed, update here.
+#	27-Oct-2010 (frima01) BUG 124650
+#	    Add +Olibmerrno to compile flags for POSIX compliant
+#	    errors from math lib.
 #
 #####
 
@@ -45,8 +48,8 @@ SHLIBLD = "ld" ;
 CPP 	default = "/lib/cpp" ;
 ASMACH64 = "+E64" ;
 ASMACH32 = "+E32" ;
-CCMACH64 = "-DBUILD_ARCH64 +e -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DD64 +M2 +DSblended -W  p,-H375000 -D_LARGEFILE64_SOURCE" ;
-CCMACH32 = "-DBUILD_ARCH32 +e -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DSblended -W  p,-H375000 -D_LARGEFILE64_SOURCE" ;
+CCMACH64 = "-DBUILD_ARCH64 +e -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DD64 +M2 +DSblended -W  p,-H375000 -D_LARGEFILE64_SOURCE +Olibmerrno" ;
+CCMACH32 = "-DBUILD_ARCH32 +e -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DSblended -W  p,-H375000 -D_LARGEFILE64_SOURCE +Olibmerrno" ;
 CCLDMACH64 	= "+DD64 -Wl,-E -Wl,+s -Wl,+n" ;
 CCLDMACH32	= "+DD32 -Wl,-E -Wl,+s -Wl,+n" ;
 CCPICFLAG 	= "+Z" ;
