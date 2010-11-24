@@ -79,6 +79,8 @@
 **      18-Nov-04 (Gordon.Thorpe@ca.com and Ralph.Loen@ca.com)
 **          Moved GCC global references from this file into gcc.h, as they are
 **          intended for the private use of GCC only.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 **/
 
 #ifndef _GCX_INCLUDED_
@@ -109,7 +111,7 @@ typedef struct _GCXLIST {
 FUNC_EXTERN char 	*gcx_look(GCXLIST *, i4);
 FUNC_EXTERN i4		gcx_timestamp( void );
 FUNC_EXTERN VOID	gcx_tdump( char *buf, i4 len );
-FUNC_EXTERN GCXLIST *   gcx_getGCAMsgMap();
+FUNC_EXTERN GCXLIST *   gcx_getGCAMsgMap( void );
 
 /*
 ** The various mappings.

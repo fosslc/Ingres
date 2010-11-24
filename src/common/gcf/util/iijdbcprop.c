@@ -73,6 +73,8 @@
 **	    Add "batch" config, "send_ingres_dates" driver properites.
 **	30-Jul-10 (gordy)
 **	    Add "send_integer_booleans" driver properties.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 
@@ -310,7 +312,7 @@ void print_all_prop_file( FILE * );
 void print_all_prop( FILE ** );
 void print_all_trace_prop( FILE ** );
 void print_all_sys_prop( FILE ** );
-void print_usage();
+void print_usage( void );
 
 char filename[LO_NM_LEN];
 

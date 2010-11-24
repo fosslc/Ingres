@@ -275,6 +275,8 @@
 **         In SQLSpecialColumns_InternalCall(), return after calling
 **         CatExecDirect() in the case of SQL_ROWVER or SQL_ROWID for
 **         transaction scope.
+**     15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**         Changes to eliminate compiler prototype warnings.
 */
 
 /*
@@ -335,8 +337,6 @@ static BOOL   CatQueryGetColumns (LPSTMT, IIAPI_QUERYPARM *, IIAPI_GETDESCRPARM*
 static BOOL   CatQueryClose      (LPSTMT, IIAPI_QUERYPARM *, IIAPI_GETDESCRPARM*,
                     IIAPI_GETCOLPARM *);
 
-BOOL odbc_getResult( IIAPI_GENPARM  *genParm, LPSQLCA psqlca, II_LONG cQueryTimeout);
-BOOL odbc_getQInfo( LPSTMT pstmt );
 BOOL odbc_close( LPSTMT pstmt );
 
 /*

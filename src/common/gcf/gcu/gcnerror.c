@@ -11,6 +11,7 @@
 #include    <gca.h>
 #include    <gcn.h>
 #include    <gcu.h>
+#include    <gcnint.h>
 
 /*
 ** Name: gcnerror.c
@@ -55,6 +56,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 

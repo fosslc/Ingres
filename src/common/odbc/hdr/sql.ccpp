@@ -17,6 +17,8 @@ XX##     ccpp leaves them in and the ODBC can't compile.
 XX##  06-Sep-2010 (Ralph Loen) Bug 124348
 XX##     Added version of SQLColAttribute() dependent on _WIN64 macro for
 XX##     compatibility with MS implementation.
+XX##  15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+XX##     Changes to eliminate compiler prototype warnings.
 XX*/
 XX#ifndef __SQLTYPES
 XX#define __SQLTYPES

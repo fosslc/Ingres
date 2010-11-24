@@ -12,6 +12,7 @@
 # include <apiehndl.h>
 # include <apishndl.h>
 # include <apimisc.h>
+# include <apivalid.h>
 
 /*
 ** Name: apivalid.c
@@ -73,6 +74,8 @@
 **	    Added IIapi_validDataValue().
 **	26-Oct-09 (gordy)
 **	    Boolean type supported at GCA_PROTOCOL_LEVEL_68.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 
