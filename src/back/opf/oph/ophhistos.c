@@ -835,6 +835,9 @@ oph_sarglist(
 **	    Only set the 2nd value to NULL in the precise case where two 
 **	    BFs are being combined into a BETWEEN.  Leave it alone for the
 **	    remainder of the histogram.
+**      18-oct-2010 (huazh01)
+**          skip boolean factor containing flag OPH_NOCOMPHIST. 
+**          (b124287)
 */
 static bool
 oph_compkeybld(
@@ -888,7 +891,9 @@ oph_compkeybld(
 	bool	dropbfk, firstval, oneval;
 
 	dropbfk = FALSE;
-	if (attreqc != (*bfpp)->opb_eqcls) continue;
+	if (attreqc != (*bfpp)->opb_eqcls ||
+            (*bfpp)->opb_mask & OPB_NOCOMPHIST) 
+           continue;
 	if ((bfkeyp = (*bfpp)->opb_keys) == (OPB_BFKEYINFO *) NULL) 
 		continue;
 
@@ -3936,6 +3941,13 @@ collatable_type(i4    datatype)
 **	5-Jan-2009 (kibro01) b121385
 **	    Don't apply collation unless all the composite histogram is
 **	    collatable (similar to bug 121063 during generation of statistics).
+**      18-oct-2010 (huazh01)
+**          if there are two ADC_KEXACTKEY restriction on a key column, then 
+**          use only one of them to build composite histogram. For example, if 
+**          the key is based on [col1, col2], and the query is: ... where 
+**          col1 = X AND col2 = Y AND col1 = Z, then we only use one of the 
+**          restrictions based on 'col1' to build composite histograms. 
+**          (b124287).
 */
 static VOID
 oph_composites(
@@ -3952,11 +3964,16 @@ oph_composites(
     bool		nocells;
     bool		all_collatable;
     PTR			save_collation;
+    OPB_BFT             *bfbase; 
+    OPZ_BMATTS          attrmap;
+    PST_QNODE           *qtree; 
+    i4                  tree_varno, tree_attrno, k; 
 
     save_collation = subquery->ops_global->ops_adfcb->adf_collation;
 
     MEfill(sizeof(OPZ_ATTS), (u_char)0, (PTR)&locattr);
     locattr.opz_mask = OPZ_COMPATT;	/* init dummy attr desc */
+    bfbase = subquery->ops_bfs.opb_base;
 
     /* Loop over range table, looking for variables with multi-attr
     ** key structures, at least 2 columns of which are covered by
@@ -4007,6 +4024,42 @@ oph_composites(
 	{
 	    i4	j;
 	    j = varptr->opv_mbf.opb_kbase->opb_keyorder[i].opb_attno;
+
+            MEfill(sizeof(OPZ_BMATTS), (u_char)0, (PTR)&attrmap); 
+
+	    for (k = 0; k < subquery->ops_bfs.opb_bv; k++)
+	    {
+                qtree = bfbase->opb_boolfact[k]->opb_qnode; 
+
+                if (!(qtree->pst_sym.pst_type == PST_BOP &&
+                    qtree->pst_left->pst_sym.pst_type == PST_VAR &&
+                    qtree->pst_right->pst_sym.pst_type == PST_CONST))
+                   continue;
+		
+		tree_attrno = qtree->pst_left->pst_sym.pst_value.
+				pst_s_var.pst_atno.db_att_id; 
+		tree_varno = qtree->pst_left->pst_sym.pst_value.pst_s_var.pst_vno; 
+
+                if (varno != tree_varno)
+                   continue; 
+
+		if (BTtest(tree_attrno, (char*)&attrmap))
+		{
+                   bfbase->opb_boolfact[k]->opb_mask |= OPB_NOCOMPHIST; 
+		}
+
+                if (bfbase->opb_boolfact[k]->opb_eqcls == 
+                     subquery->ops_attrs.opz_base->opz_attnums[j]->opz_equcls &&
+                    j == tree_attrno &&
+                    bfbase->opb_boolfact[k]->opb_keys &&
+                    bfbase->opb_boolfact[k]->opb_keys->opb_sargtype == ADC_KEXACTKEY
+                   )
+                {
+                    BTset(tree_attrno, (char*)&attrmap); 
+		}			
+
+	    }
+
 	    newhistp->oph_composite.oph_attrvec[i] = j;
 	    BTset((u_i2)subquery->ops_attrs.opz_base->opz_attnums[j]->
 			opz_equcls, (PTR)newhistp->oph_composite.oph_eqclist);
@@ -4017,6 +4070,7 @@ oph_composites(
 			opz_dataval.db_datatype))
 		all_collatable = FALSE;
 	}
+
 	newhistp->oph_composite.oph_attrvec[i] = OPZ_NOATTR;	
 				/* terminate attno array */
 

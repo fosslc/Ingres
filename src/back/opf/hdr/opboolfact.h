@@ -634,6 +634,9 @@ typedef struct _OPB_VIRTUAL
 **	    0% (see bug 21160). This change fixes bug 120294.
 **	2-Jun-2009 (kschendel) b122118
 **	    Remove FALIKE flag, was never set.
+**      18-oct-2010 (huazh01)
+**          OPB_RESOLVE is no longer being referenced. Rename it to 
+**          OPB_NOCOMPHIST as part of fix to b124287.
 [@history_line@]...
 [@history_template@]...
 */
@@ -717,9 +720,9 @@ typedef struct _OPB_BOOLFACT
 					** descriptor */
     i4	    opb_mask;		/* mask describing various characteristics
 					** of this boolean factor */
-#define                 OPB_RESOLVE     0x00000001L
-/* TRUE if parse tree was modified for the iftrue function and
-** needs to be re-resolved */
+#define                 OPB_NOCOMPHIST  0x00000001L
+/* TRUE if this boolean factor can't be used to build composite  
+** histogram */
 #define                 OPB_ORFOUND     0x00000002L
 /* TRUE - is at least one OR is involved in this query */
 #define			OPB_KESTIMATE	0x00000004L

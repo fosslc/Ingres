@@ -806,6 +806,11 @@ opl_ojeqcls(
 **	    3349.
 **	31-Aug-2006 (kschendel)
 **	    Watch for HFAGG as well as RFAGG.
+**      14-oct-2010 (huazh01)
+**          remove the block of codes that call opl_resolve() if OPB_RESOLVE
+**          is set. OPB_RESOLVE is not being used after change 409457. 
+**          OPB_RESOLVE is renamed to OPB_NOCOMPHIST as part of fix to 
+**          bug 124287.
 */
 VOID
 opl_ojoin(
@@ -911,27 +916,7 @@ opl_ojoin(
 		BTset( (i4)varp->opv_ojeqc, (char *)ojp1->opl_innereqc);
 	}
     }
-    {	/* traverse the boolean factors in which an IFTRUE function was
-	** inserted which changed the result type of an operation
-	** so that the conjunct can be re-resolved
-	*/
-	
-	OPB_IBF             maxbf;          /* number of boolean factors allocated*/
-	OPB_BFT             *bfbase;        /* ptr to base of array of ptrs to
-					    ** boolean factor elements */
-	OPB_IBF		    bf;
 
-	maxbf = subquery->ops_bfs.opb_bv;   /* number of boolean factors allocated*/
-	bfbase = subquery->ops_bfs.opb_base;/* ptr to base of array of ptrs to 
-					    ** boolean factors */
-	for (bf = maxbf; --bf >= 0;)
-	{
-	    OPB_BOOLFACT	*bfp;
-	    bfp = bfbase->opb_boolfact[bf];
-	    if (bfp->opb_mask & OPB_RESOLVE)
-		opl_resolve(subquery, bfp->opb_qnode);
-	}
-    }
     for (ojid1 = subquery->ops_oj.opl_lv; --ojid1 >= 0;)
     {	/* set max outer join maps used for relation placement */
 	OPL_OUTER	*outerp1;
