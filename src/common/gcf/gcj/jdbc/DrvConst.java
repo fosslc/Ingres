@@ -352,6 +352,8 @@ import	com.ingres.gcf.dam.MsgConst;
 **	    DRV_PROP_SND_INT_BOOL.
 **	13-Aug-10 (gordy)
 **	    Bumped version to 4.0.5
+**	10-Nov-10 (gordy)
+**	    Added valid values for date alias parameter.
 */
 
 interface
@@ -441,10 +443,11 @@ DrvConst
     String	DRV_PROP_SND_INT_BOOL	= "send_integer_booleans";
 
     String	prop_valid_off_on[]	= { "off", "on" };
+    String	prop_valid_false_true[]	= { "false", "true" };
     String	prop_xacm_valid[]	= { "dbms", "single", "multi" };
     String	prop_vnode_valid[]	= { "connect", "login" };
     String	prop_crsr_valid[]	= { "dbms", "readonly", "update" };
-    String	prop_valid_false_true[]	= { "false", "true" };
+    String	prop_date_alias_valid[] = { "ansidate", "ingresdate" };
     
     PropInfo	propInfo[] =		    // Connection properties
     {
@@ -507,7 +510,8 @@ DrvConst
 	new PropInfo( DRV_PROP_MNY_PREC, false, "Money Precision", null, null,
 			DrvRsrc.RSRC_CP_MNY_PRC, MsgConst.MSG_CP_MNY_PREC ),
 
-	new PropInfo( DRV_PROP_DATE_ALIAS, false, "Date Alias", null, null,
+	new PropInfo( DRV_PROP_DATE_ALIAS, false, "Date Alias", 
+			prop_date_alias_valid[0], prop_date_alias_valid,
 			DrvRsrc.RSRC_CP_DTE_TYP, MsgConst.MSG_CP_DATE_ALIAS ),
 
 	new PropInfo( DRV_PROP_SND_ING_DTE, false, "Send Ingres Dates",
