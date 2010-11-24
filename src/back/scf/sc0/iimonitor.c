@@ -108,6 +108,9 @@ i4	    lang_code;
 **      7-May-2009 (hanal04) Bug 122033
 **          When peer terminates the associated we need a generic message
 **          as the peer may not have been the DBMS.
+**     25-Oct-2010 (maspa05) Bug 124632
+**          Increase size of buffer for output and ensure the size of the
+**          string we're formatting with TRformat will fit in the buffer
 */
 int
 main(argc, argv)
@@ -571,16 +574,20 @@ char	    **argv;
 	    }
 	    else if (gca_parms.gca_it_parms.gca_message_type == GCA_TRACE)
 	    {
-		char	buf[ER_MAX_LEN];
+	      /* buf is sized for largest output line which is currently
+		 "Last Query" so it's size of query text (ER_MAX_LEN) +
+	        20 for "    Last Query:" */
+
+		char	buf[ER_MAX_LEN+20]; 
 
 		TRflush();
+
+		if (gca_parms.gca_it_parms.gca_d_length >= sizeof(buf))
+		    gca_parms.gca_it_parms.gca_d_length = sizeof(buf) - 1;
 
 		TRformat(0, 0, buf, sizeof(buf), "%t", 
 			 gca_parms.gca_it_parms.gca_d_length,
 			 gca_parms.gca_it_parms.gca_data_area);
-			  
-		if (gca_parms.gca_it_parms.gca_d_length >= sizeof(buf))
-		    gca_parms.gca_it_parms.gca_d_length = sizeof(buf) - 1;
 		
 		buf[gca_parms.gca_it_parms.gca_d_length] = EOS;
 
@@ -599,14 +606,14 @@ char	    **argv;
 			ele = (GCA_E_ELEMENT *)er->gca_e_element; 
 		TRflush();
 
+		if (ele->gca_error_parm[0].gca_l_value >= sizeof(buf))
+		    ele->gca_error_parm[0].gca_l_value = sizeof(buf) - 1;
+		
 		if ( ele->gca_l_error_parm )    
 			TRformat(0, 0, buf, sizeof(buf), "%t", 
 			 ele->gca_error_parm[0].gca_l_value,
 			 ele->gca_error_parm[0].gca_value );
 			  
-		if (ele->gca_error_parm[0].gca_l_value >= sizeof(buf))
-		    ele->gca_error_parm[0].gca_l_value = sizeof(buf) - 1;
-		
 		buf[ele->gca_error_parm[0].gca_l_value] = EOS;
 
 		STtrmwhite(buf);
