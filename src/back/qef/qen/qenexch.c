@@ -1255,6 +1255,9 @@ i4		    function )
 **      21-jul-2010 (huazh01)
 **          don't log E_DM0065_USER_INTR error for parallel query child 
 **          thread. (b124094)
+**      03-Nov-2010 (smeke01) b124383
+**          Find the correct local base for the materializer CX when we
+**          are not using the global base array.
 **/
 DB_STATUS
 qen_exchange_child(SCF_FTX *ftxcb)
@@ -1399,7 +1402,15 @@ qen_exchange_child(SCF_FTX *ftxcb)
 	else
 	{
 	    ade_excb->excb_bases[ADE_GLOBALBASE] = NULL;
-	    MatRow = &ade_excb->excb_bases[node->qen_row];
+
+	    /* find the local base array offset */
+	    for (i = 0; i < exch->exch_mat->qen_sz_base; i++)
+	    {
+		if (node->qen_row == exch->exch_mat->qen_base[i].qen_index)
+		    break;
+	    }
+
+	    MatRow = &ade_excb->excb_bases[ADE_ZBASE + i];
 	}
 
 	/*
