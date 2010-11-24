@@ -745,6 +745,9 @@ static i4  LK_rqst_trace();
 **	08-jun-2009 (jonj/joea)
 **	    In LK_request, when checking for implicit conversions, always
 **	    check the LKB hash queue unless propagating.
+**      15-oct-2010 (joea)
+**          In lk_set_dlm_callback, set cback_posts to 0 to ensure the callback
+**          doesn't get counted as stale.
 */
 
 
@@ -9632,6 +9635,7 @@ lk_set_dlm_callback( LKB *lkb, RSB *rsb )
 	*/
 	lkb->lkb_cx_req.cx_user_func = LK_AST_callback;
 	lkb->lkb_cback.cback_cbt_id = LK_mycbt;
+        lkb->lkb_cback.cback_posts = 0;
 	lkb->lkb_cback.cback_rsb_id = rsb->rsb_id;
     }
     else
