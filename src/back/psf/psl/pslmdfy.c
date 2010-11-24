@@ -2437,6 +2437,8 @@ psl_md_part_unique(PSS_SESBLK *sess_cb, DMU_CB *dmucb,
 ** History:
 **	15-Oct-2010 (kschendel) SIR 124544
 **	    Consolidated WITH-parsing needs better messages.
+**	29-Oct-2010 (kschendel)
+**	    Oops, used wrong indicator names for persists/verify, fix.
 */
 
 void
@@ -2495,11 +2497,11 @@ psl_md_action_string(PSS_SESBLK *sess_cb, char *str, i4 *length)
 		    if ((dmucb->dmu_chars.dmu_flags & DMU_FLAG_ACTON) == stornames_ptr->value)
 			name = stornames_ptr->name_string;
 		    break;
-		  case DMU_ACT_PERSISTENCE:
+		  case DMU_PERSISTS_OVER_MODIFIES:
 		    if ((dmucb->dmu_chars.dmu_flags & DMU_FLAG_PERSISTENCE) == stornames_ptr->value)
 			name = stornames_ptr->name_string;
 		    break;
-		  case DMU_ACT_VERIFY:
+		  case DMU_VACTION:
 		    if (dmucb->dmu_chars.dmu_vaction == stornames_ptr->value)
 			name = stornames_ptr->name_string;
 		    break;

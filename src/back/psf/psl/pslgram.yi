@@ -779,6 +779,9 @@
 **	    It now works pretty much the same as SQL create table as select.
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
+**	29-Oct-2010 (kschendel) SIR 124544
+**	    Make set result_structure legal in QUEL, no reason for it to
+**	    be different from sql!
 */
 
 %{
@@ -8305,16 +8308,27 @@ setsql:	    SETSQL
 setrstruct:	    SETRSTRUCT strsetparam
     {
 	i4                err_code;
+	char		*val = $2;
+	bool		compressed = FALSE;
+	i4		sstruct;
 
-	/* "set result_structure" is not legal in QUEL. Issue warning */
-	psq_cb->psq_mode = PSQ_OBSOLETE;
+	psq_cb->psq_mode = PSQ_SRINTO;
 
-	if (cb->pss_ses_flag & PSS_WARNINGS)
+	/* Decode storage structure.  Error if unknown. */
+
+	if (CMcmpnocase(val, "c") == 0)
 	{
-	    /* "set result_structure" is not supported for quel */
-	    (VOID) psf_error(5977L, 0L, PSF_USERERR,
-		&err_code, &psq_cb->psq_error, 0);
+	    compressed = TRUE;
+	    CMnext(val);
 	}
+	sstruct = uld_struct_xlate(val);
+	if (sstruct == 0 || sstruct == DB_RTRE_STORE || sstruct == DB_X100IX_STORE)
+	{
+	    (VOID) psf_error(5916L, 0L, PSF_USERERR, &err_code,
+		&psq_cb->psq_error, 1, (i4) STlength($2), $2);
+	}
+	cb->pss_result_compression = compressed;
+	cb->pss_result_struct = sstruct;
     }
 ;
 

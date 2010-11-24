@@ -489,6 +489,9 @@ SQLSTATE_MAPPING_REQUIRED
 **	11-Oct-2010 (kschendel) SIR 124544
 **	    Drop a bunch of almost-duplicated WITH-option errors, rework
 **	    the remaining ones.
+**	1-Nov-2010 (kschendel) more 124544
+**	    Drop 5977, obsolete quel message.  Drop a few other unused
+**	    messages about long-deleted features such as set cache.
 */
 
 #define _US_CLASS   0
@@ -6085,20 +6088,12 @@ E_US1712_5906:SS42503_INSUF_PRIV
 "SET TRACE: You do not have permission to set trace flags."
 E_US1713_5907:SS42000_SYN_OR_ACCESS_ERR
 "SET TRACE: Trace flag specification too long."
-E_US1714_5908:SS42000_SYN_OR_ACCESS_ERR
-"SET JOURNAL_SIZE: This function no longer available."
 E_US1715_5909:SS50000_MISC_ERRORS
 "SET JOURNALING: Journaling not enabled on this database."
 E_US1716_5910:SS42000_SYN_OR_ACCESS_ERR
 "SET: This set command takes only a single argument (in quotes)."
 E_US1717_5911:SS42000_SYN_OR_ACCESS_ERR
 "SET: An integer argument is required (in quotes)."
-E_US1718_5912:SS42000_SYN_OR_ACCESS_ERR
-"SET: The merge factor must be between 3 and 15 inclusive."
-E_US1719_5913:SS42000_SYN_OR_ACCESS_ERR
-"SET: The sort buffer size must be between 1000 and 1000000 inclusive."
-E_US171A_5914:SS42000_SYN_OR_ACCESS_ERR
-"SET: The freespace buffer size must be between 1000 and 1000000 inclusive."
 E_US171B_5915:SS42000_SYN_OR_ACCESS_ERR
 "Unrecognized storage structure in a SET RET_INTO command.
 Please use one of the following:
@@ -6183,23 +6178,6 @@ in a money value.  Allowed precision values are '0', '1', or '2'
 \n  '0' indicates no digits after the decimal indicator (e.g., 10)
 \n  '1' indicates one digit (e.g. 10.8)
 \n  '2' indicates two digits (e.g. 10.85)"
-E_US1732_5938:SS42000_SYN_OR_ACCESS_ERR
-"SET CACHE: Invalid cache size.  Legal range is 0 - 500.  Setting the
-size of the cache to a larger size than 500 will result in a cache size of 500."
-E_US1733_5939:SS25000_INV_XACT_STATE
-"SET CACHE: You may not issue a SET CACHE command in a multi-query transaction."
-E_US1734_5940:SS50008_UNSUPPORTED_STMT
-"The SET J_FREESZ1 command is no longer supported.
-This function is now done automatically by the system."
-E_US1735_5941:SS50008_UNSUPPORTED_STMT
-"The SET J_FREESZ2 command is no longer supported.
-This function is now done automatically by the system."
-E_US1736_5942:SS50008_UNSUPPORTED_STMT
-"The SET J_FREESZ3 command is no longer supported.
-This function is now done automatically by the system."
-E_US1737_5943:SS50008_UNSUPPORTED_STMT
-"The SET J_FREESZ4 command is no longer supported.
-This function is now done automatically by the system."
 E_US1738_5944:SS50008_UNSUPPORTED_STMT
 "The SET AGGREGATE command is not allowed in distributed INGRES."
 E_US1739_5945:SS50008_UNSUPPORTED_STMT
@@ -6283,19 +6261,10 @@ E_US1753_5971:SS42000_SYN_OR_ACCESS_ERR
 Please use one of the following:
 \n
 \n          PROJECT, NOPROJECT"
-E_US1754_5972:SS50008_UNSUPPORTED_STMT
-"The SET QUERY_SIZE command is no longer supported.
-This function is now done automatically by the system."
 E_US1755_5973:SS42000_SYN_OR_ACCESS_ERR
 "No file name was given for a 'SET TRACE INPUT' or 'SET TRACE OUTPUT' command."
 E_US1756_5974:SS50008_UNSUPPORTED_STMT
 "The SET AUTOCOMMIT command is not supported in QUEL."
-E_US1757_5975:SS50008_UNSUPPORTED_STMT
-"The SET CACHE command is no longer supported."
-E_US1758_5976:SS50008_UNSUPPORTED_STMT
-"The SET J_SORBUFSZ command is no longer supported."
-E_US1759_5977:SS50008_UNSUPPORTED_STMT
-"The SET RESULT_STRUCTURE command is no longer supported."
 E_US175A_5978:SS50008_UNSUPPORTED_STMT
 "The SET RET_INTO command is no longer supported."
 E_US175B_5979:SS50008_UNSUPPORTED_STMT
@@ -6304,8 +6273,6 @@ E_US175C_5980:SS50008_UNSUPPORTED_STMT
 "The SET JOINOP [NO]TIMEOUT command is not allowed in distributed INGRES."
 E_US175D_5981:SS42000_SYN_OR_ACCESS_ERR
 "SET JOINOP: invalid option '%0c'. Must be [NO]TIMEOUT."
-E_US175E_5982:SS50008_UNSUPPORTED_STMT
-"The SET J_SORTBUFSZ command is no longer supported."
 E_US175F_5983:SS42000_SYN_OR_ACCESS_ERR
 "SET AUTOCOMMIT: invalid option '%0c'. Must be ON or OFF."
 E_US1760_5984:SS50000_MISC_ERRORS
