@@ -523,6 +523,8 @@ ult_open_tracefile(void *code)
 **          string. This is because adu_sc930prtdataval is now responsible
 **          for outputting parameters and it calls ult_print_tracefile to
 **          do the PARM part and then outputs the actual value.
+**      22-oct-2010 (maspa05)
+**          Removed PARM/PARMEXEC as they are now handled by adu_sc930prtdataval
 */
 
 void
@@ -530,7 +532,7 @@ ult_print_tracefile(void *file, i2 type, char *string)
 {
 	FILE *f = (FILE*)file;
 	char *type_str,type_str2[50];
-	bool prt_timestamp=TRUE,newline=TRUE;
+	bool prt_timestamp=TRUE;
         char last_sep = ':';
 
 	HRSYSTIME hr;
@@ -602,16 +604,6 @@ ult_print_tracefile(void *file, i2 type, char *string)
 				type_str="COL";
 				prt_timestamp=FALSE;
 				break;
-		case SC930_LTYPE_PARMEXEC:
-				type_str="PARMEXEC";
-				prt_timestamp=FALSE;
-				newline=FALSE;
-				break;
-		case SC930_LTYPE_PARM:
-				type_str="PARM";
-				prt_timestamp=FALSE;
-				newline=FALSE;
-				break;
 		case SC930_LTYPE_QEP:      
 				type_str="QEP";
 				prt_timestamp=FALSE;
@@ -648,18 +640,14 @@ ult_print_tracefile(void *file, i2 type, char *string)
         if (prt_timestamp)
     	{
            TMhrnow(&hr);
-           SIfprintf(f,"%s:%ld/%ld%c%s",
+           SIfprintf(f,"%s:%ld/%ld%c%s\n",
 			     type_str,hr.tv_sec,hr.tv_nsec,last_sep,string);
         }
         else
 	{
-          SIfprintf(f,"%s%c%s",type_str,last_sep,string);
+          SIfprintf(f,"%s%c%s\n",type_str,last_sep,string);
         }
 
-	if (newline)
-	{
-          SIfprintf(f,"\n");
-        }
 
 }
 

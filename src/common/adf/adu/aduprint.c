@@ -1418,6 +1418,8 @@ ADI_FI_ID	    *instr)
 **          instead of seconds.
 **      20-Oct-2010 (maspa05)
 **          Removed un-used tmp_buf buffer
+**      22-Oct-2010 (maspa05)
+**          Removed call to ult_print_tracefile
 */
 
 STATUS
@@ -1477,7 +1479,17 @@ PTR file)
     }
 
     /* output the PARM/PARMEXEC 'header' to the trace file */
-    ult_print_tracefile(file,msg_type,stbuf);
+    switch (msg_type)
+    {
+	    case SC930_LTYPE_PARM:
+		    SIfprintf(file,"PARM:%s",stbuf);
+		    break;
+	    case SC930_LTYPE_PARMEXEC:
+		    SIfprintf(file,"PARMEXEC:%s",stbuf);
+		    break;
+	    default:
+		    SIfprintf(file,"UNKNOWN:%s",stbuf);
+    }
 
     bdt  = abs(db_dv->db_datatype);
     blen = db_dv->db_length - (db_dv->db_datatype < 0);
