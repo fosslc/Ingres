@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -46,7 +46,14 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psy_rolepriv(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psy_rolepriv - GRANT/REVOKE role privileges

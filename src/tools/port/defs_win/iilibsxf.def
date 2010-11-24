@@ -6,6 +6,9 @@
 ;	    Added ordinals.
 ;	25-Aug-2004 (drivi01) 
 ;	    Renamed iisxfnt.def to iilibsxf.def.
+;	09-Nov-2010 (jonj) SIR 124685
+;	    Delete sxap_qloc_compare, sxapo_find_msgid,
+;	    sxapo_init_cnf, sxf_scctalk, no longer global
 
 EXPORTS
 
@@ -59,7 +62,7 @@ sxap_flushbuff		@47
 sxap_position		@48				
 sxap_qallflush		@49				
 sxap_qflush		@50				
-sxap_qloc_compare		@51				
+;sxap_qloc_compare		@51				
 sxap_qloc_incr		@52				
 sxap_qwrite		@53				
 sxap_read		@54				
@@ -75,13 +78,13 @@ sxap_shm_dump		@63
 sxapo_alter		@64				
 sxapo_bgn_ses		@65				
 sxapo_end_ses		@66				
-sxapo_init_cnf		@67				
+;sxapo_init_cnf		@67				
 sxapo_show		@68				
 sxapo_shutdown		@69				
 sxapo_startup		@70				
 sxapo_acctype_to_msgid		@71				
 sxapo_evtype_to_msgid		@72				
-sxapo_find_msgid		@73				
+;sxapo_find_msgid		@73				
 sxapo_msgid_default		@74				
 sxapo_msgid_to_desc		@75				
 sxapo_priv_to_str		@76				
@@ -109,7 +112,7 @@ sxf_set_activity		@96
 sxf_chk_sess_trace		@98				
 sxf_display		@99				
 sxf_scc_trace		@100				
-sxf_scctalk		@101				
+;sxf_scctalk		@101				
 sxf_trace		@102				
 ;sxl_collate		@103				
 ;sxl_compare		@104				

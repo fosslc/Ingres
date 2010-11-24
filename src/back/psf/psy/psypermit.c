@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2008 Ingres Corporation
+** Copyright (c) 1986, 2008, 2010 Ingres Corporation
 */
 
 /*
@@ -404,25 +404,25 @@ NO_OPTIM=nc4_us5
 **          Changes for Long IDs
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Defines of other constants.
-*/
-
+
+/* Forward referenced structures for prototypes */
+typedef struct _PSY_QMAP PSY_QMAP;
+typedef struct _PSY_PQUAL PSY_PQUAL;
+
 /*
 **      Sizes and numbers of qualifications and qualification maps for use
 **	by the process which simplifies qualifications that are appended by
 **	the permit process.
 */
-
 #define                 PSY_MQMAP       4   /* Number of qual. maps to keep */
 #define			PSY_MPQUAL	128 /* Number of quals. to keep */
 
 /*
 **      Macro for allocating bit maps.
 */
-
 #define		    PSYBITMAPSIZE_MACRO(nbits) ((nbits - 1) / BITSPERBYTE + 1)
 
 /*}
@@ -438,6 +438,162 @@ NO_OPTIM=nc4_us5
 */
 typedef i2          PQMAP[PSYBITMAPSIZE_MACRO(PSY_MPQUAL) / 2 + 1];
 
+/* TABLE OF CONTENTS */
+i4 psy_protect(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	PST_QNODE *tree,
+	i4 qmode,
+	DB_ERROR *err_blk,
+	PSF_MSTREAM *mstream,
+	i4 *num_joins,
+	PSY_VIEWINFO **viewinfo);
+i4 psy_dbpperm(
+	PSS_SESBLK *sess_cb,
+	RDF_CB *rdf_cb,
+	PSQ_CB *psq_cb,
+	i4 *required_privs);
+i4 psy_cpyperm(
+	PSS_SESBLK *cb,
+	i4 perms_required,
+	DB_ERROR *err_blk);
+static bool psy_passed_prelim_check(
+	PSS_SESBLK *cb,
+	PSS_RNGTAB *rngvar,
+	i4 qmode);
+static i4 dopro(
+	PSS_RNGTAB *rngvar,
+	PST_QNODE *root,
+	i4 query_mode,
+	i4 qmode,
+	PSY_ATTMAP *byset,
+	bool retrtoall,
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	RDF_CB *rdf_cb,
+	RDF_CB *rdf_tree_cb,
+	PSS_DUPRB *dup_rb,
+	PSS_RNGTAB *err_rngvar,
+	PSY_ATTMAP *attrmap);
+static i4 applypq(
+	PSS_SESBLK *sess_cb,
+	i4 size,
+	PSY_QMAP *qmap,
+	PSY_PQUAL *pqual,
+	i4 checkany,
+	PST_QNODE **outtree,
+	PSS_DUPRB *dup_rb);
+static i4 gorform(
+	PSS_SESBLK *sess_cb,
+	i4 size,
+	PQMAP map,
+	PSY_PQUAL *pqual,
+	PST_QNODE **qual,
+	PSS_DUPRB *dup_rb);
+static i4 pickqmap(
+	i4 size,
+	PSY_QMAP *qmap);
+static i4 makedset(
+	PSS_RNGTAB *var,
+	PST_QNODE *tree,
+	i4 query_mode,
+	i4 qmode,
+	i4 retrtoall,
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	i4 *uset,
+	i4 *rset,
+	i4 *aset,
+	i4 *qset,
+	RDF_CB *rdf_cb,
+	RDF_CB *rdf_tree_cb,
+	PSS_DUPRB *dup_rb);
+i4 proappl(
+	register DB_PROTECTION *protup,
+	bool *result,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+i4 prochk(
+	i4 privs,
+	i4 *domset,
+	register DB_PROTECTION *protup,
+	PSS_SESBLK *sess_cb);
+static void btmask(
+	i4 size,
+	char *mask,
+	char *result);
+i4 psy_do_alarm_fail(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	i4 qmode,
+	DB_ERROR *err_blk);
+void psy_att_map(
+	PST_QNODE *t,
+	i4 rgno,
+	char *attrmap);
+void psy_fill_attmap(
+	register i4 *map,
+	register i4 val);
+i4 psy_grantee_ok(
+	PSS_SESBLK *sess_cb,
+	DB_PROTECTION *protup,
+	bool *applies,
+	DB_ERROR *err_blk);
+static i4 psy_check_permits(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	PSY_ATTMAP *uset,
+	PSY_ATTMAP *rset,
+	PSY_ATTMAP *aset,
+	PSY_ATTMAP *qset,
+	i4 *privs,
+	i4 query_mode,
+	i4 qmode,
+	PSS_DUPRB *dup_rb,
+	PSY_QMAP *qmap,
+	PSY_PQUAL *pqual,
+	RDF_CB *rdf_cb,
+	RDF_CB *rdf_tree_cb,
+	PSS_USRRANGE *rngtab,
+	i4 *pndx);
+i4 psy_insert_objpriv(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_ID *objid,
+	i4 objtype,
+	i4 privmap,
+	PSF_MSTREAM *mstream,
+	PSQ_OBJPRIV **priv_list,
+	DB_ERROR *err_blk);
+i4 psy_insert_colpriv(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_ID *tabid,
+	i4 objtype,
+	register i4 *attrmap,
+	i4 privmap,
+	PSF_MSTREAM *mstream,
+	PSQ_COLPRIV **priv_list,
+	DB_ERROR *err_blk);
+i4 psy_check_objprivs(
+	PSS_SESBLK *sess_cb,
+	i4 *required_privs,
+	PSQ_OBJPRIV **priv_descriptor,
+	PSQ_OBJPRIV **priv_list,
+	bool *missing,
+	DB_TAB_ID *id,
+	PSF_MSTREAM *mstream,
+	i4 obj_type,
+	DB_ERROR *err_blk);
+static i4 psy_check_colprivs(
+	PSS_SESBLK *sess_cb,
+	register i4 *required_priv,
+	PSQ_COLPRIV **priv_descriptor,
+	PSQ_COLPRIV **priv_list,
+	bool *missing,
+	DB_TAB_ID *id,
+	i4 *attrmap,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+
 /*}
 ** Name: PSY_QMAP - Qualification map
 **
@@ -469,7 +625,7 @@ typedef i2          PQMAP[PSYBITMAPSIZE_MACRO(PSY_MPQUAL) / 2 + 1];
 **	20-Jul-2004 (schka24)
 **	    rename q_active to q_usemap, use bool.
 */
-typedef struct _PSY_QMAP
+struct _PSY_QMAP
 {
     PQMAP           q_map;              /* Bit map of qualifications */
     bool	    q_applies;		/*
@@ -488,7 +644,7 @@ typedef struct _PSY_QMAP
     bool	    q_unqual;		/* TRUE means there is an unqualified
 					** permit that applies
 					*/
-} PSY_QMAP;
+};
 
 /*}
 ** Name: PSY_PQUAL - Permit qualification
@@ -501,11 +657,11 @@ typedef struct _PSY_QMAP
 **     23-jun-86 (jeff)
 **	    Adapted from PQUAL structure in 4.0
 */
-typedef struct _PSY_PQUAL
+struct _PSY_PQUAL
 {
     PST_QNODE	    *p_qual;            /* The qualification */
     i4              p_used;             /* TRUE means this qual was used */
-} PSY_PQUAL;
+};
 
 /*
 **  Definition of static variables and forward static functions.
@@ -516,128 +672,6 @@ typedef struct _PSY_PQUAL
 					** relstat to determine if the user may
 					** access a given table
 					*/
-static bool
-psy_passed_prelim_check(
-	PSS_SESBLK	    *cb,
-	PSS_RNGTAB	    *rngvar,
-	i4		    qmode);
-
-					/* Do the protection algorithm */
-static DB_STATUS
-dopro(
-	PSS_RNGTAB	*rngvar,
-	PST_QNODE	*root,
-	i4		query_mode,
-	i4		qmode,
-	PSY_ATTMAP	*byset,
-	bool		retrtoall,
-	PSS_SESBLK	*sess_cb,
-	PSS_USRRANGE	*rngtab,
-	RDF_CB		*rdf_cb,
-	RDF_CB		*rdf_tree_cb,
-	PSS_DUPRB	*dup_rb,
-	PSS_RNGTAB	*err_rngvar,
-	PSY_ATTMAP      *attrmap);
-
-					/* Apply permit qualifications */
-static DB_STATUS
-applypq(
-	PSS_SESBLK  *sess_cb,
-	i4	    size,
-	PSY_QMAP    qmap[],
-	PSY_PQUAL   pqual[PSY_MPQUAL],
-	i4	    checkany,
-	PST_QNODE   **outtree,
-	PSS_DUPRB   *dup_rb);
-
-					/* Form disjunct of all pquals
-					** referenced in maps.
-					*/
-static DB_STATUS
-gorform(
-	PSS_SESBLK	    *sess_cb,
-	i4		   size,
-	PQMAP		   map,
-	PSY_PQUAL	   pqual[],
-	PST_QNODE	   **qual,
-	PSS_DUPRB	    *dup_rb);
-
-					/* Select a qmap for elimination from
-					** the pqual bit matrix.
-					*/
-static i4
-pickqmap(
-	i4	    size,
-	PSY_QMAP    qmap[]);
-
-					/* Make domain reference sets */
-static DB_STATUS
-makedset(
-	PSS_RNGTAB	    *var,
-	PST_QNODE	    *tree,
-	i4		    query_mode,
-	i4		    qmode,
-	i4		    retrtoall,
-	PSS_SESBLK	    *sess_cb,
-	PSS_USRRANGE	    *rngtab,
-	i4		    *uset,
-	i4		    *rset,
-	i4		    *aset,
-	i4		    *qset,
-	RDF_CB		    *rdf_cb,
-	RDF_CB		    *rdf_tree_cb,
-	PSS_DUPRB	    *dup_rb);
-
-					/* Clear bits according to mask */
-static VOID
-btmask(
-	i4     size,
-	char	*mask,
-	char	*result);
-
-					/*
-					** in the course of parsing a dbproc, 
-					** check the existing list of 
-					** column-specific privileges to
-					** determine if the current user 
-					** possesses (or does not possess) a 
-					** required column-specific privilege
-					*/
-static DB_STATUS
-psy_check_colprivs(
-	PSS_SESBLK	*sess_cb,
-	register i4	*required_priv,
-	PSQ_COLPRIV	**priv_descriptor,
-	PSQ_COLPRIV     **priv_list,
-	bool		*missing,
-	DB_TAB_ID	*id,
-	i4		*attrmap,
-	PSF_MSTREAM	*mstream,
-	DB_ERROR	*err_blk);
-
-					/*
-					** check if there are permits to satisfy
-					** the required privileges
-					*/
-static DB_STATUS
-psy_check_permits(
-	PSS_SESBLK	*sess_cb,
-	PSS_RNGTAB      *rngvar,
-	PSY_ATTMAP	*uset,
-	PSY_ATTMAP	*rset,
-	PSY_ATTMAP	*aset,
-	PSY_ATTMAP	*qset,
-	i4		*privs,
-	i4		query_mode,
-	i4		qmode,
-	PSS_DUPRB	*dup_rb,
-	PSY_QMAP	*qmap,
-	PSY_PQUAL	*pqual,
-	RDF_CB		*rdf_cb,
-	RDF_CB		*rdf_tree_cb,
-	PSS_USRRANGE	*rngtab,
-	i4		*pndx);
-
 #ifdef    xDEBUG
 					/* print attribute map */
 static VOID
@@ -649,7 +683,7 @@ pr_set(
 static VOID
 pr_qmap(
 	i4	    size,
-	PSY_QMAP    qmap[]);
+	PSY_QMAP    *qmap);
 
 					/* Print bits in vector */
 static VOID
@@ -903,7 +937,7 @@ psy_protect(
 	DB_ERROR	    *err_blk,
 	PSF_MSTREAM	    *mstream,
 	i4	    	    *num_joins,
-	PSY_VIEWINFO	    *viewinfo[])
+	PSY_VIEWINFO	    **viewinfo)
 {
     register PST_QNODE	*r;
     register i4	vn;
@@ -929,7 +963,7 @@ psy_protect(
 				    */
     PSS_RNGTAB		*index_rngvar = (PSS_RNGTAB *) NULL;
 
-    register PSS_RNGTAB	*rngvar;
+    register PSS_RNGTAB	*rngvar = NULL;
     
     DB_STATUS		status = E_DB_OK, stat;
     RDF_CB		rdf_cb;		/* For permit tuples */
@@ -3758,8 +3792,8 @@ static DB_STATUS
 applypq(
 	PSS_SESBLK  *sess_cb,
 	i4	    size,
-	PSY_QMAP    qmap[],
-	PSY_PQUAL   pqual[PSY_MPQUAL],
+	PSY_QMAP    *qmap,
+	PSY_PQUAL   *pqual,
 	i4	    checkany,
 	PST_QNODE   **outtree,
 	PSS_DUPRB   *dup_rb)
@@ -3906,7 +3940,7 @@ gorform(
 	PSS_SESBLK	    *sess_cb,
 	i4		   size,
 	PQMAP		   map,
-	PSY_PQUAL	   pqual[],
+	PSY_PQUAL	   *pqual,
 	PST_QNODE	   **qual,
 	PSS_DUPRB	    *dup_rb)
 {
@@ -3994,7 +4028,7 @@ gorform(
 static i4
 pickqmap(
 	i4	    size,
-	PSY_QMAP    qmap[])
+	PSY_QMAP    *qmap)
 {
     i4		score;
     i4		maxscore = -1;
@@ -4643,7 +4677,7 @@ prochk(
 	PSS_SESBLK		*sess_cb)
 {
     register i4         *d;
-    register i4	i;
+    register u_i4	i;
     register i4		*dset;
     i4			valid_attr_map;
 #ifdef	  xDEBUG
@@ -4797,7 +4831,7 @@ pr_set(
 	char   *labl)
 {
     register i4         *x;
-    register i4	i;
+    register u_i4	i;
     char		str[25];
 
     TRdisplay("\t%s: ", labl);
@@ -4849,7 +4883,7 @@ pr_set(
 static VOID
 pr_qmap(
 	i4	    size,
-	PSY_QMAP    qmap[])
+	PSY_QMAP    *qmap)
 {
     register i4     i;
     char	    buf[PSY_MPQUAL + (PSY_MPQUAL - 1) / 4 + 1];
@@ -6066,6 +6100,7 @@ psy_check_permits(
 	    }
 	    if (privs_to_find != 0)
 	    {
+		register u_i4 u;
 		/* We only care about the column map change, if any.
 		** prochk will clear any bits for permitted columns.
 		*/
@@ -6079,9 +6114,9 @@ psy_check_permits(
 		    ** or it's ignored.
 		    ** See if we have all needed columns in this permit.
 		    */
-		    for (i = 0; i < DB_COL_WORDS; ++i)
+		    for (u = 0; u < DB_COL_WORDS; ++u)
 		    {
-			if ((upd_map->map[i] & ones_mask.map[i]) != 0)
+			if ((upd_map->map[u] & ones_mask.map[u]) != 0)
 			{
 			    privs_found = 0;
 			    /* Claim that nothing happened... */
@@ -6097,8 +6132,8 @@ psy_check_permits(
 		    ** Clear any column permits this tuple had, see if we have
 		    ** them all yet
 		    */
-		    for (i = 0; i < DB_COL_WORDS; ++i)
-			if ( (upd_map->map[i] &= ones_mask.map[i]) != 0)
+		    for (u = 0; u < DB_COL_WORDS; ++u)
+			if ( (upd_map->map[u] &= ones_mask.map[u]) != 0)
 			    privs_found = 0;
 		    /* If we have a GRANT OPTION permit tuple, record the
 		    ** columns it permits in our wgo map as well (if we care)
@@ -6108,8 +6143,8 @@ psy_check_permits(
 		      && uncond_privs_left_wgo & repref_privs)
 		    {
 			privs_found_wgo = repref_privs;
-			for (i = 0; i < DB_COL_WORDS; ++i)
-			    if ( (upd_cond_map_wgo.map[i] &= ones_mask.map[i]) != 0)
+			for (u = 0; u < DB_COL_WORDS; ++u)
+			    if ( (upd_cond_map_wgo.map[u] &= ones_mask.map[u]) != 0)
 				privs_found_wgo = 0;
 		    }
 		}
@@ -6282,11 +6317,12 @@ psy_check_permits(
 		*/
 		if (upd_map != NULL)
 		{
+		    register u_i4 u;
 		    if (upd_map == &upd_cond_map)
 		    {
 			tuple_privs = repref_privs;
-			for (i = 0; i < DB_COL_WORDS; ++i)
-			    if ( (upd_uncond_map.map[i] &= ones_mask.map[i]) != 0)
+			for (u = 0; u < DB_COL_WORDS; ++u)
+			    if ( (upd_uncond_map.map[u] &= ones_mask.map[u]) != 0)
 				tuple_privs = 0;
 			uncond_privs_left &= ~tuple_privs;
 		    }
@@ -6295,8 +6331,8 @@ psy_check_permits(
 		    {
 			/* This permit is WGO, record it as WGO as well */
 			tuple_privs = repref_privs;
-			for (i = 0; i < DB_COL_WORDS; ++i)
-			    if ( (upd_uncond_map_wgo.map[i] &= ones_mask.map[i]) != 0)
+			for (u = 0; u < DB_COL_WORDS; ++u)
+			    if ( (upd_uncond_map_wgo.map[u] &= ones_mask.map[u]) != 0)
 				tuple_privs = 0;
 			uncond_privs_left_wgo &= ~tuple_privs;
 		    }
@@ -6929,7 +6965,7 @@ psy_insert_colpriv(
 
     if (objtype & PSQ_OBJTYPE_IS_TABLE)
     {
-	register i4     i;
+	register u_i4     i;
 
 	for (i = 0, descr_attrmap = priv_descr->psq_attrmap;
 	     i < DB_COL_WORDS;
@@ -7295,7 +7331,7 @@ psy_check_colprivs(
 	PSF_MSTREAM	*mstream,
 	DB_ERROR	*err_blk)
 {
-    register i4	i;
+    register u_i4	i;
 
     *missing = FALSE;
     *priv_descriptor = (PSQ_COLPRIV *) NULL;

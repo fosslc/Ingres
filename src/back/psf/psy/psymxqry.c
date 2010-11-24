@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -76,8 +76,14 @@
 **	    Short-circuit calls to psy_secaudit() if not C2SECURE.
 **      15-Apr-2003 (bonro01)
 **          Added include <psyaudit.h> for prototype of psy_secaudit()
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psy_maxquery(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psy_maxquery - Validate and set temporary query limits
@@ -167,7 +173,6 @@ psy_maxquery(
 		    qcost_limit;
     SCF_CB	    scf_cb;
     SCF_SCI	    sci_list[7];
-    QEF_CB	    *qef_cb;
     QEF_RCB	    qef_rcb;
     QEF_ALT	    qef_alt[6];
     OPF_CB	    opf_cb;

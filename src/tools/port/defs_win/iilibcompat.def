@@ -107,6 +107,8 @@
 ;           Comment out various internal or unused MM, MO and SP functions.
 ;	08-Nov-2010 (bonro01)
 ;	    Comment out MO_tr_set missed in previous change.
+;	08-Nov-2010 (kiria01) SIR 124685
+;	    Add missing TRvformat
 
 EXPORTS
 	iiBTand	@1				
@@ -157,6 +159,7 @@ EXPORTS
 	CMunctrl	@46				
 	CMread_attr	@47				
 	CMvalidhostname	@48							
+	TRvformat	@49
 	CMvalidpathname	@50				
 	CMvalidusername	@51				
 	CMstrtest	@52				
@@ -250,6 +253,8 @@ EXPORTS
 	CSmo_hwm_active_get	@140				
 	CS_num_active	@141				
 	CS_hwm_active	@142				
+;@143
+;@144
 	IICSa_semaphore	@145				
 	IICSd_semaphore	@146				
 	IICSi_semaphore	@147				
@@ -879,6 +884,7 @@ EXPORTS
 	GCpasswd_prompt	@771				
 	GCpasswd_delete_vnode_info	@772				
 	cmicopy	@773				
+;@774
 	cmkcheck	@775				
 	GetOpenRoadStyle	@776				
 	IICSget_cpid	@777				
@@ -1203,4 +1209,3 @@ EXPORTS
 	GCwinsock2_restore @1096			
 	MHtrunc		@1097
 	IICSadjust_i8counter	@1098		
-

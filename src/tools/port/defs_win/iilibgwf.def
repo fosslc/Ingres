@@ -4,11 +4,27 @@
 ;	25-Aug-2004 (drivi01)
 ;	    Renamed iigwfnt.def to iilibgwf.def
 ;	    due to new build procedures.
+;	09-Nov-2010 (jonj) SIR 124685
+;	    Deleted GM_conn_dump, GM_conn_state,
+;	    GM_dc_conn_instance, GM_gt_conn,
+;	    GM_mk_conn_instance, GM_opblk_type,
+;	    GM_req_conn, GM_resp_conn,
+;	    GM_rm_vnode, gw08_abort, gw08_begin,
+;	    gw08_close, gw08_commit, gw08_delete,
+;	    gw08_get, gw08_idxf, gw08_info,
+;	    gw08_open, gw08_position, gw08_put,
+;	    gw08_replace, gw08_tabf, gw08_term,
+;	    gw09_abort, gw09_begin, gw09_close
+;	    gw09_commit, gw09_delete, gw09_get
+;	    gw09_idxf, gw09_info, gw09_open,
+;	    gw09_position, gw09_put, gw09_replace,
+;	    gw09_tabf, gw09_term, gwf_error,
+;	    gwf_scc_trace, gwsxa_error
 ;
 
 EXPORTS
 gwf_call		@1				
-gwf_error		@2				
+;gwf_error		@2				
 gwf_errsend		@3				
 gwf_init		@4				
 gwf_svr_info		@5				
@@ -31,7 +47,7 @@ gwt_open		@21
 gwt_register		@22				
 gwt_remove		@23				
 gwf_chk_sess_trace		@24				
-gwf_scc_trace		@25				
+;gwf_scc_trace		@25				
 gwf_scctalk		@26				
 gwf_trace		@27				
 gwu_atxn		@28				
@@ -68,7 +84,7 @@ gwsxa_find_msgid		@58
 gwsxa_msgid_default		@59				
 gwsxa_msgid_to_desc		@60				
 gwsxa_sxf_to_ingres		@61				
-gwsxa_error		@62				
+;gwsxa_error		@62				
 GWSXAmo_attach		@63				
 gwsxa_find_attbyid		@64				
 gwsxa_find_attbyname		@65				
@@ -76,36 +92,36 @@ gwsxa_priv_user		@66
 gwsxa_scf_session		@67				
 gwsxa_zapblank		@68				
 gwsxachkrcb		@69				
-gw09_abort		@70				
-gw09_begin		@71				
-gw09_close		@72				
-gw09_commit		@73				
-gw09_delete		@74				
-gw09_get		@75				
-gw09_idxf		@76				
-gw09_info		@77				
+;gw09_abort		@70				
+;gw09_begin		@71				
+;gw09_close		@72				
+;gw09_commit		@73				
+;gw09_delete		@74				
+;gw09_get		@75				
+;gw09_idxf		@76				
+;gw09_info		@77				
 gw09_init		@78				
-gw09_open		@79				
-gw09_position		@80				
-gw09_put		@81				
-gw09_replace		@82				
-gw09_tabf		@83				
-gw09_term		@84				
-gw08_abort		@85				
-gw08_begin		@86				
-gw08_close		@87				
-gw08_commit		@88				
-gw08_delete		@89				
-gw08_get		@90				
-gw08_idxf		@91				
-gw08_info		@92				
+;gw09_open		@79				
+;gw09_position		@80				
+;gw09_put		@81				
+;gw09_replace		@82				
+;gw09_tabf		@83				
+;gw09_term		@84				
+;gw08_abort		@85				
+;gw08_begin		@86				
+;gw08_close		@87				
+;gw08_commit		@88				
+;gw08_delete		@89				
+;gw08_get		@90				
+;gw08_idxf		@91				
+;gw08_info		@92				
 gw08_init		@93				
-gw08_open		@94				
-gw08_position		@95				
-gw08_put		@96				
-gw08_replace		@97				
-gw08_tabf		@98				
-gw08_term		@99				
+;gw08_open		@94				
+;gw08_position		@95				
+;gw08_put		@96				
+;gw08_replace		@97				
+;gw08_tabf		@98				
+;gw08_term		@99				
 GM_0error		@100				
 GM_10error		@101				
 GM_1error		@102				
@@ -135,7 +151,7 @@ GM_keyfind		@125
 GM_lop		@126				
 GM_op		@127				
 GM_opblk_dump		@128				
-GM_opblk_type		@129				
+;GM_opblk_type		@129				
 GM_pt_and_trim		@130				
 GM_pt_to_opblk		@131				
 GM_rop		@132				
@@ -144,23 +160,23 @@ GM_str_to_opblk		@134
 GM_trim_pt_to_opblk		@135				
 GM_tup_put		@136				
 GM_ad_conn		@137				
-GM_conn_dump		@138				
+;GM_conn_dump		@138				
 GM_conn_error		@139				
-GM_conn_state		@140				
+;GM_conn_state		@140				
 GM_key_place		@141				
 GM_klast_place		@142				
 GM_last_place		@143				
-GM_req_conn		@144				
-GM_resp_conn		@145				
+;GM_req_conn		@144				
+;GM_resp_conn		@145				
 GM_rm_conn		@146				
-GM_rm_vnode		@147				
+;GM_rm_vnode		@147				
 GM_rsb_place		@148				
 GM_cindex		@149				
 GM_conn_get		@150				
 GM_cplace_get		@151				
-GM_dc_conn_instance		@152				
-GM_gt_conn		@153				
-GM_mk_conn_instance		@154				
+;GM_dc_conn_instance		@152				
+;GM_gt_conn		@153				
+;GM_mk_conn_instance		@154				
 GM_pindex		@155				
 GM_pmib_init		@156				
 GM_sflags_get		@157				

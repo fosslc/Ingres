@@ -1,11 +1,12 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
 #include    <gl.h>
 #include    <cs.h>
 #include    <cm.h>
+#include    <cv.h>
 #include    <qu.h>
 #include    <st.h>
 #include    <me.h>
@@ -63,7 +64,29 @@
 **          Store blank trimmed names in DMT_ATT_ENTRY
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psy_print(
+	PSF_MSTREAM *mstream,
+	i4 map[],
+	PSY_QTEXT **block,
+	unsigned char *text,
+	i4 length,
+	PSS_USRRANGE *rngtab,
+	DB_ERROR *err_blk);
+i4 psy_put(
+	PSF_MSTREAM *mstream,
+	register char *inbuf,
+	register i4 len,
+	PSY_QTEXT **block,
+	DB_ERROR *err_blk);
+i4 psy_txtalloc(
+	PSF_MSTREAM *mstream,
+	PSY_QTEXT **newblock,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: psy_print	- Format query text to send to user

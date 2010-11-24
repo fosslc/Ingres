@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -67,8 +67,31 @@
 **	    of DB_STATUS.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+PST_QNODE *psy_trmqlnd(
+	PST_QNODE *qual);
+i4 psy_apql(
+	PSS_SESBLK *cb,
+	PSF_MSTREAM *mstream,
+	PST_QNODE *qual,
+	PST_QNODE *root,
+	DB_ERROR *err_blk);
+i4 psy_mrgvar(
+	PSS_USRRANGE *rngtab,
+	register i4 a,
+	register i4 b,
+	PST_QNODE *root,
+	DB_ERROR *err_blk);
+i4 psy_error(
+	i4 errorno,
+	i4 qmode,
+	PSS_RNGTAB *rngvar,
+	DB_ERROR *err_blk,
+	...);
 
 /*{
 ** Name: psy_trmqlnd	- Trim QLEND node off of qualification
@@ -406,39 +429,20 @@ psy_mrgvar(
 **	28-nov-2007 (dougi)
 **	    Added PSQ_REPDYN to PSQ_DEFCURS for cached dynamic qs.
 */
-/*VARARGS4*/
 DB_STATUS
-psy_error(errorno, qmode, rngvar, err_blk, p1, p2, p3, p4, p5, p6)
-i4            errorno;
-i4		   qmode;
-PSS_RNGTAB	   *rngvar;
-DB_ERROR	   *err_blk;
-i4		   p1;
-PTR		   p2;
-i4		   p3;
-PTR		   p4;
-i4		   p5;
-PTR		   p6;
-/*
 psy_error(
-	i4            errorno,
-	i4		   qmode,
-	PSS_RNGTAB	   *rngvar,
-	DB_ERROR	   *err_blk,
-	i4		   p1,
-	PTR		   p2,
-	i4		   p3,
-	PTR		   p4,
-	i4		   p5,
-	PTR		   p6)
-*/
+	i4 errorno,
+	i4 qmode,
+	PSS_RNGTAB *rngvar,
+	DB_ERROR *err_blk,
+	...)
 {
-    char                tabname[DB_TAB_MAXNAME + 1];
-    char		ownname[DB_OWN_MAXNAME + 1];
-    char		*modestr;
-    i4			err_code;
-    DB_STATUS		status;
-    PSS_SESBLK		*sess_cb;
+    char	tabname[DB_TAB_MAXNAME + 1];
+    char	ownname[DB_OWN_MAXNAME + 1];
+    char	*modestr;
+    i4		err_code;
+    PSS_SESBLK	*sess_cb;
+    va_list	ap;
 
     sess_cb = psf_sesscb();
 
@@ -487,8 +491,13 @@ psy_error(
     STncpy(ownname, rngvar->pss_ownname.db_own_name, DB_OWN_MAXNAME);
     ownname[ DB_OWN_MAXNAME ] = '\0';
 
+    va_start(ap, err_blk);
     if (qmode >= 0)
     {
+	i4	p1 = (i4)va_arg(ap, i4);
+	PTR	p2 = (PTR)va_arg(ap, PTR);
+	i4	p3 = (i4)va_arg(ap, i4);
+	PTR	p4 = (PTR)va_arg(ap, PTR);
 	(VOID) psf_error(errorno, 0L, PSF_USERERR, &err_code, err_blk, 5,
 	    (i4) STtrmwhite(modestr), modestr,
 	    (i4) STtrmwhite(tabname), tabname,
@@ -497,11 +506,16 @@ psy_error(
     }
     else
     {
+	i4	p1 = (i4)va_arg(ap, i4);
+	PTR	p2 = (PTR)va_arg(ap, PTR);
+	i4	p3 = (i4)va_arg(ap, i4);
+	PTR	p4 = (PTR)va_arg(ap, PTR);
 	(VOID) psf_error(errorno, 0L, PSF_USERERR, &err_code, err_blk, 4,
 	    (i4) STtrmwhite(tabname), tabname,  
 	    (i4) STtrmwhite(ownname), ownname,
 	    p1, p2, p3, p4);
     }
 
+    va_end(ap);
     return (E_DB_OK);
 }

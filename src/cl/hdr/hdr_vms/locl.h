@@ -52,6 +52,9 @@
 **          not used by the VMS' LOinfo() as files can't be symbolic links.
 **	31-jan-2008 (toumi01/abbjo03) BUG 115913
 **	    Add LO_IS_UNKNOWN.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    In cleaning up PSF errors, added LOCATION_INIT as a supported
+**	    initial value for LOCATION.
 **/
 
 /* 
@@ -165,6 +168,7 @@ typedef struct
 	unsigned char typelen;	/* Length of type part */
 	unsigned char verlen;	/* Length of version part */
 } LOCATION;
+#define LOCATION_INIT {NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,0,0,0}
 
 
 /*

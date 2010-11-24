@@ -129,6 +129,11 @@
 **          SC930_LTYPE_XA_PREPARE, SC930_LTYPE_XA_COMMIT, 
 **          SC930_LTYPE_XA_ROLLBACK, SC930_LTYPE_XA_UNKNOWN and bumped the
 **          SC930_VERSION
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Declare uleFormatNV unconditionally.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Add uleFormatFcnV to enable calling of uleFormatFcn with
+**	    direct parameter vector.
 **/
 #ifndef TR_HDR_INCLUDED
 #include <tr.h>
@@ -642,6 +647,21 @@ FUNC_EXTERN VOID      ule_initiate( char *node_name, i4  l_node_name,
 ** in a way that is type correct for the first twelve arguments.
 */
 
+FUNC_EXTERN DB_STATUS uleFormatFcnV(
+	DB_ERROR       *dberror,
+	i4	       error_code,
+	CL_ERR_DESC    *clerror,
+	i4             flag,
+	DB_SQLSTATE    *sqlstate,
+	char           *msg_buffer,
+	i4             msg_buf_length,
+	i4             *msg_length,
+	i4	       *uleError,
+	PTR	       FileName,
+	i4	       LineNumber,
+	i4	       num_parms,
+	va_list		ap);
+
 FUNC_EXTERN DB_STATUS uleFormatFcn(
         DB_ERROR       *dberror,
 	i4	       error_code,
@@ -654,6 +674,31 @@ FUNC_EXTERN DB_STATUS uleFormatFcn(
         i4	       *uleError,
 	PTR	       FileName,
 	i4	       LineNumber,
+	i4	       num_parms,
+        ...);
+
+FUNC_EXTERN DB_STATUS uleFormatNV(
+        DB_ERROR       *dberror,
+	i4	       error_code,
+        CL_ERR_DESC    *clerror,
+        i4             flag,
+        DB_SQLSTATE    *sqlstate,
+        char           *msg_buffer,
+        i4             msg_buf_length,
+        i4             *msg_length,
+        i4	       *uleError,
+	i4	       num_parms,
+        ...);
+
+FUNC_EXTERN DB_STATUS ule_formatNV(
+	i4	       error_code,
+        CL_ERR_DESC    *clerror,
+        i4             flag,
+        DB_SQLSTATE    *sqlstate,
+        char           *msg_buffer,
+        i4             msg_buf_length,
+        i4             *msg_length,
+        i4	       *uleError,
 	i4	       num_parms,
         ...);
 
@@ -681,32 +726,7 @@ FUNC_EXTERN DB_STATUS uleFormatFcn(
 /* Variadic macros not supported */
 #define uleFormat uleFormatNV
 
-FUNC_EXTERN DB_STATUS uleFormatNV(
-        DB_ERROR       *dberror,
-	i4	       error_code,
-        CL_ERR_DESC    *clerror,
-        i4             flag,
-        DB_SQLSTATE    *sqlstate,
-        char           *msg_buffer,
-        i4             msg_buf_length,
-        i4             *msg_length,
-        i4	       *uleError,
-	i4	       num_parms,
-        ...);
-
 #define ule_format ule_formatNV
-
-FUNC_EXTERN DB_STATUS ule_formatNV(
-	i4	       error_code,
-        CL_ERR_DESC    *clerror,
-        i4             flag,
-        DB_SQLSTATE    *sqlstate,
-        char           *msg_buffer,
-        i4             msg_buf_length,
-        i4             *msg_length,
-        i4	       *uleError,
-	i4	       num_parms,
-        ...);
 
 #endif /* HAS_VARIADIC_MACROS */
 

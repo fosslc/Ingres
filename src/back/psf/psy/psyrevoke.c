@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -71,15 +71,24 @@
 **	    of DB_STATUS. Supply scf_session to SCF when it's known.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward functions.
-*/
 
-extern PSF_SERVBLK	*Psf_srvblk;
-
+/* TABLE OF CONTENTS */
+i4 psy_revoke(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_v2b_col_xlate(
+	DB_TAB_ID *view_id,
+	i4 *view_attrmap,
+	DB_TAB_ID *base_id,
+	i4 *base_attrmap);
+i4 psy_b2v_col_xlate(
+	DB_TAB_ID *view_id,
+	i4 *view_attrmap,
+	DB_TAB_ID *base_id,
+	i4 *base_attrmap);
 
 /*{
 ** Name: psy_revoke	- Execute REVOKE ON [TABLE] | PROCEDURE | DBEVENT |
@@ -196,7 +205,6 @@ psy_revoke(
     DB_PROTECTION	ptuple;
     register DB_PROTECTION *protup = &ptuple;
     i4			*domset	= ptuple.dbp_domset;
-    register i4	i;
     i4		err_code;
     PSY_USR		*psy_usr;
     PSY_TBL		*psy_tbl;
@@ -204,7 +212,6 @@ psy_revoke(
     i4			colpriv_map;
     bool		noncol;
     bool		revoke_from_public;
-    char		*ch;
     i4			revoke_all = psy_cb->psy_flags & PSY_ALL_PRIVS;
 
     /*
@@ -846,8 +853,6 @@ psy_revoke(
 	*/
 	if (updtcols)
 	{
-	    i4	*attrid;
-
 	    protup->dbp_popset = protup->dbp_popctl =
 		DB_REPLACE | (psy_cb->psy_opmap & DB_GRANT_OPTION);
 
@@ -979,8 +984,6 @@ psy_revoke(
 	*/
 	if (refcols)
 	{
-	    i4	*attrid;
-
 	    protup->dbp_popset = protup->dbp_popctl =
 		DB_REFERENCES | (psy_cb->psy_opmap & DB_GRANT_OPTION);
 
@@ -1214,7 +1217,6 @@ psy_v2b_col_xlate(
 
     for (;;)	    /* something to break out of */
     {
-	i4		err_code;
 	i4		cur_attr, next_attr;
 	i4		found = FALSE;
 	DB_TAB_ID	cur_id;
@@ -1360,8 +1362,9 @@ psy_v2b_col_xlate(
 	    */
 	    if (!(found = empty_map))
 	    {
-		for (i = 0; i < DB_COL_WORDS; i++)
-		    attrmap[i] = base_attrmap[i];
+		register u_i4 u;
+		for (u = 0; u < DB_COL_WORDS; u++)
+		    attrmap[u] = base_attrmap[u];
 	    }
 	}
 
@@ -1546,7 +1549,6 @@ psy_b2v_col_xlate(
 
     for (;;)	    /* something to break out of */
     {
-	i4		err_code;
 	i4		cur_attr;
 	DB_TAB_ID	cur_id;
 	i2		*tmp;

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -84,8 +84,21 @@
 **	    Short-circuit calls to psy_secaudit() if not C2SECURE.
 **      15-Apr-2003 (bonro01)
 **          Added include <psyaudit.h> for prototype of psy_secaudit()
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psy_qrymod(
+	PST_QNODE *qtree,
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_J_ID *num_joins,
+	i4 *resp_mask);
+i4 psy_qminit(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSF_MSTREAM *mstream);
 
 /*{
 ** Name: psy_qrymod	- Process views, permits, and integrities

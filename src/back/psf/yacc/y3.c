@@ -20,12 +20,40 @@
 **      16-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
 */
+
+/* TABLE OF CONTENTS */
+void output (void);
+i4 apack (
+	i4	*p,
+	i4	n);
+void go2out (void);
+static void go2gen (
+	i4	c);
+static void precftn (
+	i4	r,
+	i4	t,
+	i4	s);
+static void wract (
+	i4	i);
+static void wrstate (
+	i4	i);
+static void wdef (
+	char	*s,
+	i4	n);
+void warray (
+	i4	s,
+	i4	*v,
+	i4	n);
+void hideprod (void);
+
+
  /* important local variables */
 /* the number of the last reduction of a state */
 GLOBALREF i4      lastred;
 GLOBALREF i4      defact[NSTATES]; /* the default actions of states */
 
-output ()
+void
+output (void)
 {				/* print the output for the states */
 
     i4      i,
@@ -116,9 +144,10 @@ output ()
 
 GLOBALREF i4      pkdebug;
 
-apack (p, n)
-i4	*p;
-i4	n;
+i4
+apack (
+	i4	*p,
+	i4	n)
 {				/* pack state i from temp1 into amem */
     i4      off;
     register i4     *pp,
@@ -183,10 +212,12 @@ i4	n;
 nextk: 	;
     }
     ERROR ("no space in action table");
- /* NOTREACHED */
+    /* NOTREACHED */
+    return 0;
 }
 
-go2out ()
+void
+go2out (void)
 {				/* output the gotos for the nontermninals */
     i4      i,
             j,
@@ -263,8 +294,9 @@ go2out ()
 
 GLOBALREF i4      g2debug;
 
-go2gen (c)
-i4	c;
+static void
+go2gen (
+	i4	c)
 {				/* output the gotos for nonterminal c */
 
     i4      i,
@@ -334,10 +366,11 @@ i4	c;
     }
 }
 
-precftn (r, t, s)
-i4	r,
-	t,
-	s;
+static void
+precftn (
+	i4	r,
+	i4	t,
+	i4	s)
 {				/* decide a shift/reduce conflict by
 				   precedence.  r is a rule number, t a token
 				   number */
@@ -382,8 +415,9 @@ i4	r,
     }
 }
 
-wract (i)
-i4	i;
+static void
+wract (
+	i4	i)
 {				/* output state i */
  /* temp1 has the actions, lastred the default */
     i4      p,
@@ -482,8 +516,9 @@ i4	i;
     return;
 }
 
-wrstate (i)
-i4	i;
+static void
+wrstate (
+	i4	i)
 {				/* writes state i */
     register i4     j0,
 		    j1;
@@ -550,17 +585,19 @@ i4	i;
 
 }
 
-wdef (s, n)
-char	*s;
-i4	n;
+static void
+wdef (
+	char	*s,
+	i4	n)
 {				/* output a definition of s to the value n */
     SIfprintf (ftable, "# define %s %d\n", s, n);
 }
 
-warray (s, v, n)
-i4	s;
-i4     *v,
-        n;
+void
+warray (
+	i4	s,
+	i4	*v,
+	i4	n)
 {
 
     register i4     i;
@@ -590,7 +627,8 @@ i4     *v,
     }
 }
 
-hideprod ()
+void
+hideprod (void)
 {
  /* in order to free up the mem and amem arrays for the optimizer,  and still
     be able to output yyr1, etc., after the sizes of  the action array is

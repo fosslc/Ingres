@@ -639,7 +639,7 @@ va_dcl
 # endif
 {
 #if !defined(__STDARG_H__)
-    i4		    (*fcn)();
+    i4		    (*fcn)(PTR, i4, char *);
 # endif
     PTR		    arg;
     char	    *buffer;
@@ -654,7 +654,7 @@ va_dcl
     va_start(p, fcn);
 # else
     va_start(p);
-    fcn =	(i4 (*)()) va_arg(p,PTR);
+    fcn =	(i4 (*)(PTR, i4, char *)) va_arg(p,PTR);
 # endif
 
     arg =	va_arg(p,PTR);
@@ -671,7 +671,7 @@ va_dcl
 }
 
 /*
-** Name: TRformat_to_buffer	- Format text into memory.
+** Name: TRvformat - Format text into memory.
 **
 ** Description:
 **      This function will format text into a memory buffer and then call a 
@@ -703,15 +703,19 @@ va_dcl
 ** History:
 **	26-Jun-2007 (jonj)
 **	    Created for circular cached deadlock tracing by LK
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    In cleaning up prototypes, renamed TRformat_to_buffer to
+**	    TRvformat to clarify what it is and realigned its parameters and
+**	    with TRformat
 */
 VOID
-TRformat_to_buffer(
-VOID		    (*fcn)(),
-i4		    *arg,
-char		    *buffer,
-i4		    l_buffer,
-char		    *fmt,
-va_list		    ap )
+TRvformat(
+	i4	(*fcn)(PTR, i4, char *),
+	PTR	arg,
+	char	*buffer,
+	i4	l_buffer,
+	char	*fmt,
+	va_list	ap)
 {
     i4		    offset = 0;
     i4		    cur_arg = 0;
@@ -726,7 +730,7 @@ va_list		    ap )
 
 static VOID
 do_format(fcn, arg, format, parameter, pcur_arg, buffer, buffer_length, buffer_offset, base, type, marg)
-i4		    (*fcn)();
+i4		    (*fcn)(PTR, i4, char *);
 PTR		    arg;
 char		    **format;
 va_list		    *parameter;

@@ -79,7 +79,47 @@ NEEDLIBS = BYACCLIB COMPATLIB
 # include   <si.h>
 # include   <st.h>
 # include   <me.h>
+# include   <pc.h>
+# include   <nm.h>
 # include   "dextern.h"
+
+/* TABLE OF CONTENTS */
+i4 main(int argc, char **argv);
+static void closeall(void);
+static void others(void);
+static char *chcopy(
+	char *p,
+	char *q);
+char *writem(
+	i4	*pp);
+char *symnam(
+	i4	i);
+static void summary(void);
+void ERROR(
+	char *s);
+void aryfil(
+	i4	*v,
+	i4	n,
+	i4	c);
+static i4 setunion(
+	register i4	*a,
+	register i4	*b);
+static void prlook(
+	struct looksets	*p);
+static void cpres(void);
+static void cpfir(void);
+i4 state(
+	i4	c);
+void putitem(
+	i4	*ptr,
+	struct looksets *lptr);
+static void cempty(void);
+static void stagen(void);
+void closure(
+	i4	i);
+struct looksets *flset(
+	struct looksets	*p);
+
 
 /* variables used locally */
 
@@ -137,11 +177,8 @@ GLOBALREF struct looksets *pfirst[NNONTERM + 2];
 /* vector of nonterminals nontrivially deriving e */
 GLOBALREF i4		pempty[NNONTERM + 1];
 
-extern VOID closeall();
-
-main(argc, argv)
-int argc;
-char *argv[];
+i4
+main(int argc, char **argv)
 {
     char stbuf[STBUFSIZE];
     MEadvise(ME_INGRES_ALLOC);
@@ -179,10 +216,12 @@ char *argv[];
     others();
 	closeall();
     PCexit(OK);
+    /*NOTREACHED*/
+    return 0;
 }
 
-VOID
-closeall()
+static void
+closeall(void)
 {
     if (finput)
         (VOID)SIclose(finput);
@@ -215,7 +254,8 @@ closeall()
 }
 
 /* put out other arrays, copy the parsers */
-others()
+static void
+others(void)
 {
     register i4     c,
 		    lastc = -1,
@@ -313,24 +353,12 @@ others()
 	fdebug = (FILE *)NULL;
     ZAPFILE(&debugloc);
 
-    c = 0;
-    PLOOP(0,i)
-    {
-	if ((c = funcid(i)) && (c != lastc))
-	{
-	    lastc = c;
-	    SIfprintf(ftable, "FUNC_EXTERN\ti4\t%s%diftn();\n", prefix, c);
-	    SIfprintf(fileptr,"FUNC_EXTERN\ti4\t%s%diftn();\n", prefix, c);
-	}
-    }
-    /* A little c tutorial:  const foo *ptr -> pointer to const foo
-    ** foo * const ptr -> const pointer to foo
-    ** We want the latter.
-    ** Don't worry about ansi-style args in the function table.  It just
-    ** has names and there's no cross-check.
-    */
-    SIfprintf(fileptr, "\n\nGLOBALDEF \ti4\t(* const %sfunc[])()=\n{",
-	prefix);
+    SIfprintf(fileptr, "\n\ntypedef i4 (*YY_PSLFN_PTR)(YACC_CB *, i4, DB_STATUS *,%s *",
+	    argtype);
+    for (i = 0; i < Numparams; i++)
+	SIfprintf(fileptr, ",%s", Params[i].parmtype);
+    SIfprintf(fileptr, ");\nextern YY_PSLFN_PTR %sfunc[];\n", prefix);
+
     if (Filespecs[YYFUNC].filegiven)
     {
 	SIfprintf(ftable, "\n\ntypedef i4 (*YY_PSLFN_PTR)(YACC_CB *, i4, DB_STATUS *,%s *",
@@ -339,6 +367,36 @@ others()
 	    SIfprintf(ftable, ",%s", Params[i].parmtype);
 	SIfprintf(ftable, ");\nextern YY_PSLFN_PTR %sfunc[];\n", prefix);
     }
+    c = 0;
+    PLOOP(0,i)
+    {
+	if ((c = funcid(i)) && (c != lastc))
+	{
+	    i4 j;
+	    lastc = c;
+	    SIfprintf(fileptr,"FUNC_EXTERN i4 %s%diftn("
+				"YACC_CB *, i4, DB_STATUS *,%s *", prefix, c, argtype);
+	    for (j = 0; j < Numparams; j++)
+		SIfprintf(fileptr, ",%s", Params[j].parmtype);
+	    SIfprintf(fileptr, ");\n");
+	    if (Filespecs[YYFUNC].filegiven)
+	    {
+		SIfprintf(ftable, "FUNC_EXTERN\ti4\t%s%diftn("
+				"YACC_CB *, i4, DB_STATUS *,%s *", prefix, c, argtype);
+		for (j = 0; j < Numparams; j++)
+		    SIfprintf(ftable, ",%s", Params[j].parmtype);
+		SIfprintf(ftable, ");\n");
+	    }
+	}
+    }
+    /* A little c tutorial:  const foo *ptr -> pointer to const foo
+    ** foo * const ptr -> const pointer to foo
+    ** We want the latter.
+    ** Don't worry about ansi-style args in the function table.  It just
+    ** has names and there's no cross-check.
+    */
+    SIfprintf(fileptr, "\n\nGLOBALDEF \tYY_PSLFN_PTR\t%sfunc[]=\n{",
+	prefix);
     j = 0;
     PLOOP(0,i)
     {
@@ -354,7 +412,7 @@ others()
 	}
 	else
 	{
-	    SIfprintf(fileptr, "\n\t(i4 (*)()) NULL");
+	    SIfprintf(fileptr, "\n\t(YY_PSLFN_PTR)NULL");
 	}
     }
 
@@ -387,25 +445,12 @@ others()
 		    break;
 		case 'D':
 		    {
-		    i4	prevparm = FALSE;
-
-		    SIfprintf(ftable, "%sparse(", prefix);
-		    prevparm = TRUE;
-		    SIfprintf(ftable, "cb");
+		    SIfprintf(ftable, "%sparse(%s *cb", prefix, argtype);
 		    for (i = 0; i < Numparams; i++)
-		    {
-			if (prevparm)
-			    SIputc(',', ftable);
-			prevparm = TRUE;
-			SIfprintf(ftable, Params[i].parmname);
-		    }
-		    SIputc(')', ftable);
-		    SIfprintf(ftable, "\n%s\t*cb;", argtype);
-		    for (i = 0; i < Numparams; i++)
-		    {
-			SIfprintf(ftable, "\n%s\t%s;", Params[i].parmtype,
-			    Params[i].parmname);
-		    }
+			SIfprintf(ftable, ", %s %s",
+				Params[i].parmtype,
+				Params[i].parmname);
+		    SIfprintf(ftable, ")\n");
 		    c = SIgetc(finput);
 		    break;
 		    }
@@ -468,10 +513,10 @@ others()
 	ftable = (FILE *)NULL;
 }
 
-char *
-chcopy(p, q)
-char	*p;
-char	*q;
+static char *
+chcopy(
+	char *p,
+	char *q)
 {
     /* copies string q into p, returning next free char ptr */
     while(*p = *q++)
@@ -484,8 +529,8 @@ char	*q;
 
 /* creates output string for item pointed to by pp */
 char *
-writem(pp)
-i4  *pp;
+writem(
+	i4	*pp)
 {
     i4		i,*p;
     static char sarr[ISIZE];
@@ -529,7 +574,8 @@ i4  *pp;
 
 /* return a pointer to the name of symbol i */
 char *
-symnam(i)
+symnam(
+	i4	i)
 {
     char    *cp;
 
@@ -550,7 +596,8 @@ GLOBALREF i4  * zzmemsz;
 GLOBALREF i4  zzrrconf;
 
 /* output the summary on the tty */
-summary()
+static void
+summary(void)
 {
     if (foutput!=NULL)
     {
@@ -591,8 +638,9 @@ summary()
 }
 
 /* write out error comment */
-ERROR(s)
-char	*s;
+void
+ERROR(
+	char *s)
 {	
     ++nerrors;
     SIfprintf(stderr, "\n fatal error: ");
@@ -605,10 +653,11 @@ char	*s;
 }
 
 /* set elements 0 through n-1 to c */
-aryfil(v, n, c)
-i4	*v;
-i4	n;
-i4	c;
+void
+aryfil(
+	i4	*v,
+	i4	n,
+	i4	c)
 {
     i4	    i;
 
@@ -621,9 +670,10 @@ i4	c;
 ** Return 1 if b is not a subset of a, 0 otherwise.
 */
 
-setunion(a, b)
-register i4	*a;
-register i4	*b;
+static i4
+setunion(
+	register i4	*a,
+	register i4	*b)
 {
     register i4     i, x, sub;
 
@@ -638,8 +688,9 @@ register i4	*b;
     return (sub);
 }
 
-prlook(p)
-struct looksets	    *p;
+static void
+prlook(
+	struct looksets	*p)
 {
     register i4     j, *pp;
 
@@ -664,7 +715,8 @@ struct looksets	    *p;
 ** Compute an array with the beginnings of  productions yielding given
 ** nonterminals.  The array pres points to these lists
 */
-cpres()
+static void
+cpres(void)
 {
     /* the array pyield has the lists: the total size is only NPROD+1 */
     register i4     **pmem;
@@ -704,7 +756,8 @@ cpres()
 
 GLOBALREF int indebug;
 
-cpfir()
+static void
+cpfir(void)
 {
     /* compute an array with the first of nonterminals */
     register i4     *p, **s, i, **t, ch, changes;
@@ -771,8 +824,9 @@ cpfir()
 }
 
 /* sorts last state,and sees if it equals earlier ones. returns state number */
-state(c)
-i4	c;
+i4
+state(
+	i4	c)
 {
     i4		    size1, size2;
     register i4     i;
@@ -865,9 +919,10 @@ i4	c;
 
 GLOBALREF i4	pidebug; /* debugging flag for putitem */
 
-putitem(ptr, lptr)
-i4		*ptr;
-struct looksets *lptr;
+void
+putitem(
+	i4	*ptr,
+	struct looksets *lptr)
 {
     register struct item *j;
 
@@ -893,7 +948,8 @@ struct looksets *lptr;
 ** Also, look for nonterminals which don't derive any token strings.
 */
 
-cempty()
+static void
+cempty(void)
 {
 #define             EMPTY               1
 #define		    WHOKNOWS		0
@@ -981,7 +1037,8 @@ again:
 GLOBALREF i4	gsdebug;
 
 /* generate the states */
-stagen()
+static void
+stagen(void)
 {
     i4			    i, j;
     register i4	    c;
@@ -1076,8 +1133,9 @@ stagen()
 GLOBALREF i4	cldebug;	/* debugging flag for closure */
 
 /* generate the closure of state i */
-closure(i)
-i4	i;
+void
+closure(
+	i4	i)
 {
     i4			    c, ch, work, k;
     register struct wset    *u, *v;
@@ -1210,8 +1268,8 @@ i4	i;
 }
 
 struct looksets *
-flset(p)
-struct looksets	    *p;
+flset(
+	struct looksets	*p)
 {
     /* decide if the lookahead set pointed to by p is known */
     /* return pointer to a perminent location for the set */

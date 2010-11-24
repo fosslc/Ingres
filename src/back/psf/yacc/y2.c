@@ -59,6 +59,42 @@
 **	    it's in the PSS_SESBLK now.  Arrange to pick it up from there.
 */
 
+/* TABLE OF CONTENTS */
+void setup(
+	i4	argc,
+	char	**argv);
+static void finact(void);
+static i4 defin(
+	i4	t,
+	register char	*s);
+static void defout(void);
+char *cstash(
+	register char *s);
+static i4 gettok(void);
+static i4 fdtype(
+	i4	t);
+static bool fdnobypass(
+	i4	t);
+static i4 chfind(
+	i4	t,
+	register char	*s);
+static void cpyunion(void);
+static void cpycode(void);
+static i4 skipcom(void);
+static void cpyact(
+	i4 offset);
+static void lhsfill(
+	char	*s);
+static void rhsfill(
+	char	*s);
+static void lrprnt(void);
+static void beg_debug(void);
+static void end_toks(void);
+static void end_debug(void);
+i4 funcid(
+	i4	ndx);
+
+
 # define IDENTIFIER 257
 # define MARK 258
 # define TERM 259
@@ -145,6 +181,7 @@ GLOBALREF   LOCATION	temploc;
 GLOBALREF   char    tempbuf[MAX_LOC];
 GLOBALREF   LOCATION	debugloc;
 GLOBALREF   char    dbgbuf[MAX_LOC];
+GLOBALREF   char    deffile[MAX_LOC];
 GLOBALREF   char    prefix[50];	/* Prefix for table names */
 /* Name of print function to use for debugging */
 GLOBALREF   char    printfunc[50];
@@ -175,9 +212,10 @@ GLOBALREF   struct outfiles Filespecs[];
 GLOBALREF   PARMTYPE Params[MAXPARMS];
 GLOBALREF   i4      Numparams;
 
-setup (argc, argv)
-i4   argc;
-char   *argv[];
+void
+setup(
+	i4	argc,
+	char	**argv)
 {
     i4		i,
 		j,
@@ -231,22 +269,22 @@ char   *argv[];
 		case 'd': 
 		    if (*(argv[1] + 1) == '\0')
 		    {
-			STcopy(FILED, filename);
+			STcopy(FILED, deffile);
 		    }
 		    else
 		    {
-			STcopy(argv[1] + 1, filename);
+			STcopy(argv[1] + 1, deffile);
 			/*
 			** To terminate inner loop, set argv[1] pointing to last
 			** char of string just processed.
 			*/
 			argv[1] += STlength(argv[1]) - 1;
 		    }
-		    if (LOfroms(PATH & FILENAME, filename, &dloc) != OK)
+		    if (LOfroms(PATH & FILENAME, deffile, &dloc) != OK)
 			ERROR(STprintf(stbuf,
-			    "bad filename %s for output file", filename));
+			    "bad filename %s for output file", deffile));
 		    if (SIopen(&dloc, "w", &fdefine) != OK)
-			ERROR(STprintf(stbuf, "cannot open %s", filename));
+			ERROR(STprintf(stbuf, "cannot open %s", deffile));
 		    continue;
 
 		case 'l': 
@@ -471,7 +509,29 @@ char   *argv[];
 		    ERROR(STprintf(stbuf, "cannot open file %s for option %s",
 			Filespecs[i].filename, Filespecs[i].optname));
 		}
-		SIfprintf(Filespecs[i].fileptr, "# include\t<compat.h>\n\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <compat.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <gl.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <cs.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <ex.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <qu.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <sl.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <iicommon.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <dbdbms.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <ddb.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <dmf.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <dmtcb.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <adf.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <ulf.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <qsf.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <scf.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <qefrcb.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <rdf.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <psfparse.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <psfindep.h>\n");
+		SIfprintf(Filespecs[i].fileptr, "#include <pshparse.h>\n");
+		if (fdefine)
+		    SIfprintf(Filespecs[i].fileptr, "#include \"%s\"\n", deffile);
+		SIfprintf(Filespecs[i].fileptr, "#include <yacc.h>\n\n");
 		SIfprintf(Filespecs[i].fileptr, "typedef\ti4\tyytabelem;\n\n");
 	    }
 	}
@@ -935,7 +995,8 @@ more_rule:
 	finput = (FILE *)NULL;
 }
 
-finact()
+static void
+finact(void)
 {
  /* finish action routine */
 
@@ -952,11 +1013,12 @@ finact()
 }
 
 /*	define s to be a terminal if t=0 or a nonterminal if t=1		*/
-defin(t, s)
-i4		t;
-register char	*s;
+static i4
+defin(
+	i4	t,
+	register char	*s)
 {
-    register i4     val;
+    register i4     val = 0;
     char	    stbuf[STBUFSIZE];
 
     if (t)
@@ -1036,7 +1098,8 @@ register char	*s;
 }
 
 /* write out the defines (at the end of the declaration section) */
-defout()
+static void
+defout(void)
 {
     register i4     i;
     i4              c;
@@ -1048,7 +1111,7 @@ defout()
 	cp = tokset[i].name;
 	if (*cp == ' ')		/* literals */
 	{
-	    SIfprintf(fdebug, "\t\"%s\",\t%d,\n",
+	    SIfprintf(fdebug, "\t{\"%s\",\t%d},\n",
 		    tokset[i].name + 1, tokset[i].value);
 	    cp++;		/* in my opinion, this should be continue */
 	}
@@ -1060,19 +1123,10 @@ defout()
 	}
 
 	if (tokset[i].name[0] != ' ')
-	    SIfprintf(fdebug, "\t\"%s\",\t%d,\n",
+	    SIfprintf(fdebug, "\t{\"%s\",\t%d},\n",
 		tokset[i].name, tokset[i].value);
-	if (fdefine == NULL)
-	{
-	    SIfprintf(ftable,
+	SIfprintf(fdefine?fdefine:ftable,
 		"# define %s %d\n", tokset[i].name, tokset[i].value);
-	}
-	else
-	{
-	    SIfprintf(fdefine, "# define %s %d\n", tokset[i].name,
-		tokset[i].value);
-	}
-
 nodef: 	;
     }
 
@@ -1080,9 +1134,9 @@ nodef: 	;
 
 }
 
-char   *
-cstash(s)
-register char   *s;
+char *
+cstash(
+	register char *s)
 {
     char   *temp;
 
@@ -1097,7 +1151,8 @@ register char   *s;
     return (temp);
 }
 
-gettok()
+static i4
+gettok(void)
 {
     register i4     i,
 		    base;
@@ -1296,8 +1351,9 @@ begin:
 }
 
 /* determine the type of a symbol */
-fdtype(t)
-i4	t;
+static i4
+fdtype(
+	i4 t)
 {
     register i4     v;
     char    stbuf[STBUFSIZE];
@@ -1314,9 +1370,9 @@ i4	t;
 
 /*@RH@*/
 /* determine if nobypass was specified for a symbol */
-bool
-fdnobypass(t)
-i4	t;
+static bool
+fdnobypass(
+	i4	t)
 {
     char stbuf[STBUFSIZE];
 
@@ -1326,9 +1382,10 @@ i4	t;
     return(nontrst[t - NTBASE].nobypass);
 }
 
-chfind(t, s)
-i4		t;
-register char	*s;
+static i4
+chfind(
+	i4	t,
+	register char	*s)
 {
     i4      i;
     char    stbuf[STBUFSIZE];
@@ -1355,7 +1412,8 @@ register char	*s;
     return (defin(t, s));
 }
 
-cpyunion()
+static void
+cpyunion(void)
 {
  /* copy the union declaration to the output, and the define file if present */
 
@@ -1378,20 +1436,14 @@ cpyunion()
     }
     SIputc('\n', ftable);
 
-    if (fdefine)
-	SIfprintf(fdefine, "\n#define YYSTDEF\ntypedef union ");
-    else
-    	SIfprintf(ftable, "\n#define YYSTDEF\ntypedef union ");
+    SIfprintf(fdefine?fdefine:ftable, "\n#define YYSTDEF\ntypedef union");
 
     level = 0;
     for (;;)
     {
 	if ((c = SIgetc(finput)) < 0)
 	    ERROR("EOF encountered while processing %%union");
-	if (fdefine)
-	    SIputc(c, fdefine);
-	else
-	    SIputc(c, ftable);
+	SIputc(c, fdefine?fdefine:ftable);
 
 	switch (c)
 	{
@@ -1408,17 +1460,15 @@ cpyunion()
 		--level;
 		if (level == 0)
 		{		/* we are finished copying */
-		    if (fdefine)
-			SIfprintf(fdefine, " YYSTYPE;\n");
-		    else
-			SIfprintf(ftable, " YYSTYPE;\n");
+		    SIfprintf(fdefine?fdefine:ftable, " YYSTYPE;\n");
 		    return;
 		}
 	}
     }
 }
 
-cpycode()
+static void
+cpycode(void)
 {				/* copies code between \{ and \} */
 
     i4      c;
@@ -1465,7 +1515,8 @@ cpycode()
     ERROR("eof before %%}");
 }
 
-skipcom()
+static i4
+skipcom(void)
 {				/* skip over comments */
     register i4     c,
                     i = 0;		/* i is the number of lines skipped */
@@ -1487,10 +1538,13 @@ skipcom()
 	c = SIgetc(finput);
     }
     ERROR("EOF inside comment");
- /* NOTREACHED */
+    /* NOTREACHED */
+    return 0;
 }
 
-cpyact(offset)
+static void
+cpyact(
+	i4 offset)
 {				/* copy C action to the next ; or closing } */
     i4      brac,
             c,
@@ -1700,16 +1754,18 @@ GLOBALREF char    lhstext[BUFSIZ];
 GLOBALREF char    rhstext[RHS_TEXT_LEN]; /* store current rhs list */
 
 /* new rule, dump old (if exists), restart strings */
-lhsfill(s)
-char   *s;
+static void
+lhsfill(
+	char	*s)
 {
     rhsfill((char *) 0);
     STcopy(s, lhstext);	/* don't worry about too long of a name */
 }
 
 
-rhsfill(s)
-char   *s;			/* either name or 0 */
+static void
+rhsfill(
+	char	*s)			/* either name or 0 */
 {
     static char *loc = rhstext;	/* next free location in rhstext */
     register char  *p;
@@ -1738,7 +1794,8 @@ char   *s;			/* either name or 0 */
 }
 
 
-lrprnt()			/* print out the left and right hand sides */
+static void
+lrprnt(void)			/* print out the left and right hand sides */
 {
     char   *rhs;
 
@@ -1749,8 +1806,8 @@ lrprnt()			/* print out the left and right hand sides */
     SIfprintf(fdebug, "	\"%s :%s\",\n", lhstext, rhs);
 }
 
-
-beg_debug()			/* dump initial sequence for fdebug file */
+static void
+beg_debug(void)			/* dump initial sequence for fdebug file */
 {
     SIfprintf(fdebug,
 	    "typedef struct { char *t_name; int t_val; } yytoktype;\n");
@@ -1763,18 +1820,18 @@ beg_debug()			/* dump initial sequence for fdebug file */
 	    prefix);
 }
 
-
-end_toks()			/* finish yytoks array, get ready for yyred's
+static void
+end_toks(void)			/* finish yytoks array, get ready for yyred's
 				   strings */
 {
-    SIfprintf(fdebug, "\t\"-unknown-\",\t-1\t/* ends search */\n");
+    SIfprintf(fdebug, "\t{\"-unknown-\",\t-1}\t/* ends search */\n");
     SIfprintf(fdebug, "};\n\nGLOBALDEF const\tchar * %sreds[] =\n{\n",
 	prefix);
     SIfprintf(fdebug, "\t\"-no such reduction-\",\n");
 }
 
-
-end_debug()			/* finish yyred array, close file */
+static void
+end_debug(void)			/* finish yyred array, close file */
 {
     lrprnt();			/* dump last lhs, rhs */
     SIfprintf(fdebug, "};\n#endif /* YYDEBUG */\n");
@@ -1783,8 +1840,9 @@ end_debug()			/* finish yyred array, close file */
 }
 
 /* inform caller of function name, if any, for this action */
-funcid(ndx)
-i4	ndx;
+i4
+funcid(
+	i4	ndx)
 {
     return (ftname[ndx]);
 }
