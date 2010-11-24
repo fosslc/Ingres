@@ -770,6 +770,12 @@ opa_ptids(
 **      29-jul-2009 (huazh01)
 **          remove pst_qnode in the form of 'x = x' from the qualification. 
 **          (b122361)
+**      30-jul-2010 (huazh01)
+**          Re-introduce opa_push() part of the fix to b120357, but restrict
+**          it so we apply the fix only if the concurrent query's result
+**          relation ops_gentry is the same as the current one. if they are
+**          not the same, propagating restriction will cause wrong result.
+**          This fixes b123330.
 [@history_template@]...
 */
 static VOID 
@@ -851,6 +857,11 @@ opa_push(
 		groupp->pst_right->pst_sym.pst_type == PST_VAR)
 	 break;			/* got it */
 	if (groupp == NULL) return;
+
+        if (usq->ops_agg.opa_concurrent &&
+            usq->ops_agg.opa_concurrent->ops_gentry !=
+            usq->ops_gentry)
+           return;
 
 	/* If this is a PROJECTION, build a bit map of ref'ed vars. */
 	if (psq) for (n1 = psq->ops_root->pst_left; n1 && n1->pst_sym.pst_type == 
@@ -963,6 +974,13 @@ opa_push(
 **          for concurrent subquery (non-NULL opa_concurrent), do not
 **          modify the query tree if only one of the children of a PST_AND
 **          node qualifies. (bug 121792)
+**      30-jul-2010 (huazh01)
+**          Re-introduce opa_push() part of the fix to b120357, but restrict
+**          it so we apply the fix only if the concurrent query's result
+**          relation ops_gentry is the same as the current one. if they are
+**          not the same, propagating restriction will cause wrong result.
+**          Also back out the fix to b121792 because the new fix to b120357
+**          covers b121792 as well. (b123330)
 [@history_template@]...
 */
 static bool 
@@ -1008,8 +1026,7 @@ opa_pushandcheck(
 	}
 	else return(FALSE);
 
-        if (n1->pst_sym.pst_type == PST_QLEND ||
-            aggsq->ops_agg.opa_concurrent)
+        if (n1->pst_sym.pst_type == PST_QLEND)
            return(FALSE);
 
 	/* Copy (for not in/exists heuristic) or move (for having 
