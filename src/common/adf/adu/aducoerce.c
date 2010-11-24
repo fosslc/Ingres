@@ -233,6 +233,13 @@ e.
 **	    Fixed length calculations.
 **	04-aug-2010 (zhayu01) Bug 124183 / SD 146120
 **	    Changed utemp declaration from char [64] to char [DB_MAXTUP + 1].
+**      17-may-2010 (huazh01)
+**          Cast 'fval' into f4 type before assigning it to a f4 temp
+**          variable. (b123750)
+**      18-may-2010 (huazh01)
+**          Rework the b123750 fix by removing the variable 'tmp'.
+**      20-may-2010 (shust01)
+**          Rework the b123750 fix due to problems with fix on VMS.
 */
 DB_STATUS
 adu_1flt_coerce(
@@ -371,12 +378,15 @@ DB_DATA_VALUE	    *rdv)
     EXmath(EX_ON);
     if (rdv->db_length == 4)
     {
+        f4 tmp;
 	if (CV_ABS_MACRO(fval) > FLT_MAX)
+        {
+            tmp = (f4) 0.0;
 	    EXsignal (EXFLTOVF, 0);	    
-	{
-	    f4 tmp = fval;
-	    F4ASSIGN_MACRO(tmp, *(f4 *)rdv->db_data);
-	}
+        } else
+            tmp = fval;
+	
+        F4ASSIGN_MACRO(tmp, *(f4 *)rdv->db_data);
     }
     else
         F8ASSIGN_MACRO(fval, *(f8 *)rdv->db_data);
