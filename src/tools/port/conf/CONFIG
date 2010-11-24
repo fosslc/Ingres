@@ -770,6 +770,10 @@
 **	    Add conditional compilation for ICE
 **	20-Jul-2010 (bonro01)
 **	    Update version for Ingres 10.1
+**  08-Nov-2010 (clach04)
+**      Enterprise Access gateways moving to Ingres style version numbers.
+**      I.e. instead of 2 part number with genlevel, X.Y/GENLEVEL now have
+**      3 part number: X.Y.Z
 */
 
 /*
@@ -778,7 +782,7 @@
 # define FULL_RELEASE
 # define ING_VER	 II 10.1.0
 # define ING_W4GL_VER	 II 10.1.0
-# define EA_VER		EA 3.0/1002
+# define EA_VER		EA 3.0.0
 
 # define R_CODE		/* give me the code */
 # define R_TST		/* give me the tests */
