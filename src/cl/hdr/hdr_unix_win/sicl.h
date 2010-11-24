@@ -99,9 +99,12 @@
 **	    SIungetc.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	19-nov-2010 (stephenb)
+**	    Include stdarg.h, Solaris needs it for the va_list prototype.
 */
 
 # include 	<systypes.h>
+# include	<stdarg.h>
 
 /* Once upon a time, stdio.h defined its own NULL, causing annoying
 ** redefinition warnings.  These days one would hope that stdio.h is
