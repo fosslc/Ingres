@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -117,8 +117,26 @@
 **	    say so.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psy_cproc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_kproc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_gproc(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	QSF_RCB *qsf_rb,
+	RDF_CB *rdf_cb,
+	DB_OWN_NAME **alt_user,
+	DB_OWN_NAME *dbp_owner,
+	i4 gproc_mask,
+	i4 *ret_flags);
 
 /*{
 ** Name: psy_cproc - Create a database procedure definition in
@@ -849,9 +867,6 @@ psy_gproc(
     PSQ_QDESC		*qdesc;
     bool		leave_loop = TRUE;
     DB_PROCEDURE *dbp;
-    SXF_ACCESS  access;
-    i4	msgid;
-    i4	local_status;
 
     *ret_flags = 0;
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 1995, 2005 Ingres Corporation
+/* Copyright (c) 1995, 2005, 2010 Ingres Corporation
 **
 **
 */
@@ -27,7 +27,6 @@
 #include    <psfindep.h>
 #include    <pshparse.h>
 #include    <psftrmwh.h>
-#include    <pslyalloc.h>
 
 /**
 **
@@ -134,8 +133,14 @@
 **          Changes for SET [NO]BLOBJOURNALING
 **      14-jan-2004 (stial01)
 **          set [no]blobjournaling only when table specified.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psq_bgn_session(
+	register PSQ_CB *psq_cb,
+	register PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psq_bgn_session	- Begin a parser session.

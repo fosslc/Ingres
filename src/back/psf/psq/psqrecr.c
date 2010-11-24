@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -134,9 +134,23 @@
 **	    psl_rptqry_tblids().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-**
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psq_recreate(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+i4 psq_dbpreg(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+void psq_dbp_qp_ids(
+	PSS_SESBLK *sess_cb,
+	char *fe_id,
+	DB_CURSOR_ID *be_id,
+	DB_DBP_NAME *dbp_name,
+	DB_OWN_NAME *dbp_own_name);
 
 /*{
 ** Name: psq_recreate	- Identifies procedure QP in memory or recreates
@@ -1153,22 +1167,20 @@ exit2:
 **	19-Jun-2010 (kiria01) b123951
 **	    Add extra parameter to psl0_rngent for WITH support.
 */
+DB_STATUS
 psq_dbpreg(
 	PSQ_CB		*psq_cb,
 	PSS_SESBLK	*sess_cb)
 {
     DB_CURSOR_ID	be_id;
     DB_STATUS		status;
-    DB_STATUS		stat;
     i4		err_code;
     QSF_RCB		qsf_rb;
-    RDF_CB		rdf_cb;
     PSS_DBPALIAS	dbpid;		/* the dbproc id template */
     PSS_RNGTAB		*resrange;
     i4			rngvar_info;
     i4			tbls_to_lookup;	/* controls the 3 tier logic */
     i4			lookup_mask;
-    DB_OWN_NAME		ingres;
     DB_OWN_NAME		*owner;
     DD_REGPROC_DESC	*regproc_desc;
     DD_LDB_DESC		*ldb_desc;

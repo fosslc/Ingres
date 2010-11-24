@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -73,8 +73,41 @@
 **	    Added PSS_SESSCB* parameter to psq_prt_tabname().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psq_x_add(
+	PSS_SESBLK *sess_cb,
+	char *str_2_store,
+	PSF_MSTREAM *mem_stream,
+	i4 buf_size,
+	PSS_Q_PACKET_LIST *pkt_list,
+	i4 str_len,
+	char *open_delim,
+	char *close_delim,
+	char *separator,
+	DB_ERROR *err_blk);
+i4 psq_x_new(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mem_stream,
+	i4 buf_size,
+	PSS_Q_PACKET_LIST *pkt_list,
+	DB_ERROR *err_blk);
+i4 psq_x_backup(
+	PSS_Q_PACKET_LIST *packet_list,
+	char *str);
+bool psq_same_site(
+	DD_LDB_DESC *ldb_desc1,
+	DD_LDB_DESC *ldb_desc2);
+i4 psq_prt_tabname(
+	PSS_SESBLK *sess_cb,
+	PSS_Q_XLATE *xlated_qry,
+	PSF_MSTREAM *mem_stream,
+	PSS_RNGTAB *rng_var,
+	i4 qmode,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: psq_x_add	- Add null-terminated string to a translated query

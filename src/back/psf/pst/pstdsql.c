@@ -227,8 +227,71 @@
 **      15-Jul-2010 (horda03) B124082
 **          Prevent RECACHE of cached queries failing due to derived table
 **          rngvars.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
+/* TABLE OF CONTENTS */
+i4 pst_prepare(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	char *sname,
+	bool nonupdt,
+	bool repeat,
+	PTR stmt_offset,
+	PST_QNODE *updcollst);
+i4 pst_execute(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	char *sname,
+	PST_PROCEDURE **pnode,
+	i4 *maxparm,
+	PTR *parmlist,
+	bool *nonupdt,
+	bool *qpcomp,
+	PST_QNODE **updcollst,
+	bool rdonly);
+i4 pst_prmsub(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	PST_QNODE **nodep,
+	DB_DATA_VALUE *plist[],
+	bool repeat_dyn);
+i4 pst_describe(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	char *sname);
+i4 pst_commit_dsql(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+static GCA_COL_ATT *pst_sqlatt(
+	PSS_SESBLK *cb,
+	PST_QNODE *resdom,
+	GCA_COL_ATT *sqlatts,
+	i4 *tup_size);
+static i4 pst_dstobj(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	PST_PROTO *proto);
+i4 pst_get_stmt_mode(
+	PSS_SESBLK *sess_cb,
+	char *sname,
+	PSQ_STMT_INFO **stmt_info);
+i4 pst_descinput(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	char *sname);
+static i4 pst_descinput_walk(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_PROTO *proto,
+	GCA_COL_ATT *desc_base,
+	PST_QNODE **nodep);
+i4 pst_cpdata(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *tree,
+	bool use_qsf);
 
 /*
 ** Definition of all global variables referenced by this file.
@@ -428,7 +491,7 @@ pst_prepare(
     ULM_RCB		ulm_rcb;
     i4		err_code;
     DB_DATA_VALUE	srcedv, resdv;
-    i4			checksum = 0, stmt_size, dummy = 0;
+    i4			checksum = 0, stmt_size;
     QSF_RCB		qsf_rb;
     char		*p;
     char		*syntaxp = NULL;
@@ -763,7 +826,6 @@ pst_prepare(
 
     if (proto->pst_mode == PSQ_APPEND || proto->pst_mode == PSQ_REPCURS)
     {
-	u_char		*stmt = sess_cb->pss_bgnstmt; /* or pss_qbuf */
 	i4		i;
 	PSS_RNGTAB	*rng = sess_cb->pss_resrng;
 	DMT_ATT_ENTRY	**attribute;
@@ -1277,7 +1339,6 @@ pst_execute(
     if (repeat)
     {
 	char	*p;
-	bool	found = TRUE;
 	bool	dyntrace;
 	i4	val1, val2;
 
@@ -1516,9 +1577,6 @@ pst_execute(
 	int		i;
 	i4		num_atts;
 	PSS_RNGTAB      rngvar;
-	char		*colname;
-	int		resdom_count;
-	int		collno;
 	PST_QNODE	*node, *right_child;
 	QEU_CPATTINFO	*cpatts;
 	QEU_CPATTINFO	*curr_att;
@@ -3560,6 +3618,8 @@ pst_prmsub(
 		}
 	    }
 	    break;
+	default:
+	    break;
 	} /* switch */
 
 	nodep = (PST_QNODE**)pst_pop_item(&stk); 
@@ -4485,7 +4545,6 @@ pst_descinput_walk(
     DB_STATUS status = E_DB_OK;
     GCA_COL_ATT *desc;		/* SQLDA entry for parameter */
     i4 err_code;		/* Junk */
-    i4 parm_no;			/* Parameter marker number */
     bool descend = TRUE;
     PST_QNODE *inlist_bop = NULL;
 
@@ -4534,6 +4593,8 @@ pst_descinput_walk(
 		    nodep = &node->pst_right;
 		    continue;
 		}
+		break;
+	    default:
 		break;
 	    }
 	    /* Delay node evaluation */
@@ -4776,7 +4837,6 @@ pst_descinput_walk(
 			/* Case 6 */
 			ADI_OPINFO opinfo;
 			ADI_FI_TAB fi_tab;
-			ADI_FI_DESC *fi;
 			ADI_OP_ID opno;
 			pparent = parent;
 			while (pparent->pst_sym.pst_type == PST_OPERAND)

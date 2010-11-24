@@ -89,8 +89,54 @@
 **	    Don't lie about what memory pool is exhausted.  Who knows
 **	    how many support hours have been wasted increasing psf-memory
 **	    when it's really QSF memory that ran out...
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psf_mopen(
+	PSS_SESBLK *sess_cb,
+	i4 objtype,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+i4 psf_malloc(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	i4 size,
+	void *result,
+	DB_ERROR *err_blk);
+i4 psf_mclose(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	DB_ERROR *err_blk);
+i4 psf_mroot(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	PTR root,
+	DB_ERROR *err_blk);
+i4 psf_mchtyp(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	i4 objtype,
+	DB_ERROR *err_blk);
+i4 psf_mlock(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+i4 psf_munlock(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+i4 psf_symall(
+	PSS_SESBLK *pss_cb,
+	PSQ_CB *psq_cb,
+	i4 size);
+i4 psf_umalloc(
+	PSS_SESBLK *sess_cb,
+	PTR mstream,
+	i4 msize,
+	PTR *mresult,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: psf_mopen	- Open a memory stream.

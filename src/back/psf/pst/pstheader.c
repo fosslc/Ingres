@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -127,27 +127,43 @@
 **          Changes for Long IDs
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/* Forward references */
-VOID
-pst_singlesite(
-	PSS_RNGTAB	*rng_tab,
-	i4             *stype,
-	DD_LDB_DESC	**save_ldb_desc);
 
-static DB_STATUS
-pst_proc_rngentry(
-		  PSS_SESBLK	*sess_cb,
-		  PSQ_CB	*psq_cb,
-		  PST_QTREE	*header,
-		  PSS_RNGTAB	*usrrange,
-		  bool		*is_iidd);
-
-static void
-pst_chk_xtab_upd_const_only( PST_QTREE  *header);
-
-static bool walk(PST_QNODE *qn1);
+/* TABLE OF CONTENTS */
+i4 pst_header(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	i4 forupdate,
+	PST_QNODE *sortlist,
+	PST_QNODE *qtree,
+	PST_QTREE **tree,
+	PST_PROCEDURE **pnode,
+	i4 mask,
+	PSS_Q_XLATE *xlated_qry);
+i4 pst_modhdr(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	i4 forupdate,
+	PST_QTREE *header);
+bool pst_cdb_cat(
+	PSS_RNGTAB *rng_tab,
+	PSQ_CB *psq_cb);
+static i4 pst_proc_rngentry(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_QTREE *header,
+	PSS_RNGTAB *usrrange,
+	bool *is_iidd);
+void pst_singlesite(
+	PSS_RNGTAB *rng_tab,
+	i4 *stype,
+	DD_LDB_DESC **save_ldb_desc);
+static void pst_chk_xtab_upd_const_only(
+	PST_QTREE *header);
+static bool walk(
+	PST_QNODE *qn1);
 
 /*{
 ** Name: pst_header	- Allocate and fill in a query tree header

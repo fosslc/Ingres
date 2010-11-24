@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -38,8 +38,8 @@
 #include    <psfindep.h>
 #include    <pshparse.h>
 #include    <psftrmwh.h>
-#include    <pslcopyd.h>
 #include    <usererror.h>
+#include    <pslcopyd.h>
 
 /*
 ** Name: PSLCOPY.C:	this file contains functions used in semantic actions
@@ -161,10 +161,81 @@
 **          length. 
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **	    
 */
-
-/* external declarations */
+
+/* TABLE OF CONTENTS */
+i4 psl_cp1_copy(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_Q_XLATE *xlated_qry,
+	PTR scanbuf_ptr,
+	DB_ERROR *err_blk);
+i4 psl_cp2_copstmnt(
+	PSS_SESBLK *sess_cb,
+	PSQ_MODE *qmode,
+	DB_ERROR *err_blk);
+i4 psl_cp3_copytable(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *resrange,
+	DB_TAB_NAME *tabname,
+	PSS_Q_XLATE *xlated_qry,
+	DD_LDB_DESC *ldbdesc,
+	DB_ERROR *err_blk);
+i4 psl_cp4_coparam(
+	PSS_SESBLK *sess_cb,
+	PSS_Q_XLATE *xlated_qry,
+	DB_ERROR *err_blk);
+i4 psl_cp5_cospecs(
+	PSS_SESBLK *sess_cb,
+	PSS_Q_XLATE *xlated_qry,
+	char *domname,
+	PTR scanbuf_ptr,
+	DB_ERROR *err_blk);
+i4 psl_cp6_entname(
+	PSS_SESBLK *sess_cb,
+	char *entname,
+	DB_ERROR *err_blk,
+	PTR *scanbuf_ptr);
+i4 psl_cp7_fmtspec(
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	bool w_nullval);
+i4 psl_cp8_coent(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	bool parse_coent,
+	char *type_name,
+	i4 len_prec_num,
+	i4 *type_lenprec,
+	char *type_delim);
+i4 psl_cp9_nm_eq_nm(
+	PSS_SESBLK *sess_cb,
+	char *name,
+	char *value,
+	DB_ERROR *err_blk);
+i4 psl_cp10_nm_eq_str(
+	PSS_SESBLK *sess_cb,
+	char *name,
+	char *value,
+	DB_ERROR *err_blk);
+i4 psl_cp11_nm_eq_no(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *name,
+	i4 value);
+i4 psl_cp12_nm_eq_qdata(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *name,
+	DB_DATA_VALUE *value,
+	DB_ERROR *err_blk);
+i4 psl_cp13_nm_single(
+	PSS_SESBLK *sess_cb,
+	char *name,
+	DB_ERROR *err_blk);
 
 /*
 ** Name: psl_cp1_copy	- Semantic actions for copy: production

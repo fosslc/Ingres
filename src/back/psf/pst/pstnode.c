@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -91,7 +91,6 @@
 **	10-Jan-2001 (jenjo02)
 **	    Added *PSS_SELBLK parm to psf_mopen(), psf_mlock(), psf_munlock(),
 **	    psf_malloc(), psf_mclose(), psf_mroot(), psf_mchtyp().
-[@history_template@]...
 **	18-Feb-05 (srisu02)
 **	    Fixed an AIX compilation error by typecasting the return value of 
 **          a call to ME_ALIGN_MACRO as i4 
@@ -103,18 +102,36 @@
 **	    Initialize the data in the node if not passed in.
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-/*
-** Forward Function References
-*/
-bool
-pst_is_const_bool(PST_QNODE *node, bool *bval);
-
-/*
-[@#defines_of_other_constants@]
-[@type_definitions@]
-*/
+/* TABLE OF CONTENTS */
+i4 pst_node(
+	PSS_SESBLK *cb,
+	PSF_MSTREAM *stream,
+	PST_QNODE *left,
+	PST_QNODE *right,
+	i4 type,
+	char *value,
+	i4 vallen,
+	DB_DT_ID datatype,
+	i2 dataprec,
+	i4 datalen,
+	DB_ANYTYPE *datavalue,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk,
+	i4 flags);
+void pst_negate(
+	register DB_DATA_VALUE *dataval);
+void pst_map(
+	PST_QNODE *tree,
+	PST_J_MASK *map);
+bool pst_is_const_bool(
+	PST_QNODE *node,
+	bool *bval);
+void pst_not_bool(
+	PST_QNODE *node);
 
 /*
 ** Global Variable Definitions
@@ -370,7 +387,7 @@ pst_node(
     DB_DT_ID		adb_right;
     DB_DT_ID		adatatype;
     PST_QNODE		*node;
-    register PST_SYMBOL *symbol;
+    register PST_SYMBOL *symbol = NULL;
     PST_RT_NODE		*rnode;
     PTR			data_val = NULL;
     i4		err_code;

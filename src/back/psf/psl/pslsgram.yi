@@ -3640,390 +3640,775 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    SSQs into temporary variables and extended the PST_STATEMENT
 **	    calls to allow for a sequence of these to be passed outside
 **	    a DBproc context - including a DECLARE.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 %{
 
+
+/* TABLE OF CONTENTS */
+void psl_bp(void);
+void psl_bugbp(void);
+static i4 chkcnst(
+	PST_QNODE *tp);
+static i4 psl_fatt(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	bool same_scope,
+	DB_ATT_NAME *att_name,
+	PST_QNODE **node,
+	PSS_RNGTAB **rngvarp,
+	u_i4 fatt_flag,
+	PST_J_MASK *rel_mask,
+	PST_QNODE *union_head,
+	bool allow_fwdvar);
+i4 psl_subsel(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *subnode);
+static i4 psl_ordGroup(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *gptr,
+	PST_QNODE *tlist);
+static bool psl_agginExpr(
+	PST_QNODE *nodep);
+static i4 psl_tingx(
+	PST_QNODE *targ,
+	PST_QNODE *groupex);
+static i4 psl_ting(
+	PSS_SESBLK *cb,
+	PSS_RNGTAB **rng_vars,
+	PST_QNODE *targ,
+	PST_QNODE *group);
+static i4 psl_constx(
+	PST_QNODE *expr,
+	PST_QNODE *group);
+PST_QNODE *psl_find_node(
+	PST_QNODE *node,
+	PST_QNODE **cursor,
+	PST_TYPE type);
+PST_QNODE **psl_find_nodep(
+	PST_QNODE **nodep,
+	PST_QNODE ***cursor,
+	PST_TYPE type);
+i4 psl_hcheck(
+	PSS_SESBLK *cb,
+	PST_QNODE *having,
+	PST_QNODE *group,
+	PST_J_MASK *fromlist);
+i4 psl_hcheckvar(
+	PST_QNODE *having,
+	PST_QNODE *group,
+	PST_J_MASK *fromlist);
+i4 psl_curval(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PSC_CURBLK *cursor,
+	PST_QNODE **tree);
+i4 psl_shareable(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	bool *shareable,
+	DB_SHR_RPTQRY_INFO **qry_info);
+void psl_backpatch(
+	PST_STATEMENT *stmt,
+	PST_STATEMENT *patch);
+bool psl_agfcn(
+	PST_QNODE *node);
+void psl_up(
+	PSS_SESBLK *cb,
+	PSS_USRRANGE *rngtab,
+	register PST_QTREE *hdr,
+	bool *flag,
+	i4 *reason);
+i4 psl_crsopen(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PSC_CURBLK *crblk,
+	PST_QTREE *tree,
+	bool for_rdonly,
+	PST_QNODE *updcollst,
+	bool nonupdt,
+	PST_J_ID num_joins,
+	bool dynqp_comp);
+i4 psl_crskeyflag(
+	PSS_SESBLK *cb,
+	PST_QTREE *tree);
+static void psl_nonupdt_err(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	i4 reason,
+	i4 *err_code);
+static i4 psl_do_insert(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *root_node,
+	bool *shareable_qp,
+	PST_QTREE **tree,
+	bool isdbp,
+	PST_J_ID num_joins,
+	PSS_Q_XLATE *xlated_qry,
+	DB_SHR_RPTQRY_INFO **qry_info,
+	PST_QNODE *sort_list,
+	PST_QNODE *first_n,
+	PST_QNODE *offset_n);
+i4 psl_p_tlist(
+	PST_QNODE **tlist,
+	PSS_YYVARS *yyvarsp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl_p_telem(
+	PSL_P_TELEM_CTX *ctx,
+	PST_QNODE **node,
+	PST_QNODE *parent);
+static bool psl_aop_nooj(
+	PST_QNODE *nodep,
+	PSS_YYVARS *yyvarsp);
+void psl_set_jrel(
+	PST_J_MASK *inner_rels,
+	PST_J_MASK *outer_rels,
+	PST_J_ID join_id,
+	register PSS_RNGTAB **rng_vars,
+	DB_JNTYPE join_type);
+i4 psl_check_key(
+	PSS_SESBLK *cb,
+	DB_ERROR *err_blk,
+	DB_DT_ID att_type);
+void psl_syn_info_msg(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_OBJ_NAME *obj_spec,
+	i4 owned_by,
+	i4 qry_len,
+	char *qry,
+	DB_ERROR *err_blk);
+i4 psl_comment_col(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_COL_REF *col_ref);
+void psl_insert_into_agg_list(
+	PST_QNODE *var_node,
+	YYAGG_NODE_PTR *agglist_elem,
+	YYAGG_NODE_PTR **agg_list_stack,
+	i4 cur_scope,
+	PST_J_MASK *rel_list);
+static i4 psl_treedup_with_agg(
+	PST_QNODE *node_to_dup,
+	PST_QNODE **dup_to,
+	PSS_YYVARS *yyvarsp,
+	PSS_SESBLK *sess_cb);
+i4 psl_for_cond(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_DBPINFO *dbpinfo,
+	PST_QNODE **condition);
+i4 psl_ifkwd(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_DBPINFO *dbpinfo,
+	PST_STATEMENT **if_stmt_node);
+void psl_thenkwd(
+	PSS_DBPINFO *dbpinfo);
+void psl_elsekwd(
+	PSS_DBPINFO *dbpinfo);
+void psl_ifstmt(
+	PST_STATEMENT *if_node,
+	PST_QNODE *condition,
+	PST_STATEMENT *if_action,
+	PST_STATEMENT *else_action,
+	PSS_DBPINFO *dbpinfo);
+static i4 psl_simple_compare(
+	PSS_SESBLK *sess_cb,
+	PST_QNODE *operand1,
+	PST_QNODE *operand2,
+	ADI_OP_ID operator,
+	u_i4 pat_flags,
+	UCS2 escape_char,
+	PSS_TREEINFO **treeinfo,
+	bool in_target_clause,
+	PSQ_CB *psq_cb);
+static i4 psl_subsel_compare(
+	PSS_SESBLK *sess_cb,
+	PST_QNODE *expr,
+	PST_QNODE *subsel,
+	ADI_OP_ID operator,
+	i4 meta_op,
+	PSS_TREEINFO **treeinfo,
+	bool in_target_clause,
+	bool subsel_illegal,
+	i4 err_msgno,
+	PSQ_CB *psq_cb);
+i4 psl_repeat_qry_id(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	DB_CURSOR_ID *fe_id,
+	PST_QTREE *header,
+	DB_SHR_RPTQRY_INFO *qry_info);
+i4 psl_qeucb(
+	PSS_SESBLK *sess_cb,
+	i4 operation,
+	DB_ERROR *err_blk);
+i4 psl_init_dbp_stmt(
+	PSS_SESBLK *sess_cb,
+	PSS_DBPINFO *dbpinfo,
+	i4 qmode,
+	i4 type,
+	PST_STATEMENT **stmt,
+	DB_ERROR *err_blk);
+static i4 psl_add_grantee(
+	PSS_SESBLK *sess_cb,
+	char *grantee_name,
+	PSS_ID_TYPE grantee_type,
+	DB_ERROR *err_blk);
+i4 psl_cdbp_typedesc(
+	PSS_SESBLK *sess_cb,
+	PSS_DBPINFO *dbpinfo,
+	char *type_name,
+	i4 num_len_prec_vals,
+	i4 *len_prec,
+	i4 null_def,
+	PSQ_CB *psq_cb);
+i4 psl_send_setqry(
+	PSS_SESBLK *sess_cb,
+	char *str_2_send,
+	PSQ_CB *psq_cb);
+void psl_grantee_type_to_str(
+	i4 grantee_type,
+	char **str,
+	i4 *str_len,
+	bool by_word);
+static bool psl_valid_session_schema_use(
+	i4 qmode,
+	PSS_SESBLK *sess_cb,
+	char *obj_name,
+	DB_ERROR *err_blk);
+static i4 psl_tbl_rngent(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *objname,
+	i4 scope,
+	char *varname,
+	bool tabonly,
+	bool stream_ok,
+	PSS_RNGTAB **rngvarp,
+	i4 *rngvar_info,
+	PST_J_ID *pjoin_id);
+static i4 psl_reg_struct(
+	DMU_CB *dmu_cb,
+	char *ssname,
+	bool unique,
+	DB_ERROR *err_blk);
+static i4 psl_tbl_ref(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	PSS_COL_REF *col_ref,
+	i4 in_target_clause,
+	i4 cur_scope,
+	PSS_TBL_REF **tbl_refs,
+	PSS_TBL_REF **fwdref,
+	PSS_RNGTAB **rngtab,
+	bool in_union_orderby);
+static i4 psl_dbproc_param(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *name,
+	PST_QNODE *argument,
+	bool is_byref,
+	PST_QNODE **result);
+static i4 psl_mfunc_param(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	PST_QNODE *argument,
+	PST_QNODE **result);
+static i4 psl_usr_func(
+	char *fname,
+	PSS_SESBLK *sess_cb,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk);
+void psl_debug(void);
+static i4 psl_reserved_ident(
+	char *name,
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	i4 force_check);
+static i4 psl_set_function(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	const char *func_name,
+	i4 distinct,
+	i4 count_or_any,
+	PST_QNODE *expr1_node,
+	PST_QNODE *expr2_node,
+	PST_QNODE **aghdnodep);
+static i4 psl_vrule_tree_convert(
+	PST_QNODE *rootnode,
+	PST_QNODE *vtree,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+static i4 psl_vrule_subtree(
+	PSS_SESBLK *cb,
+	PST_QNODE **subtree,
+	PST_QNODE *vtree,
+	PSS_DUPRB *dup_rb);
+static void psl_bld_tid_descr(
+	DMT_ATT_ENTRY *attribute,
+	char *att_nmstr,
+	PSS_SESBLK *cb);
+static i4 psl_1ary_func_extra_proc(
+	PSS_SESBLK *sess_cb,
+	i4 op_id,
+	PST_QNODE *arg1,
+	PST_QNODE **prec_scale,
+	DB_ERROR *err_blk);
+static i4 psl_2ary_func_extra_proc(
+	PSS_SESBLK *sess_cb,
+	i4 op_id,
+	PST_QNODE *arg1,
+	PST_QNODE *arg2,
+	DB_ERROR *err_blk);
+static i4 psl_3ary_func_extra_proc(
+	i4 op_id,
+	PST_QNODE *arg2,
+	PST_QNODE *arg3,
+	DB_ERROR *err_blk);
+static i4 psl_arg_room(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	i4 n);
+static i4 psl_nary_func(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	ADI_OPINFO *func,
+	PST_QNODE **result_ptr);
+static i4 psl_chain_bop_fn(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	ADI_OPINFO *func,
+	PST_QNODE **result_ptr);
+i4 psl_must_be_string(
+	PSS_SESBLK *sess_cb,
+	DB_DATA_VALUE *in_val,
+	DB_ERROR *err_blk);
+static i4 psl_bld_col_spec_grant_template(
+	PTR txt_chain,
+	char *priv_str,
+	bool cols_excluded,
+	PSF_QUEUE *colq,
+	DB_ERROR *err_blk);
+i4 psl_norm_id_2_delim_id(
+	unsigned char **ident,
+	i4 *ident_len,
+	unsigned char *delim_id_buf,
+	DB_ERROR *err_blk);
+static i4 psl_remove_single_quotes(
+	char *text_chain,
+	char *identifier,
+	DB_ERROR *err_blk);
+static i4 psl_prepend_schemaname(
+	char *text_chain,
+	char *obj_name,
+	unsigned char *schema_name,
+	DB_ERROR *err_blk);
+static bool psl_seqop_search(
+	PST_QNODE *nodep);
+static bool psl_validate_collation_name(
+	char *collname,
+	DB_COLL_ID *collID);
+static bool psl_validate_collation_mix(
+	i2 collID1,
+	i2 collID2);
+i4 psl_collation_check(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	DB_DATA_VALUE *dv,
+	DB_COLL_ID collID);
+static i4 psl_push_yyvars(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	PSS_YYVARS **yyvpp);
+static i4 psl_groupingsets_fromcr(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	i4 crtype,
+	PST_QNODE *listp,
+	PST_QNODE **newnodep);
+static i4 psl_groupingsets_normalize(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE **rootp);
+static i4 psl_groupingsets_expand(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE **rootp,
+	bool *alldonep);
+static i4 psl_groupingsets_tidy(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *nodep,
+	i4 *rsdmnop);
+i4 psl_ansi_strtodt(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	DB_DT_ID ansitype,
+	i4 intflds,
+	DB_TEXT_STRING *instr,
+	PST_QNODE **newnode,
+	DB_DATA_VALUE *dataval,
+	i2 secfrac);
+static i4 psl_bool_const_treeinfo(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	bool result,
+	PSS_TREEINFO **treeinfo);
+static i4 psl_patcomp(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_TREEINFO *treeinfo,
+	bool in_target_clause);
+i4 psl_mk_const_similar(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	DB_DATA_VALUE *templ,
+	PST_QNODE **cst,
+	DB_ERROR *err_blk,
+	bool *handled);
+static i4 psl_mk_similar_lenchk(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	PST_QNODE **expr,
+	PST_QNODE *orig_cst,
+	PST_QNODE *cast_cst,
+	DB_ERROR *err_blk);
+i4 psl_checklen(
+	char *ident,
+	u_i4 max,
+	char *objstr,
+	DB_ERROR *psq_error);
+static i4 psl_override_collist(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PSS_RNGTAB *resrange,
+	QUEUE *col_list);
+static i4 psl_define_var(
+	PSS_SESBLK *cb,
+	char *name,
+	bool chk_unique,
+	PSS_DBPINFO *dbpinfo,
+	DB_ERROR *err_blk);
+static i4 psl_lookup_var(
+	QUEUE *q,
+	char *name,
+	bool required,
+	PSS_DECVAR **pvar,
+	DB_ERROR *err_blk);
+static i4 psl_dbp_finalize(
+	PSS_SESBLK *cb,
+	PST_STATEMENT *stmt_body,
+	bool full_funct,
+	PSS_DBPINFO *dbpinfo,
+	PST_DECVAR **decvarp,
+	DB_ERROR *err_blk);
+static i4 psl_dbp_init_nondbp(
+	PSS_SESBLK *cb,
+	PSS_YYVARS *yyvarsp,
+	DB_ERROR *err_blk);
+static i4 psl_dbp_define_builtins(
+	PSS_SESBLK *cb,
+	PSS_DBPINFO *dbpinfo,
+	DB_ERROR *err_blk);
+static i4 psls_2handle(
+	EX_ARGS *exargs);
+static i4 psls_1handle(
+	EX_ARGS *exargs);
+i4 pslsparse(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls1iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls2iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls3iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls4iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls5iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls6iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls7iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls8iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls9iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls10iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls11iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls12iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls13iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls14iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls15iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls16iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls17iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls18iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls19iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls20iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls21iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls22iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls23iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls24iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls25iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls26iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls27iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls28iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls29iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls30iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls31iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls32iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls33iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls34iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls35iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls36iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls37iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls38iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls39iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls40iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls41iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls42iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls43iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls44iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls45iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psls46iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
 /*
 **  Forward and/or External function references.
 */
 
 GLOBALREF PSF_SERVBLK *Psf_srvblk;
-
-static DB_STATUS psl_do_insert(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PST_QNODE	*root_node,
-	bool		*shareable_qp,
-	PST_QTREE	**tree,
-	bool		isdbp,
-	PST_J_ID	num_joins,
-	PSS_Q_XLATE	*xlated_qry,
-	DB_SHR_RPTQRY_INFO	**qry_info,
-	PST_QNODE	*sort_list,
-	PST_QNODE	*first_n,
-	PST_QNODE	*offset_n);
-
-static void psl_nonupdt_err(
-	PSQ_CB	*psq_cb,
-	PSS_SESBLK *cb,
-	i4	reason,
-	i4	*err_code);
-
-static DB_STATUS psl_fatt(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	bool		same_scope,
-	DB_ATT_NAME	*att_name,
-	PST_QNODE	**node,
-	PSS_RNGTAB	**rngvarp,
-	u_i4		fatt_flag,
-	PST_J_MASK	*rel_mask,
-	PST_QNODE	*union_head,
-	bool		allow_fwdvar);
-
-static DB_STATUS chkcnst(
-	PST_QNODE *tp);
-
-static bool psl_valid_session_schema_use(
-	i4		qmode,
-	PSS_SESBLK	*sess_cb,
-	char		*obj_name,
-	DB_ERROR	*err_blk);
-
-static DB_STATUS psl_tbl_rngent(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PSS_OBJ_NAME	*objname,
-	i4		scope,
-	char		*varname,
-	bool		tabonly,
-	bool		stream_ok,
-	PSS_RNGTAB	**rngvarp,
-	i4		*rngvar_info,
-	PST_J_ID	*pjoin_id);
-
-static DB_STATUS psl_tbl_ref(
-	PSQ_CB		*psq_cb,
-	PSS_SESBLK	*sess_cb,
-	PSS_COL_REF	*col_ref,
-	i4		in_target_clause,
-	i4		cur_scope,
-	PSS_TBL_REF	**tbl_refs,
-	PSS_TBL_REF	**fwdref,
-	PSS_RNGTAB	**rngtab,
-	bool		in_union_orderby);
-
-static DB_STATUS
-psl_reg_struct(
-	DMU_CB      *dmu_cb,
-	char        *ssname,
-	bool        unique,
-	DB_ERROR    *err_blk);
-static DB_STATUS
-psl_usr_func(
-	     char	    *fname,
-	     PSS_SESBLK	    *sess_cb,
-	     PST_QNODE	    **newnode,
-	     DB_ERROR	    *err_blk);
-static DB_STATUS
-psl_vrule_tree_convert(
-	    PST_QNODE	*rootnode,
-	    PST_QNODE	*vtree,
-	    PSS_SESBLK	*sess_cb,
-	    DB_ERROR	*err_blk);
-static DB_STATUS
-psl_set_function(
-	    PSS_SESBLK	*sess_cb,
-	    PSQ_CB	*psq_cb,
-	    PSS_YYVARS	*yyvarsp,
-	    const char	*func_name,
-	    i4		distinct,
-	    i4		count_or_any,
-	    PST_QNODE	*expr1_node,
-	    PST_QNODE	*expr2_node,
-	    PST_QNODE	**aghdnodep);
-static bool
-psl_validate_collation_name(
-	char		*collname,
-	DB_COLL_ID	*collID);
-static bool
-psl_validate_collation_mix(
-	i2	collID1,
-	i2	collID2);
-static DB_STATUS
-psl_vrule_subtree(
-	    PSS_SESBLK	*sess_cb,
-	    PST_QNODE	**subtree,
-	    PST_QNODE	*vtree,
-	    PSS_DUPRB	*dup_rb);
-static void
-psl_bld_tid_descr(
-	    DMT_ATT_ENTRY	*attribute,
-	    char		*att_nmstr,
-	    PSS_SESBLK		*cb);
-static i4
-psl_reserved_ident(
-	char		*name,
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	i4		force_check);
-static DB_STATUS
-psl_simple_compare(
-	PSS_SESBLK	*sess_cb,
-	PST_QNODE	*operand1,
-	PST_QNODE	*operand2,
-	ADI_OP_ID	operator,
-	u_i4		pat_flags,
-	UCS2		escape_char,
-	PSS_TREEINFO	**treeinfo,
-	bool		in_target_clause,
-	PSQ_CB		*psq_cb);
-
-
-static DB_STATUS
-psl_subsel_compare(
-	PSS_SESBLK	*sess_cb,
-	PST_QNODE	*expr,
-	PST_QNODE	*subsel,
-	ADI_OP_ID	operator,
-	i4		meta_op,
-	PSS_TREEINFO	**treeinfo,
-	bool		in_target_clause,
-	bool		subsel_illegal,
-	i4		err_msgno,
-	PSQ_CB		*psq_cb);
-static DB_STATUS
-psl_1ary_func_extra_proc(
-	    PSS_SESBLK	    *sess_cb,
-	    i4		    op_id,
-	    PST_QNODE	    *arg1,
-	    PST_QNODE	    **prec_scale,
-	    DB_ERROR	    *err_blk);
-static DB_STATUS
-psl_2ary_func_extra_proc(
-	    PSS_SESBLK	    *sess_cb,
-	    i4		    op_id,
-	    PST_QNODE	    *arg1,
-	    PST_QNODE	    *arg2,
-	    DB_ERROR	    *err_blk);
-static DB_STATUS
-psl_3ary_func_extra_proc(
-	    i4		    op_id,
-	    PST_QNODE	    *arg2,
-	    PST_QNODE	    *arg3,
-	    DB_ERROR	    *err_blk);
-
-static DB_STATUS psl_arg_room(
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb,
-	PSS_YYVARS *yyvarsp,
-	i4 n);
-
-static DB_STATUS psl_nary_func(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PSS_YYVARS	*yyvarsp,
-	ADI_OPINFO	*func,
-	PST_QNODE	**result_ptr);
-
-static DB_STATUS psl_chain_bop_fn(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PSS_YYVARS	*yyvarsp,
-	ADI_OPINFO	*func,
-	PST_QNODE	**result_ptr);
-
-static DB_STATUS
-psl_mfunc_param(
-	PSQ_CB		*psq_cb,
-	PSS_SESBLK	*cb,
-	PST_QNODE	*argument,
-	PST_QNODE	**result);
-
-static DB_STATUS
-psl_bld_col_spec_grant_template(
-	PTR		txt_chain,
-	char		*priv_str,
-	bool		cols_excluded,
-	PSF_QUEUE	*colq,
-	DB_ERROR	*err_blk);
-static DB_STATUS
-psl_add_grantee(
-	PSS_SESBLK	*sess_cb,
-	char		*grantee_name,
-	PSS_ID_TYPE	grantee_type,
-	DB_ERROR	*err_blk);
-static DB_STATUS
-psl_remove_single_quotes(
-	char		*text_chain,
-	char		*identifier,
-	DB_ERROR	*err_blk);
-static DB_STATUS
-psl_prepend_schemaname(
-	char		*text_chain,
-	char		*obj_name,
-	u_char		*schema_name,
-	DB_ERROR	*err_blk);
-static bool
-psl_seqop_search(
-	PST_QNODE	*nodep);
-static DB_STATUS
-psl_push_yyvars(
-	PSQ_CB		*psq_cb,
-	PSS_SESBLK	*sess_cb,
-	PSS_YYVARS	**yyvpp);
-static bool
-psl_aop_nooj(
-	PST_QNODE	*nodep,
-	PSS_YYVARS	*yyvarsp);
-static DB_STATUS psl_ordGroup(
-        PSS_SESBLK      *cb,
-        PSQ_CB          *psq_cb,
-        PST_QNODE       *gptr,
-        PST_QNODE       *tlist);
-
-static DB_STATUS psl_tingx(
-        PST_QNODE       *targ,
-        PST_QNODE       *groupex);
-
-static DB_STATUS psl_ting(
-	PSS_SESBLK	*cb,
-	PSS_RNGTAB	**rng_vars,
-        PST_QNODE       *targ,
-        PST_QNODE       *group);
-
-static DB_STATUS psl_constx(
-        PST_QNODE       *expr,
-        PST_QNODE       *group);
-static bool 
-psl_agginExpr(
-	PST_QNODE	*nodep);
-static DB_STATUS
-psl_groupingsets_fromcr(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	i4		crtype,
-	PST_QNODE	*listp,
-	PST_QNODE	**newnodep);
-static DB_STATUS
-psl_groupingsets_normalize(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PST_QNODE	**rootp);
-static DB_STATUS
-psl_groupingsets_expand(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PST_QNODE	**rootp,
-	bool		*alldonep);
-static DB_STATUS
-psl_groupingsets_tidy(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PST_QNODE	*nodep,
-	i4		*rsdmnop);
-
-static DB_STATUS psl_treedup_with_agg(
-	PST_QNODE *node_to_dup,
-	PST_QNODE **dup_to,
-	PSS_YYVARS *yyvarsp,
-	PSS_SESBLK *sess_cb);
-
-static DB_STATUS
-psl_ansi_strtodt(
-        PSS_SESBLK      *cb,
-        PSQ_CB          *psq_cb,
-	DB_DT_ID	ansitype,
-	i4		intparts,
-        DB_TEXT_STRING	*instr,
-        PST_QNODE       **newnode,
-	DB_DATA_VALUE	*dataval,
-	i2		secfrac);
-
-static DB_STATUS
-psl_bool_const_treeinfo(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	bool		result,
-	PSS_TREEINFO	**treeinfo);
-
-static DB_STATUS
-psl_patcomp(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_TREEINFO	*treeinfo,
-	bool		in_target_clause);
-
-DB_STATUS
-psl_mk_const_similar(
-	PSS_SESBLK	*sess_cb,
-	PSF_MSTREAM	*mstream,
-	DB_DATA_VALUE	*templ,   
-	PST_QNODE	**cst,
-	DB_ERROR	*err_blk,
-	bool		*handled);
-
-static DB_STATUS
-psl_mk_similar_lenchk(
-	PSS_SESBLK	*sess_cb,
-	PSF_MSTREAM	*mstream,
-	PST_QNODE	**expr,
-	PST_QNODE	*orig_cst,
-	PST_QNODE	*cast_cst,
-	DB_ERROR	*err_blk);
-
-static i4
-psl_checklen( 
-	char		*ident,
-	u_i4		max,
-	char		*objstr,
-	DB_ERROR	*psq_error);
-
-static DB_STATUS
-psl_override_collist(
-PSS_SESBLK      *cb,
-PSQ_CB          *psq_cb,
-PSS_RNGTAB      *resrange,
-QUEUE		*col_list);
-
-static DB_STATUS
-psl_define_var(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	bool		chk_unique,
-	PSS_DBPINFO	*dbpinfo,
-	DB_ERROR	*err_blk);
-
-static DB_STATUS
-psl_lookup_var(
-	QUEUE		*q,
-	char		*name,
-	bool		required,
-	PSS_DECVAR	**pvar,
-	DB_ERROR	*err_blk);
-
-static DB_STATUS
-psl_dbp_finalize(
-	PSS_SESBLK	*cb,
-	PST_STATEMENT	*stmt_body,
-	bool		full_funct,
-	PSS_DBPINFO	*dbpinfo,
-	PST_DECVAR	**decvarp,
-	DB_ERROR	*err_blk);
-
-static DB_STATUS
-psl_dbp_init_nondbp(
-	PSS_SESBLK	*cb,
-	PSS_YYVARS	*yyvarsp,
-	DB_ERROR	*err_blk);
-
-static DB_STATUS
-psl_dbp_define_builtins(
-	PSS_SESBLK	*cb,
-	PSS_DBPINFO	*dbpinfo,
-	DB_ERROR	*err_blk);
-
-/*[@function_reference@]...*/
 
 /*
 **  Defines of other constants.
@@ -10778,7 +11163,7 @@ twith_nm_eq_hexconst:	    nonkeyword EQUAL HEXCONST
 
 	if (cb->pss_distrib & DB_3_DDB_SESS)
 	{
-	    status = psl_ct15_distr_with(cb, $1, $3->db_t_text,
+	    status = psl_ct15_distr_with(cb, $1, (char*)$3->db_t_text,
 			&$Yxlated_qry, FALSE, psq_cb);
 	}
 	else
@@ -25287,7 +25672,6 @@ common_seq_opt:	    START WITH sign_op number
 		|   CYCLE
     {
 	i4                err_code;
-	DB_STATUS	       status;
 
 	if ($Yseqp->dbs_flag & DBS_NOCYCLE)
 	{
@@ -27148,7 +27532,6 @@ prepare_kwrd:	PREPARE
 
 opt_repeat:	/* Nuttin' dere */
     {
-	i4	dummy;
 	if (((Psf_srvblk->psf_flags & PSF_CACHEDYN) && 
 		!(cb->pss_ses_flag & PSS_NO_CACHEDYN)) || 
 	    (cb->pss_ses_flag & PSS_CACHEDYN))
@@ -29479,7 +29862,7 @@ subselect:	    select first_n distinct target_spec into_clause from
 	** primary union select andin that case we mark such that ORDER BY can
 	** re-enable the scope later */
 	
-	(VOID)pst_snscope(&cb->pss_auxrng, &$Yfrom_list,
+	pst_snscope(&cb->pss_auxrng, &$Yfrom_list,
 		cb->pss_qualdepth != 0 ||
 		    ($Ynonupdt_reason & PSS_UNION_IN_OUTERMOST_SUBSEL)
 		    ? MAXI1
@@ -41902,7 +42285,7 @@ settrace:	    settracestmnt strsetparam
 		    /* set trace record filename */
 		    if (ult_set_tracefile($3) != OK)
                     {
-                       LOCATION *loc=ult_tracefile_loc();
+                       LOCATION *loc = (LOCATION *)ult_tracefile_loc();
 
 		       if (loc)
                        {
@@ -42255,7 +42638,6 @@ setrole:	SETROLE
     }
     generic_ident setrole_passwd
     {
-        DB_STATUS               status;
 	i4                 err_code;
 
 	/*
@@ -42689,8 +43071,6 @@ update:	    updatekwd from_item from_u
     }
 	    SET updatelist
     {
-	DB_STATUS status;
-
 	/*
 	** aggregates are not allowed in the updatelist, but are OK in the
 	** where_clause
@@ -46329,7 +46709,7 @@ psl_fatt(
     i4		        att_c_match_count = 0;
     i4			att_l_match_level = 0;
     i4			i;
-    PST_J_MASK		union_mask = {0};
+    PST_J_MASK		union_mask = {{0}};
 
     /* for each variable, look up the column name */
     for (i = 0; i < PST_NUMVARS; i++)
@@ -46464,7 +46844,7 @@ psl_fatt(
 
     while (union_head)
     {
-	PST_J_MASK needed_mask = {0};
+	PST_J_MASK needed_mask = {{0}};
 	MEcopy((PTR)&union_head->pst_sym.pst_value.pst_s_root.pst_tvrm,
 		sizeof(PST_J_MASK), (PTR)&needed_mask);
 	BTand(PST_NUMVARS, (char *)&union_mask, (char *)&needed_mask);
@@ -46694,6 +47074,8 @@ static bool psl_agginExpr(PST_QNODE	*nodep)
 	case PST_AGHEAD:
 	case PST_AOP:
 	    return(TRUE);
+	default:
+	    break;
 	}
 	if (nodep->pst_left && psl_agginExpr(nodep->pst_left))
 	    return(TRUE);
@@ -47226,7 +47608,8 @@ psl_hcheck(
     }
 
     /* Switch the having node type to perform the various checks. */
-    switch (having->pst_sym.pst_type) {
+    switch (having->pst_sym.pst_type)
+    {
 
       case PST_AND:
       case PST_OR:
@@ -47261,6 +47644,8 @@ psl_hcheck(
 	/* Last chance is to check for aggregate/constant expression. */
 	if (status != E_DB_OK) status = psl_constx(having->pst_left, group);
 	return(status);
+    default:
+	break;
     }
 
     return(E_DB_ERROR);		/* we shouldn't really get to here */
@@ -53299,6 +53684,8 @@ psl_init_dbp_stmt(
 
 		break;
 	    }
+	    default:
+		break;
 	}
 
 	/*
@@ -54749,7 +55136,7 @@ psl_tbl_ref(
 	{
 	    i4	schema_len;
 
-	    schema_len = cus_trmwhite((u_i4) sizeof(*schema_name),
+	    schema_len = psf_trmwhite((u_i4) sizeof(*schema_name),
 		(char *) schema_name);
 	    MEcopy((PTR) schema_name, schema_len, (PTR) qualifier);
 	    CMcpychar((u_char *)".", (qualifier + schema_len));
@@ -58014,8 +58401,8 @@ psl_ansi_strtodt(
 	** ingres interval form */
 	if (prepend || append)
 	{
-	    char *p = &instr->db_t_text[0];
-	    char *e = p + instr->db_t_count;
+	    u_char *p = &instr->db_t_text[0];
+	    u_char *e = p + instr->db_t_count;
 	    while (p < e && !CMalpha(p))
 		CMnext(p);
 	    if (p < e)

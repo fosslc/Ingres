@@ -428,14 +428,128 @@
 **	    teach gateway register to use pslctbl close-out routines.
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
-
-/* static functions and constants declaration */
 
-static char * psl_seckey_attr_name(
-	PSS_SESBLK	*sess_cb
-);
-
+/* TABLE OF CONTENTS */
+i4 psl_ct1_create_table(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_CONS *cons_list);
+i4 psl_crtas_fixup_columns(
+	PSS_SESBLK *sess_cb,
+	PST_QNODE *newcolspec,
+	PST_QNODE *query_expr,
+	PSQ_CB *psq_cb);
+i4 psl_ct2s_crt_tbl_as_select(
+	PSS_SESBLK *sess_cb,
+	PST_QNODE *newcolspec,
+	PST_QNODE *query_expr,
+	PSQ_CB *psq_cb,
+	PST_J_ID *join_id,
+	PSS_Q_XLATE *xlated_qry,
+	PST_QNODE *sort_list,
+	PST_QNODE *first_n,
+	PST_QNODE *offset_n);
+i4 psl_ct3_crwith(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+i4 psl_ct9_new_loc_name(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *loc_name,
+	char *table_name);
+i4 psl_ct10_crt_tbl_kwd(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+i4 psl_ct11_tname_name_name(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *name1,
+	char *name2,
+	char *name3,
+	char **value);
+i4 psl_ct12_crname(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *tbl_spec);
+i4 psl_ct13_newcolname(
+	PSS_SESBLK *sess_cb,
+	char *column_name,
+	PSQ_CB *psq_cb,
+	PSS_Q_XLATE *xlated_qry,
+	PTR *scanbuf_ptr);
+i4 psl_ct14_typedesc(
+	PSS_SESBLK *sess_cb,
+	char *type_name,
+	i4 num_len_prec_vals,
+	i4 *len_prec,
+	i4 null_def,
+	PST_QNODE *default_node,
+	DB_TEXT_STRING *default_text,
+	DB_IISEQUENCE *idseqp,
+	PSQ_CB *psq_cb,
+	DB_COLL_ID collationID,
+	i4 encrypt_spec);
+i4 psl_ct15_distr_with(
+	PSS_SESBLK *sess_cb,
+	char *name,
+	char *value,
+	PSS_Q_XLATE *xlated_qry,
+	bool quoted_val,
+	PSQ_CB *psq_cb);
+i4 psl_ct16_distr_create(
+	PSS_SESBLK *sess_cb,
+	PSS_Q_XLATE *xlated_qry,
+	bool simple_create,
+	PSQ_CB *psq_cb);
+i4 psl_ct17_distr_specs(
+	PSS_SESBLK *sess_cb,
+	PTR scanbuf_ptr,
+	PSS_Q_XLATE *xlated_qry,
+	DB_ERROR *err_blk);
+static void psl_find_18colname(
+	i4 qmode,
+	PSS_SESBLK *sess_cb,
+	PSS_DBPINFO *dbpinfo,
+	char **colname);
+i4 psl_ct18s_type_qual(
+	i4 qmode,
+	i4 qual1,
+	i4 qual2,
+	PSS_SESBLK *sess_cb,
+	PSS_DBPINFO *dbpinfo,
+	DB_ERROR *err_blk);
+i4 psl_ct19s_constraint(
+	PSS_SESBLK *sess_cb,
+	i4 type,
+	PSY_COL *cons_cols,
+	PSS_OBJ_NAME *ref_tabname,
+	PSY_COL *ref_cols,
+	PSS_TREEINFO *check_cond,
+	PSS_CONS **consp,
+	DB_ERROR *err_blk);
+i4 psl_ct20s_cons_col(
+	PSS_SESBLK *sess_cb,
+	PSY_COL **colp,
+	char *newcolname,
+	DB_ERROR *err_blk);
+i4 psl_ct21s_cons_name(
+	char *cons_name,
+	PSS_CONS *cons,
+	PSS_CONS **cons_listp);
+i4 psl_ct22s_cons_allowed(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+void psl_command_string(
+	i4 qmode,
+	PSS_SESBLK *sess_cb,
+	char *command,
+	i4 *length);
+static char *psl_seckey_attr_name(
+	PSS_SESBLK *sess_cb);
 
 /*
 ** Name: psl_ct1_create_table	- Semantic actions for create_table: (SQL) and
@@ -2440,7 +2554,9 @@ psl_ct11_tname_name_name(
 {
     DB_STATUS	    status;
     i4		    dv_size;
-    i4		    left;	/* for BYTE_ALIGN sizing */
+# ifdef BYTE_ALIGN
+    i4		    left;
+# endif
 
     /* concat the two names */
     /* determine the length of the result */
@@ -4405,7 +4521,7 @@ psl_ct16_distr_create(
 	bl = STindex(dmu_cb->dmu_location.data_address, " ",
 			     sizeof(DB_LOC_NAME));
 
-	len = (bl == (char *) NULL) ? sizeof(DB_LOC_NAME) : -1;
+	len = (bl == (char *) NULL) ? (i4)sizeof(DB_LOC_NAME) : -1;
 
 	status = psq_x_add(sess_cb, dmu_cb->dmu_location.data_address,
 			   &sess_cb->pss_ostream, xlated_qry->pss_buf_size,

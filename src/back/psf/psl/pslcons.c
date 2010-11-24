@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 **
 */
  
@@ -184,165 +184,211 @@
 **	    Key count in statement node changed to i2, fix here.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
-/* function prototypes for static functions
- */
-static DB_STATUS    psl_ver_cons_columns(
-					 PSS_SESBLK       *sess_cb,
-					 char 	    	  *cons_str,
-					 i4		  qmode,
-					 PSF_QUEUE	  *colq,
-					 DMU_CB	     	  *dmu_cb,
-					 PSS_RNGTAB    	  *rngvar,
-					 i4	     	  newtbl,
-					 bool		  dmtatt,
-					 DB_COLUMN_BITMAP *col_map,
-					 DMT_ATT_ENTRY    **att_array,
-					 PST_COL_ID       **colid_listp,
-					 i2		  *numcols,
-					 DB_ERROR  	  *err_blk);
-static DB_STATUS    psl_ver_unique_cons(
-					PSS_SESBLK    *sess_cb, 
-					i4           qmode, 
-					PSS_CONS      *cons,
-					i4           newtbl,
-					DMU_CB	      *dmu_cb,
-					PSS_RNGTAB    *rngvar,
-					PST_CREATE_INTEGRITY *cr_integ,
-					DB_ERROR      *err_blk);
-static DB_STATUS    psl_ver_ref_cons(
-				     PSS_SESBLK       *sess_cb, 
-				     i4  	      qmode, 
-				     PSS_CONS         *cons,
-				     i4	      newtbl,
-				     DMU_CB    	      *dmu_cb,
-				     PSS_RNGTAB	      *refing_rngvar,
-				     PST_STATEMENT    *stmt,
-				     DB_ERROR         *err_blk);
-static DB_STATUS    psl_ver_check_cons(
-				       PSS_SESBLK   *sess_cb,
-				       PSQ_CB	    *psq_cb,
-				       PSS_CONS     *cons,
-				       i4           newtbl,
-				       DMU_CB  	    *dmu_cb,
-				       PSS_RNGTAB   *rngvar,
-				       PST_CREATE_INTEGRITY *cr_integ);
-static DB_STATUS    psl_cons_text(
-				  PSS_SESBLK      *sess_cb,
-				  PSS_CONS	  *cons, 
-				  SIZE_TYPE	  *memleft,
-				  PSF_MSTREAM	  *mstream,
-				  DB_TEXT_STRING  **txtp,
-				  PTR	  	  text_chain,
-				  DB_ERROR	  *err_blk);
-static DB_STATUS    psl_add_col_list(
-				     PSF_QUEUE	*colq,
-				     PTR	text_chain,
-				     DB_ERROR	*err_blk);
-static DB_STATUS    psl_add_schema_table(
-					 DB_OWN_NAME	*ownname,
-					 i4		ownname_is_regid,
-					 DB_TAB_NAME	*tabname,
-					 i4		tabname_is_regid,
-					 PTR		text_chain,
-					 DB_ERROR	*err_blk);
-static DB_STATUS    psl_ixopts_text(
-				PSS_CONS	*cons, 
-				PTR		text_chain, 
-				DB_ERROR	*err_blk, 
-				bool		firstwith);
-static DB_STATUS    psl_ver_ref_priv(
-				     PSS_SESBLK		*sess_cb,
-				     PSS_RNGTAB		*rngvar,
-				     DB_COLUMN_BITMAP	*ref_map,
-				     PST_CREATE_INTEGRITY *cr_integ,
-				     DB_ERROR		*err_blk);
-static DB_STATUS    psl_ver_ref_types(
-				      PSS_SESBLK     *sess_cb, 
-				      i4  	     qmode, 
-				      i4             newtbl,
-				      i4             num_cols,
-				      DMF_ATTR_ENTRY **cons_att_array, 
-				      DMT_ATT_ENTRY  **ref_att_array,
-				      DB_ERROR       *err_blk);
-static DB_STATUS    psl_find_primary_cons(
-					  PSS_SESBLK	    *sess_cb,
-					  PSS_RNGTAB	    *rngvar,
-					  DB_COLUMN_BITMAP  *col_map,
-					  DB_CONSTRAINT_ID  *cons_id,
-					  u_i4		    *integ_no,
-					  DMT_ATT_ENTRY	    **att_array,
-					  PST_COL_ID	    **collistp,
-					  DB_ERROR	    *err_blk);
-static DB_STATUS psl_qual_primary_cons(
-				      PTR		*qual_args,
-				      DB_INTEGRITY      *integ,
-				      i4		*satisfies,
-				      PSS_SESBLK	*sess_cb);
-static DB_STATUS    psl_find_unique_cons(
-					 PSS_SESBLK 	  *sess_cb,
-					 DB_COLUMN_BITMAP *col_map,
-					 PSS_RNGTAB 	  *rngvar,
-					 DB_CONSTRAINT_ID *cons_id,
-					 u_i4		  *integ_no,
-					 DB_ERROR	  *err_blk);
-static DB_STATUS   psl_qual_unique_cons(
-					PTR		*qual_args,
-					DB_INTEGRITY    *integ,
-					i4		*satisfies,
-					PSS_SESBLK	*sess_cb);
-static DB_STATUS    psl_handle_self_ref(
-					PSS_SESBLK	*sess_cb,
-					PST_STATEMENT	*stmt,
-					PSS_OBJ_NAME	*obj_name,
-					PSS_CONS	*cons,
-					DB_ERROR	*err_blk);
-static DB_STATUS    psl_check_unique_set(
-					 DB_INTEGRITY	*integ_tup1,
-					 DB_INTEGRITY	*integ_tup2,
-					 i4		name1_specified,
-					 i4		name2_specified,
-					 i4		qmode,
-					 PSS_SESBLK	*sess_cb,
-					 DB_ERROR	*err_blk);
-static DB_STATUS psl_compare_multi_cons(
-					PSS_SESBLK	*sess_cb,
-					PST_STATEMENT	**stmt_list,
-					DMU_CB		*dmu_cb,
-					i4		qmode,
-					DB_ERROR	*err_blk);
-static DB_STATUS psl_qual_dup_cons(
-				   PTR		*qual_args,
-				   DB_INTEGRITY	*integ,
-				   i4		*dummy,
-				   PSS_SESBLK	*sess_cb);
-static DB_STATUS psl_compare_agst_table(
-					PSS_SESBLK	*sess_cb,
-					PST_STATEMENT	*stmt,
-					PSS_RNGTAB	*rngvar,
-					i4		qmode,
-					DB_ERROR	*err_blk);
-static DB_STATUS psl_compare_agst_schema(
-					 PSS_SESBLK	*sess_cb,
-					 PST_STATEMENT	*stmt_list,
-					 i4		qmode,
-					 DB_ERROR	*err_blk);
-
-static bool psl_verify_new_index(
-		PSS_SESBLK		*sess_cb,
-		PST_CREATE_INTEGRITY	*cinteg,
-		PST_CREATE_INTEGRITY	*xinteg);
-
+/* TABLE OF CONTENTS */
+i4 psl_verify_cons(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	i4 newtbl,
+	DMU_CB *dmu_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_CONS *cons_list,
+	PST_STATEMENT **stmt_listp);
+static i4 psl_ver_cons_columns(
+	PSS_SESBLK *sess_cb,
+	char *cons_str,
+	i4 qmode,
+	PSF_QUEUE *colq,
+	DMU_CB *dmu_cb,
+	PSS_RNGTAB *rngvar,
+	i4 newtbl,
+	bool dmtatt,
+	DB_COLUMN_BITMAP *col_map,
+	DMT_ATT_ENTRY **att_array,
+	PST_COL_ID **colid_listp,
+	i2 *num_cols,
+	DB_ERROR *err_blk);
+static i4 psl_cons_text(
+	PSS_SESBLK *sess_cb,
+	PSS_CONS *cons,
+	SIZE_TYPE *memleft,
+	PSF_MSTREAM *mstream,
+	DB_TEXT_STRING **txtp,
+	PTR text_chain,
+	DB_ERROR *err_blk);
+static i4 psl_add_col_list(
+	PSF_QUEUE *colq,
+	PTR text_chain,
+	DB_ERROR *err_blk);
+static i4 psl_add_schema_table(
+	DB_OWN_NAME *ownname,
+	i4 ownname_is_regid,
+	DB_TAB_NAME *tabname,
+	i4 tabname_is_regid,
+	PTR text_chain,
+	DB_ERROR *err_blk);
+static i4 psl_ixopts_text(
+	PSS_CONS *cons,
+	PTR text_chain,
+	DB_ERROR *err_blk,
+	bool firstwith);
+i4 psl_gen_alter_text(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	SIZE_TYPE *memleft,
+	DB_OWN_NAME *ownname,
+	DB_TAB_NAME *tabname,
+	PSS_CONS *cons,
+	DB_TEXT_STRING **query_textp,
+	DB_ERROR *err_blk);
+static i4 psl_ver_unique_cons(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	PSS_CONS *cons,
+	i4 newtbl,
+	DMU_CB *dmu_cb,
+	PSS_RNGTAB *rngvar,
+	PST_CREATE_INTEGRITY *cr_integ,
+	DB_ERROR *err_blk);
+static i4 psl_ver_ref_cons(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	PSS_CONS *cons,
+	i4 newtbl,
+	DMU_CB *dmu_cb,
+	PSS_RNGTAB *refing_rngvar,
+	PST_STATEMENT *stmt,
+	DB_ERROR *err_blk);
+static i4 psl_ver_ref_types(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	i4 newtbl,
+	i4 num_cols,
+	DMF_ATTR_ENTRY **cons_att_array,
+	DMT_ATT_ENTRY **ref_att_array,
+	DB_ERROR *err_blk);
+static i4 psl_handle_self_ref(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT *stmt,
+	PSS_OBJ_NAME *obj_name,
+	PSS_CONS *cons,
+	DB_ERROR *err_blk);
+static i4 psl_ver_ref_priv(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	DB_COLUMN_BITMAP *ref_map,
+	PST_CREATE_INTEGRITY *cr_integ,
+	DB_ERROR *err_blk);
+static i4 psl_qual_primary_cons(
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *satisfies,
+	PSS_SESBLK *sess_cb);
+i4 psl_qual_ref_cons(
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *satisfies,
+	PSS_SESBLK *sess_cb);
+i4 psl_find_cons(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_CONS_QUAL_FUNC qual_func,
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *found,
+	DB_ERROR *err_blk);
+static i4 get_primary_key_cols(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	DB_CONSTRAINT_ID *cons_id,
+	DMT_ATT_ENTRY **att_array,
+	PST_COL_ID **colid_listp,
+	DB_ERROR *err_blk);
+static i4 psl_find_primary_cons(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	DB_COLUMN_BITMAP *col_map,
+	DB_CONSTRAINT_ID *cons_id,
+	u_i4 *integ_no,
+	DMT_ATT_ENTRY **att_array,
+	PST_COL_ID **colid_listp,
+	DB_ERROR *err_blk);
+static i4 psl_find_unique_cons(
+	PSS_SESBLK *sess_cb,
+	DB_COLUMN_BITMAP *col_map,
+	PSS_RNGTAB *rngvar,
+	DB_CONSTRAINT_ID *cons_id,
+	u_i4 *integ_no,
+	DB_ERROR *err_blk);
+static i4 psl_qual_unique_cons(
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *satisfies,
+	PSS_SESBLK *sess_cb);
+static i4 psl_ver_check_cons(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_CONS *cons,
+	i4 newtbl,
+	DMU_CB *dmu_cb,
+	PSS_RNGTAB *rngvar,
+	PST_CREATE_INTEGRITY *cr_integ);
+static i4 psl_check_unique_set(
+	DB_INTEGRITY *integ_tup1,
+	DB_INTEGRITY *integ_tup2,
+	i4 name1_specified,
+	i4 name2_specified,
+	i4 qmode,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+static i4 psl_compare_multi_cons(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT **stmt_list,
+	DMU_CB *dmu_cb,
+	i4 qmode,
+	DB_ERROR *err_blk);
+static i4 psl_compare_agst_table(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT *stmt,
+	PSS_RNGTAB *rngvar,
+	i4 qmode,
+	DB_ERROR *err_blk);
+static i4 psl_qual_dup_cons(
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *dummy,
+	PSS_SESBLK *sess_cb);
+static i4 psl_compare_agst_schema(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT *stmt_list,
+	i4 qmode,
+	DB_ERROR *err_blk);
+i4 psl_find_column_number(
+	DMU_CB *dmu_cb,
+	DB_ATT_NAME *col_name);
 static bool psl_verify_existing_index(
-		PST_CREATE_INTEGRITY	*cinteg,
-		i4			keycount,
-		i4			*keyarray);
-
-static VOID    psl_print_conslist(PSS_CONS *cons_list, i4  print);
-static VOID    psl_print_cons(PSS_CONS *cons);
-static VOID    psl_print_colq(PSF_QUEUE *q);
-
+	PST_CREATE_INTEGRITY *cinteg,
+	i4 keycount,
+	i4 *keyarray);
+static bool psl_verify_new_index(
+	PSS_SESBLK *sess_cb,
+	PST_CREATE_INTEGRITY *cinteg,
+	PST_CREATE_INTEGRITY *xinteg);
+static void psl_print_conslist(
+	PSS_CONS *cons_list,
+	i4 print);
+static void psl_print_colq(
+	PSF_QUEUE *q);
+static void psl_print_cons(
+	PSS_CONS *cons);
+i4 psl_find_iobj_cons(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	i4 *found,
+	DB_ERROR *err_blk);
 
 /*
 ** Name: psl_verify_cons  - verify that constraints for a CREATE TABLE statement
@@ -1912,8 +1958,8 @@ psl_ixopts_text(
 	/* Loop over location string, copying one location at a time. */
         while (locleft)
         {
-            for (locsize = (sizeof(DB_LOC_NAME) < locleft) ?
-                sizeof(DB_LOC_NAME) : locleft; locsize; locsize--)
+            for (locsize = ((i4)sizeof(DB_LOC_NAME) < locleft) ?
+                (i4)sizeof(DB_LOC_NAME) : locleft; locsize; locsize--)
              if (locaddr[locsize-1] != ' ') break;
                                 /* wee loop to strip trailing blanks */
 	    MEcopy((char *)locaddr, locsize, (char *)tbufaddr);

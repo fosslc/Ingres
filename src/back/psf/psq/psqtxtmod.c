@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 **
 */
 
@@ -113,8 +113,90 @@
 **          Move psq_store_text() declarator to pshparse.h and make public.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psq_topen(
+	PTR *header,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
+i4 psq_tadd(
+	PTR header,
+	unsigned char *piece,
+	i4 size,
+	PTR *result,
+	DB_ERROR *err_blk);
+i4 psq_rptqry_text(
+	PTR header,
+	unsigned char *piece,
+	i4 size,
+	PTR *result,
+	DB_ERROR *err_blk);
+i4 psq_tclose(
+	PTR header,
+	DB_ERROR *err_blk);
+i4 psq_tsubs(
+	PTR header,
+	PTR piece,
+	unsigned char *newtext,
+	i4 size,
+	PTR *newpiece,
+	DB_ERROR *err_blk);
+i4 psq_tout(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	PTR header,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+i4 psq_1rptqry_out(
+	PSS_SESBLK *sess_cb,
+	PTR header,
+	PSF_MSTREAM *mstream,
+	i4 *txt_len,
+	unsigned char **txt,
+	DB_ERROR *err_blk);
+i4 psq_tqrylen(
+	PTR header,
+	i4 *length);
+i4 psq_tcnvt(
+	PSS_SESBLK *sess_cb,
+	PTR header,
+	DB_DATA_VALUE *dbval,
+	PTR *result,
+	DB_ERROR *err_blk);
+i4 psq_tinsert(
+	PTR header,
+	unsigned char *piece,
+	i4 size,
+	PTR *result,
+	PTR oldpiece,
+	DB_ERROR *err_blk);
+PTR psq_tbacktrack(
+	PTR piece,
+	i4 n);
+PTR psq_tbackfromlast(
+	PTR header,
+	i4 n);
+i4 psq_tmulti_out(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	PTR header,
+	PSF_MSTREAM *mstream,
+	DB_TEXT_STRING **txtp,
+	DB_ERROR *err_blk);
+i4 psq_store_text(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	PTR header,
+	PSF_MSTREAM *mstream,
+	PTR *result,
+	bool return_db_text_string,
+	DB_ERROR *err_blk);
+void psq_tdelete(
+	PTR header,
+	PTR piece);
 
 /* static and forward declarations */
 
@@ -894,6 +976,7 @@ psq_tcnvt(
     status  = E_DB_OK;
     totype  = (DB_DT_ID) DB_LTXT_TYPE;
 
+    adffn.adf_r_dv.db_datatype = totype;
     if (dbval->db_datatype == totype)
 	dv_size = dbval->db_length;
     else
@@ -988,7 +1071,6 @@ psq_tcnvt(
 
     string	  = (DB_TEXT_STRING*) tp->psq_tval;
     /* Fill in text piece */
-    adffn.adf_r_dv.db_datatype	= totype;
     adffn.adf_r_dv.db_length	= dv_size;
     adffn.adf_r_dv.db_data	= (PTR) string;
     adffn.adf_dv_n		= 1;

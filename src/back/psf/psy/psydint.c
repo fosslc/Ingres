@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -114,17 +114,19 @@
 **	    to allow for extra flags in PST_RSDM_NODE
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward static functions.
-*/
-static VOID
-makeidset(
-	register i4        varno,
+
+/* TABLE OF CONTENTS */
+i4 psy_dinteg(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb,
+	QEU_CB *qeu_cb);
+static void makeidset(
+	register i4 varno,
 	register PST_QNODE *tree,
-	u_i4		   dset[]);
+	u_i4 dset[]);
 
 /*{
 ** Name: psy_dinteg	- Define an integrity.
@@ -300,7 +302,7 @@ psy_dinteg(
     DB_STATUS           status;
     DB_STATUS		stat;
     DB_INTEGRITY	inttuple;
-    register DB_INTEGRITY *inttup;
+    register DB_INTEGRITY *inttup = NULL;
     RDF_CB		rdf_cb;
     register RDR_RB	*rdf_rb = &rdf_cb.rdf_rb;
     QSF_RCB		qsf_rb;
@@ -854,7 +856,8 @@ psy_dinteg(
 	/* Commented out, because we want to return good status to commit rather
 	** than abort in this case. Abort is done `manually' by calling RDF to
 	** remove integrity at the end of this proc.
-	/*	status = E_DB_ERROR;	*/
+	**	status = E_DB_ERROR;
+	*/
 	goto exit;
     }
 exit:

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1985, 2004 Ingres Corporation
+** Copyright (c) 1985, 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -112,12 +112,22 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward static functions.
-*/
 
+/* TABLE OF CONTENTS */
+i4 psl_cv1_create_view(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *new_col_list,
+	PST_QNODE *query_expr,
+	i4 check_option,
+	PSS_YYVARS *yyvarsp);
+i4 psl_cv2_viewstmnt(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
 
 /*{
 ** Name: psl_cv1_create_view - wrap up CREATE/DEFINE VIEW processing; this
@@ -383,8 +393,6 @@ psl_cv1_create_view(
     DB_TAB_ID           *tabids = (DB_TAB_ID *) NULL;
     i4			*tabtypes = (i4 *) NULL;
     DD_OBJ_TYPE         *obj_types = (DD_OBJ_TYPE *) NULL;
-    bool		wco_insert_rule = FALSE;
-    bool		wco_update_rule = FALSE;
     PST_STATEMENT	*snode = (PST_STATEMENT *) sess_cb->pss_object;
     PST_CREATE_VIEW	*crt_view = &snode->pst_specific.pst_create_view;
     PST_QTREE		*qtree;
@@ -955,7 +963,6 @@ psl_cv1_create_view(
 	    PST_QNODE	    *tree_copy;
 	    PSS_DUPRB	    dup_rb;
 	    PST_J_ID	    dummy;
-	    PST_QNODE	    *tlist_start = (PST_QNODE *) NULL;
 	    i4	    qrymod_resp_mask;
 	    bool	    leave_loop;
 
@@ -1158,7 +1165,7 @@ psl_cv1_create_view(
 		PSS_RNGTAB	*rule_rng_var = (PSS_RNGTAB *) NULL, *r;
 		PSY_ATTMAP	insrt_map;
 		i4		i;
-	    
+	        u_i4		u;
 		/*
 		** make sure that the underlying table of the new view does NOT
 		** also appear in a subquery inside the qualification;
@@ -1264,7 +1271,7 @@ psl_cv1_create_view(
 		** updated, CHECK OPTION will have to be enforced dynamically
 		*/
 
-		DB_COLUMN_BITMAP_INIT(crt_view->pst_updt_cols.db_domset, i, 0);
+		DB_COLUMN_BITMAP_INIT(crt_view->pst_updt_cols.db_domset, u, 0);
 
 		wco_updt_attrs = FALSE;
 

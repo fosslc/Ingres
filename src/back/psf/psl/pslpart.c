@@ -1,5 +1,5 @@
 /*
-** Copyright 2004, Ingres Corporation
+** Copyright 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -118,37 +118,81 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
-/* Local routine prototypes */
-
-/* Lookup a column name, return column info */
+/* TABLE OF CONTENTS */
+i4 psl_partdef_end(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+i4 psl_partdef_new_dim(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	i4 distrule);
+i4 psl_partdef_nonval(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	i4 nparts);
+i4 psl_partdef_oncol(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	char *colname);
+i4 psl_partdef_partlist(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+i4 psl_partdef_pname(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	char *pname,
+	bool allow_ii);
+i4 psl_partdef_start(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+i4 psl_partdef_value(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	i4 sign_flag,
+	DB_DATA_VALUE *value);
+i4 psl_partdef_value_check(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+i4 psl_partdef_with(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
 static i2 ppd_lookup_column(
 	PSS_SESBLK *sess_cb,
 	i4 qmode,
 	char *colname,
 	i2 *col_typep);
-
-/* Allocate memory from the partition def temporary stream */
-static DB_STATUS ppd_malloc(
+static i4 ppd_malloc(
 	i4 psize,
 	void *pptr,
 	PSS_SESBLK *sess_cb,
 	PSQ_CB *psq_cb);
-
-/* Start a new breaks table entry */
-static DB_STATUS ppd_new_break(
+static i4 ppd_new_break(
 	PSS_SESBLK *sess_cb,
 	PSQ_CB *psq_cb,
 	PSS_YYVARS *yyvarsp,
 	DB_PART_DIM *dim_ptr);
-
-/* Issue memory allocation message, returns E_DB_ERROR */
-static DB_STATUS ppd_ulm_errmsg(
+i4 ppd_qsfmalloc(
+	PSQ_CB *psq_cb,
+	i4 psize,
+	void *pptr);
+static i4 ppd_ulm_errmsg(
 	PSS_SESBLK *sess_cb,
 	PSQ_CB *psq_cb);
-
-
+
 /* Local definitions */
 /* Various temporary memory areas are sized with a guess.  Define the
 ** initial size guesses here.

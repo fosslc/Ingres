@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -92,13 +92,109 @@
 **	    than just a name lookup.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-static bool
-pst_gb_search(
-	PST_QNODE	*root);
-
+/* TABLE OF CONTENTS */
+i4 pst_rginit(
+	PSS_USRRANGE *rangetab);
+i4 pst_rglook(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *name,
+	bool getdesc,
+	PSS_RNGTAB **result,
+	i4 query_mode,
+	DB_ERROR *err_blk);
+i4 pst_rgent(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	i4 showtype,
+	DB_TAB_NAME *tabname,
+	DB_TAB_OWN *tabown,
+	DB_TAB_ID *tabid,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk);
+i4 pst_rgdel(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_NAME *tabname,
+	PSS_USRRANGE *rngtable,
+	DB_ERROR *err_blk);
+i4 pst_rgrent(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	DB_TAB_ID *tabid,
+	i4 query_mode,
+	DB_ERROR *err_blk);
+i4 pst_rgcopy(
+	PSS_USRRANGE *fromtab,
+	PSS_USRRANGE *totab,
+	PSS_RNGTAB **resrng,
+	DB_ERROR *err_blk);
+void pst_snscope(
+	PSS_USRRANGE *rngtable,
+	PST_J_MASK *from_list,
+	i4 offset);
+void pst_rescope(
+	PSS_USRRANGE *rngtable,
+	PST_J_MASK *from_list,
+	i4 offset);
+i4 pst_sent(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	i4 showtype,
+	DB_TAB_NAME *tabname,
+	DB_TAB_OWN *tabown,
+	DB_TAB_ID *tabid,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk);
+i4 pst_slook(
+	PSS_USRRANGE *rngtable,
+	PSS_SESBLK *cb,
+	DB_OWN_NAME *schema_name,
+	char *name,
+	PSS_RNGTAB **result,
+	DB_ERROR *err_blk,
+	bool scope_flag);
+i4 pst_sdent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *corrname,
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB **rngvar,
+	PST_QNODE *root,
+	i4 type,
+	DB_ERROR *err_blk);
+i4 pst_stproc(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *corrname,
+	i4 dbpid,
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB **rngvar,
+	PST_QNODE *root,
+	DB_ERROR *err_blk);
+static bool pst_gb_search(
+	PST_QNODE *root);
+i4 pst_rgfind(
+	PSS_USRRANGE *rngtable,
+	PSS_RNGTAB **result,
+	i4 vno,
+	DB_ERROR *err_blk);
+i4 pst_rng_unfix(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rng_ptr,
+	DB_ERROR *errblk);
 
 /*{
 ** Name: pst_rginit	- Initialize the range table.
@@ -437,7 +533,7 @@ pst_rgent(
 	i4		   query_mode,
 	DB_ERROR	   *err_blk)
 {
-    register PSS_RNGTAB *rptr;
+    register PSS_RNGTAB *rptr = NULL;
     PSS_RNGTAB		*rp;
     DB_STATUS           status;
     i4		err_code;
@@ -881,7 +977,7 @@ pst_rgcopy(
 **	    This arises in union contexts where the primary union's scope is needed
 **	    in order by contexts.
 */
-DB_STATUS
+void
 pst_snscope(
 	PSS_USRRANGE       *rngtable,
 	PST_J_MASK	   *from_list,
@@ -924,7 +1020,7 @@ pst_snscope(
 **	26-nov-02 (kiria01)
 **	    Created.
 */
-DB_STATUS
+void
 pst_rescope(
 	PSS_USRRANGE       *rngtable,
 	PST_J_MASK	   *from_list,
@@ -1036,7 +1132,6 @@ pst_sent(
 	DB_ERROR	   *err_blk)
 {
     register PSS_RNGTAB *rptr;
-    PSS_RNGTAB		*rp;
     DB_STATUS           status;
     i4		err_code;
 
@@ -1215,9 +1310,7 @@ pst_slook(
     PSS_RNGTAB		*first = (PSS_RNGTAB *) NULL;
     char                namepad[DB_TAB_MAXNAME];
     i4		err_code;
-    i4		err_num = 0L;
     i4			scope = cb->pss_qualdepth;
-    i4			cur_scope = -1;
     i4			i;
     struct PST_SLOOK_SORT_
     {
@@ -1805,12 +1898,11 @@ pst_stproc(
     DMT_TBL_ENTRY	*tblptr;
     DB_PROCEDURE	*dbptupp;
     RDR_INFO		*rdrinfop;
-    PST_QNODE		*nodep;
     QEF_DATA		*qp;
     RDF_CB		rdf_cb;
     RDR_RB		*rdf_rb;
 
-    i4			i, j, totlen, offset;
+    i4			i, j;
     DB_STATUS           status;
     i4		err_code;
     i4		    dmt_mem_size;

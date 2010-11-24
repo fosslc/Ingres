@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 **
 */
 
@@ -76,12 +76,13 @@
 **	    Added MO hooks for PSF.
 **	11-Jun-2010 (kiria01) b123908
 **	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-GLOBALREF i4		      Psf_init;
-GLOBALREF	PSF_SERVBLK	*Psf_srvblk;
-
+/* TABLE OF CONTENTS */
+i4 psq_startup(
+	PSQ_CB *psq_cb);
 
 /*{
 ** Name: psq_startup	- Start up the parser for a server.
@@ -253,7 +254,7 @@ psq_startup(
 	** Value specified by the user should not result in sessions getting
 	** less than PSF_SESMEM_MIN bytes each
 	*/
-	if (psq_cb->psq_mserver < PSF_SESMEM_MIN * (i4) psq_cb->psq_mxsess)
+	if ((i4)psq_cb->psq_mserver < PSF_SESMEM_MIN * psq_cb->psq_mxsess)
 	{
 	    (VOID) psf_error(E_PS0704_INSF_MEM, 0L, PSF_INTERR, &err_code,
 		&psq_cb->psq_error, 0);

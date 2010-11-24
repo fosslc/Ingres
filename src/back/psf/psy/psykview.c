@@ -1,6 +1,5 @@
-/* Copyright (c) 1995, 2005 Ingres Corporation
-**
-**
+/*
+**Copyright (c) 1995, 2005, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -99,8 +98,24 @@
 **	    Delete alter-timestamp routine, done inside QEF these days.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psy_kview(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb,
+	QEU_CB *qeu_cb);
+i4 psy_basetbl(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_ID *view_id,
+	DB_TAB_ID *tbl_id,
+	DB_ERROR *err_blk);
+i4 psy_kregproc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb,
+	DB_TAB_NAME *procname);
 
 /*{
 ** Name: psy_kview	- Destroy views.

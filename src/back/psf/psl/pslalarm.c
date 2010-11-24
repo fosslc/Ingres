@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -64,7 +64,35 @@
 **		psl_al2_tbl_obj_spec - Handle table object spec
 **		psl_al3_db_obj_spec  - Handle database object spec
 **		psl_al4_drop_alarm   - Handle drop security alarms.
+**
+** History:
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+i4 psl_al1_create_alarm(
+	PSS_SESBLK *cb,
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	i4 subject_type,
+	i4 object_type);
+i4 psl_al2_tbl_obj_spec(
+	PSS_SESBLK *cb,
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *obj_spec);
+i4 psl_al3_db_obj_spec(
+	PSS_SESBLK *cb,
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	char *objname,
+	bool is_delim);
+i4 psl_al4_drop_alarm(
+	PSS_SESBLK *cb,
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	i4 object_type);
 
 /*
 ** Name: psl_al1_create_alarm
@@ -170,8 +198,8 @@ psl_al1_create_alarm(
 		(VOID) psf_error(E_PS04D3_ALARM_TOO_MANY_OBJS, 
 			0L, PSF_USERERR,
 			&err_code, &psq_cb->psq_error, 2,
-			sizeof("TABLE")-1, "TABLE"),
-			sizeof(maxobj),&maxobj;
+			sizeof("TABLE")-1, "TABLE",
+			sizeof(maxobj),&maxobj);
 		return (E_DB_ERROR);
 	}
 	/*
@@ -860,7 +888,6 @@ psl_al3_db_obj_spec(
 )
 {
     DB_SECALARM *alarm= &psy_cb->psy_tuple.psy_alarm;
-    DB_STATUS 	status=E_DB_OK;
 
 
     /*
@@ -908,12 +935,9 @@ psl_al4_drop_alarm(
 	i4	    object_type
 )
 {
-    DB_STATUS	    status=E_DB_OK;
     i4	    err_code;
     i4		    num_tbl;
-    bool	    got_alarm_name=TRUE;
     PSY_TBL	    *psy_tbl;
-    i4		    obj_name_len;
     DB_SECALARM     *alarm= &psy_cb->psy_tuple.psy_alarm;
     char	    *obj_name;
 
@@ -946,8 +970,8 @@ psl_al4_drop_alarm(
 		(VOID) psf_error(E_PS04D3_ALARM_TOO_MANY_OBJS, 
 			0L, PSF_USERERR,
 			&err_code, &psq_cb->psq_error, 2,
-			sizeof("TABLE")-1, "TABLE"),
-			sizeof(maxobj),&maxobj;
+			sizeof("TABLE")-1, "TABLE",
+			sizeof(maxobj),&maxobj);
 		return (E_DB_ERROR);
 	}
 	/*

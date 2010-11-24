@@ -84,7 +84,93 @@
 **	    amorphous handling of DDL with-options for years, do something
 **	    about it.  I didn't really expect this to expand into a
 **	    replacement of the dmu_char_array too, but so it goes...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+typedef struct _PSL_WITH_TABLE PSL_WITH_TABLE;
+
+void psl_withopt_init(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+static i4 psl_withopt_value(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	const PSL_WITH_TABLE *lookup,
+	char *option,
+	void *valueptr,
+	u_i2 valuelen,
+	char *style);
+static i4 psl_act_encryptions(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DMU_CB *dmucb,
+	char *valueptr,
+	u_i2 valuelen,
+	const PSL_WITH_TABLE *lookup);
+static bool psl_gw_option(
+	register char *name);
+i4 psl_nm_eq_nm(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *option,
+	char *value);
+i4 psl_nm_eq_hexconst(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *option,
+	u_i2 valuelen,
+	char *value);
+i4 psl_nm_eq_no(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *option,
+	i4 value,
+	PSS_Q_XLATE *xlate);
+i4 psl_with_kwd(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *option,
+	PSS_Q_XLATE *xlate);
+i4 psl_withlist_prefix(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *option,
+	PSS_Q_XLATE *xlate);
+i4 psl_withlist_elem(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *value,
+	PSS_Q_XLATE *xlate);
+static i4 psl_withlist_keyelem(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DMU_CB *dmucb,
+	char *value);
+i4 psl_withlist_relem(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	f8 *element);
+static i4 psl_withstar_text(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *option,
+	char *value,
+	PSS_Q_XLATE *xlated_qry);
+static i4 psl_withstar_elem(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *value,
+	PSS_Q_XLATE *xlated_qry);
+i4 psl_withopt_post(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+static i4 psl_validate_rtree(
+	PSS_SESBLK *sess_cb,
+	char *qry,
+	i4 qry_len,
+	DB_ERROR *err_blk);
 
 /* Define the master tables of options.  There's one table for each
 ** general form:  option=string, option=hex, option=number, option,
@@ -198,7 +284,7 @@ enum psl_action_codes {
 
 
 /* Next we need a structure definition for the table */
-typedef struct {
+struct _PSL_WITH_TABLE {
 	char	*keyword;	/* The option name (lowercase) */
 	char	*dupword;	/* Error string for duplicate-option error */
 	u_i4	valid_qmodes;	/* The statement types allowing this option */
@@ -212,7 +298,7 @@ typedef struct {
 	i4	minvalue;	/* Minimum value (I4 action) */
 	i4	maxvalue;	/* Maximum value (I4 action) */
 	u_i4	offset;		/* DMU_CHARACTERISTICS struct offset (I4 action) */
-} PSL_WITH_TABLE;
+};
 
 /*    {"option-name", "NAME-FOR-DUPLICATE-OPTION-ERROR-MSG",
 **	 valid_qmodes_bitmask,
@@ -3196,7 +3282,7 @@ psl_withopt_post(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb)
     if (BTtest(DMU_ALLOCATION, dmu_indicators))
     {
 	i4 nparts;
-	u_i4 allocation;
+	i4 allocation;
 
 	nparts = 1;
 	if (qbits & (PSL_QBIT_CTAS | PSL_QBIT_DGTTAS | PSL_QBIT_MODSTOR))
@@ -3218,7 +3304,7 @@ psl_withopt_post(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb)
 	** to divide the entire allocation away ... DMF will do the
 	** right thing, and at least the user had some clue.
 	*/
-	allocation = (u_i4) dmuchar->dmu_alloc;
+	allocation = dmuchar->dmu_alloc;
 	if (allocation > 4 * nparts)
 	    allocation = allocation / nparts;
 	if (allocation < 4 || allocation > DB_MAX_PAGENO)

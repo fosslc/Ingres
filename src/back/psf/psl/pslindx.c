@@ -157,9 +157,32 @@
 **          Store blank trimmed names in DMT_ATT_ENTRY
 **	13-Oct-2010 (kschendel) SIR 124544
 **	    Many changes for centralized WITH-option handling.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
-
+/* TABLE OF CONTENTS */
+i4 psl_ci1_create_index(
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+i4 psl_ci2_index_prefix(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	i4 unique);
+i4 psl_ci3_indexrel(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *tbl_spec);
+i4 psl_ci4_indexcol(
+	PSS_SESBLK *sess_cb,
+	char *colname,
+	DB_ERROR *err_blk,
+	bool cond_add);
+i4 psl_ci5_indexlocname(
+	PSS_SESBLK *sess_cb,
+	char *loc_name,
+	PSS_OBJ_NAME *index_spec,
+	PSQ_CB *psq_cb);
 
 /*
 ** Name: psl_ci1_create_index	- Semantic actions for CREATE INDEX

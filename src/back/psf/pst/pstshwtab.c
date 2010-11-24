@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -146,8 +146,47 @@
 **	    Don't allow partitions.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 pst_showtab(
+	PSS_SESBLK *sess_cb,
+	i4 showtype,
+	DB_TAB_NAME *tabname,
+	DB_TAB_OWN *tabown,
+	DB_TAB_ID *tabid,
+	bool tabonly,
+	PSS_RNGTAB *rngentry,
+	i4 query_mode,
+	DB_ERROR *err_blk);
+i4 pst_dbpshow(
+	PSS_SESBLK *sess_cb,
+	DB_DBP_NAME *dbpname,
+	PSS_DBPINFO **dbpinfop,
+	DB_OWN_NAME *dbp_owner,
+	DB_TAB_ID *dbp_id,
+	i4 dbp_mask,
+	PSQ_CB *psq_cb,
+	i4 *ret_flags);
+i4 pst_add_1indepobj(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_ID *obj_id,
+	i4 obj_type,
+	DB_DBP_NAME *dbpname,
+	PSQ_OBJ **obj_list,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+void pst_rdfcb_init(
+	RDF_CB *rdf_cb,
+	PSS_SESBLK *sess_cb);
+i4 pst_ldbtab_desc(
+	PSS_SESBLK *sess_cb,
+	QED_DDL_INFO *ddl_info,
+	PSF_MSTREAM *mem_stream,
+	i4 flag,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: pst_showtab	- Get a table description for a range variable.

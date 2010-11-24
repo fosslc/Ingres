@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -62,8 +62,16 @@
 **	26-Oct-2009 (kiria01) SIR 121883
 **	    Scalar sub-query support: Added dump of
 **	    session flag for SET CARDINALITY_CHECK
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psq_sesdump(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+void psq_rngdmp(
+	PSS_RNGTAB *rv);
 
 /*{
 ** Name: psq_sesdump	- Dump the session control block for a given session.

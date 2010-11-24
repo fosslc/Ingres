@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -80,8 +80,69 @@
 **	    Delete old-code, been ifdef'ed out for 16 years.
 **	21-Oct-2010 (kiria01) b124629
 **	    Move DOT trace code out of here into pstprmdmp.c where it belongs.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 pst_node_size(
+	PST_SYMBOL *sym,
+	i4 *symsize,
+	i4 *datasize,
+	DB_ERROR *err_blk);
+i4 pst_treedup(
+	PSS_SESBLK *sess_cb,
+	PSS_DUPRB *dup_rb);
+i4 pst_push_item(
+	PST_STK *base,
+	PTR item);
+PTR pst_pop_item(
+	PST_STK *base);
+void pst_pop_all(
+	PST_STK *base);
+PST_QNODE *pst_parent_node(
+	PST_STK *base,
+	PST_QNODE *child);
+PST_QNODE *pst_antecedant_by_1type(
+	PST_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1);
+PST_QNODE *pst_antecedant_by_2types(
+	PST_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2);
+PST_QNODE *pst_antecedant_by_3types(
+	PST_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2,
+	PST_TYPE t3);
+PST_QNODE *pst_antecedant_by_4types(
+	PST_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2,
+	PST_TYPE t3,
+	PST_TYPE t4);
+i4 pst_qtree_compare(
+	PST_STK_CMP *ctx,
+	PST_QNODE **a,
+	PST_QNODE **b,
+	bool fixup);
+i4 pst_qtree_compare_norm(
+	PST_STK_CMP *ctx,
+	PST_QNODE **a,
+	PST_QNODE **b);
+PST_QNODE *pst_non_const_core(
+	PST_QNODE *node);
+i4 pst_qtree_norm(
+	PST_STK *stk,
+	PST_QNODE **nodep,
+	PSQ_CB *psq_cb);
+u_i4 pst_qtree_size(
+	PST_STK *stk,
+	PST_QNODE *node);
 
 /*{
 ** Name: pst_node_size 	- determine exact size of the node.
@@ -517,6 +578,8 @@ pst_treedup(
 		/* Clear GB flag & let be set if seen (via subsel) */
 		subsel->pst_sym.pst_value.pst_s_root.pst_mask1 &= ~PST_3GROUP_BY;
 		break;
+	    default:
+		break;
 	    }
 	    /* Delay node evaluation */
 	    pst_push_item(&stk, (PTR)nodep);
@@ -631,6 +694,8 @@ pst_treedup(
 		    bylist_elem = bylist_elem->pst_left;
 		}
 	    }
+	    break;
+	default:
 	    break;
 	}
 	nodep = (PST_QNODE**)pst_pop_item(&stk);
@@ -1177,6 +1242,8 @@ pst_qtree_compare(
 		    goto different;
 		}
 		break;
+	    default:
+		break;
 	    }
 	    if ((*a)->pst_left)
 	    {
@@ -1467,6 +1534,7 @@ pst_qtree_compare(
 	case PST_WHOP:
 	case PST_GCL:
 	case PST_GSET:
+	default:
 	    break;
 	}
 	a = (PST_QNODE **)pst_pop_item(&ctx->stk);
@@ -1671,7 +1739,6 @@ pst_qtree_norm(
     PST_TYPE		ty;
     PST_QNODE		*node;
     PST_QNODE		fake;
-    bool		chg;
 
     PST_STK_CMP_INIT(cmp_ctx, stk->cb, NULL);
 
@@ -1910,6 +1977,8 @@ pst_qtree_norm(
 		*nodep = fake.pst_left;
 		continue;
 	    }
+	    break;
+	default:
 	    break;
 	}
 	if (node->pst_left)

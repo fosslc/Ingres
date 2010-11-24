@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -108,14 +108,30 @@
 **          ult_always_trace() uses bitmask flags now
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void print_qry_buffer(
+	PSQ_CB *psq_cb,
+	PSQ_QDESC *qdesc,
+	PSS_SESBLK *sess_cb);
+i4 psq_parseqry(
+	register PSQ_CB *psq_cb,
+	register PSS_SESBLK *sess_cb);
+i4 psq_cbinit(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+i4 psq_cbreturn(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	i4 ret_val);
+i4 psq_destr_dbp_qep(
+	PSS_SESBLK *sess_cb,
+	PTR handle,
+	DB_ERROR *err_blk);
 
-
-FUNC_EXTERN	DB_STATUS   	pslparse();
-FUNC_EXTERN	DB_STATUS   	pslsparse();
-FUNC_EXTERN	VOID	   	adu_2prvalue();
-GLOBALREF       PSF_SERVBLK    *Psf_srvblk;
-
 /*{
 ** Name: print_qry_buffer	- Output the SC930 tracing for a query
 **
@@ -460,7 +476,7 @@ psq_parseqry(
 	    /* skip leading white space chars, if any */
 	    for (c = qdesc->psq_qrytext;
 		 c <= (char *) sess_cb->pss_endbuf && CMwhite(c);
-		 c = CMnext(c)
+		 CMnext(c)
 		)
 	    ;
 
@@ -468,7 +484,7 @@ psq_parseqry(
 	    for (;
 		 *r != EOS && c <= (char *) sess_cb->pss_endbuf &&
 		 !CMcmpnocase(c,r);
-		 c = CMnext(c), r = CMnext(r)
+		 CMnext(c), CMnext(r)
 		)	
 	    ;
 

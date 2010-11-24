@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -75,17 +75,27 @@
 **          Added include <psyaudit.h> for prototype of psy_secaudit()
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward static functions.
-*/
 
-static DB_STATUS psy_altaudit( 
-    PSY_CB	*psy_cb,
-    PSS_SESBLK	*sess_cb);
-
+/* TABLE OF CONTENTS */
+i4 psy_audit(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_secaudit(
+	int force,
+	PSS_SESBLK *sess_cb,
+	char *objname,
+	DB_OWN_NAME *objowner,
+	i4 objlength,
+	SXF_EVENT auditevent,
+	i4 msg_id,
+	SXF_ACCESS accessmask,
+	DB_ERROR *err);
+static i4 psy_altaudit(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psy_audit - Enable/disable security auditing
@@ -145,7 +155,7 @@ psy_audit(
 	PSY_CB             *psy_cb,
 	PSS_SESBLK	   *sess_cb)
 {
-    DB_STATUS		status, local_status;
+    DB_STATUS		status;
     i4		err_code;
     char		dbname[DB_DB_MAXNAME];
     SCF_CB		scf_cb;
@@ -370,7 +380,6 @@ psy_secaudit(
     SXF_RCB               sxfrcb;
     CL_SYS_ERR	          syserr;
     i4               local_error;
-    CS_SID		  sess_id = sess_cb->pss_sessid;
 
     /*
     ** If we're not doing any C2 security auditing, then just return
@@ -459,7 +468,6 @@ psy_altaudit(
     i4               local_error;
     DB_ERROR    	  err;
     SXF_ACCESS	  	  access;
-    CL_SYS_ERR	          syserr;
 
     for(;;)
     {

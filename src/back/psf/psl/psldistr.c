@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -102,7 +102,57 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+i4 psl_rg1_reg_distr_tv(
+	PSS_SESBLK *sess_cb,
+	PSS_OBJ_NAME *reg_name,
+	i4 ldb_obj_type,
+	PSS_Q_XLATE *xlated_qry,
+	PSQ_CB *psq_cb);
+i4 psl_rg2_reg_distr_idx(
+	PSS_SESBLK *sess_cb,
+	char *reg_name,
+	PSS_Q_XLATE *xlated_qry,
+	DB_ERROR *err_blk);
+i4 psl_rg3_reg_tvi(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+i4 psl_rg4_regtext(
+	PSS_SESBLK *sess_cb,
+	i4 ldb_obj_type,
+	PSS_Q_XLATE *xlated_qry,
+	PSQ_CB *psq_cb);
+i4 psl_rg5_ldb_spec(
+	PSS_SESBLK *sess_cb,
+	char *name,
+	i4 qmode,
+	DB_ERROR *err_blk);
+i4 psl_rg6_link_col_list(
+	char *colname,
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+i4 psl_ds1_dircon(
+	PSQ_CB *psq_cb,
+	char *name1,
+	char *name2,
+	bool is_distrib);
+i4 psl_ds2_dir_exec_immed(
+	char *name,
+	bool is_distrib,
+	char *exec_arg,
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+i4 psl_proc_func(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	i4 op_code,
+	PST_QNODE *arg,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk);
 
 /*
 ** Name: psl_rg1_reg_distr_tv	- semantic actions for reg_distr_tv production
@@ -820,9 +870,6 @@ psl_rg2_reg_distr_idx(
 {
     QED_DDL_INFO	*ddl_info     = (QED_DDL_INFO *) sess_cb->pss_object;
     DD_2LDB_TAB_INFO    *ldb_tab_info = ddl_info->qed_d6_tab_info_p;
-    DD_PACKET	    	*pkt;
-    char		*c2 =
-		    (char *)(sess_cb->pss_qbuf + CMbytecnt(sess_cb->pss_qbuf));
     i4		err_code;
     DB_STATUS	    	status;
     i4		    	mask = 0;
@@ -1966,7 +2013,7 @@ psl_proc_func(
     PTR		        result;
     DB_DATA_VALUE       *res_data_value = &adf_funcblk.adf_r_dv;
     i4	        err_code;
-    register i4         res_len;    /* length of CHAR or VARCHAR text */
+    register i4         res_len = 0;    /* length of CHAR or VARCHAR text */
     DB_DATA_VALUE       *arg_val;
     bool		leave_loop = TRUE;
 
@@ -2070,7 +2117,7 @@ psl_proc_func(
 			       c1 = sess_cb->pss_dba.db_tab_own.db_own_name,
 			       c2 = ((DB_TEXT_STRING *) result)->db_t_text;
 			       (i <
-				 sizeof(sess_cb->pss_dba.db_tab_own.db_own_name)
+				 (i4)sizeof(sess_cb->pss_dba.db_tab_own.db_own_name)
 				    && !CMspace(c1)
 			       );
 			       i += CMbytecnt(c1), CMcpyinc(c1,c2))
@@ -2165,7 +2212,7 @@ psl_proc_func(
 				for (i = 0,
 				     c1 = sess_cb->pss_user.db_own_name,
 				     c2 = ((DB_TEXT_STRING *)result)->db_t_text;
-				    i < sizeof(sess_cb->pss_user.db_own_name)
+				    i < (i4)sizeof(sess_cb->pss_user.db_own_name)
 				     && !CMspace(c1);
 				    i += CMbytecnt(c1), CMcpyinc(c1,c2))
 				;
@@ -2518,7 +2565,7 @@ psl_proc_func(
 
 	    /* determine length of DBA's name and copy it */
 	    for (res_len = 0;
-		(res_len < sizeof(sess_cb->pss_dba.db_tab_own.db_own_name)
+		(res_len < (i4)sizeof(sess_cb->pss_dba.db_tab_own.db_own_name)
 		 && !CMspace(c1));
 		res_len += CMbytecnt(c1), CMcpyinc(c1,c2))
 	    ;
@@ -2542,7 +2589,7 @@ psl_proc_func(
 
 	    /* determine length of user's name and copy it*/
 	    for (res_len = 0;
-		(res_len < sizeof(sess_cb->pss_user.db_own_name) &&
+		(res_len < (i4)sizeof(sess_cb->pss_user.db_own_name) &&
 		 !CMspace(c1));
 		res_len += CMbytecnt(c1), CMcpyinc(c1,c2))
 	    ;
@@ -2728,10 +2775,10 @@ psl_proc_func(
 	}
     }
 
-    status = pst_node(sess_cb, stream, (PST_QNODE *) NULL,
-	(PST_QNODE *) NULL, PST_CONST, (char *) &cconst, sizeof(cconst),
-	res_data_value->db_datatype, (i2) 0, (i4) res_data_value->db_length,
-	(DB_ANYTYPE *) result, newnode, err_blk, (i4) 0);
+    status = pst_node(sess_cb, stream, NULL, NULL,
+		PST_CONST, (char *) &cconst, sizeof(cconst),
+		res_data_value->db_datatype, 0, res_data_value->db_length,
+		(DB_ANYTYPE *) result, newnode, err_blk, 0);
 
     return (status);
 }

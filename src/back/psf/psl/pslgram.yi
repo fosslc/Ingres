@@ -782,25 +782,126 @@
 **	29-Oct-2010 (kschendel) SIR 124544
 **	    Make set result_structure legal in QUEL, no reason for it to
 **	    be different from sql!
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
 %{
-/*[@forward_type_references@]*/
-
-/*
-**  Forward and/or External function references.
-*/
 
-/*[@function_reference@]...*/
-
+/* TABLE OF CONTENTS */
+i4 getfacil(
+	char *code,
+	PSQ_MODE *facility,
+	i4 *flagno);
+char *sconvert(
+	DB_TEXT_STRING *string);
+i4 qdata_cvt(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	DB_DATA_VALUE *fval,
+	DB_DT_ID totype,
+	PTR *value);
+void psl_quel_shareable(
+	PSS_SESBLK *sess_cb,
+	i4 qry_mask,
+	bool *shareable);
+i4 psl_rptqry_tblids(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	PSF_MSTREAM *mstream,
+	i4 qry_mode,
+	i4 *num_ids,
+	DB_TAB_ID **id_list,
+	DB_ERROR *err_blk);
+static i4 psl_2handle(
+	EX_ARGS *exargs);
+static i4 psl_1handle(
+	EX_ARGS *exargs);
+i4 pslparse(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl1iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl2iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl3iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl4iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl5iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl6iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl7iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl8iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl9iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl10iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl11iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl12iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl13iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
 /*
 **  Defines of other constants.
 */
 
-/*[@group_of_defined_constants@]...*/
-/*[@type_definitions@]*/
-/*[@global_variable_definitions@]*/
-/*[@static_variable_or_function_definitions@]*/
 %}
 
 /*
@@ -11273,7 +11374,6 @@ qdata_cvt(
     ADI_DT_NAME		dt_fname;
     ADI_DT_NAME		dt_tname;
     i4		err_code;
-    i4			left;
 
     if (fval->db_datatype == totype)
 	dv_size = fval->db_length;

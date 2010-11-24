@@ -2,11 +2,10 @@
 ** Copyright (c) 2008 Ingres Corporation
 */
 
-#include    <compat.h>
-#include    <cs.h>
-#include    <iicommon.h>
-#include    <mo.h>
-
+#include <compat.h>
+#include <cs.h>
+#include <iicommon.h>
+#include <mo.h>
 /*
 ** Name: PSFMO.C		- PSF Managed Objects
 **
@@ -20,7 +19,12 @@
 **	    Added constant folding stats
 **	27-Oct-2009 (kiria01) SIR 121883
 **	    Scalar sub-queries - added exp.psf.pst.ssflatten
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+STATUS psf_mo_init(void);
 
 
 /*
@@ -73,7 +77,7 @@ static MO_CLASS_DEF PSFmo_psf_fold_control[] =
 	0, 0, MOintget, MOintset, (PTR)&Psf_nfoldbexpr, MOcdata_index
     },
 #   endif
-    {0}
+    {0, NULL, 0, 0, 0, 0, NULL, NULL, NULL, NULL}
 };
 
 

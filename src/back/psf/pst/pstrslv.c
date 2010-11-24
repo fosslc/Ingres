@@ -1,5 +1,5 @@
 /* 
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -121,11 +121,49 @@
 **	    just adjust the type (e.g. don't max out decimal prec/scale!).
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 pst_resolve(
+	PSS_SESBLK *sess_cb,
+	ADF_CB *adf_scb,
+	register PST_QNODE *opnode,
+	DB_LANG lang,
+	DB_ERROR *error);
+i4 pst_union_resolve(
+	PSS_SESBLK *sess_cb,
+	PST_QNODE *rootnode,
+	DB_ERROR *error);
+static i4 pst_caserslt_resolve(
+	PSS_SESBLK *sess_cb,
+	PST_QNODE *casep,
+	DB_ERROR *error);
+static i4 pst_caseunion_resolve(
+	PSS_SESBLK *sess_cb,
+	DB_DATA_VALUE *dv1,
+	DB_DATA_VALUE *dv2,
+	bool forcenull,
+	DB_ERROR *error);
+static i4 pst_get_union_resdom_type(
+	DB_DT_ID dt,
+	DB_DATA_VALUE *resval,
+	ADF_CB *adf_scb,
+	bool nullable,
+	DB_ERROR *error);
+i4 pst_parm_resolve(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *resdom);
+static i4 pst_handler(
+	EX_ARGS *exargs);
+bool pst_convlit(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	DB_DATA_VALUE *targdv,
+	PST_QNODE *srcenode);
 
-
-GLOBALREF PSF_SERVBLK     *Psf_srvblk;  /* PSF server control block ptr */
-
 /*
 ** Counters for constant folding stats - see psfmo.c
 */
@@ -137,27 +175,6 @@ i4 Psf_ncoerce = 0;
 i4 Psf_nfoldcoerce = 0;
 #endif
 
-static DB_STATUS
-pst_caserslt_resolve(
-	PSS_SESBLK  *sess_cb,
-	PST_QNODE   *casep,
-	DB_ERROR    *error);
-
-static DB_STATUS pst_caseunion_resolve(
-	PSS_SESBLK *sess_cb,
-	DB_DATA_VALUE *dv1,
-	DB_DATA_VALUE *dv2,
-	bool forcenull,
-	DB_ERROR *error);
-
-
-static DB_STATUS
-pst_get_union_resdom_type(
-			DB_DT_ID	dt,
-			DB_DATA_VALUE *resval,
-			ADF_CB	*adf_scb,
-			bool		nullable,
-			DB_ERROR	*error);
 
 /*{
 ** Name: pst_resolve	- Resolve a query tree operator node
@@ -1512,7 +1529,6 @@ pst_union_resolve(
 	PST_QNODE   *rootnode,
 	DB_ERROR    *error)
 {
-    ADF_CB		*adf_scb = (ADF_CB *)sess_cb->pss_adfcb;
     DB_STATUS		status;
     register PST_QNODE	*res1;
     register PST_QNODE	*res2;
@@ -1710,12 +1726,10 @@ pst_caserslt_resolve(
 	PST_QNODE   *casep,
 	DB_ERROR    *error)
 {
-    ADF_CB		*adf_scb = (ADF_CB *)sess_cb->pss_adfcb;
     DB_STATUS		status;
     register PST_QNODE	*res;
     PST_QNODE		*whlistp, *whop1p, *whop2p;
     DB_DATA_VALUE	*dv;
-    i4			err_code;
     bool		forcenull, else_seen;
 
     /* Make sure there is a node to resolve */
@@ -2231,7 +2245,6 @@ pst_parm_resolve(
     i4	    err_code;
     DB_DT_ID	    rdt, cdt;
     ADI_DT_NAME	    rdtname, cdtname;
-    ADI_FI_ID	    convid;
     
 
     /* Make sure there is a node to resolve */

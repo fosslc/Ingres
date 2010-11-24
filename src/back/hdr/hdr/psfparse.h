@@ -694,6 +694,8 @@
 **	    Move pst_ttargtype into enum PST_TTARGTYPE. Move pst_rgtype into
 **	    enum PST_RGTYPE using table macro. Make PST_STTYPE into enum
 **	    using table macro.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Cleaned up prototypes
 **/
 
 /*
@@ -7212,52 +7214,44 @@ typedef struct _PSS_SESBLK *PSF_SESSCB_PTR;
 /*
 ** entry points
 */
-FUNC_EXTERN DB_STATUS
-psq_call(
+FUNC_EXTERN DB_STATUS psq_call(
 	i4		   opcode,
 	PSQ_CB		   *psq_cb,
 	PSF_SESSCB_PTR	   sess_cb);
 
-FUNC_EXTERN DB_STATUS
-psy_call(
+FUNC_EXTERN DB_STATUS psy_call(
 	i4		   opcode,
 	PSY_CB		   *psy_cb,
 	PSF_SESSCB_PTR	   sess_cb);
 
-FUNC_EXTERN DB_STATUS
-psf_debug(
+FUNC_EXTERN DB_STATUS psf_debug(
 	DB_DEBUG_CB	   *debug_cb);
 
 /*
 ** these functions are not the "normal" entry points but are nonetheless used
 ** by OPF 
 */
-FUNC_EXTERN DB_STATUS
-pst_resolve(
+FUNC_EXTERN DB_STATUS pst_resolve(
 	PSF_SESSCB_PTR     sess_cb,
 	ADF_CB		   *adf_scb,
 	PST_QNODE	   *opnode,
 	DB_LANG		   lang,
 	DB_ERROR	   *error);
 
-FUNC_EXTERN VOID
-pst_1ftype(
+FUNC_EXTERN VOID pst_1ftype(
 	PST_QNODE          *qnode,
 	char               *buf);
 
-FUNC_EXTERN VOID
-pst_1fidop(
+FUNC_EXTERN VOID pst_1fidop(
 	PST_QNODE          *qnode,
 	char               *buf);
 
-FUNC_EXTERN DB_STATUS
-pst_1prmdump(
+FUNC_EXTERN DB_STATUS pst_1prmdump(
 	PST_QNODE          *tree,
 	PST_QTREE	   *header,
 	DB_ERROR	    *error);
 
-FUNC_EXTERN DB_STATUS
-pst_prmdump(
+FUNC_EXTERN DB_STATUS pst_prmdump(
 	PST_QNODE           *tree,
 	PST_QTREE	    *header,
 	DB_ERROR	    *error,

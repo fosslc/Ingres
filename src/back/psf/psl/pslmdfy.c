@@ -205,19 +205,67 @@
 **	11-Oct-2010 (kschendel) SIR 124544
 **	    Changes for consolidated WITH-clause parsing.
 **	    Put MODIFY action in dmu_action.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
-
-/* Module local definitions and storage. */
 
-/* Forward procedure declarations */
-
-static DB_STATUS psl_md_part_unique(
+/* TABLE OF CONTENTS */
+i4 psl_md1_modify(
+	PSS_SESBLK *sess_cb,
+	PSS_YYVARS *yyvarsp,
+	DB_ERROR *err_blk);
+i4 psl_md2_modstmnt(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+i4 psl_md3_modunique(
+	PSS_SESBLK *sess_cb,
+	PSS_YYVARS *yyvarsp,
+	DB_ERROR *err_blk);
+i4 psl_md4_modstorname(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *storname);
+i4 psl_md5_modkeys(
+	PSS_SESBLK *sess_cb,
+	PSS_YYVARS *yyvarsp,
+	DB_ERROR *err_blk);
+i4 psl_md6_modbasekey(
+	PSS_SESBLK *sess_cb,
+	bool ascending,
+	DB_ERROR *err_blk);
+i4 psl_md7_modkeyname(
+	PSS_SESBLK *sess_cb,
+	char *keyname,
+	PSS_YYVARS *yyvarsp,
+	DB_ERROR *err_blk);
+i4 psl_md8_modtable(
+	PSS_SESBLK *sess_cb,
+	PSS_OBJ_NAME *tblspec,
+	DB_ERROR *err_blk);
+i4 psl_md_logpartname(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	char *logname);
+i4 psl_md_modpart(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+i4 psl_md_reconstruct(
+	PSS_SESBLK *sess_cb,
+	DMU_CB *dmucb,
+	DB_ERROR *err_blk);
+static i4 psl_md_part_unique(
 	PSS_SESBLK *sess_cb,
 	DMU_CB *dmucb,
 	PSS_YYVARS *yyvarsp,
 	DB_ERROR *err_blk);
-
-
+void psl_md_action_string(
+	PSS_SESBLK *sess_cb,
+	char *str,
+	i4 *length);
+
 /* Since there are so many MODIFY action variants, let's table
 ** drive this thing.
 ** Some of the actions need a wee bit of extra checking or work beyond
@@ -420,7 +468,7 @@ static const struct _MODIFY_STORNAMES
 	 0, 0, 0, PSL_MDF_ERROR
 	},
 
-	{NULL, 0, 0, 0}
+	{NULL, 0, 0, 0, 0}
 };
 
 

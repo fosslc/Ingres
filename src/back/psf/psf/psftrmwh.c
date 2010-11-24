@@ -31,7 +31,14 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psf_trmwhite(
+	u_i4 len,
+	char *bufp);
 
 /*{
 ** Name: psf_trmwhite 	- Trim trailing white space.

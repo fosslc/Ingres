@@ -1,3 +1,3 @@
-FUNC_EXTERN VOID
-pst_windup(
-	PST_QNODE          *reslist);
+/* pstwindup.c */
+FUNC_EXTERN void pst_windup(
+	PST_QNODE *reslist);

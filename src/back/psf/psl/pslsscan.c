@@ -1,4 +1,4 @@
-/* Copyright (c) 1986, 2005 Ingres Corporation
+/* Copyright (c) 1986, 2005, 2010 Ingres Corporation
 **
 **
 */
@@ -518,7 +518,36 @@
 **          Add SEGMENTED as a keyword for SET QEP SEGMENTED.
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+typedef struct _KEYINFO KEYINFO;
+
+i4 psl_sscan(
+	register PSS_SESBLK *pss_cb,
+	register PSQ_CB *psq_cb);
+static i4 multi_word_keyword(
+	PSS_SESBLK *pss_cb,
+	PSQ_CB *psq_cb,
+	const KEYINFO *tret,
+	unsigned char *this_char,
+	unsigned char *qry_end,
+	i4 *ret_valp);
+static i4 psl_unorm(
+	PSS_SESBLK *pss_cb,
+	PSQ_CB *psq_cb,
+	i4 token);
+static bool psl_dtunorm(
+	ADF_CB *adf_cb,
+	i2 idt);
+i4 psl_unorm_error(
+	PSS_SESBLK *pss_cb,
+	PSQ_CB *psq_cb,
+	DB_DATA_VALUE *rdv,
+	DB_DATA_VALUE *dv1,
+	i4 err_status);
 
 /*
 **  Defines of other constants.
@@ -569,13 +598,13 @@ typedef struct _SECONDARY
 **     28-jan-86 (jeff)
 **          Modified from old Key_info struct.
 */
-typedef struct _KEYINFO
+struct _KEYINFO
 {
     i4              token;              /* The token to be returned */
     i4		    tokval;             /* Value of the token */
     i4              num2ary;            /* Number of possible 2nd words */
     SECONDARY       *secondary;         /* Table of second words */
-}   KEYINFO;
+};
 
 /*
 ** Definition of all global variables owned by this file.
@@ -1507,27 +1536,6 @@ static const KEYTABLE alt_part_kwds =
 	sizeof(alt_part_index) / sizeof(alt_part_index[0]),
 	&alt_part_info[0]
 };
-	
-
-/* Local procedure declarations */
-
-static i4 multi_word_keyword(PSS_SESBLK *pss_cb,
-	PSQ_CB *psq_cb,
-	const struct _KEYINFO *tret,
-	u_char *this_char,
-	u_char *qry_end,
-	i4 *ret_valp);
-
-static i4 
-psl_unorm(
-PSS_SESBLK *pss_cb,
-PSQ_CB	    *psq_cb,
-i4	    token);
-
-static bool
-psl_dtunorm(
-ADF_CB          *adf_cb,
-i2		idt);
 
 
 /*{
@@ -1795,7 +1803,6 @@ psl_sscan(
     i4		    lineno = 0;
     i4		    nonwhite = 0;
     DB_STATUS	    status;
-    i4		    left;
     bool	    leave_loop = TRUE;
     const KEYTABLE  *kwd_table;
     bool	    hexconst_0xNN = FALSE;
@@ -2085,8 +2092,8 @@ common_datetime_lit:
 		register u_char *string;
 		register i4     length;
 		register i4     left;
-		register i4     c;
-		register i4     hex_num;
+		register i4     c = 0;
+		register i4     hex_num = 0;
 		u_char		*start;
 		register i4     hex_size = 0;
 		bool		hexconst_end = FALSE;
@@ -2564,7 +2571,7 @@ digits:
             {
 		/* Unicode literal - U&'...'. */
 
-		i4	i, j, hcount;
+		i4	i, hcount;
                 DB_NVCHR_STRING	*utoken, *uchunk;
 		u_char	*curristr;	/* start of current input segment */
 		i4	ulen;		/* length (so far) of token */
@@ -4050,7 +4057,7 @@ multi_word_keyword(PSS_SESBLK *pss_cb, PSQ_CB *psq_cb,
 {
     i4 compval;
     i4 lines = 0;
-    register i4 ii_try;
+    register i4 ii_try = 0;
     register i4	low;
     register i4	high;
     SECONDARY *second;
@@ -4375,7 +4382,6 @@ i4	    token)
     char		*name;
     DB_NVCHR_STRING	*norm_nvchr;
     DB_TEXT_STRING	*norm_text;
-    char		*norm_name;
     DB_DATA_VALUE	dv1;
     DB_DATA_VALUE	rdv;
     DB_DATA_VALUE	*pop[2];
@@ -4727,9 +4733,7 @@ DB_STATUS err_status)
     ADF_CB		*adf_cb;
     i4			val1, val2;
     char		*p;
-    char		*n = NULL;
     i4			i;
-    i4			cnt = 0;
     i4			t1 = dv1->db_datatype;
     i4			t2 = rdv->db_datatype;
     i4			error;

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -84,7 +84,33 @@
 **	    psf_malloc(), psf_mclose(), psf_mroot(), psf_mchtyp(),
 **	    psl_rptqry_tblids(), psl_cons_text(), psl_gen_alter_text(),
 **	    psq_tmulti_out(), psq_1rptqry_out(), psq_tout().
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+i4 pst_crt_tbl_stmt(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	i4 operation,
+	DB_ERROR *err_blk);
+i4 pst_rename_stmt(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	i4 operation,
+	DB_ERROR *err_blk);
+i4 pst_ddl_header(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT *stmt,
+	DB_ERROR *err_blk);
+i4 pst_attach_to_tree(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT *stmt_list,
+	DB_ERROR *err_blk);
+i4 pst_crt_schema(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	DB_ERROR *err_blk);
 
 /*
 ** Name: pst_crt_tbl_stmt - allocate a PST_CREATE_TABLE statement node
@@ -571,7 +597,6 @@ pst_crt_schema(PSS_SESBLK *sess_cb,
 		 DB_ERROR *err_blk)
 {
     DB_STATUS	 	status;
-    i4	 	err_code;
     PST_STATEMENT	*stmt;
     PST_PROCEDURE	*prnode;
     PST_CREATE_SCHEMA	*crt_node;

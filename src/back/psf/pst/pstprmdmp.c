@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -139,8 +139,204 @@
 **          Changes for Long IDs
 **	21-Oct-2010 (kiria01) b124629
 **	    Move DOT trace code into here from pstnorml.c
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
+
+/* TABLE OF CONTENTS */
+i4 pst_prmdump(
+	PST_QNODE *tree,
+	PST_QTREE *header,
+	DB_ERROR *error,
+	i4 facility);
+i4 pst_1prmdump(
+	PST_QNODE *tree,
+	PST_QTREE *header,
+	DB_ERROR *error);
+static PTR pst_left(
+	PTR node);
+static PTR pst_right(
+	PTR node);
+static void pst_prnode(
+	PTR node,
+	PTR control);
+static void pst_1prnode(
+	PTR node,
+	PTR control);
+static void pst_ftype(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fdtype(
+	PST_QNODE *node,
+	char *buf,
+	i4 max_str_len);
+static void pst_f_joinid(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_f_1joinid(
+	PST_QNODE *qnode,
+	char *buf);
+static void pst_fdlen(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fdprec(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fdval(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fnlen(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fblank(
+	char *buf,
+	i4 max_str_len);
+static void pst_fidop(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+void pst_1fidop(
+	PST_QNODE *qnode,
+	char *buf);
+static void pst_finop(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_flcv(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_frcv(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fprmtyp(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fparm(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_frdno(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_ftgno(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_ftgtyp(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fupdt(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_frname(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fvno(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fnoat(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fnmat(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fvars(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_frtuser(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fcid(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fcnm(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_fccol(
+	PST_QNODE *qnode,
+	char *buf,
+	i4 max_str_len);
+static void pst_hddump(
+	PST_QTREE *header);
+void pst_1ftype(
+	PST_QNODE *qnode,
+	char *buf);
+i4 pst_dmpres(
+	PST_RESTAB *restab);
+i4 pst_scctrace(
+	PTR arg1,
+	i4 msg_length,
+	char *msg_buffer);
+void pst_display(
+	char *format,
+	...);
+#ifdef xDEBUG
+void pst_dbpdump(
+	PST_PROCEDURE *pnode,
+	i4 whichlink);
+#endif
+#ifdef PST_DOT_DIAGS
+static void pst_qtree_rsdm_node(
+	FILE *fd,
+	PST_RSDM_NODE *r);
+static void pst_qnode_dot1(
+	ADF_CB *adfcb,
+	FILE *fd,
+	PSS_SESBLK *cb,
+	PST_QNODE *node,
+	PST_QTREE *tree);
+static void pst_qtree_dot1(
+	ADF_CB *adfcb,
+	FILE *fd,
+	PSS_SESBLK *cb,
+	PST_QTREE *tree);
+static void pst_decvar_dot1(
+	ADF_CB *adfcb,
+	FILE *fd,
+	PST_DECVAR *d);
+static void pst_stmt_dot1(
+	ADF_CB *adfcb,
+	FILE *fd,
+	PSS_SESBLK *cb,
+	PST_STATEMENT *stmt);
+static void pst_dot(
+	char *fname,
+	PSS_SESBLK *cb,
+	PST_QNODE *node,
+	PST_PROCEDURE *proc,
+	bool relations);
+void pst_qtree_dot(
+	char *fname,
+	PSS_SESBLK *cb,
+	PST_QNODE *node);
+void pst_relations_dot(
+	char *fname,
+	PSS_SESBLK *cb,
+	PST_QNODE *node);
+void pst_proc_dot(
+	char *fname,
+	PST_PROCEDURE *proc);
+#endif
 /*
 **  Defines
 */
@@ -149,137 +345,6 @@
 #define	    PST_BUF_SIZE    (DB_MAXNAME + 3)
 #define	    PST_MAX_STR_LEN (PST_BUF_SIZE - 1)
 
-/*
-**  Forward and/or External function references.
-*/
-static void pst_hddump(PST_QTREE *header);
-
-static void pst_fblank(
-	char               *buf,
-	i4		    max_str_len);
-static void pst_f_joinid(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_f_1joinid(
-	PST_QNODE          *qnode,
-	char               *buf);
-static void pst_fccol(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fcid(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fcnm(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fdlen(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fdprec(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fdtype(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fdval(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fidop(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_finop(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_flcv(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fnlen(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fnmat(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fnoat(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fparm(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fprmtyp(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_frcv(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_frdno(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_frname(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_frtuser(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_ftgno(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_ftgtyp(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_ftype(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fupdt(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fvars(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-static void pst_fvno(
-	PST_QNODE          *qnode,
-	char               *buf,
-	i4		    max_str_len);
-
-static PTR
-pst_left(
-	PTR                node);
-static PTR
-pst_right(
-	PTR                node);
-static VOID
-pst_prnode(
-	PTR                node,
-	PTR                control);
-static VOID
-pst_1prnode(
-	PTR                node,
-	PTR                control);
-
 /* Local static data. */
 
 /* Table of 3-letter abbreviations for pst_type codes.*/
@@ -2781,7 +2846,7 @@ pst_1ftype(
 {
     const char *string;
 
-    if (qnode->pst_sym.pst_type >= 0 && qnode->pst_sym.pst_type < PST_MAX_ENUM)
+    if (qnode->pst_sym.pst_type < PST_MAX_ENUM)
 	string = pst_typestr3[qnode->pst_sym.pst_type];
     else
 	string = "???";
@@ -2892,7 +2957,7 @@ pst_scctrace(
     char	 *p;
 
     if (msg_length == 0)
-	return;
+	return 0;
 
     /* Truncate message if necessary */
     if (msg_length > PSF_MAX_TEXT)
@@ -2924,6 +2989,7 @@ pst_scctrace(
 	TRdisplay("SCF error %d displaying a message to user\n",
 	    scf_cb.scf_error.err_code);
     }
+    return 0;
 }
 
 /*{
@@ -2952,44 +3018,30 @@ pst_scctrace(
 **	    Bug #56449
 **	    Changed %x to %p for pointer values.
 */
-VOID
-pst_display(format, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10)
-char               *format;
-i4		    p1;
-i4		    p2;
-i4		    p3;
-i4		    p4;
-i4		    p5;
-i4		    p6;
-i4		    p7;
-i4		    p8;
-i4		    p9;
-i4		    p10;
-/*
-pst_display(
-	char               *format,
-	i4		    p1,
-	i4		    p2,
-	i4		    p3,
-	i4		    p4,
-	i4		    p5,
-	i4		    p6,
-	i4		    p7,
-	i4		    p8,
-	i4		    p9,
-	i4		    p10)
-*/
-{
-    char		buffer[PSF_MAX_TEXT + 1]; /* last char for `\n' */
 
-    /* TRformat removes `\n' chars, so to ensure that pst_scctrace()
+#if defined(__STDARG_H__)
+void pst_display(char *fmt, ...)
+#else
+void pst_display(va_alist)
+#endif
+{
+    va_list ap;
+    char buf[PSF_MAX_TEXT + 1]; /* last char for `\n' */
+#if defined(__STDARG_H__)
+    va_start(ap, fmt);
+#else
+    char *fmt;
+    va_start(ap);
+    fmt = (char*)va_arg(ap, char *);
+#endif
+    
+    /* TRvformat removes `\n' chars, so to ensure that pst_scctrace()
     ** outputs a logical line (which it is supposed to do), we allocate
     ** a buffer with one extra char for NL and will hide it from TRformat
     ** by specifying length of 1 byte less. The NL char will be inserted
     ** at the end of the message by pst_scctrace().
     */
-    TRformat(pst_scctrace, 0, buffer, sizeof(buffer) - 1, format, 
-	p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
+    TRvformat(pst_scctrace, 0, buf, sizeof(buf) - 1, fmt, ap);
 }
 
 #ifdef xDEBUG
@@ -3918,23 +3970,35 @@ pst_qnode_dot1(
 /*	    v->pst_s_sort.pst_srvno
 	    v->pst_s_sort.pst_srasc
 */
+	    SIfprintf(fd, "}\"]\n");
+	    break;
 	case PST_CURVAL:
 /*	    v->pst_s_curval
 */
+	    SIfprintf(fd, "}\"]\n");
+	    break;
 	case PST_RULEVAR:
 /*	    v->pst_s_rule.pst_rltype
 	    v->pst_s_rule.pst_rltargtype
 	    v->pst_s_rule.pst_rltno
 */
+	    SIfprintf(fd, "}\"]\n");
+	    break;
 	case PST_TAB:
 /*	    v->pst_s_tab
 */
+	    SIfprintf(fd, "}\"]\n");
+	    break;
 	case PST_SEQOP:
 /*	    v->pst_s_seqop
 */
+	    SIfprintf(fd, "}\"]\n");
+	    break;
 	case PST_GBCR:
 /*	    v->pst_s_group.pst_groupmask
 */
+	    SIfprintf(fd, "}\"]\n");
+	    break;
 
 	case PST_NOT:
 	case PST_QLEND:
@@ -3944,6 +4008,7 @@ pst_qnode_dot1(
 	case PST_WHOP:
 	case PST_GCL:
 	case PST_GSET:
+	default:
 	    SIfprintf(fd, "}\"]\n");
 	    break;
 	}
@@ -3970,15 +4035,14 @@ pst_qnode_dot1(
 **	    Created
 */
 
-void
+static void
 pst_qtree_dot1(
     ADF_CB *adfcb,
     FILE *fd,
     PSS_SESBLK *cb,
     PST_QTREE *tree)
 {
-    STATUS rval;
-    i4 i, j;
+    i4 i;
 
     SIfprintf(fd, "n%p[label=\"{QTREE|{%s|vsn:%d}|RNGENTRY",
 	    tree, pqtype_array[tree->pst_mode<PSQ_MODE_MAX
@@ -4033,6 +4097,9 @@ pst_qtree_dot1(
 	    case PST_WETREE:
 	    case PST_TPROC:
 		pst_qnode_dot1(adfcb, fd, cb, r->pst_rgroot, tree);
+		break;
+	    default:
+		break;
 	    }
 	}
     }
@@ -4263,7 +4330,7 @@ pst_stmt_dot1(
 	    }
 	    break;
 	case PST_EXEC_IMM_TYPE:
-	    {	PST_EXEC_IMM *v = &stmt->pst_specific.pst_execImm;
+	    {	/*PST_EXEC_IMM *v = &stmt->pst_specific.pst_execImm;*/
 		SIfprintf(fd, "|pst_qrytext?");
 	    }
 	    goto common_end;
@@ -4333,22 +4400,22 @@ pst_stmt_dot1(
 	    }
 	    break;
 	case PST_CREATE_INTEGRITY_TYPE:
-	    {	PST_CREATE_INTEGRITY *v = &stmt->pst_specific.pst_createIntegrity;
+	    {	/*PST_CREATE_INTEGRITY *v = &stmt->pst_specific.pst_createIntegrity;*/
 		SIfprintf(fd, "|TBS");
 	    }
 	    goto common_end;
 	case PST_MODIFY_TABLE_TYPE:
-	    {	PST_MODIFY_TABLE *v = &stmt->pst_specific.pst_modifyTable;
+	    {	/*PST_MODIFY_TABLE *v = &stmt->pst_specific.pst_modifyTable;*/
 		SIfprintf(fd, "|TBS");
 	    }
 	    goto common_end;
 	case PST_DROP_INTEGRITY_TYPE:
-	    {	PST_DROP_INTEGRITY *v = &stmt->pst_specific.pst_dropIntegrity;
+	    {	/*PST_DROP_INTEGRITY *v = &stmt->pst_specific.pst_dropIntegrity;*/
 		SIfprintf(fd, "|TBS");
 	    }
 	    goto common_end;
 	case PST_CREATE_SCHEMA_TYPE:
-	    {	PST_CREATE_SCHEMA *v = &stmt->pst_specific.pst_createSchema;
+	    {	/*PST_CREATE_SCHEMA *v = &stmt->pst_specific.pst_createSchema;*/
 		SIfprintf(fd, "|TBS");
 	    }
 	    goto common_end;
@@ -4373,7 +4440,7 @@ pst_stmt_dot1(
 	    }
 	    break;
 	case PST_RENAME_TYPE:
-	    {	PST_RENAME *v = &stmt->pst_specific.pst_rename;
+	    {	/*PST_RENAME *v = &stmt->pst_specific.pst_rename;*/
 		SIfprintf(fd, "|TBS");
 	    }
 	    goto common_end;
@@ -4555,6 +4622,9 @@ pst_dot(
 		    case PST_WETREE:
 		    case PST_TPROC:
 			pst_qnode_dot1(&adfcb, fd, cb, rngvar->pss_qtree, NULL);
+			break;
+		    default:
+			break;
 		    }
 		}
 	    }
@@ -4763,6 +4833,9 @@ pst_dot(
 			}
 		    }
 		}
+		break;
+	    default:
+		break;
 	    }
 	    p = (PST_QNODE*)pst_pop_item(&stk);
 	}

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -51,8 +51,14 @@
 **	15-sep-93 (swm)
 **	    Added cs.h include above other header files which need its
 **	    definition of CS_SID.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+i4 psy_comment(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psy_comment - Insert long and/or short remark for a table or a column.

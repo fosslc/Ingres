@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -65,8 +65,6 @@
 **	    psy_colpriv_xlate	-   translate column-specific privilege on a
 **				    view into column-specific privilege on the
 **				    underlying table
-**	    psy_find_rgvar_ref	-   find reference to a given range variable
-**				    in a tree
 **	    psy_dbp_ev_seq_perm	-   complete the actions required to insert
 **				    permits granting specified privilege on a
 **				    dbevent or a dbproc to all grantees
@@ -200,81 +198,132 @@
 **          Store blank trimmed names in DMT_ATT_ENTRY
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward functions.
-*/
 
-static DB_STATUS
-psy_tbl_to_col_priv(
-	i4		    *tbl_wide_privs,
-	i4		    *col_priv_map,
-	PSY_ATTMAP	    *colpriv_attr_map,
-	i4		    priv,
-	PST_QNODE	    *tree,
-	DB_ERROR	    *err_blk);
-static DB_STATUS
-psy_colpriv_xlate(
-	PST_QNODE	    *tree,
-	i4		    *col_priv_map,
-	PSY_ATTMAP	    *colpriv_attr_map,
-	i4		    priv,
-	i4		    view_attr_count,
-	DB_ERROR	    *err_blk);
-static bool
-psy_find_rgvar_ref(
-	PST_QNODE       *t,
-	i4             rgno);
-static DB_STATUS
-psy_mark_sublist(
-	PSS_SESBLK		*sess_cb,
-	PSQ_INDEP_OBJECTS	*indep_objs,
-	PSF_MSTREAM		*mstream,
-	i4			hdrtype,
-	DB_TAB_ID		*dbpid,
-	DB_DBP_NAME		*dbpname,
-	DB_ERROR		*err_blk);
-static DB_STATUS
-psy_dbp_ev_seq_perm(
-	RDF_CB		*rdf_cb,
-	PSY_CB		*psy_cb,
-	PSY_TBL		*psy_tbl,
-	DB_PROTECTION	*protup,
-	char		*buf,
-	i4		buf_len);
-static bool
-psy_recursive_chain(
-	PSS_DBPLIST_HEADER      *cur_node,
-	register DB_TAB_ID	*dbpid);
-static bool
-psy_dupl_dbp(
-	PSS_DBPLIST_HEADER  *dbp_list,
-	PSQ_OBJ		    *obj,
-	PSS_DBPLIST_HEADER  *cur_dbp,
-	bool		    ps133);
-static DB_STATUS
-psy_prvtxt(
-	    PSS_SESBLK		*sess_cb,
-	    i4		priv,
-	    PSY_ATTMAP		*attrib_map,
-	    PTR			txt_chain,
-	    DMT_ATT_ENTRY	**attdesc,
-	    PSY_TBL		*psy_tbl,
-	    i4			*grntee_type_offset,
-	    i4			*grantee_offset,
-	    char		*buf,
-	    i4			buf_len,
-	    bool		grant_option,
-	    DB_TEXT_STRING	**txt,
-	    PSF_MSTREAM		*mstream,
-	    DB_ERROR		*err_blk);
-static VOID
-psy_pr_cs_privs(
-		i4		priv,
-		PSY_ATTMAP	*col_priv_attmap,
-		DMT_ATT_ENTRY	**att_list);
+/* TABLE OF CONTENTS */
+i4 psy_dgrant(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+bool psy_permit_ok(
+	i4 obj_mask,
+	PSS_SESBLK *cb,
+	DB_OWN_NAME *obj_owner);
+void psy_prvmap_to_str(
+	i4 privs,
+	char *priv_str,
+	DB_LANG lang);
+void psy_init_rel_map(
+	PSQ_REL_MAP *map);
+static i4 psy_tbl_to_col_priv(
+	i4 *tbl_wide_privs,
+	i4 *col_priv_map,
+	PSY_ATTMAP *colpriv_attr_map,
+	i4 priv,
+	PST_QNODE *tree,
+	DB_ERROR *err_blk);
+static i4 psy_colpriv_xlate(
+	PST_QNODE *tree,
+	i4 *col_priv_map,
+	PSY_ATTMAP *colpriv_attr_map,
+	i4 priv,
+	i4 view_attr_count,
+	DB_ERROR *err_blk);
+void psy_attmap_to_str(
+	DMT_ATT_ENTRY **attr_descr,
+	PSY_ATTMAP *attr_map,
+	register i4 *offset,
+	char *str,
+	i4 str_len);
+static i4 psy_mark_sublist(
+	PSS_SESBLK *sess_cb,
+	PSQ_INDEP_OBJECTS *indep_objs,
+	PSF_MSTREAM *mstream,
+	i4 hdrtype,
+	DB_TAB_ID *dbpid,
+	DB_DBP_NAME *dbpname,
+	DB_ERROR *err_blk);
+static i4 psy_dbp_ev_seq_perm(
+	RDF_CB *rdf_cb,
+	PSY_CB *psy_cb,
+	PSY_TBL *psy_tbl,
+	DB_PROTECTION *protup,
+	char *buf,
+	i4 buf_len);
+static bool psy_recursive_chain(
+	PSS_DBPLIST_HEADER *cur_node,
+	register DB_TAB_ID *dbpid);
+i4 psy_dbp_status(
+	PSY_TBL *dbp_descr,
+	PSS_SESBLK *sess_cb,
+	PSF_QUEUE *grant_dbprocs,
+	i4 qmode,
+	i4 *dbp_mask,
+	DB_ERROR *err_blk);
+i4 psy_dbp_priv_check(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DB_DBP_NAME *dbpname,
+	DB_TAB_ID *dbpid,
+	bool *non_existant_dbp,
+	bool *missing_obj,
+	i4 *dbp_mask,
+	i4 *privs,
+	DB_ERROR *err_blk);
+static bool psy_dupl_dbp(
+	PSS_DBPLIST_HEADER *dbp_list,
+	PSQ_OBJ *obj,
+	PSS_DBPLIST_HEADER *cur_dbp,
+	bool ps133);
+i4 psy_tbl_grant_check(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	DB_TAB_ID *grant_obj_id,
+	i4 *tbl_wide_privs,
+	PSY_COL_PRIVS *col_specific_privs,
+	DB_TAB_ID *indep_id,
+	i4 *indep_tbl_wide_privs,
+	PSY_COL_PRIVS *indep_col_specific_privs,
+	i4 psy_flags,
+	bool *insuf_privs,
+	bool *quel_view,
+	DB_ERROR *err_blk);
+i4 psy_check_privs(
+	PSS_RNGTAB *rngvar,
+	i4 *privs_to_find,
+	i4 indep_tbl_wide_privs,
+	PSY_COL_PRIVS *indep_col_specific_privs,
+	PSS_SESBLK *sess_cb,
+	bool ps131,
+	DB_TAB_ID *grant_obj_id,
+	i4 flags,
+	i4 *fully_satisfied,
+	DB_ERROR *err_blk);
+void psy_prv_att_map(
+	char *attmap,
+	bool exclude_cols,
+	i4 *attr_nums,
+	i4 num_cols);
+static i4 psy_prvtxt(
+	PSS_SESBLK *sess_cb,
+	i4 priv,
+	PSY_ATTMAP *attrib_map,
+	PTR txt_chain,
+	DMT_ATT_ENTRY **attdesc,
+	PSY_TBL *psy_tbl,
+	i4 *grntee_type_offset,
+	i4 *grantee_offset,
+	char *buf,
+	i4 buf_len,
+	bool grant_option,
+	DB_TEXT_STRING **txt,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+static void psy_pr_cs_privs(
+	i4 priv,
+	PSY_ATTMAP *col_priv_attmap,
+	DMT_ATT_ENTRY **att_list);
 
 /*{
 ** Name: psy_dgrant	- Execute GRANT.
@@ -638,7 +687,6 @@ psy_dgrant(
     PSQ_INDEP_OBJECTS   indep_objs;
     register DB_PROTECTION *protup = &ptuple;
     i4			*domset	= ptuple.dbp_domset;
-    register i4	i;
     i4		err_code;
     i4			textlen;
     i4			text_lock = 0;
@@ -1635,7 +1683,8 @@ Current user must posess EXECUTE WITH GRANT OPTION on database procedure\n\
 
 		    if (indep_col_specific_privs.psy_col_privs)
 		    {
-			i4		i, j;
+			i4		i;
+			u_i4		j;
 			PSQ_COLPRIV	*csp;
 			i4		*att_map, *p;
 			i4		priv_map = 0;
@@ -2174,9 +2223,9 @@ Current user must posess EXECUTE WITH GRANT OPTION on database procedure\n\
 		** owner and of the object itself
 		*/
 		i4   *p = col_specific_privs.psy_attmap[PSY_UPDATE_ATTRMAP].map;
-
-		for (i = 0; i < DB_COL_WORDS; i++)
-		    domset[i] = p[i];
+		u_i4 u;
+		for (u = 0; u < DB_COL_WORDS; u++)
+		    domset[u] = p[u];
 
 	        rdf_rb->rdr_querytext = (PTR) u_txt->db_t_text;
 		grntee_type_start = 
@@ -2475,9 +2524,10 @@ Current user must posess EXECUTE WITH GRANT OPTION on database procedure\n\
 		*/
 		i4   *p = 
 		      col_specific_privs.psy_attmap[PSY_REFERENCES_ATTRMAP].map;
+		u_i4 u;
 
-		for (i = 0; i < DB_COL_WORDS; i++)
-		    domset[i] = p[i];
+		for (u = 0; u < DB_COL_WORDS; u++)
+		    domset[u] = p[u];
 
 	        rdf_rb->rdr_querytext = (PTR) r_txt->db_t_text;
 		grntee_type_start = 
@@ -3442,62 +3492,6 @@ psy_colpriv_xlate(
     }
 
     return(E_DB_OK);
-}
-
-/*
-** Name: psy_find_rgvar_ref - find reference to a given range variable in a tree
-**
-** Description:
-**	Recursively (one day we'll do away with it) walk a tree looking for
-**	references to attributes of a specified range variable
-**
-** Input:
-**	t	    tree to be searched
-**	rgno	    number of the range variable corresponding to the relation
-**		    of interest
-**
-** Output:
-**	none
-**
-** Returns:
-**	TRUE	    if a reference was found
-**	FALSE	    otherwise
-**
-** History:
-**	27-aug-91 (andre)
-**	    written
-*/
-static bool
-psy_find_rgvar_ref(
-	PST_QNODE       *t,
-	i4             rgno)
-{
-    if (t != (PST_QNODE *) NULL)
-    {
-	if (t->pst_sym.pst_type == PST_VAR)
-	{
-	    if (t->pst_sym.pst_value.pst_s_var.pst_vno == rgno)
-	    {
-		return(TRUE);
-	    }
-	}
-	else
-	{
-	    if (t->pst_left != (PST_QNODE *) NULL &&
-		psy_find_rgvar_ref(t->pst_left, rgno))
-	    {
-		return(TRUE);
-	    }
-
-	    if (t->pst_right != (PST_QNODE *) NULL &&
-		psy_find_rgvar_ref(t->pst_right, rgno))
-	    {
-		return(TRUE);
-	    }
-	}
-    }
-
-    return(FALSE);
 }
 
 /*
@@ -7281,7 +7275,7 @@ psy_tbl_grant_check(
     
     i4		    err_code;
     i4		    mask;
-    register PST_QTREE      *vtree;
+    register PST_QTREE      *vtree = NULL;
     DB_STATUS		    status;
     register i4	    i;
     PSY_ATTMAP		    *col_priv_attmap;
@@ -8277,7 +8271,7 @@ view '%t' owned by the user, \
 		    }
 		    else
 		    {
-		        i4		i;
+		        u_i4		u;
 		        i4		*map_to, *map_from;
 
 		        map_to = col_specific_privs->
@@ -8285,8 +8279,8 @@ view '%t' owned by the user, \
 		        map_from = indep_col_specific_privs->
 			    psy_attmap[PSY_UPDATE_ATTRMAP].map;
 
-		        for (i = 0; i < DB_COL_WORDS; i++)
-			    map_to[i] = map_from[i];
+		        for (u = 0; u < DB_COL_WORDS; u++)
+			    map_to[u] = map_from[u];
 		    }
 	        }
 
@@ -8294,7 +8288,7 @@ view '%t' owned by the user, \
 		   && ~fully_satisfied & DB_REFERENCES
 	          )
 	        {
-		    i4		i;
+		    u_i4	u;
 		    i4		*map_to, *map_from;
 
 		    /* REFERENCES may only be granted on base tables */
@@ -8306,8 +8300,8 @@ view '%t' owned by the user, \
 		    map_from = indep_col_specific_privs->
 		        psy_attmap[PSY_REFERENCES_ATTRMAP].map;
 
-		    for (i = 0; i < DB_COL_WORDS; i++)
-		        map_to[i] = map_from[i];
+		    for (u = 0; u < DB_COL_WORDS; u++)
+		        map_to[u] = map_from[u];
 	        }
 	    }
 
@@ -9469,7 +9463,7 @@ privileges WGO on\n'%t' owned by '%t':\n\n",
         ** determine whether the user possessed UPDATE WGO on some
         ** of the required columns of the relation
         */
-        i4		i;
+        u_i4		u;
         i4		*map_reqd, *map_not_found, *col_privs;
         i4		found = FALSE;
 
@@ -9487,9 +9481,9 @@ privileges WGO on\n'%t' owned by '%t':\n\n",
 	col_privs =
 	    indep_col_specific_privs->psy_attmap[PSY_UPDATE_ATTRMAP].map;
 
-        for (i = 0;
-	     i < DB_COL_WORDS;
-	     i++, map_reqd++, map_not_found++, col_privs++
+        for (u = 0;
+	     u < DB_COL_WORDS;
+	     u++, map_reqd++, map_not_found++, col_privs++
 	    )
         {
 	    if (*map_not_found != *map_reqd)
@@ -9524,7 +9518,7 @@ privileges WGO on\n'%t' owned by '%t':\n\n",
         ** determine whether the user possessed REFERENCES WGO on some
         ** of the required columns of the relation
         */
-        i4		i;
+        u_i4		u;
         i4		*map_reqd, *map_not_found, *col_privs;
         i4		found = FALSE;
 
@@ -9542,9 +9536,9 @@ privileges WGO on\n'%t' owned by '%t':\n\n",
 	col_privs =
 	    indep_col_specific_privs->psy_attmap[PSY_REFERENCES_ATTRMAP].map;
 
-        for (i = 0;
-	     i < DB_COL_WORDS;
-	     i++, map_reqd++, map_not_found++, col_privs++
+        for (u = 0;
+	     u < DB_COL_WORDS;
+	     u++, map_reqd++, map_not_found++, col_privs++
 	    )
         {
 	    if (*map_not_found != *map_reqd)

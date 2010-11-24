@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -156,14 +156,55 @@
 **          Store blank trimmed names in DMT_ATT_ENTRY
 **	14-Oct-2010 (kschendel) SIR 124544
 **	    Change how we store DMU characteristics
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
-static DB_STATUS psl_atbl_partcheck(
-	PSS_SESBLK    *sess_cb,
-	PSQ_CB        *psq_cb,
+/* TABLE OF CONTENTS */
+i4 psl_alter_table(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_CONS *cons_list);
+i4 psl_alt_tbl(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *tbl_spec,
+	PSS_RNGTAB **rngvarp);
+i4 psl_d_cons(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_RNGTAB *rngvar,
+	char *cons_name,
+	bool drop_cascade);
+i4 psl_alt_tbl_col(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+i4 psl_alt_tbl_col_drop(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DB_ATT_NAME attname,
+	bool cascade);
+i4 psl_alt_tbl_col_add(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DB_ATT_NAME attname,
+	PSS_CONS *cons_list,
+	i4 altopts);
+i4 psl_alt_tbl_col_rename(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DB_ATT_NAME attname,
+	DB_ATT_NAME *newattname);
+i4 psl_alt_tbl_rename(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *newTabName);
+static i4 psl_atbl_partcheck(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
 	DMT_ATT_ENTRY *dmt_attr);
-
-static DB_STATUS psl_atbl_alter_lob(
+static i4 psl_atbl_alter_lob(
 	PSS_SESBLK *sess_cb,
 	PSQ_CB *psq_cb,
 	DMT_ATT_ENTRY *dmt_att,

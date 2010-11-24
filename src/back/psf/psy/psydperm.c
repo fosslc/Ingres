@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -98,13 +98,20 @@
 **	    Short-circuit calls to psy_secaudit() if not C2SECURE.
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward functions.
-*/
 
+/* TABLE OF CONTENTS */
+i4 psy_dpermit(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_sqlview(
+	PSS_RNGTAB *rngvar,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	i4 *issql);
+
 #ifdef	xORANGE
 /*
 ** @FIX_ME@
@@ -365,7 +372,6 @@ psy_dpermit(
     PST_VRMAP		varmap;
     PSY_TBL		*psy_tbl;
     DB_TIME_ID		timeid;
-    DB_NAME             *objname;
 
     /*
     ** For CREATE/DEFINE PERMIT execute code below.
@@ -525,7 +531,7 @@ psy_dpermit(
 	    i4			    indep_tbl_wide_privs;
 	    bool		    insuf_privs, quel_view;
 	    i4		    val1, val2;
-
+	    u_i4	u;
 	    /*
 	    ** build maps of table-wide and column-specific privileges for
 	    ** psy_tbl_grant_check()
@@ -575,9 +581,9 @@ psy_dpermit(
 		    : csp->psy_attmap->map;
 
 		/* copy the attribute map */
-		for (i = 0; i < DB_COL_WORDS; i++, ip++)
+		for (u = 0; u < DB_COL_WORDS; u++, ip++)
 		{
-		    *ip = domset[i];
+		    *ip = domset[u];
 		}
 	    }
 	    else
@@ -652,7 +658,8 @@ psy_dpermit(
 
 		if (indep_col_specific_privs.psy_col_privs)
 		{
-		    i4		i, j;
+		    i4		i;
+		    u_i4	u;
 		    PSQ_COLPRIV	*csp;
 		    i4		*att_map, *p;
 		    i4		priv_map = 0;
@@ -696,9 +703,9 @@ psy_dpermit(
 			    }
 			}
 
-			for (p = csp->psq_attrmap, j = 0;
-			     j < DB_COL_WORDS;
-			     j++)
+			for (p = csp->psq_attrmap, u = 0;
+			     u < DB_COL_WORDS;
+			     u++)
 			{
 			    *p++ = *att_map++;
 			}
