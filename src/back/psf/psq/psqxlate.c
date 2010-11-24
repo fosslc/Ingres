@@ -128,6 +128,10 @@
 **	    If there's time, I would consider simplifying the interface
 **	    to this function.  There's no need to pass in mem_stream
 **	    and pkt_list because they are always the same.
+**	28-Oct-2010 (kschendel) SIR 124544
+**	    Allow for open-delim and close-delim of NULL when str_len is
+**	    specified.  There's no need to make the caller jump thru hoops.
+**	    YES, this routine needs an interface cleanup.
 */
 DB_STATUS
 psq_x_add(
@@ -154,6 +158,7 @@ psq_x_add(
 	/* the next 2 vars will be used only when storing string constants */
     char	    *text_const   = str_2_store;
     i4		    txt_const_len = str_len;
+    i4		    close_delim_len;
 
     /*
     ** if there are no buffers in the list, add one
@@ -176,8 +181,17 @@ psq_x_add(
     */
     if (str_len >= 0)
     {
-	str_len += CMbytecnt(open_delim) + CMbytecnt(close_delim);
-	str_2_store = open_delim;    /* need opening delimiter */
+	if (open_delim != NULL)
+	{
+	    str_len += CMbytecnt(open_delim);
+	    str_2_store = open_delim;	/* Start with open delim if any */
+	}
+	close_delim_len = 0;
+	if (close_delim != NULL)
+	{
+	    close_delim_len = CMbytecnt(close_delim);
+	    str_len += close_delim_len;
+	}
     }
         
     for (;;)
@@ -193,17 +207,17 @@ psq_x_add(
 	}
 	else			    /* must be dealing with text string */
 	{
-	    if (str_len == CMbytecnt(close_delim))	    
+	    if (str_len == 0)
+	    {
+		break;				/* done copying the string */
+	    }
+	    else if (str_len == close_delim_len)
 	    {
 		str_2_store = close_delim;	/* need closing delimiter */
 	    }
-	    else if (str_len == txt_const_len + CMbytecnt(close_delim))
+	    else if (str_len == txt_const_len + close_delim_len)
 	    {
 		str_2_store = text_const;	/* start copying text */
-	    }
-	    else if (str_len == 0)	
-	    {
-		break;				/* done copying the string */
 	    }
 
 	    str_len -= CMbytecnt(str_2_store);
@@ -212,6 +226,7 @@ psq_x_add(
 	/*								    
 	** if there is no room in the current buffer,
 	** allocate new list element
+*********** FIXME and what if the string is > buf_size?  gah.
 	*/
     	if ((*buflen + CMbytecnt(str_2_store)) > (i4) buf_size)
 	{

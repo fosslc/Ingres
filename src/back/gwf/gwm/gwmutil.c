@@ -1852,6 +1852,8 @@ GM_dbslen( char *str )
 **	12-Oct-2010 (kschendel) SIR 124544
 **	    dmu_char_array replaced with DMU_CHARACTERISTICS.
 **	    Fix the loop here.
+**	27-Oct-2010 (kschendel)
+**	    Fix above to positively init all the return elements.
 */
 
 void
@@ -1861,9 +1863,13 @@ GM_info_reg( GWX_RCB *gwx_rcb, i4  *journaled, i4  *structure,
     DMU_CHARACTERISTICS *dmuchars;
     i4 indicator;
 
-    /*
-     **	Pull ouy gateway registration information.
-     */
+    /* Init the return values.  We should always see structure, but be
+    ** safe.
+    */
+    *journaled = *unique = *update = 0;
+    *structure = DB_BTRE_STORE;
+
+    /* Now inspect the dmu-characteristics and set what was sent */
     dmuchars = gwx_rcb->xrcb_dmu_chars;
     if (dmuchars == NULL)
 	return;

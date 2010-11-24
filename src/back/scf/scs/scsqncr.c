@@ -1515,6 +1515,9 @@ GLOBALREF SC_MAIN_CB *Sc_main_cb; /* server control block */
 **	    Added support for rename table/column.
 **	21-Jul-2010 (kschendel) SIR 124104
 **	    Add (stub) set create_compression.
+**	27-Oct-2010 (kschendel)
+**	    Noticed that set-batch-copy-optim was missing.  No observed
+**	    symptoms, but fix it.
 */
 typedef struct _SQNCR_TBL
 {
@@ -1724,8 +1727,9 @@ static  const SQNCR_TBL   sqncr_tbl[] = {
 /* PSQ_GCA_XA_COMMIT */		{0,0},
 /* PSQ_GCA_XA_ROLLBACK */	{0,0},
 /* PSQ_FREELOCATOR */		{SQ_PSF_MASK, 0},
-/* PSQ_ATBL_RENAME_COLUMN */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
+/* 190 PSQ_ATBL_RENAME_COLUMN */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
 /* PSQ_ATBL_RENAME_TABLE */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
+/* PSQ_SETBATCHCOPYOPTIM */	{SQ_PSF_MASK, 0},
 /* PSQ_CREATECOMP */		{SQ_PSF_MASK, 0},
 	{0,0}
 };

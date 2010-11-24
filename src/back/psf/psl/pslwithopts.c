@@ -828,6 +828,8 @@ static DB_STATUS psl_validate_rtree(
 ** History:
 **	8-Oct-2010 (kschendel) SIR 124544
 **	    Clean up WITH-option parsing a bit more.
+**	27-Oct-2010 (kschendel)
+**	    Just return if a Star session.
 */
 
 static struct PSL_QMODE_XLATE {
@@ -856,6 +858,12 @@ psl_withopt_init(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb)
     PSS_YYVARS *yyvars;	
     struct PSL_QMODE_XLATE *xlate;
     u_i4 qmode_bits;
+
+    /* Star sessions will never use any of the WITH-parsing stuff.
+    ** A Star session just pushes text around.  Return now if Star.
+    */
+    if (sess_cb->pss_distrib & DB_3_DDB_SESS)
+	return;
 
     qmode = psq_cb->psq_mode;
     yyvars = sess_cb->pss_yyvars;
@@ -1691,6 +1699,12 @@ psl_nm_eq_nm(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, char *option, char *value)
 {
     DB_STATUS status;
 
+    /* Purely defensive:  should never get a Star session, just return if
+    ** we do ... caller has to figure it out.
+    */
+    if (sess_cb->pss_distrib & DB_3_DDB_SESS)
+	return (E_DB_OK);
+
     status = psl_withopt_value(sess_cb, psq_cb, nm_eq_nm_options,
 		option, value, 0, "option=string");
     if (status == E_DB_INFO)
@@ -1729,6 +1743,12 @@ psl_nm_eq_hexconst(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, char *option,
 	u_i2 valuelen, char *value)
 {
     DB_STATUS status;
+
+    /* Purely defensive:  should never get a Star session, just return if
+    ** we do ... caller has to figure it out.
+    */
+    if (sess_cb->pss_distrib & DB_3_DDB_SESS)
+	return (E_DB_OK);
 
     status = psl_withopt_value(sess_cb, psq_cb, nm_eq_hex_options,
 		option, value, valuelen, "option=hex_constant");
@@ -1938,7 +1958,6 @@ psl_withlist_elem(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
     QEU_CB	*qeucb;
 
     yyvars = sess_cb->pss_yyvars;
-    dmuchar = yyvars->cur_chars;
     err_blk = &psq_cb->psq_error;
     command = yyvars->qry_name;
     length = yyvars->qry_len;
@@ -1965,6 +1984,7 @@ psl_withlist_elem(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 	return psl_withstar_elem(sess_cb, psq_cb, value, xlate);
     }
 
+    dmuchar = yyvars->cur_chars;
     qeucb = NULL;
     dmucb = NULL;
     if ((yyvars->qmode_bits & (PSL_QBIT_CONS | PSL_QBIT_COPY)) == 0)
@@ -2397,6 +2417,12 @@ psl_withlist_relem(
     i4		rangeno;
     QEU_CB	*qeu_cb;
 
+    /* There's no support for range / rtree stuff in Star.  If we get
+    ** here by accident, just return rather than segv'ing.
+    */
+    if (sess_cb->pss_distrib & DB_3_DDB_SESS)
+	return (E_DB_OK);
+
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
 
@@ -2574,8 +2600,8 @@ psl_withstar_elem(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 
     status = psq_x_add(sess_cb, value, &sess_cb->pss_ostream,
 			xlated_qry->pss_buf_size,
-			&xlated_qry->pss_q_list, STlength(value), " ",
-			" ", NULL, err_blk);
+			&xlated_qry->pss_q_list, STlength(value),
+			" ", " ", NULL, err_blk);
 
     if (DB_FAILURE_MACRO(status))				
 	return(status);
@@ -2590,26 +2616,26 @@ psl_withstar_elem(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 	{
 	    status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream,
 		    xlated_qry->pss_buf_size, &xlated_qry->pss_q_list,
-		    -1, (char *) NULL, (char *) NULL, ") ", err_blk);
+		    -1, NULL, NULL, ") ", err_blk);
 	}
 	else
 	{
 	    status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream,
 		    xlated_qry->pss_buf_size, &xlated_qry->pss_q_list,
-		    -1, (char *) NULL, (char *) NULL, ", ", err_blk);
+		    -1, NULL, NULL, ", ", err_blk);
 	}
     }
     else if (CMnmstart(c1)) 
     {
 	status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream,
 		    xlated_qry->pss_buf_size, &xlated_qry->pss_q_list,
-		    -1, (char *) NULL, (char *) NULL, ", ", err_blk);
+		    -1, NULL, NULL, ", ", err_blk);
     }
     else if (!CMcmpcase(c1, ")") || !CMcmpcase(c1, ""))
     {
 	status = psq_x_add(sess_cb, "", &sess_cb->pss_ostream,
 		    xlated_qry->pss_buf_size, &xlated_qry->pss_q_list,
-		    -1, (char *) NULL, (char *) NULL, ") ", err_blk);
+		    -1, NULL, NULL, ") ", err_blk);
     }
 
     return (status);
@@ -2657,6 +2683,8 @@ psl_withstar_elem(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 ** History:
 **	11-Oct-2010 (kschendel) SIR 124544
 **	    Centralize all the WITH-parsing stuff
+**	27-Oct-2010 (kschendel)
+**	    Just return if a Star session.
 */
 
 DB_STATUS
@@ -2678,6 +2706,12 @@ psl_withopt_post(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb)
     PSS_YYVARS *yyvars;
     QEU_CB *qeucb;
     u_i4 qbits;			/* Query mode bits */
+
+    /* Star sessions never use any of the real WITH-parsing stuff.
+    ** A Star session just pushes text around.  Return now if Star.
+    */
+    if (sess_cb->pss_distrib & DB_3_DDB_SESS)
+	return (E_DB_OK);
 
     yyvars = sess_cb->pss_yyvars;
     err_blk = &psq_cb->psq_error;
