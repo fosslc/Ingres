@@ -1409,6 +1409,10 @@ ADI_FI_ID	    *instr)
 **          directly to the file. This allows us to write some of the very
 **          long lines that can occur without creating large char buffers
 **          except where really needed.
+**      19-Oct-2010 (maspa05) b124551
+**          Corrected a couple of accidental format changes associated with
+**          the above change - i8s weren't getting printed and empty strings
+**          were output as '<empty>' instead of ''
 */
 
 STATUS
@@ -1513,7 +1517,7 @@ PTR file)
 	  case DB_CHR_TYPE:
 	    if (blen == 0)
 	    {
-		SIfprintf(file, "'<empty>'\n");
+		SIfprintf(file, "''\n");
 	    }
 	    else
 	    {
@@ -1638,7 +1642,7 @@ PTR file)
 	    {
 		I8ASSIGN_MACRO(*data,i8_tmp);
 		CVla8(i8_tmp,num_buf);
-	        STprintf(stbuf, "%s\n", num_buf);
+	        SIfprintf(file, "%s\n", num_buf);
 		break;
 	    }
 	    SIfprintf(file, "%d\n", i4_tmp);
