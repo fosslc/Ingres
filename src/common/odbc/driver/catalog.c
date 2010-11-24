@@ -271,6 +271,10 @@
 **     24-Aug-2010 (Ralph Loen) Bug 124300
 **         Add SQL_MAX_PROCEDURE_NAME_LEN to select query in 
 **         CatGetDBCapabilities().
+**     27-Oct-2010 (Ralph Loen) Bug 124658
+**         In SQLSpecialColumns_InternalCall(), return after calling
+**         CatExecDirect() in the case of SQL_ROWVER or SQL_ROWID for
+**         transaction scope.
 */
 
 /*
@@ -2143,8 +2147,8 @@ RETCODE SQL_API SQLSpecialColumns_InternalCall(
             CatRemove (szSqlStr, AND);
 
         retcode = CatExecDirect (pstmt, szSqlStr, CATLG_SPECCOL);
-        if (retcode != SQL_SUCCESS)
-            goto routine_exit;
+
+        goto routine_exit;
     }
 
     /*
