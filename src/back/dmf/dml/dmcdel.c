@@ -14,6 +14,7 @@
 #include    <ulf.h>
 #include    <dmccb.h>
 #include    <dmrcb.h>
+#include    <dmscb.h>
 #include    <dmtcb.h>
 #include    <dmxcb.h>
 #include    <lg.h>
@@ -21,6 +22,7 @@
 #include    <dm.h>
 #include    <dmp.h>
 #include    <dm2d.h>
+#include    <dml.h>
 /**
 ** Name: DMCDEL.C - Functions used to delete a database from a server.
 **
@@ -58,6 +60,8 @@
 **	    SIR 120874 Modified to use new DB_ERROR based uleFormat 
 **	18-Nov-2008 (jonj)
 **	    dm2d_? functions converted to DB_ERROR *
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dml.h to get dmc_del_db() prototype.
 **/
 
 /*{

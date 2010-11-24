@@ -49,6 +49,8 @@
 **	04-Jan-2001 (jenjo02)
 **	    Added (SCD_SCB*)scb parameter to prototype for
 **	    scd_init_sngluser().
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype scd_mo_init()
 **/
 
 /*}
@@ -158,3 +160,6 @@ FUNC_EXTERN DB_STATUS scd_dblist(void);
 
 FUNC_EXTERN DB_STATUS scd_init_sngluser(SCF_CB *scf_cb,
 					SCD_SCB *scb );
+
+FUNC_EXTERN VOID scd_mo_init(void);
+

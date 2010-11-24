@@ -382,6 +382,8 @@
 **	    Fix net-change logic for width for ALTER TABLE.
 **      14-May-2010 (stial01)
 **          Alloc/maintain exact size of column names (iirelation.relattnametot)
+**      19-Jul-2010 (thich01)
+**          Some rtree related fixes around coupon setup and data fill.
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    dm2u-create wants compression now.
 **/
@@ -988,6 +990,14 @@ DM2U_INDEX_CB   *index_cb)
         /*    we choose one or another based on the flag gateway      */
 
 
+        /* 
+         * Set this to a normal read if it's an rtree index so that coupons
+         * are not ignored and therefore set up correctly. 
+         * For spatial rtree indexes, all data are LOBs.  So all coupon setup
+         * must be done if building an rtree.
+         */
+        if(index_cb->indxcb_structure == TCB_RTREE) 
+            tbl_access_mode = DM2T_A_READ;
         status = dm2t_open(dcb, index_cb->indxcb_tbl_id, 
 		 tbl_lk_mode, DM2T_UDIRECT, 
 		 ((gateway)?DM2T_A_MODIFY:tbl_access_mode), timeout, 
@@ -1151,6 +1161,13 @@ DM2U_INDEX_CB   *index_cb)
 	tp = m->mx_tpcb_next;
 	mct = &tp->tpcb_mct;
 
+        /* 
+         * Setup the coupon structure. For spatial rtree indexes, all data are
+         * LOBs.  So all coupon setup must be done if building an rtree.
+         */
+        if(index_cb->indxcb_structure == TCB_RTREE && 
+           t->tcb_rel.relstat2 & TCB2_HAS_EXTENSIONS) 
+            dmpe_find_or_create_bqcb(r, dberr);
 	/*
 	** All's ready now.
 	**
@@ -2487,6 +2504,8 @@ dm2uMakeIndMxcb(DM2U_MXCB **mxcb,
 **		Add geospatial support.
 **	9-Jul-2010 (kschendel) SIR 123450
 **	    Index btree key compression is wired to old-standard for now.
+**      19-Jul-2010 (thich01)
+**              Initialize colencwid properly so rtree data is filled.
 */
 DB_STATUS
 dm2uMakeIndAtts(
@@ -2675,7 +2694,7 @@ DB_ERROR	*dberr)
             **  N.B. For RTree it is: NBR, HILBERT, TIDP 
 	    **  However, the sort record is Hilbert, TIDP, NBR
             **  NBRs are hilbertsize * 2
-	    **  e.g. hilbertsize = 6 => NBR is 6 bytes * 2 or 12
+	    **  e.g. hilbertsize = 8 => NBR is 8 bytes * 2 or 16
             */
 
             if (m->mx_structure == TCB_RTREE)

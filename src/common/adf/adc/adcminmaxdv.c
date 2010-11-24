@@ -90,6 +90,8 @@
 **	    the dn_time in AD_DATENTRNL.
 **      14-aug-2009 (joea)
 **          Change the DB_BOO_TYPE cases in adc_1minmaxdv_rti.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 */
 
 /*{
@@ -531,6 +533,7 @@ DB_DATA_VALUE	    *adc_maxdv)
 	      case DB_DEC_TYPE:
 	      case DB_BIT_TYPE:
 	      case DB_BYTE_TYPE:
+              case DB_NBR_TYPE:
 		adc_mindv->db_length = 1;
 		break;
 
@@ -641,6 +644,7 @@ DB_DATA_VALUE	    *adc_maxdv)
 	      case DB_CHA_TYPE:
 	      case DB_BIT_TYPE:
 	      case DB_BYTE_TYPE:
+              case DB_NBR_TYPE:
 		MEfill(len, (u_char) 0, (PTR) data);
 		break;
 
@@ -813,6 +817,7 @@ DB_DATA_VALUE	    *adc_maxdv)
 		break;
 	      case DB_BIT_TYPE:
 	      case DB_BYTE_TYPE:
+              case DB_NBR_TYPE:
 		adc_maxdv->db_length = adf_scb->adf_maxstring;
 		break;
 
@@ -1004,6 +1009,7 @@ DB_DATA_VALUE	    *adc_maxdv)
 
 	      case DB_CHA_TYPE:
 	      case DB_BYTE_TYPE:
+              case DB_NBR_TYPE:
 		MEfill(len, (u_char) 0xFF, (PTR) data);
 		break;
 

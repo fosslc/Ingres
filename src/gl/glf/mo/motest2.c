@@ -15,6 +15,8 @@ NEEDLIBS = COMPAT
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      03-nov-2010 (joea)
+**          Declare local functions static.
 */
 
 # include <compat.h>
@@ -38,7 +40,7 @@ NEEDLIBS = COMPAT
 
 /* format and print something nicely */
 
-VOID
+static void
 show( char *classid, 
      char *instance, 
      char *sval, 
@@ -50,7 +52,7 @@ show( char *classid,
 
 /* show everything in the table, by classid */
 
-VOID
+static void
 showall(void)
 {
     i4  lsbuf;

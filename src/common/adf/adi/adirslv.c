@@ -133,6 +133,9 @@
 **          The order of the IFNULL functions have been arranged so that
 **          they follow the order listed in the SQL Guide, so once a 
 **          function has been found for one of the datatypes provided, use it.
+**      09-mar-2010 (thich01)
+**          Add adi_dtfamily_retrieve to allow the family dt id to be easily
+**          determined.
 **      13-may-2010 (horda03) B123704
 **          Only consider functions flags with ADI_F65536_PAR1MATCH if
 **          the FI's 1st parameter type matches the 1st parameter type supplied.
@@ -1315,6 +1318,8 @@ PREC_TY		prec_ty;
 **	    become impotent in ANSI contexts and dtfamily processing
 **	    then fails for combinations that should result in a differing
 **	    result type.
+**      20-Aug-2009 (thich01)
+**          Allow DB_GEOM_TYPE to exist as a family.
 **	23-Sep-2009 (kiria01) b122578
 **	    If flag set to propagate type from param and that param type
 **	    is ALL then make ALL the dtfamily type so that all the ALLs end
@@ -1474,6 +1479,10 @@ ADI_RSLV_BLK	     *adi_rslv_blk
       		  return(adu_error(adf_scb, E_AD9998_INTERNAL_ERROR, 0));
 		  break;
 	    }
+          }
+          else if (fdt == DB_GEOM_TYPE)
+          {
+              /* Nothing to do here. Just allow the GEOM family. */
           }
 	  else if (family == DB_ALL_TYPE)
 	  {
@@ -1985,6 +1994,28 @@ ADI_FI_DESC	*newfidesc;
       }
     }
     return (E_DB_OK);
+}
+
+/*{
+ * Name: adi_dtfamily_retrieve() - Returns the family id (if there is one) for
+ *       the given DB datatype.
+ *
+ * Returns: Family datatype or 0.
+ *
+ * History: 09-mar-2010 (thich01)
+ *             Created.
+ */
+DB_DT_ID
+adi_dtfamily_retrieve( DB_DT_ID	input )
+{
+    ADI_DATATYPE *func_dt;
+    DB_DT_ID dtin = abs(input);
+
+    func_dt = Adf_globs->Adi_dtptrs[dtin];
+    if (dtin < ADI_DT_CLSOBJ_MIN && func_dt)
+        return(func_dt->adi_dtfamily);
+    else 
+        return 0;
 }
 
 /*

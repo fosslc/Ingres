@@ -61,7 +61,6 @@ NO_OPTIM=dr6_us5
 #include <qefcopy.h>
 
 #include    <sc.h>
-#include    <sca.h>
 #include    <scc.h>
 #include    <scs.h>
 #include    <scd.h>
@@ -682,13 +681,15 @@ NO_OPTIM=dr6_us5
 **	    Re-type some ptr's as the proper struct pointer.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Delete sca.h include. Function prototypes moved to
+**	    scf.h for exposure to DMF.
+**	    Deleted scd_mo_init() prototype, now in scd.h
 */
 
 /*
 **  Forward and/or External function references.
 */
-
-FUNC_EXTERN void scd_mo_init(void);
 
 static DB_STATUS start_lglk_special_threads(
 				    i4  recovery_server,

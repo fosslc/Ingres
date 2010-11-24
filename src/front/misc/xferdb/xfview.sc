@@ -370,6 +370,9 @@ EXEC SQL END DECLARE SECTION;
 **      12-Jan-2009 (coomi01) Bug 123136
 **          Add reltid parameter to writeview; We now use this to trigger
 **          creation of output text stream.
+**      15-Mar-2010 (troal)
+**          Don't add geometry_columns definition to copy.in, it is already
+**          created by createdb.
 **       2-Aug-2010 (hanal04) Bug 124120
 **          Change "first time" code to avoid case where we think we have
 **          already been called because of a STAR/MS-SQL registered view
@@ -398,6 +401,13 @@ writeview(
     xfread_id(vi->name);
     if (!xfselected(vi->name)) 
 	return; 
+	
+    /*
+     * Don't add geometry_columns definition to copy.in,
+     * it is already created by createdb.
+     */
+    if(!STncasecmp(vi->name, "geometry_columns", 16))
+	return;
 
     xfread_id(vi->owner);
 

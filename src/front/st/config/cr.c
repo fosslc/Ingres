@@ -411,7 +411,7 @@ static PM_CONTEXT *protect_data;
 
 void scan_cache_params(char *, char *, char *, char *, char *, char *, 
 			FILE *, bool);
-void scan_ports_and_change(char *host, char *serverType, char *instance, 
+static void scan_ports_and_change(char *host, char *serverType, char *instance, 
                            char *countStr, FILE *output);
 static void special_rules(char *, char *, FILE *, i4, char *, char *);
 static char * get_cache_name(char *host, char *instance);

@@ -526,6 +526,8 @@
 **         the DAYOFYEAR(), DAYOFMONTH() and MONTHNAME() scalars, and
 **         calculate the buffer length depending on the scalar and the
 **         length of the referenced column name.
+**   17-Aug-2010 (thich01)
+**         Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
 **   03-Sep-2010 (Ralph Loen) Bug 124348
 **         Replaced SQLINTEGER, SQLUINTEGER and SQLPOINTER arguments with
 **         SQLLEN, SQLULEN and SQLLEN * for compatibility with 64-bit
@@ -5630,6 +5632,15 @@ RETCODE PrepareSqlda(
         case IIAPI_BYTE_TYPE:
         case IIAPI_VBYTE_TYPE:
         case IIAPI_LBYTE_TYPE:
+        case IIAPI_GEOM_TYPE :
+        case IIAPI_POINT_TYPE :
+        case IIAPI_MPOINT_TYPE :
+        case IIAPI_LINE_TYPE :
+        case IIAPI_MLINE_TYPE :
+        case IIAPI_POLY_TYPE :
+        case IIAPI_MPOLY_TYPE :
+        case IIAPI_NBR_TYPE :
+        case IIAPI_GEOMC_TYPE :
 # ifdef IIAPI_NCHA_TYPE
         case IIAPI_NCHA_TYPE:
         case IIAPI_NVCH_TYPE:
@@ -5931,6 +5942,14 @@ UDWORD SetColOffset(
     else
     if (pird->fIngApiType == IIAPI_LVCH_TYPE   ||
         pird->fIngApiType == IIAPI_LBYTE_TYPE  ||
+        pird->fIngApiType == IIAPI_GEOM_TYPE   ||
+        pird->fIngApiType == IIAPI_POINT_TYPE  ||
+        pird->fIngApiType == IIAPI_MPOINT_TYPE ||
+        pird->fIngApiType == IIAPI_LINE_TYPE   ||
+        pird->fIngApiType == IIAPI_MLINE_TYPE  ||
+        pird->fIngApiType == IIAPI_POLY_TYPE   ||
+        pird->fIngApiType == IIAPI_MPOLY_TYPE  ||
+        pird->fIngApiType == IIAPI_GEOMC_TYPE  ||
 # ifdef IIAPI_LNVCH_TYPE
         pird->fIngApiType == IIAPI_LTXT_TYPE   ||
         pird->fIngApiType == IIAPI_LNVCH_TYPE)

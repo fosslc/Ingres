@@ -62,9 +62,12 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	15-nov-2010 (stephenb)
+**	    ii_SIisopen() is only used here, make it static and proto 
+**	    it properly.
 **/
 
-FUNC_EXTERN bool ii_SIisopen();
+static bool ii_SIisopen(i4);
 
 bool
 SIisopen(fp)
@@ -95,7 +98,7 @@ FILE	*fp;
 # endif
 }
 
-bool
+static bool
 ii_SIisopen(fd)
 i4      fd;
 {

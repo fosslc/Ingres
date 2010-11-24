@@ -49,6 +49,8 @@ NEEDLIBS = COMPAT
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      03-nov-2010 (joea)
+**          Declare local functions static.
 */
 
 # include <compat.h>
@@ -103,7 +105,7 @@ typedef struct
 
 /* simple ER lookup function */
 
-char *
+static char *
 er_decode( STATUS msg_id )
 {
     STATUS old_err;
@@ -152,7 +154,7 @@ er_decode( STATUS msg_id )
 
 /* simple integer method -- wrap a private integer r/w */
 
-STATUS
+static STATUS
 myintget( i4  offset,
 	 i4  objsize,
 	 PTR object,
@@ -171,7 +173,7 @@ myintget( i4  offset,
     return( stat );
 }
 
-STATUS
+static STATUS
 myintset( i4  offset,
 	 i4  luserbuf,
 	 char *userbuf,
@@ -195,7 +197,7 @@ myintset( i4  offset,
 
 /* output instdata is the instance as a string */
 
-STATUS
+static STATUS
 my_dynamic_index(i4 msg,
 		 PTR cdata,
 		 i4  linstance,
@@ -250,7 +252,7 @@ my_dynamic_index(i4 msg,
     return( stat );
 }
 
-STATUS
+static STATUS
 my_dynamic_get( i4  offset,
 	       i4  objsize,
 	       PTR object,
@@ -271,7 +273,7 @@ my_dynamic_get( i4  offset,
 
 /***************** wrap a string buffer *****************/
 
-STATUS
+static STATUS
 mystrget( i4  offset,
 	 i4  objsize,
 	 PTR object,
@@ -290,7 +292,7 @@ mystrget( i4  offset,
     return( stat );
 }
 
-STATUS
+static STATUS
 mystrset( i4  offset,
     i4  luserbuf,
     char *userbuf,
@@ -408,7 +410,7 @@ typedef VOID DRIVE_FUNC( char *classid, char *instance, char *sval,
 
 /* format and print something nicely */
 
-VOID
+static void
 show( char *classid, 
      char *instance, 
      char *sval, 
@@ -423,7 +425,7 @@ show( char *classid,
 
 /* show everything in the table, by classid */
 
-VOID
+static void
 showall(void)
 {
     i4  lsbuf;
@@ -447,7 +449,7 @@ showall(void)
     SIprintf("\n");
 }
 
-VOID 
+static void
 drivecol( char *colclassid, DRIVE_FUNC *func, PTR arg ) 
 {
     STATUS stat;
@@ -471,7 +473,7 @@ drivecol( char *colclassid, DRIVE_FUNC *func, PTR arg )
     } 
 }
 
-VOID 
+static void
 driverow( char *instance, char **cols, DRIVE_FUNC *func, PTR arg ) 
 {
     STATUS stat;
@@ -514,7 +516,7 @@ driverow( char *instance, char **cols, DRIVE_FUNC *func, PTR arg )
 ** This function prints all the values associated with a "row"
 ** of various classids having the same instance. 
 */
-VOID
+static void
 showrow( char *instance, PTR colclassids )
 {
     driverow( instance, (char **)colclassids, show, (PTR) NULL );
@@ -525,7 +527,7 @@ showrow( char *instance, PTR colclassids )
 ** Called once for each row of an index column; arg contains
 ** a list of column classids to show for a row with that instance.
 */
-VOID
+static void
 per_row_show( char *classid, char *instance, char *sval, i4  perms, PTR arg )
 {
     SIprintf("\n");
@@ -536,7 +538,7 @@ per_row_show( char *classid, char *instance, char *sval, i4  perms, PTR arg )
 /*
 ** Show a table with the instances in an index/id column
 */
-VOID
+static void
 showtable( char *indexcol, char **colclassids )
 {
     SIprintf("\nShowing table indexed by %s\n", indexcol );
@@ -548,7 +550,7 @@ showtable( char *indexcol, char **colclassids )
 ** This function scans and prints all instance (rows) of a "column" of 
 ** a given classid.  The scan is terminated when we get a new classid.
 */
-VOID
+static void
 showcol( char *colclassid )
 {
     SIprintf("\nShowing column of %s\n", colclassid );
@@ -557,7 +559,7 @@ showcol( char *colclassid )
 
 /* ---------------------------------------------------------------- */
 
-STATUS
+static STATUS
 mymonitor( char *classid, char *twinid, char *instance, char *value,
 	  PTR mon_data, i4  msg )
 {
@@ -632,7 +634,7 @@ MO_INSTANCE_DEF mib_idefs[] =
     { 0 }
 };
 
-STATUS
+static STATUS
 tbl_attach( i4  nelem, MO_INSTANCE_DEF *idp )
 {
     STATUS ret_val = OK;
@@ -650,7 +652,7 @@ tbl_attach( i4  nelem, MO_INSTANCE_DEF *idp )
     return( ret_val );
 }
 
-STATUS
+static STATUS
 tbl_detach( i4  nelem, MO_INSTANCE_DEF *idp )
 {
     STATUS ret_val = OK;
@@ -667,7 +669,7 @@ tbl_detach( i4  nelem, MO_INSTANCE_DEF *idp )
     return( ret_val );
 }
 
-VOID
+static void
 addusertables(void)
 {
     i4  i;
@@ -691,7 +693,7 @@ addusertables(void)
 }
 
 
-VOID
+static void
 delusertables(void)
 {
     i4  i;
@@ -709,6 +711,9 @@ delusertables(void)
     }
 }
 
+static void
+spptree()
+{}
 
 int
 main(argc, argv)
@@ -854,8 +859,3 @@ char **argv;
     PCexit( OK );
     return( FAIL );
 }
-
-int
-spptree()
-{}
-

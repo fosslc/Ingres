@@ -11,13 +11,16 @@
 ##	05-Jul-2007 (hanje04)
 ##	    SIR 118420
 ##	    Created.
+##      29-Sep-2010 (thich01)
+##          Add -s to the pkg_sulist argument so iigenpreun recognizes it 
+##          properly.
 ##
 export II_SYSTEM=%rpm_prefix%
 rc=0
 
 if [ "$1" = "remove" ] ; then
     $II_SYSTEM/ingres/utility/iigenpreun -r %rpm_basename% \
-        -v %rpm_version% -p %pkg_name% %pkg_sulist%
+        -v %rpm_version% -p %pkg_name% -s %pkg_sulist%
     rc=$?
 fi
 

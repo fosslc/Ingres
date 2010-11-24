@@ -205,6 +205,10 @@
 **	10-Jun-2008 (lunbr01)  bug 120432
 **	    Added II_G_NO_COMP value for ii_gl_flags in II_GLB_CB to
 **	    suppress varchar compression if variable II_VCH_COMPRESS_ON=N.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **	20-Aug-2009 (drivi01)
 **	    Add a prototype for IIputdomio in iisetdom.c.
 **	21-Aug-2009 (kschendel) 121804
@@ -1628,6 +1632,14 @@ GLOBALREF	II_GLB_CB	*IIglbcb;
 # define	IIDB_LONGTYPE_MACRO(dbv) 			\
 		(  abs((dbv)->db_datatype) == DB_LVCH_TYPE 	\
 		|| abs((dbv)->db_datatype) == DB_LBYTE_TYPE	\
+		|| abs((dbv)->db_datatype) == DB_GEOM_TYPE	\
+		|| abs((dbv)->db_datatype) == DB_POINT_TYPE	\
+		|| abs((dbv)->db_datatype) == DB_MPOINT_TYPE	\
+		|| abs((dbv)->db_datatype) == DB_LINE_TYPE	\
+		|| abs((dbv)->db_datatype) == DB_MLINE_TYPE	\
+		|| abs((dbv)->db_datatype) == DB_POLY_TYPE	\
+		|| abs((dbv)->db_datatype) == DB_MPOLY_TYPE	\
+		|| abs((dbv)->db_datatype) == DB_GEOMC_TYPE \
 		|| abs((dbv)->db_datatype) == DB_LBIT_TYPE      \
 	        || abs((dbv)->db_datatype) == DB_LNVCHR_TYPE)
 
@@ -1658,6 +1670,14 @@ GLOBALREF	II_GLB_CB	*IIglbcb;
 # define        IIDT_LONGTYPE_MACRO(dt)        \
 	        (  abs(dt) == DB_LVCH_TYPE     \
 		|| abs(dt) == DB_LBYTE_TYPE    \
+		|| abs(dt) == DB_GEOM_TYPE    \
+		|| abs(dt) == DB_POINT_TYPE    \
+		|| abs(dt) == DB_MPOINT_TYPE    \
+		|| abs(dt) == DB_LINE_TYPE    \
+		|| abs(dt) == DB_MLINE_TYPE    \
+		|| abs(dt) == DB_POLY_TYPE    \
+		|| abs(dt) == DB_MPOLY_TYPE    \
+		|| abs(dt) == DB_GEOMC_TYPE  \
 	        || abs(dt) == DB_LBIT_TYPE     \
 		|| abs(dt) == DB_LNVCHR_TYPE)
 

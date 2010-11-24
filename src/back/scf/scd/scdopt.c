@@ -59,7 +59,6 @@ NO_OPTIM=dr6_us5
 #include <qefcopy.h>
 
 #include    <sc.h>
-#include    <sca.h>
 #include    <scc.h>
 #include    <scs.h>
 #include    <scd.h>
@@ -376,6 +375,9 @@ NO_OPTIM=dr6_us5
 **          string constants.
 **	14-Oct-2010 (kschendel) SIR 124544
 **	    Result-structure is handled by PSF now, not OPF.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Delete sca.h include. Function prototypes moved to
+**	    scf.h for exposure to DMF.
 */
 
 /*

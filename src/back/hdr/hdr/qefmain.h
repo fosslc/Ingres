@@ -364,6 +364,10 @@
 **          Add E_QE030F_LOAD_TPROC_QP and E_QE0310_INVALID_TPROC_ACT
 **      21-Jan-2009 (horda03) Bug 121519
 **          Add E_QE00AA_ERROR_CREATING_TABLE.
+**	Feb-24-2010 (troal01)
+**	    Add E_QE5423_SRID_MISMATCH
+**	Mar-15-2010 (troal01)
+**	    Added E_QE5424_INVALID_SRID and E_QE5425_SRS_NONEXISTENT errors
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **	18-Apr-2010 (gupsh01) Sir 123444
@@ -1089,6 +1093,13 @@ typedef struct _QEF_FUNC QEF_FUNC;
 /* informational messages NOT for auditing */
 #define I_QE3000_LONGRUNNING_QUERY      (E_QEF_MASK + 0x3000L)
 #define I_QE3001_LONGRUNNING_QUERY      (E_QEF_MASK + 0x3001L)
+
+/*
+ * Geospatial error codes
+ */
+#define E_QE5423_SRID_MISMATCH	        (E_QEF_MASK + 0x5423L)
+#define E_QE5424_INVALID_SRID           (E_QEF_MASK + 0x5424L)
+#define E_QE5425_SRS_NONEXISTENT        (E_QEF_MASK + 0x5425L)
 
 #define TEMP_TABLE_MACRO(dmt_cb)    ((i4)(dmt_cb)->dmt_id.db_tab_base < 0 &&\
 					MEcmp( ( PTR) &(dmt_cb)->dmt_owner,\

@@ -150,6 +150,9 @@
 ** 30-Jun-2010 (drivi01)
 **    Bug #124006
 **    Add new BOOLEAN datatype.
+** 17-Aug-2010 (thich01)
+**    Add geospatial types to IISQ types.  Make changes to treat spatial
+**    types like LBYTEs or NBR type as BYTE.
 */
 
 #define BUGNOTNULLABLE     // remove when the bug is corrected at ingres level
@@ -250,6 +253,15 @@ INGDBATYPES IngToDbaTypes[] = {   // TO BE FINISHED SQL unknown types bellow
   { IISQ_BYTE_TYPE,   INGTYPE_BYTE,         0},
   { IISQ_VBYTE_TYPE,  INGTYPE_BYTEVAR,      0},
   { IISQ_LBYTE_TYPE,  INGTYPE_LONGBYTE,     0},
+  { IISQ_GEOM_TYPE,   INGTYPE_LONGBYTE,     0},
+  { IISQ_POINT_TYPE,  INGTYPE_LONGBYTE,     0},
+  { IISQ_MPOINT_TYPE, INGTYPE_LONGBYTE,     0},
+  { IISQ_LINE_TYPE,   INGTYPE_LONGBYTE,     0},
+  { IISQ_MLINE_TYPE,  INGTYPE_LONGBYTE,     0},
+  { IISQ_POLY_TYPE,   INGTYPE_LONGBYTE,     0},
+  { IISQ_MPOLY_TYPE,  INGTYPE_LONGBYTE,     0},
+  { IISQ_NBR_TYPE,    INGTYPE_BYTE,         0},
+  { IISQ_GEOMC_TYPE,  INGTYPE_LONGBYTE,     0},
   { IISQ_OBJ_TYPE,    INGTYPE_OBJKEY,       0},
   { IISQ_TBL_TYPE,    INGTYPE_TABLEKEY,     0},
   { DB_NCHR_TYPE,     INGTYPE_UNICODE_NCHR, 0},
@@ -284,6 +296,15 @@ INGDBATYPES IngToDbaTypes[] = {   // TO BE FINISHED SQL unknown types bellow
   { -IISQ_BYTE_TYPE,  INGTYPE_BYTE,         0},
   { -IISQ_VBYTE_TYPE, INGTYPE_BYTEVAR,      0},
   { -IISQ_LBYTE_TYPE, INGTYPE_LONGBYTE,     0},
+  { -IISQ_GEOM_TYPE,  INGTYPE_LONGBYTE,     0},
+  { -IISQ_POINT_TYPE, INGTYPE_LONGBYTE,     0},
+  { -IISQ_MPOINT_TYPE, INGTYPE_LONGBYTE,    0},
+  { -IISQ_LINE_TYPE,  INGTYPE_LONGBYTE,     0},
+  { -IISQ_MLINE_TYPE, INGTYPE_LONGBYTE,     0},
+  { -IISQ_POLY_TYPE,  INGTYPE_LONGBYTE,     0},
+  { -IISQ_MPOLY_TYPE, INGTYPE_LONGBYTE,     0},
+  { -IISQ_NBR_TYPE,   INGTYPE_BYTE,         0},
+  { -IISQ_GEOMC_TYPE, INGTYPE_LONGBYTE,     0},
   { -IISQ_OBJ_TYPE,   INGTYPE_OBJKEY,       0},
   { -IISQ_TBL_TYPE,   INGTYPE_TABLEKEY,     0},
   { -DB_NCHR_TYPE,    INGTYPE_UNICODE_NCHR, 0},
@@ -518,7 +539,16 @@ int SqlGetHostInfos(void **lpValue,LPOBJECTLIST lp, HSQL hsql, int iCol, int * l
        break;
      case IISQ_VBYTE_TYPE :
      case IISQ_BYTE_TYPE : 
+     case IISQ_NBR_TYPE : 
      case IISQ_LBYTE_TYPE :
+     case IISQ_GEOM_TYPE :
+     case IISQ_POINT_TYPE :
+     case IISQ_MPOINT_TYPE :
+     case IISQ_LINE_TYPE :
+     case IISQ_MLINE_TYPE :
+     case IISQ_POLY_TYPE :
+     case IISQ_MPOLY_TYPE :
+     case IISQ_GEOMC_TYPE :
        // Added Emb Jan 06, 97
        *lpilen=lpSqlda->sqlvar[iCol].sqllen;
        iret = SQL_BYTE_TYPE;
@@ -908,6 +938,7 @@ static int FetchAllRows(LPSQLROWSET lpSqlRowSet)
             break;
          case IISQ_BYTE_TYPE :               // byte and char length ....
          case IISQ_CHA_TYPE :                // is sqlen +1 ('\0')
+         case IISQ_NBR_TYPE : 
             BytesToAlloc+=lpSqlRowSet->lpsqlda->sqlvar[i].sqllen+1;
             break;
          case IISQ_VBYTE_TYPE :              // Varbyte and varchar length 
@@ -934,6 +965,14 @@ static int FetchAllRows(LPSQLROWSET lpSqlRowSet)
                lpSqlRowSet->lpsqlda->sqlvar[i].sqltype=IISQ_CHA_TYPE;
             break;
          case IISQ_LBYTE_TYPE :              // Long byte.
+         case IISQ_GEOM_TYPE :
+         case IISQ_POINT_TYPE :
+         case IISQ_MPOINT_TYPE :
+         case IISQ_LINE_TYPE :
+         case IISQ_MLINE_TYPE :
+         case IISQ_POLY_TYPE :
+         case IISQ_MPOLY_TYPE :
+         case IISQ_GEOMC_TYPE :
          default :                           // Integer.
             return RES_ERR;
       }
@@ -973,6 +1012,8 @@ static int FetchAllRows(LPSQLROWSET lpSqlRowSet)
       if (lpSqlRowSet->lpsqlda->sqlvar[i].sqltype == IISQ_BYTE_TYPE ||
           lpSqlRowSet->lpsqlda->sqlvar[i].sqltype == IISQ_CHA_TYPE  ||
           lpSqlRowSet->lpsqlda->sqlvar[i].sqltype == IISQ_DTE_TYPE  ||
+          lpSqlRowSet->lpsqlda->sqlvar[i].sqltype == IISQ_NBR_TYPE  ||
+          lpSqlRowSet->lpsqlda->sqlvar[i].sqltype == -IISQ_NBR_TYPE  ||
           lpSqlRowSet->lpsqlda->sqlvar[i].sqltype == -IISQ_BYTE_TYPE ||            
           lpSqlRowSet->lpsqlda->sqlvar[i].sqltype == -IISQ_CHA_TYPE  ||
           lpSqlRowSet->lpsqlda->sqlvar[i].sqltype == -IISQ_DTE_TYPE)
@@ -1716,6 +1757,7 @@ BOOL FillHosts(void *lpHostv)
             break;           
          case IISQ_BYTE_TYPE :               // byte and char length ....
          case IISQ_CHA_TYPE :                // +1 byte for('\0')
+         case IISQ_NBR_TYPE : 
             iHostBytes=lpMyRowSet->lpsqlda->sqlvar[i].sqllen+1;
             break;
          case IISQ_VBYTE_TYPE :              // Varbyte and varchar length 
@@ -1727,6 +1769,14 @@ BOOL FillHosts(void *lpHostv)
             iHostBytes=lpMyRowSet->lpsqlda->sqlvar[i].sqllen;
             break;
          case IISQ_LBYTE_TYPE :              // Long byte.
+         case IISQ_GEOM_TYPE :
+         case IISQ_POINT_TYPE :
+         case IISQ_MPOINT_TYPE :
+         case IISQ_LINE_TYPE :
+         case IISQ_MLINE_TYPE :
+         case IISQ_POLY_TYPE :
+         case IISQ_MPOLY_TYPE :
+         case IISQ_GEOMC_TYPE :
          default :                           // Integer.
             return FALSE;
       }

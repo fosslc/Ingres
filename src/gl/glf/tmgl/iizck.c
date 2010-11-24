@@ -78,6 +78,8 @@
 **	    Compiler warning fixes.
 **	20-Jun-2009 (kschendel) SIR 122138
 **	    Hybrid add-on symbol changed, fix here.
+**      03-nov-2010 (joea)
+**          Complete TMtz_usage prototype.
 */
 
 /*
@@ -110,7 +112,7 @@ TMtz_getopt(i4	  nargc,
 	    char  *ioptopt);
 
 static VOID
-TMtz_usage();
+TMtz_usage(void);
 
 static VOID
 TMtz_cvtime(

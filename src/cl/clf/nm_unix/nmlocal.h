@@ -54,6 +54,8 @@
 **	14-Jun-2010 (whiro01)
 **	    Take out "NMstIngAt" which conflicts (in C++) with the def in
 **	    nmcl.h
+**	15-nov-2010 (stephenb)
+**	    Correctly proto forward funcs.
 */
  
 # include	<tm.h>
@@ -118,14 +120,17 @@ GLOBALREF SYSTIME NMtime;
  
 /* Function declarations */
  
-FUNC_EXTERN FILE	*NMopensyms();
-FUNC_EXTERN STATUS	NMaddsym();
-FUNC_EXTERN STATUS	NMreadsyms();
-FUNC_EXTERN STATUS	NMwritesyms();
-FUNC_EXTERN STATUS	NMflushIng();
-FUNC_EXTERN STATUS	NM_initsyms();
-FUNC_EXTERN STATUS	NMlocksyms();
-FUNC_EXTERN VOID	NMunlocksyms();
+FUNC_EXTERN FILE	*NMopensyms(char *);
+FUNC_EXTERN STATUS	NMaddsym(register char 	*name,
+				 register char	*value,
+				 register SYM	*endsp);
+FUNC_EXTERN STATUS	NMreadsyms(void);
+FUNC_EXTERN STATUS	NMwritesyms(void);
+FUNC_EXTERN STATUS	NMflushIng(void);
+FUNC_EXTERN STATUS	NMlocksyms(void);
+FUNC_EXTERN VOID	NMunlocksyms(void);
+FUNC_EXTERN STATUS	NM_initsym(void);
+FUNC_EXTERN STATUS	NMzapIngAt(register char *name);
 
 # define	NULL_STRING	""
 # define	NULL_CHR	1

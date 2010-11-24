@@ -151,6 +151,8 @@
 **	    Removed obsolete functions and updated remaining.
 **	28-Jul-10 (kiria01) b124142
 **	    Tighten the access to ADF_NVL_BIT
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs.
 */
 
 
@@ -281,6 +283,14 @@ IIapi_getAPILength
     case IIAPI_LVCH_TYPE :
     case IIAPI_LBYTE_TYPE :
     case IIAPI_LNVCH_TYPE :
+    case IIAPI_GEOM_TYPE :
+    case IIAPI_POINT_TYPE :
+    case IIAPI_MPOINT_TYPE :
+    case IIAPI_LINE_TYPE :
+    case IIAPI_MLINE_TYPE :
+    case IIAPI_POLY_TYPE :
+    case IIAPI_MPOLY_TYPE :
+    case IIAPI_GEOMC_TYPE :
 	if ( buffer != NULL )
 	{
 	    II_UINT2	seg_len;
@@ -368,6 +378,14 @@ IIapi_getGCALength( IIAPI_DESCRIPTOR *descriptor )
     case IIAPI_LVCH_TYPE :
     case IIAPI_LBYTE_TYPE :
     case IIAPI_LNVCH_TYPE :	
+    case IIAPI_GEOM_TYPE :
+    case IIAPI_POINT_TYPE :
+    case IIAPI_MPOINT_TYPE :
+    case IIAPI_LINE_TYPE :
+    case IIAPI_MLINE_TYPE :
+    case IIAPI_POLY_TYPE :
+    case IIAPI_MPOLY_TYPE :
+    case IIAPI_GEOMC_TYPE :
 	/*
 	** For LOBs, the fixed sized portion of the 
 	** variable length segmented format is used.

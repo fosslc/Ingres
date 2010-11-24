@@ -250,6 +250,8 @@
 **      30-Jun-2005 (hweho01)
 **          Make the inclusion of cxmsg implementations dependent on  
 **          define string conf_CLUSTER_BUILD for axp_osf platform.
+**      03-nov-2010 (joea)
+**          Declare cx_clm_file_reserve and cx_clm_file_read as static.
 **/
 
 
@@ -1606,7 +1608,7 @@ cx_msg_clm_file_init( void )
 **	04-apr-2004 (devjo01)
 **	    Created.
 */
-STATUS
+static STATUS
 cx_clm_file_reserve( i4 *pchit, i4 length )
 {
     CX_NODE_CB  *sms;
@@ -1990,7 +1992,7 @@ cx_clm_file_write( i4 chit, PTR data, i4 offset, i4 length, i4 totlen )
 **	04-apr-2004 (devjo01)
 **	    Created.
 */
-STATUS
+static STATUS
 cx_clm_file_read( i4 chit, PTR buffer, i4 bufsize, i4 offset, i4 *retreived )
 {
     STATUS	 status, tstatus;

@@ -66,6 +66,12 @@
 **	    fixes bug 109134.
 **      31-aug-2004 (sheco02)
 **          X-integrate change 466442 to main.
+**      09-mar-2010 (thich01)
+**          Change how the NBR function is validated to make us of the GEOM
+**          family type.  Hard code the dimesion of an NBR for now, until a
+**          3d type comes along and requires a calculation.
+**      02-apr-2010 (thich01)
+**          Add a search for Union by name instead of just by argument types.
 */
 DB_STATUS
 adi_dt_rtree(
@@ -80,7 +86,8 @@ adi_dt_rtree(
     ADI_OP_ID		overlaps_op_id;
     ADI_OP_ID		inside_op_id;
     ADI_OP_ID		perimeter_op_id;
-    DB_DT_ID		hilbert_dt_id;
+    ADI_OP_ID		union_op_id;
+    DB_DT_ID		hilbert_dt_id, family_dt_id;
     DB_DATA_VALUE	dv1;
     DB_DATA_VALUE	dv2;
     DB_STATUS		status;
@@ -111,9 +118,15 @@ adi_dt_rtree(
     adi_rslv_blk.adi_dt[0] = (DB_DT_ID)abs(obj_dt_id);
     adi_rslv_blk.adi_dt[1] = DB_ALL_TYPE;
 
+    /*
+     * The function expects DB_GEOM_TYPE but all spatial types are valid.
+     *Therefore, check the family type to ensure it's a spatial type.
+     */ 
     status = adi_resolve(adf_scb, &adi_rslv_blk, FALSE);
+    family_dt_id = adi_dtfamily_retrieve(adi_rslv_blk.adi_dt[0]);
     if ((DB_FAILURE_MACRO(status)) ||
-	(adi_rslv_blk.adi_fidesc->adi_dt[0] != adi_rslv_blk.adi_dt[0])) 
+	((adi_rslv_blk.adi_fidesc->adi_dt[0] != adi_rslv_blk.adi_dt[0]) &&
+        (family_dt_id != DB_GEOM_TYPE)))
 	return(status);
 
     status = adi_function(adf_scb,
@@ -153,7 +166,8 @@ adi_dt_rtree(
     status = adi_0calclen( adf_scb, &adi_rslv_blk.adi_fidesc->adi_lenspec,
 			0, (DB_DATA_VALUE **)NULL, &dv1);
     rtree_blk->adi_hilbertsize = dv1.db_length;
-    rtree_blk->adi_dimension = dv1.db_length / 3;
+    /* This will need to determine 2d, 3d, 4d when applicable. */
+    rtree_blk->adi_dimension = 2;
     rtree_blk->adi_hilbert_fiid = adi_rslv_blk.adi_fidesc->adi_finstid;
 
     /* Obtain the length of the range */
@@ -211,10 +225,14 @@ adi_dt_rtree(
 	return(status);
 
     /*
-    ** Find the NBR(nbr, nbr)-> nbr function
+    ** Find the Union(nbr, nbr)-> 0,1 function
     */
 
-    adi_rslv_blk.adi_op_id = nbr_op_id;
+    status = adi_opid(adf_scb, "UNION", &union_op_id);
+    if (DB_FAILURE_MACRO(status))
+	return(status);
+
+    adi_rslv_blk.adi_op_id = union_op_id;
     adi_rslv_blk.adi_num_dts = 2;
     adi_rslv_blk.adi_dt[0] = rtree_blk->adi_nbr_dtid;
     adi_rslv_blk.adi_dt[1] = rtree_blk->adi_nbr_dtid;

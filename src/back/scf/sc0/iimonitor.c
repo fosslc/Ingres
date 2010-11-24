@@ -90,11 +90,13 @@ NEEDLIBS = GCFLIB COMPATLIB
 **	    Removed MALLOCLIB from NEEDLIBS
 **	27-Apr-2006 (gordy)
 **	    Added support for GCF servers.  Handle GCA_ERROR messages.
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Fix prototypes
 [@history_template@]...
 */
 
-VOID	iimon_release();
-VOID	iimon_error();
+static VOID iimon_release( i4 aid );
+static VOID iimon_error( i4  aid, i4  errcod );
 
 # define    _DUMMY_AID_VALUE	-9999
 
@@ -656,10 +658,8 @@ char	    **argv;
 **	2-Jul-1993 (daveb)
 **	    removed unused variable 'error'
 */
-VOID
-iimon_error(aid, errcod)
-i4  aid;
-i4  errcod;
+static VOID
+iimon_error( i4  aid, i4  errcod )
 {
     i4			err_msg_len;
     CL_ERR_DESC		cl_err_code;
@@ -706,9 +706,8 @@ i4  errcod;
     PCexit(FAIL);
 }
 
-VOID
-iimon_release(aid)
-i4		aid;
+static VOID
+iimon_release( i4 aid )
 {
     i4			error;
     i4			status;

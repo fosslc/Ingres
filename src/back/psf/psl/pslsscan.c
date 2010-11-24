@@ -498,6 +498,8 @@
 **	26-Oct-2009 (kiria01) SIR 121883
 **	    Scalar sub-query support: Added 
 **	    SET [NO]CARDINALITY_CHECK -> SETCARDCHK
+**	21-Jan-2010 (troal01)
+**	    Added SRID keyword.
 **	18-Mar-2010 (kiria01) b123438
 **	    Avoid editing the sorted token list directly. See
 **	    pslscanprep.awk.
@@ -1411,7 +1413,8 @@ static const KEYINFO                Key_info[] = {
 /* 215 */	       { SINGLETON,	    0,	0,	(SECONDARY *)NULL },
 /* 216 */	       { RENAME,    PSL_GOVAL,	0,	(SECONDARY *)NULL },
 /* 217 */	       { ENCRYPT,	    0,  0,	(SECONDARY *)NULL },
-/* 218 */              { SEGMENTED,         0,  0,      (SECONDARY *) NULL   }
+/* 218 */              { SEGMENTED,         0,  0,      (SECONDARY *) NULL   },
+/* 219 */              { SRID,              0,  0,      (SECONDARY *)NULL }
 };
 
 /* Alternate keyword lists for inside WITH parsing (specifically, when

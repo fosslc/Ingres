@@ -1329,6 +1329,8 @@
 #           on VMS when PTOOLSBIN is not in use.
 #	18-Oct-2009 (bonro01) Bug 116245
 #	    Add MkDir to IISIGFILES to make destination dir if necessary.
+#	19-Nov-2009 (thich01)
+#	    Added HDRGEOS and src/common/adf/adu to IISUBSYS for geospatial.
 #	24-Nov-2009 (bonro01)
 #	    Fix Windows link problem caused by change 501221 bug 122875
 #	17-Dec-2009 (bonro01)
@@ -1411,6 +1413,8 @@
 #	    BUG 123943
 #	    Use more restrictive sed mask in IIRemRCComments so it doesn't
 #	    remove the LSB headers
+#	3-Jul-2009 (warmerdam)
+#	    Added HDRPROJ and src/common/adf/adu to IISUBSYS for geospatial.
 #       23-Jul-2010 (horda03)
 #           A jam in the genxml directory on NT fails to build the genxml
 #           utility because it is unable to find the iilibadf shared library.
@@ -1450,6 +1454,14 @@
 #           rules to ensure correct build order used.
 #       09-aug-2010 (joea)
 #           Correct _IIAWK action on VMS: need to quote uppercase params.
+#	31-Aug-2010 (troal01)
+#	    Added IIGeoLibs rule
+#	21-Sept-2010 (troal01)
+#	    Updated IIGeoLibs to create symlinks
+#	30-Sept-2010 (troal01)
+#	    IINEEDLIBS updated to only link the geospatial dependencies when
+#	    necessary. Also don't dynamically link with ingbuild. GEOS_VERS
+#	    GEOSC_VERS and PROJ_VERS added to SEPCCPP rule.
 #	01-Oct-2010 (bonro01)
 #	    Fix Windows build problems using cygwin
 #	04-Oct-2010 (kiria01) b124065
@@ -1458,6 +1470,9 @@
 #           Build Hybrid versions of abfmain.obj and abfimain.obj.
 #           With no i8 support and 64-bit pointers some applications
 #           can only be run when built 32-bit.
+#	06-Oct-2010 (troal01)
+#	    Add GEOLINKSTATIC to IITOOLSEXE and modified IINEEDLIBS to link
+#	    in the geospatial dependencies statically if binary is in that list
 #	01-Nov-2010 (bonro01)
 #	    Add rule ADDDIRCCFLAGS and IISUBDIRCCFLAGS to allow
 #	    adding compiler flags to specific directory trees.
@@ -2693,6 +2708,7 @@ rule IITOOLSEXE
     MAIN $(<) : $(>) ; 
     if ! $(NT) 
     { 
+	GEOLINKSTATIC += $(<:S=$(SUFEXE)) ;
 	LOCATE on $(<:S=$(SUFEXE)) = $(INGTOOLSBIN) ; 
     }  
     else
@@ -3385,6 +3401,8 @@ rule IISUBSYS
 			}
 	case common/adf/adl   :
 			HDRS = $(HDRS) $(HDRICE) $(HDRFRONT) $(HDRSAX) ;
+        case common/adf/adu  :
+			HDRS = $(HDRS) $(HDRGEOS) $(HDRPROJ) ;
 	case common/adf/ads   :
 			if $(NT)
 			{
@@ -3928,21 +3946,40 @@ rule IINEEDLIBS
 	
 	if ! $(NT)
 	{
-	if $(<:S) != .o
-	{
 		if $(<:S) != .o
 		{
-	    	  LINKLIBS on $(<) += $(LDLIBMACH) ;
-		}
-		if $(VERSHB)
-		{
-		  if $(<:S) != .o
-		  {
-	    	    LINKLIBS on $(SUFHB)/$(<) += $(LDLIBMACHHB) ;
-		  }
+			LINKLIBS on $(<) += $(LDLIBMACH) ;		    
+			#if WITH_GEO is defined we need to do some special handling of
+			#the linking of binaries that need ADFLIB, LIBINGRES or INGRESLIB
+			if $(WITH_GEO) && ( ADFLIB in $(>) || LIBINGRES in $(>) || INGRESLIB in $(>) )
+			{
+				#if it requires a static link we must also link with C++
+				if $(<) in $(GEOLINKSTATIC)
+				{
+					LINKLIBS on $(<) += $(GEOSCLIB) $(GEOSLIB) $(PROJLIB) ; 
+					LINK on $(<) = $(C++) ;
+					if $(VERSHB)
+					{
+						LINKLIBS on $(SUFHB)$(DFS)$(<) += $(GEOSCLIBHB) $(GEOSLIBHB) $(PROJLIBHB) ;
+						LINK on $(SUFHB)$(DFS)$(<) = $(C++) ;
+					}
+				}
+				#otherwise we dynamically link libgeos/libproj, if required.
+				else
+				{
+					LINKLIBS on $(<) += -L$(GEOS_LOC) -L$(PROJ_LOC) -lgeos -lgeos_c -lproj ;
+					if $(VERSHB)
+					{
+						LINKLIBS on $(SUFHB)/$(<) += -L$(GEOSHB_LOC) -L$(PROJHB_LOC) -lgeos -lgeos_c -lproj ;
+					}
+				}
+			}
+			if $(VERSHB)
+			{
+				LINKLIBS on $(SUFHB)/$(<) += $(LDLIBMACH) ;
+			}
 		}
 	}
-        }
 
 
 	for _l in $(>)
@@ -8042,6 +8079,108 @@ rule IIXERCLIB
 	}
 }
 
+rule IIGeoLibs
+{
+    if $(NT)
+    {
+        geodeps_destination = $(INGBIN) ;
+        geodeps_search_location = $(GEOSROOT)$(DFS)lib $(PROJROOT)$(DFS)lib ;
+    }
+    else if $(UNIX)
+    {
+        geodeps_destination = $(INGLIB) ;
+        geodeps_search_location = $(GEOS_LOC) $(PROJ_LOC) ;
+    }
+    #not supported yet
+    else
+    {
+        return ;
+    }
+    for f in $(<)
+    {
+        local _t1 = EMPTY ;
+        if $(f:B) = libgeos
+        {
+	        _t1 = $(f:B)-$(GEOS_VERS).$(SLSFX) ;
+        }
+        else if $(f:B) = libgeos_c
+        {
+        	_t1 = $(f).$(GEOSC_VERS) ;
+        }
+        else if $(f:B) = libproj
+        {
+        	_t1 = $(f).$(PROJ_VERS) ;
+        }
+        if $(NT)
+        {
+        	_t1 = $(f) ;
+        }
+        local _t2 = $(f) ;
+        local _s1 = [ FGristFiles $(_t1) ] ;
+
+        FILE $(_t1) : $(_s1) ;
+        
+        #The libs must be copied before any utility that is linked with them
+        #is run, otherwise it might not be able to find the .so files it needs
+        #to function properly.
+        DEPENDS $(ADFLIB) : $(_t1) ;
+        
+        LOCATE on $(_t1) = $(geodeps_destination) ;
+        SEARCH on $(_s1) = $(geodeps_search_location) ;
+        
+        MODE on $(_t1) = $(EXEMODE) ;
+        Chmod $(_t1) ;
+        
+        if ! $(NT)
+        {
+		    IISYMLINK $(_t2) : $(_t1) ;
+	        DEPENDS $(_t1) : $(_t2) ;
+	        LOCATE on $(_t2) = $(geodeps_destination) ;
+	        Clean clean : $(_t1) $(_t2) ;
+        }
+        else
+        {
+        	Clean clean : $(_t1) ;
+        }
+        
+        
+        #deal with hybrid builds
+        if $(VERSHB)
+        {
+            local _hbt1 = $(SUFHB)$(DFS)$(f) ;
+            if $(f:B) = libgeos
+            {
+                _hbt1 = $(SUFHB)$(DFS)$(f:B)-$(GEOS_VERS).$(SLSFX) ;
+            }
+            else if $(f:B) = libgeos_c
+            {
+                _hbt1 = $(SUFHB)$(DFS)$(f).$(GEOSC_VERS) ;
+	        }
+            else if $(f:B) = libproj
+            {
+                _hbt1 = $(SUFHB)$(DFS)$(f).$(PROJ_VERS) ;
+            }
+            local _hbt2 = $(SUFHB)$(DFS)$(f) ;
+            local _hbs1 = $(_t1:G=hb) ;
+
+            FILE $(_hbt1) : $(_hbs1) ;
+            IISYMLINK $(_hbt2) : $(_hbt1) ;
+
+            DEPENDS $(ADFLIB) : $(_hbt1) ;
+            DEPENDS $(_hbt1) : $(_hbt2) ;
+
+            LOCATE on $(_hbt1) = $(INGLIB) ;
+            LOCATE on $(_hbt2) = $(INGLIB) ;
+            SEARCH on $(_hbs1) = $(GEOSHB_LOC) $(PROJHB_LOC) ;
+
+            MODE on $(_hbt1) = $(EXEMODE) ;
+            Chmod $(_hbt1) ;
+
+            Clean clean : $(_hbt1) $(_hbt2) ;
+        }
+    }
+}
+
 rule IMPLIBRARY
 {
     IMPLIBRARYFROMOBJECTS $(<) : $(>:S=$(SUFOBJ)) ;
@@ -9409,6 +9548,8 @@ else
 	. shlibinfo
 	$(SED) "-e s/\$SLSFX/$SLSFX/" "-e s/\${slvers}/${slvers}/g" \
 	    "-e s/\$XERCVERS/$XERCVERS/" "-e s/\$XERCLIB/$XERCLIB/g" \
+	    "-e s/\$GEOS_VERS/$GEOS_VERS/" "-e s/\$PROJ_VERS/$PROJ_VERS/" \
+	    "-e s/\$GEOSC_VERS/$GEOSC_VERS/" \
 	    '-e s:^XX::' '-e s:(PROG0PRFX)::g' \
             '-e s:(PROG1PRFX):ii:g' '-e s:(PROG2PRFX):ing:g' \
             '-e s:(PROG3PRFX):II:g' '-e s:(PROG4PRFX):ii:g' \

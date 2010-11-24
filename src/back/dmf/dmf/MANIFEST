@@ -57,6 +57,8 @@
 #		Add dmfsinfo.c
 #       31-Dec-2009 (horda03)
 #            Correct VMS library dependancies.
+#	16-Mar-2010 (troal01)
+#		Add dmfsrs.c
 
 IISUBSYS back dmf dmf ;
 
@@ -64,7 +66,7 @@ IILIBRARY DMFLIB : dmfaltdb.c dmfarchive.c dmfatp.c dmfcall.c
 	dmfcsp.c dmfdbg.c dmfdtp.c dmfgw.c dmfinfo.c dmfinfo1.c dmfinit.c
 	dmfprftst.c dmfrcp.c dmfrecover.c dmfreloc.c dmfrfp.c
 	dmfterm.c dmftinfo.c dmftmmo.c dmftrace.c fastload.c dmfio.c
-	dmfjnl.c dmfsinfo.c ;
+	dmfjnl.c dmfsinfo.c dmfsrs.c ;
 
 if $(UNIX)
 {

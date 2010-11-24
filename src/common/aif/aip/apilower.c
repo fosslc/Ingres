@@ -203,9 +203,12 @@
 **	    Removed receive buffer and replaced with combined
 **	    send/receive buffer.  Enhanced parameter memory 
 **	    block handling.
+**	30-Aug-10 (thich01)
+**	    New API version 8, level 7 for GCA protcol 69.
 */
 
-# define API_GCA_PROTOCOL_LEVEL		GCA_PROTOCOL_LEVEL_68
+# define API_GCA_PROTOCOL_LEVEL		GCA_PROTOCOL_LEVEL_69
+# define API_V7_PROTOCOL_LEVEL		GCA_PROTOCOL_LEVEL_68
 # define API_V6_PROTOCOL_LEVEL		GCA_PROTOCOL_LEVEL_67
 # define API_V5_PROTOCOL_LEVEL		GCA_PROTOCOL_LEVEL_66
 # define API_V4_PROTOCOL_LEVEL		GCA_PROTOCOL_LEVEL_65
@@ -682,6 +685,10 @@ IIapi_connGCA( IIAPI_HNDL *handle, II_LONG timeout )
 
     case IIAPI_VERSION_6 :
 	reqParm->gca_peer_protocol = API_V6_PROTOCOL_LEVEL;
+	break;
+
+    case IIAPI_VERSION_7 :
+	reqParm->gca_peer_protocol = API_V7_PROTOCOL_LEVEL;
 	break;
 
     default :
@@ -1578,7 +1585,9 @@ reqCmpl( II_PTR closure )
     connHndl->ch_sizeAdvise = max( reqParm->gca_size_advise, DB_MAXTUP );
     connParm->co_sizeAdvise = connHndl->ch_sizeAdvise;
 
-    if ( connHndl->ch_partnerProtocol >= GCA_PROTOCOL_LEVEL_68 )
+    if ( connHndl->ch_partnerProtocol >= GCA_PROTOCOL_LEVEL_69 )
+	connParm->co_apiLevel = IIAPI_LEVEL_7;
+    else if ( connHndl->ch_partnerProtocol >= GCA_PROTOCOL_LEVEL_68 )
 	connParm->co_apiLevel = IIAPI_LEVEL_6;
     else  if ( connHndl->ch_partnerProtocol >= GCA_PROTOCOL_LEVEL_67 )
 	connParm->co_apiLevel = IIAPI_LEVEL_5;

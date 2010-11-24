@@ -202,8 +202,12 @@
 **          Add adu_strgenerate_digit() and adu_strvalidate_digit()
 **	11-May-2009 (kschendel) b122041
 **	    Compiler caught value instead of pointer being pass to adu-error.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
 **      01-Aug-2009 (martin bowes) SIR122320
 **          Added soundex_dm (Daitch-Mokotoff soundex)
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      03-Sep-2009 (coomi01) b122473
 **          Add adu_3alltobyte as a wrapper around adu_2alltobyte allowing a
 **          output length parameter to be specified.
@@ -1419,6 +1423,14 @@ register DB_DATA_VALUE	*rdv)
 		/* otherwise if non-UTF8, drop down to DB_LBYTE_TYPE case. */ 
 	  }
 	  case DB_LBYTE_TYPE:
+	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  {
 		ADP_PERIPHERAL	    *periph = (ADP_PERIPHERAL *) dv1->db_data;
 
@@ -2427,6 +2439,14 @@ register DB_DATA_VALUE	*rdv)
 
     if ((dv1->db_datatype == DB_LVCH_TYPE)
 	|| (dv1->db_datatype == DB_LBYTE_TYPE)
+	|| (dv1->db_datatype == DB_GEOM_TYPE)
+	|| (dv1->db_datatype == DB_POINT_TYPE)
+	|| (dv1->db_datatype == DB_MPOINT_TYPE)
+	|| (dv1->db_datatype == DB_LINE_TYPE)
+	|| (dv1->db_datatype == DB_MLINE_TYPE)
+	|| (dv1->db_datatype == DB_POLY_TYPE)
+	|| (dv1->db_datatype == DB_MPOLY_TYPE)
+	|| (dv1->db_datatype == DB_GEOMC_TYPE)
 	|| (dv1->db_datatype == DB_LNVCHR_TYPE))
     {
 	size = 0;
@@ -2795,6 +2815,14 @@ DB_DATA_VALUE	    *rdv)
       case DB_LNVCHR_TYPE:
       case DB_LCLOC_TYPE:
       case DB_LBLOC_TYPE:
+      case DB_GEOM_TYPE:
+      case DB_POINT_TYPE:
+      case DB_MPOINT_TYPE:
+      case DB_LINE_TYPE:
+      case DB_MLINE_TYPE:
+      case DB_POLY_TYPE:
+      case DB_MPOLY_TYPE:
+      case DB_GEOMC_TYPE:
       case DB_LNLOC_TYPE:
 	return ( adu_lvch_move(adf_scb, dv1, rdv));
 	break;
@@ -4148,10 +4176,42 @@ DB_DATA_VALUE	   *dv_out)
 	    }
 	}
 	else if (abs(dv_in->db_datatype) == abs(dv_out->db_datatype) ||
-		abs(dv_in->db_datatype) == DB_LBYTE_TYPE &&
-		abs(dv_out->db_datatype) == DB_LVCH_TYPE ||
-		abs(dv_in->db_datatype) == DB_LVCH_TYPE &&
-		abs(dv_out->db_datatype) == DB_LBYTE_TYPE)
+		(abs(dv_in->db_datatype) == DB_LBYTE_TYPE ||
+		  abs(dv_in->db_datatype) == DB_POINT_TYPE ||
+		  abs(dv_in->db_datatype) == DB_MPOINT_TYPE ||
+		  abs(dv_in->db_datatype) == DB_LINE_TYPE ||
+		  abs(dv_in->db_datatype) == DB_MLINE_TYPE ||
+		  abs(dv_in->db_datatype) == DB_POLY_TYPE ||
+		  abs(dv_in->db_datatype) == DB_MPOLY_TYPE ||
+		  abs(dv_in->db_datatype) == DB_GEOMC_TYPE ||
+                  abs(dv_in->db_datatype) == DB_GEOM_TYPE) &&
+		(abs(dv_out->db_datatype) == DB_LVCH_TYPE ||
+		  abs(dv_out->db_datatype) == DB_POINT_TYPE ||
+		  abs(dv_out->db_datatype) == DB_MPOINT_TYPE ||
+		  abs(dv_out->db_datatype) == DB_LINE_TYPE ||
+		  abs(dv_out->db_datatype) == DB_MLINE_TYPE ||
+		  abs(dv_out->db_datatype) == DB_POLY_TYPE ||
+		  abs(dv_out->db_datatype) == DB_MPOLY_TYPE ||
+		  abs(dv_in->db_datatype) == DB_GEOMC_TYPE ||
+                  abs(dv_out->db_datatype) == DB_GEOM_TYPE) ||
+		(abs(dv_in->db_datatype) == DB_LVCH_TYPE ||
+		  abs(dv_in->db_datatype) == DB_POINT_TYPE ||
+		  abs(dv_in->db_datatype) == DB_MPOINT_TYPE ||
+		  abs(dv_in->db_datatype) == DB_LINE_TYPE ||
+		  abs(dv_in->db_datatype) == DB_MLINE_TYPE ||
+		  abs(dv_in->db_datatype) == DB_POLY_TYPE ||
+		  abs(dv_in->db_datatype) == DB_MPOLY_TYPE ||
+		  abs(dv_in->db_datatype) == DB_GEOMC_TYPE ||
+                  abs(dv_in->db_datatype) == DB_GEOM_TYPE) &&
+		 (abs(dv_out->db_datatype) == DB_LBYTE_TYPE ||
+		  abs(dv_out->db_datatype) == DB_POINT_TYPE ||
+		  abs(dv_out->db_datatype) == DB_MPOINT_TYPE ||
+		  abs(dv_out->db_datatype) == DB_LINE_TYPE ||
+		  abs(dv_out->db_datatype) == DB_MLINE_TYPE ||
+		  abs(dv_out->db_datatype) == DB_POLY_TYPE ||
+		  abs(dv_out->db_datatype) == DB_MPOLY_TYPE ||
+		  abs(dv_in->db_datatype) == DB_GEOMC_TYPE ||
+                  abs(dv_out->db_datatype) == DB_GEOM_TYPE) )
 	{
 	    /* long --> long, let underlying handler do it all
 	    ** (As long as no conversion needed) */
@@ -6271,6 +6331,14 @@ register DB_DATA_VALUE	*rdv)
 
 	  case DB_LVCH_TYPE:
 	  case DB_LBYTE_TYPE:
+	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  {
 		ADP_PERIPHERAL	    *periph = (ADP_PERIPHERAL *) dv1->db_data;
 
@@ -6300,6 +6368,14 @@ register DB_DATA_VALUE	*rdv)
 	{
 	  case DB_LVCH_TYPE:
 	  case DB_LBYTE_TYPE:
+	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  {
 		ADP_PERIPHERAL	    *periph = (ADP_PERIPHERAL *) dv1->db_data;
 

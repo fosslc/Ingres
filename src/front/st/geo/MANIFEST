@@ -8,10 +8,11 @@
 #           Added calls to the IIGeoLibs rule
 #       30-Sep-2010 (troal01)
 #           Only call IIGeoLibs if WITH_GEO is defined.
-
+#       23-Nov-2010 (troal01)
+#           Renamed srid.dat to sridmap.dat.
 IISUBSYS front st geo ;
 
-IIDFILES geo : srs.dat ;
+IIDFILES geo : sridmap.dat ;
 
 if $(WITH_GEO)
 {

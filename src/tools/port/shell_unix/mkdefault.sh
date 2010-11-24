@@ -737,6 +737,8 @@
 ##	    Add support for Intel OS X
 ##      25-mar-2008 (bolke01)
 ##          Added definitions for LIB_BLD and LIB_TGT
+##      28-Feb-2009 (thich01)
+##          Added -lgeos_c to compile in GEOS library for spatial operations
 ##      17-Mar-2009 (hweho01)
 ##          On AIX, increase CCLDSERVER to "-bmaxdata:0x40000000" for  
 ##          Ingres 9.2 release.
@@ -756,6 +758,8 @@
 ##	    Neeed for 64bit builds
 ##	23-Sept-2009 (frima01) SIR 122138
 ##	    Correct CCLDMACH64, XTERMLIB and ldlibpath64 for i64.lnx.
+##	19-Nov-2009 (thich01)
+##	    Added GEOS_LOC and GEOS64_LOC to library locations for geospatial
 ##	19-Apr-2010 (hweho01)
 ##	    For Solaris/Sparc, prepare runtime compiler and linker 
 ##	    settings with flags that are introduced in Studio 12.
@@ -766,6 +770,14 @@
 ##	6-May-2010 (kschendel)
 ##	    Change above to use a syntax that Solaris's shell likes, so
 ##	    that it doesn't end up with lib64.
+##      3-Jul-2010 (warmerdam)
+##	    Added PROJ_LOC and PROJ64_LOC to library locations for geospatial
+##      31-Aug-2010 (thich01)
+##          Added check for geo compile time definition
+##	31-Aug-2010 (troal01)
+##	    Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
+##	21-Sept-2010 (troal01)
+##	    If conf_WITH_GEO is set, make sure we link to libgeos and libproj
 
 TMP=/tmp/libc.nm
 trap 'rm -f $TMP' 0 1 2 13 15
@@ -778,6 +790,10 @@ for o in $opts
 {
   echo "#define conf_$o TRUE"
 }
+
+if [ ! -n ${conf_WITH_GEO} ] ; then
+    WITH_GEO="-D_WITH_GEO"
+fi
 
 vers=$config
 
@@ -1157,7 +1173,7 @@ case $vers in
             echo "CCMACH_DBG = -g -Kthread -Ksigned -Kmips3 -FOlimit,4000";;
    ts2_us5) echo "CCMACH = -KPIC -Wx,-G0 -Olimit 4000 -signed -D_REENTRANT";;
      *_lnx|\
-    int_rpl) compflags="-fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS -Wno-write-strings"
+    int_rpl) compflags="-fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS $WITH_GEO -Wno-write-strings"
 	    compflags32=
 	    [ "$conf_B64" ] && compflags32="-D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 	    if [ -z "$build_arch" ] ; then
@@ -1604,7 +1620,22 @@ case $vers in
 	    suffix="-lpthread -lfpe -lmutex -lm -lc -lcurses "
 	    ;;
      *_lnx|\
-    int_rpl) suffix="-lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s"
+    int_rpl)
+	    if [ "$conf_WITH_GEO" ] ; then
+	    	if [ "$build_arch" = '32+64' ] ; then
+	    		prefix32 = "-L$GEOSHB_LOC -L$PROJHB_LOC"
+	    		prefix64 = "-L$GEOS_LOC -L$PROJ_LOC"
+	    	elif [ "$build_arch" = '64+32' ] ; then
+	    		prefix32 = "-L$GEOS_LOC -L$PROJ_LOC"
+	    		prefix64 = "-L$GEOSHB_LOC -L$PROJHB_LOC"
+	    	else
+	    		prefix = "-L$GEOS_LOC -L$PROJ_LOC"
+	    	fi
+	        GEOS_LD="-lgeos -lgeos_c -lproj"
+	    else
+	        GEOS_LD=""
+	    fi
+	    suffix="-lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s $GEOS_LD"
 	    ;; 
    *_osx) suffix="-bind_at_load -framework CoreServices -framework DirectoryService -framework Security"
 	    [ -f /usr/lib/libcc_dynamic.a ] && suffix="-lcc_dynamic $suffix"

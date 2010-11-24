@@ -51,6 +51,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	15-nov-2010 (stephenb)
+**	    Add prototypes to quiet compiler.
 */
 
 /* statics */
@@ -68,7 +70,15 @@ GLOBALDEF GCX_TP_BLOCK	gcx_tp[GCX_TP_COUNT];
 GLOBALDEF i4            gcx_curtrace = 0;
 GLOBALDEF i4            gcx_curentry = 1;
 
+/*
+** Forward and external references
+*/
 FUNC_EXTERN i4  GCX_exit_handler();
+i4  GCX1_trace_alloc(char *, char *, i4 **, GCX_TE_BLOCK **);
+VOID GCX_print_a_trace(i4);
+STATUS GCX2_print_trace();
+i4 GCX_exit_handler(EX_ARGS *);
+STATUS GCX2_print_trace(void);
 
 #define hdr1\
  "Trace taken @ %s by process %x ----------------------------------------\n",\
@@ -153,8 +163,8 @@ i4  _entry;
     /* display the tracepoint */
     TRdisplay (line1);
 }
-
-GCX2_print_trace()
+STATUS
+GCX2_print_trace(void)
 {
     i4  i;
     i4  curtrace;

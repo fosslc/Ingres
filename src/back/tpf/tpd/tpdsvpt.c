@@ -28,6 +28,8 @@
 #include    <tpf.h>
 #include    <tpfcat.h>
 #include    <tpfddb.h>
+#include    <tpfqry.h>
+#include    <tpfproto.h>
 
 
 /**
@@ -63,6 +65,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include tpfqry.h, tpfproto.h to get prototypes.
 **/
 
 GLOBALREF   char		*IITP_10_savepoint_p;	/* "savepoint" */
@@ -425,7 +429,7 @@ tpd_s4_abort_to_svpt(
     rqr_cb.rqr_dv_cnt = 0;
     rqr_cb.rqr_dv_p = (DB_DATA_VALUE *) NULL;
 
-    tpd_u0_trimtail(i_svpt_name_p, sizeof(DB_SP_NAME), svpt_name);
+    tpd_u0_trimtail((char*)i_svpt_name_p, sizeof(DB_SP_NAME), svpt_name);
     if (v_tpr_p->tpr_lang_type == DB_QUEL)
 	STprintf(qrytxt, "%s %s;", IITP_11_abort_to_p, svpt_name);	
     else

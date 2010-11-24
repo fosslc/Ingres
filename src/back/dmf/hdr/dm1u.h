@@ -55,6 +55,8 @@
 **	    Grrrr ... another instance of two names for the same thing,
 **	    in this case the VERBOSE flag.  Define in terms of the
 **	    definition in dmucb.h.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    dm1u_talk() rewritten with variable parameters, prototyped.
 **/
 
 /*
@@ -262,4 +264,8 @@ FUNC_EXTERN DB_STATUS dm1u_verify(
 			DB_ERROR        *dberr );
 
 
-FUNC_EXTERN VOID dm1u_talk();
+FUNC_EXTERN VOID dm1u_talk(
+			DM1U_CB		*dm1u,
+			i4		msg_id,
+			i4		count,
+			... );

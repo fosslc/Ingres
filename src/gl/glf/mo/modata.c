@@ -43,6 +43,8 @@ LIBRARY = IMPCOMPATLIBDATA
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      03-nov-2010 (joea)
+**          Remove GLDLLdummy.  Move momon.c declarations to moint.h.
 */
 
 /* momem.c */
@@ -139,9 +141,6 @@ GLOBALDEF MO_CLASS_DEF MO_meta_classes[] =
 /* momon.c */
 
 MO_GET_METHOD MO_mon_id_get;
-MO_GET_METHOD MO_mon_class_get;
-MO_INDEX_METHOD MO_mon_index;
-MO_GET_METHOD MO_nullstr_get;
 
 static char momon_index_class[] = "exp.glf.mo.monitors.mon_id";
 
@@ -330,12 +329,3 @@ GLOBALDEF MO_CLASS_DEF MO_cdefs[] =
 
     { 0 }
 };
-
-VOID
-GLDLLdummy()
-{
-i2 i,j,k;
-
-    i = j = k = 0;
-    return;
-}

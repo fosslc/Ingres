@@ -116,6 +116,8 @@
 **	    Added parameter to qsf_attach_inst and qsf_detach_inst
 **	29-Oct-2010 (jonj) SIR 120874
 **	    qso_rmvindex err_code param changed to *DB_ERROR
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Renamed qsf_decay_set() prototype to qsf_set_decay()
 */
 
 
@@ -772,7 +774,7 @@ FUNC_EXTERN i4		qsf_clrmem		( QSF_CB *scb );
 FUNC_EXTERN DB_STATUS	qsf_clrsesobj		( QSF_RCB *qsf_rb );
 FUNC_EXTERN STATUS	qsf_detach_inst		( QSO_OBID obid, i2 type );
 FUNC_EXTERN STATUS	qsf_mo_attach		( void );
-FUNC_EXTERN STATUS	qsf_decay_set		( i4  decay_factor );
+FUNC_EXTERN STATUS	qsf_set_decay		( i4  decay_factor );
 
 FUNC_EXTERN DB_STATUS	qsd_obj_dump		( QSF_RCB *qsf_rb );
 FUNC_EXTERN DB_STATUS	qsd_obq_dump		( QSF_RCB *qsf_rb );

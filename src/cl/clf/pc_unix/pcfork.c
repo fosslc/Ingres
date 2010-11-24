@@ -4,6 +4,7 @@
 # include	<cs.h>
 # include	<pc.h>
 # include	<qu.h>
+# include	<ex.h>
 
 # include	<clconfig.h>
 
@@ -64,6 +65,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	15-nov-2010 (stephenb)
+**	    Include ex.h for prototyping.
 */
 
 # if defined(OS_THREADS_USED) && defined(SYS_V_THREADS)
@@ -96,7 +99,7 @@ STATUS *status;
     
 	if( (pid = FORKCMD()) < 0 ) 	/* failure, free mem, set status */
 	{
-	    *status = no_fork();	/* parent, fork failed */
+	    *status = PCno_fork();	/* parent, fork failed */
 	    MEfree( (PTR)pp );	
 	}
 	else if( pid > 0 )		/* parent keeps track */

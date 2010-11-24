@@ -83,6 +83,8 @@ NO_OPTIM = usl_us5
 **	    Added support for unicode nchar and nvarchar type.
 **      13-aug-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1helem_rti.
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -565,6 +567,7 @@ DB_DATA_VALUE      *adc_dvhg)
 	break;
 
       case DB_BYTE_TYPE:
+      case DB_NBR_TYPE:
         fromp    = (u_char *) adc_dvfrom->db_data;
 	top      = (u_char *) adc_dvhg->db_data;
 	fromendp = fromp + adc_dvfrom->db_length;

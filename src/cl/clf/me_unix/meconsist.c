@@ -59,6 +59,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	15-nov-2010 (stephenb)
+**	    Proto forward funcs.
 */
 
 extern ME_HEAD	MElist;
@@ -68,6 +70,26 @@ extern ME_HEAD	MEfreelist;
 /* function to use as a printf for error messages, the function pointer
    assigned to it must be for a VARARGS function */
 static i4	(*MEprintf)();
+/*
+** Forward references
+*/
+STATIC i4
+blkcmp(
+	const void *a,
+	const void  *b);
+STATIC STATUS
+checklist(
+	ME_HEAD	*list,
+	i4	sortp);
+STATIC ME_NODE *
+mem_next(
+	ME_NODE * this);
+STATIC STATUS
+sortlist(
+	ME_HEAD	* list);
+STATIC STATUS
+mergecheck(
+	VOID);
 
 extern char end;
 STATIC char	*memstart = &end;
@@ -176,11 +198,11 @@ char			*which;
 
 STATIC i4
 blkcmp(
-	ME_NODE **a,
-	ME_NODE  **b)
+	const void *a,
+	const void  *b)
 {
     /* avoid arthmetic range problems */
-    return ( ( *a < *b ) ? -1 : ( ( *a > *b ) ? 1 : 0 ) );
+    return ( ( a < b ) ? -1 : ( ( a > b ) ? 1 : 0 ) );
 }
 
 STATIC ME_NODE *MEsortidx[ MAX_ME_NODES ];
@@ -194,7 +216,6 @@ sortlist(
     register i4  i;
 	register i4  cnt;
 
-	extern void qsort();
 
 	/* build index array */
 	

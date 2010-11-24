@@ -147,6 +147,8 @@
 **         LOG and read-only under FILES location.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype static dmckp_audit().
 **/
 
 
@@ -182,6 +184,14 @@ static DB_STATUS dmckp_spawn(
 static DB_STATUS dmckp_spawnnow(
     		    char        *command,
     		    PID         *pid );
+
+static VOID dmckp_audit( 
+		    DMP_DCB     *dcb,
+		    u_i4	direction,
+	 	    u_i4	granularity,
+		    DB_STATUS   status,
+		    char	*command,
+		    i4		*err_code );
 
 
 /*{
@@ -3058,7 +3068,7 @@ dmckp_save_file(
 **	   audit all OS command strings executed for checkpoint/
 **	   rollforward. (SIR 86561)
 */
-DB_STATUS
+static VOID
 dmckp_audit( 
     DMP_DCB     *dcb,
     u_i4	direction,
@@ -3104,6 +3114,6 @@ dmckp_audit(
 	*err_code = local_dberr.err_code;
     }
 
-    return( E_DB_OK );
+    return;
 
 }

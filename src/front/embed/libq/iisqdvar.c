@@ -135,6 +135,8 @@
 **	27-aug-2009 (crido01) Bug 122532
 **	    Added case for DB_LBYTE_TYPE, since it requires a length
 **	    adjustment (just like DB_LVCH_TYPE).
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs.
 */
 
 bool
@@ -205,6 +207,15 @@ DB_DATA_VALUE	*objdbv;
 	     || sqtype == DB_INDS_TYPE
 	     || sqtype == DB_MNY_TYPE
 	     || sqtype == DB_LBYTE_TYPE
+	     || sqtype == DB_GEOM_TYPE
+	     || sqtype == DB_POINT_TYPE
+	     || sqtype == DB_MPOINT_TYPE
+	     || sqtype == DB_LINE_TYPE
+	     || sqtype == DB_MLINE_TYPE
+	     || sqtype == DB_POLY_TYPE
+	     || sqtype == DB_MPOLY_TYPE
+	     || sqtype == DB_NBR_TYPE
+	     || sqtype == DB_GEOMC_TYPE
 	     || sqtype == DB_LVCH_TYPE
 	     || sqtype == DB_LNVCHR_TYPE)
     {

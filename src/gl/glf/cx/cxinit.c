@@ -19,6 +19,7 @@
 #include <efndef.h>
 #include <iledef.h>
 #endif
+#include "cxlocal.h"
 
 /**
 **
@@ -99,6 +100,8 @@
 **	    Replace II_VMS_ITEM_LIST_3 by ILE3.
 **	28-oct-2008 (joea)
 **	    Use EFN$C_ENF and IOSB when calling a synchronous system service.
+**      03-nov-2010 (joea)
+**          Include cxlocal.h for prototypes.
 */
 
 

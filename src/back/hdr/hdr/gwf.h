@@ -174,6 +174,8 @@ typedef	struct	_GW_RCB	GW_RCB;
 **	    Expand qualification function stuff to match new DMF style.
 **	12-Oct-2010 (kschendel) SIR 124544
 **	    gwr_char_array replaced with DMU_CHARACTERISTICS.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Properly declared gwf_call(), gwf_trace().
 **/
 
 #define	GWF_VERSION	1
@@ -846,8 +848,9 @@ typedef struct _DM_COLUMN	GW_DMP_ATTR;
 **     function prototype
 */
 
-FUNC_EXTERN DB_STATUS gwf_call();
-FUNC_EXTERN DB_STATUS gwf_trace();
+FUNC_EXTERN DB_STATUS gwf_call(GWF_OPERATION op,
+			       GW_RCB	*rcb);
+FUNC_EXTERN DB_STATUS gwf_trace(DB_DEBUG_CB *debug_cb);
 
 /* Name of the special place object for use in 'is' clauses which appear
 ** in an array below for use in the parser

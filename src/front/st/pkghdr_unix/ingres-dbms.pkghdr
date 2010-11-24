@@ -13,14 +13,8 @@
 %prefix_tag% %rpm_prefix%
 %rpmprereq_tag% %rpm_basename% = %rpm_version%-%rpm_release%
 %debprereq_tag% %rpm_basename% (= %rpm_version%)
-%provides_tag% %rpm_basename%-ome
-%provides_tag% %rpm_basename%-tuxedo
-%provides_tag% %rpm_basename%-c2audit
-%replaces_tag% ca-ingres%rpm_specname%
-%replaces_tag% ca-ingres-ome
-%replaces_tag% ca-ingres-tuxedo
-%replaces_tag% ca-ingres-c2audit
-%replaces_tag% ingres2006%rpm_specname%
+%provides_tag% %rpm_basename%-ome, %rpm_basename%-tuxedo, %rpm_basename%-c2audit
+%replaces_tag% ca-ingres%rpm_specname%, ca-ingres-ome, ca-ingres-tuxedo, ca-ingres-c2audit, ingres2006%rpm_specname%
 %autoreq_tag% %rpm_autoreq_off%
 %define_tag% %rpm_unpack_term_off%
 %define_tag% %rpm_missing_doc_term_off%

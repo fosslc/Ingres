@@ -79,6 +79,9 @@
 **          Prototypes: added dmdprentries(), changed dmd_print_entry()
 **	09-Jun-2010 (stial01)
 **          Added prototype for dmd_pr_mvcc_info()
+**	02-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Uncomment dmd_petrace() prototype, sanitize DMPE_RECORD
+**	    as PTR.
 */
 
 /*
@@ -326,13 +329,11 @@ FUNC_EXTERN VOID dmd_format_log(
 			char	    *line_buffer,
 			i4	    l_line_buffer);
 
-/*
 FUNC_EXTERN VOID dmd_petrace(
 			char		   *operation,
-			DMPE_RECORD        *record,
+			PTR	           record,
 			i4		   base,
 			i4		   extension );
-*/
 
 FUNC_EXTERN VOID dmd_lock_info(i4 options);
 

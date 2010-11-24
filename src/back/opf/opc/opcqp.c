@@ -157,6 +157,8 @@
 **          opc_iqp_init() if opf_locator, return locator instead of blob.
 **      06-nov-2006 (stial01)
 **          Changes to return lob/locator as specified by opf_locator
+**	17-Aug-2010 (thich01)
+**	    Make changes to treat spatial types like LBYTEs.
 **	18-Aug-2009 (drivi01)
 **	    Fixed precedence warnings and other warnings in efforts
 **	    to port to Visual Studio 2009.
@@ -2816,6 +2818,14 @@ i4		*bits)
 		rdv->db_length = ADP_LOC_PERIPH_SIZE;
 		break;
 	case	DB_LBYTE_TYPE:
+	case 	DB_GEOM_TYPE:
+	case 	DB_POINT_TYPE:
+	case 	DB_MPOINT_TYPE:
+	case 	DB_LINE_TYPE:
+	case 	DB_MLINE_TYPE:
+	case 	DB_POLY_TYPE:
+	case 	DB_MPOLY_TYPE:
+	case 	DB_GEOMC_TYPE:
 		rdv->db_datatype = DB_LBLOC_TYPE;
 		rdv->db_length = ADP_LOC_PERIPH_SIZE;
 		break;

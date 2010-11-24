@@ -100,6 +100,8 @@
 **	    keep editing this file every time the config version changes.
 **      04-nov-2008 (stial01)
 **          Moved static initialization of dbdb_dbtuple to scd_initiate()
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Move MO prototypes to scsint.h
 */
 
 /*
@@ -113,24 +115,6 @@ LIBRARY = IMPSCFLIBDATA
 */
 
 GLOBALDEF DU_DATABASE	      dbdb_dbtuple;
-
-/*
-** data from scsmo.c
-*/
-
-MO_GET_METHOD scs_self_get;
-MO_GET_METHOD scs_pid_get;
-MO_GET_METHOD scs_dblockmode_get;
-MO_GET_METHOD scs_facility_name_get;
-MO_GET_METHOD scs_act_detail_get;
-MO_GET_METHOD scs_activity_get;
-MO_GET_METHOD scs_description_get;
-MO_GET_METHOD scs_query_get;
-MO_GET_METHOD scs_lquery_get;
-MO_GET_METHOD scs_assoc_get;
-
-MO_SET_METHOD scs_remove_sess_set;
-MO_SET_METHOD scs_crash_sess_set;
 
 static char index_name[] = "exp.scf.scs.scb_index";
 static char index_ptr [] = "exp.scf.scs.scb_ptr";

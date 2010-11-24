@@ -6,6 +6,8 @@
 #include <gl.h>
 #include <st.h>
 #include <iicommon.h>
+#include <ulf.h>
+#include <uld.h>
 
 
 
@@ -26,6 +28,8 @@
 **	    Invent as someplace to put query-mode text lookups.
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include ulf.h, uld.h to get prototypes
 */
 
 /* Lookup tables defined in ulddata.roc: */

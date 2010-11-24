@@ -141,6 +141,10 @@
 **        the max table id.
 **      28-jan-2009 (stial01)
 **          Added DB_IITYPE_LEN, DB_IISTRUCT_LEN
+**	16-Jun-2009 (thich01)
+**	    Add GEOM type for spatial.
+**	20-Aug-2009 (thich01)
+**	    Add POINT, MPOINT, LINE, MLINE, POLY, and MPOLY spatial types.
 **      06-oct-2009 (joea)
 **          Change DB_DT_ID_MACRO to provide SQL and QUEL precedence values for
 **          BOOLEAN.  Add db_booltype member to DB_ANYTYPE union and defines
@@ -154,6 +158,8 @@
 **      22-Feb-2010 (maspa05) 123293
 **        added SVR_CLASS_MAXNAME for the size of a server_class name, used
 **        to be hard-coded to 24
+**      09-Mar-2010 (thich01)
+**          Add NBR type.
 **	25-Mar-2010 (toumi01) SIR 122403
 **	    Add DB_ATTS fields encflags and encwid and definitions for
 **	    encryption.
@@ -168,6 +174,8 @@
 **	    might vary and cause problems.
 **     13-Aug-2010 (hanal04) Bug 124250
 **        Moved AFE_NTEXT_STRING from afe.h to iicommon.h
+**     19-Aug-2010 (thich01)
+**        Left a space at 60 for GCA SECL TYPE.
 **     13-Oct-2010 (hanal04) Bug 124250
 **        Include systypes.h with wchar.h to resolve build
 **        problems on HP Itanium.
@@ -1192,6 +1200,17 @@ _DEFINE(QTXT,   51, CHAR, BASE,  0,  0,  0,  0  /* Type for qry text  */)\
 _DEFINE(TFLD,   52, CHAR, BASE,  0,  0,  0,  0  /* Type for table     */)\
 _DEFINE(DEC_CHR,53, NUMB, BASE,  0,  0,  0,  0  /* Type for decimal literal */)\
 _DEFINE(NQTXT,  54, NCHAR,PAD,   0,  0,  0,  0  /* Type for qry text */)\
+_DEFINE(55,     55, NONE, BASE,  0,  0,  0,  0  /* Unused - was prototype for spatial */)\
+_DEFINE(GEOM,   56, BYTE, LV,   18, 18, 18, 18  /* Spatial Long Byte */)\
+_DEFINE(POINT,  57, BYTE, LV,   18, 18, 18, 18  /* Point Long Byte */)\
+_DEFINE(MPOINT, 58, BYTE, LV,   18, 18, 18, 18  /* MPoint Long Byte */)\
+_DEFINE(LINE,   59, BYTE, LV,   18, 18, 18, 18  /* Line Long Byte */)\
+_DEFINE(60,     60, NONE, BASE,  0,  0,  0,  0  /* Unused - was SECL*/)\
+_DEFINE(MLINE,  61, BYTE, LV,   18, 18, 18, 18  /* MLine Long Byte */)\
+_DEFINE(POLY,   62, BYTE, LV,   18, 18, 18, 18  /* Poly Long Byte */)\
+_DEFINE(MPOLY,  63, BYTE, LV,   18, 18, 18, 18  /* MPoly Long Byte */)\
+_DEFINE(NBR,    64, BYTE, BASE,  0,  0,  0,  0  /* NBR type for Rtree */)\
+_DEFINE(GEOMC,	65, BYTE, LV,   18, 18, 18, 18  /* GeomColl Long Byte */)\
 _DEFINEEND
 
 /*

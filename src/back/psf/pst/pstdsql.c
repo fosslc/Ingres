@@ -4952,6 +4952,8 @@ pst_descinput_walk(
 **	7-oct-2010 (stephenb)
 **	    qeu_cptr needs to be aligned on a bus boudary to pervent bus
 **	    errors on some platforms
+**	08-Oct-2010 (troal01)
+**	    Removed i=0, it was causing compile error on Windows.
 **      19-oct-2010 (maspa05) bug 124551
 **          use adu_sc930prtdataval to output parameter values to SC930 trace
 */

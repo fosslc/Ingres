@@ -7,6 +7,7 @@
 # include	<st.h>
 # include	<me.h>
 # include	<ex.h>
+# include	<si.h>
 # include	<termios.h>
 
 /*
@@ -54,6 +55,8 @@
 **	    SIR 123622
 **	    Add control-c (interupt) and contol-d (quit) support.
 **	    Replace references to int with i4.
+**	15-nov-2010 (stephenb)
+**	    Include si/h and correctly define funcs for prototyping.
 */
 
 # define	MAX_BUF_LENGTH	512 /* maximum buffer length */
@@ -152,7 +155,7 @@ char *buf;
 
 /* clears the doubly-linked list memory */
 void 
-SIclearhistory()
+SIclearhistory(void)
 { 
 	HISTORYNODE *temp; 
 	if (hist != NULL) 

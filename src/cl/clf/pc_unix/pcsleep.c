@@ -1,5 +1,6 @@
 # include	<compat.h>
 # include	<gl.h>
+# include	<pc.h>
 
 /*
  *	Copyright (c) 1983, 2001 Ingres Corporation
@@ -33,6 +34,8 @@
 **	19-Mar-2001 (hanje04)
 **	    On some plaforms usleep will ONLY accept values of < 1sec.
 **	    will use sleep if msec => 1000.
+**	15-nov-2010 (stephenb)
+**	    Inlcude pc.h for prototypes.
  */
 
 VOID

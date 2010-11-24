@@ -131,6 +131,9 @@
 **     10-Aug-2010 (drivi01)
 **	    Fix pird->OctetLength for 64-bit Windows platform
 **	    because pird isn't defined.  Use pxxd instead.
+**     17-Aug-2010 (thich01)
+**          Add geospatial types to IIAPI types.  Make changes to treat spatial
+**          types like LBYTEs or NBR type as BYTE.
 **     24-Aug-2010 (Ralph Loen) Bug 124300
 **          In SQLGetDescRec_InternalCall(), don't fill an unreferenced
 **          SubTypePtr.
@@ -2695,6 +2698,42 @@ char* GetDescTypeName(LPDESCFLD pxxd)
 		 pName = "LONG BYTE";  
 		 break;
 
+	case IIAPI_GEOM_TYPE :
+		 pName = "GEOMETRY";  
+		 break;
+
+	case IIAPI_POINT_TYPE :
+		 pName = "POINT";  
+		 break;
+
+	case IIAPI_MPOINT_TYPE :
+		 pName = "MULTIPOINT";  
+		 break;
+
+	case IIAPI_LINE_TYPE :
+		 pName = "LINESTRING";  
+		 break;
+
+	case IIAPI_MLINE_TYPE :
+		 pName = "MULTILINESTRING";  
+		 break;
+
+	case IIAPI_POLY_TYPE :
+		 pName = "POLYGON";  
+		 break;
+
+	case IIAPI_MPOLY_TYPE :
+		 pName = "MULTILPOLYGON";  
+		 break;
+
+	case IIAPI_NBR_TYPE :
+		 pName = "NBR";  
+		 break;
+
+	case IIAPI_GEOMC_TYPE :
+		 pName = "GEOMETRY COLLECTION";  
+		 break;
+
    	case IIAPI_MNY_TYPE:
 		 pName = "MONEY"; 
 		 break;
@@ -3080,6 +3119,7 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
         break;
 
     case IIAPI_BYTE_TYPE:
+    case IIAPI_NBR_TYPE:
         pird->ConciseType = SQL_BINARY; 
         pird->Precision = pird->Length = pird->OctetLength;
         pird->VerboseType = pird->ConciseType;    
@@ -3101,6 +3141,14 @@ void SetDescDefaultsFromType(LPDBC pdbc, LPDESCFLD pird)
         break;
 
     case IIAPI_LBYTE_TYPE:
+    case IIAPI_GEOM_TYPE :
+    case IIAPI_POINT_TYPE :
+    case IIAPI_MPOINT_TYPE :
+    case IIAPI_LINE_TYPE :
+    case IIAPI_MLINE_TYPE :
+    case IIAPI_POLY_TYPE :
+    case IIAPI_MPOLY_TYPE :
+    case IIAPI_GEOMC_TYPE :
         pird->ConciseType = SQL_LONGVARBINARY; 
         pird->Precision   = pird->Length = MAXI4;
         pird->VerboseType = pird->ConciseType;    

@@ -151,8 +151,15 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**      10-Mar-2010 (thich01)
+**          Allow GEOM family an exception for rtree indexing, but only for
+**          rtrees.  Still disallow other index types.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      19-Jul-2010 (thich01)
+**          Slight change to where dt family is checked for GEOM rtree.  This
+**          seems to be a more reliable place to check, as it was failing
+**          when it was in the if.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
 **	13-Oct-2010 (kschendel) SIR 124544
@@ -253,6 +260,7 @@ psl_ci1_create_index(
     i4			    num_atts;
     i4			    i;
     DMT_ATT_ENTRY	    *att_entry;
+    DMU_KEY_ENTRY **key;
 
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
@@ -914,10 +922,16 @@ psl_ci4_indexcol(
     status = psl_check_key(sess_cb, err_blk, (DB_DT_ID) attribute->att_type);
     if (DB_FAILURE_MACRO(status))
     {
-	_VOID_ psf_error(2180L, 0L, PSF_USERERR, &err_code, err_blk, 2,
-	    sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
+        /* Allow GEOM family types to get past the check key as an exception
+         * for rtree indexing. */
+        DB_DT_ID dtfam = adi_dtfamily_retrieve(attribute->att_type);
+        if (dtfam != DB_GEOM_TYPE)
+        {
+	    _VOID_ psf_error(2180L, 0L, PSF_USERERR, &err_code, err_blk, 2,
+	        sizeof(sess_cb->pss_lineno), &sess_cb->pss_lineno,
 	    col_nmlen, colname);
-	return (status);
+	    return (status);
+        }
     }
 
     /* Store the column name in the DMU_CB key entry array */

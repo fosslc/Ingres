@@ -2,6 +2,7 @@
 # include	<gl.h>
 # include	<clconfig.h>
 # include	<pc.h>
+# include	<ex.h>
 # include	"pclocal.h"
 # include	<PCerr.h>
 # include	<si.h>
@@ -50,6 +51,8 @@
 **	    adding <gl.h> after <compat.h>
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	15-nov-2010 (stephenb)
+**	    Include ex.h for prototyping.
  */
 
 /* static char	*Sccsid = "@(#)PCread.c	3.2  4/11/84"; */

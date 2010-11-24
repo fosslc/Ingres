@@ -584,6 +584,9 @@
 #	    Add support for LSB builds which use versioned shared libraries
 #	21-May-2010 (bonro01)
 #	    Remove ICE from builds
+#	30-Sep-2010 (troal01)
+#	    If conf_WITH_GEO is defined, we must link libq with the geospatial
+#		dependencies.
 #
 
 if [ -n "$ING_VERS" ] ; then
@@ -1244,10 +1247,20 @@ fi
         -lnsl -lsocket -lld \
         $shlink_opts -hlib(PROG0PRFX)q.1.$SLSFX
         ;;
-      *_lnx|int_rpl)
+    *_lnx|int_rpl)
+	if [ "$conf_WITH_GEO" ] ; then
+		geo_libs=" -lgeos -lgeos_c -lproj "
+		if [ "$do_hyb" = "true" ] ; then
+			GEOS_LD="-L$GEOSHB_LOC -L$PROJHB_LOC $geo_libs"
+		else
+			GEOS_LD="-L$GEOS_LOC -L$PROJ_LOC $geo_libs"
+		fi
+	else
+		GEOS_LD=""
+	fi
 	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.${slvers}.$SLSFX *.o \
 	-L$INGLIB -l(PROG0PRFX)compat.${slvers} \
-	$shlink_opts -soname=lib(PROG0PRFX)q.1.$SLSFX
+	$shlink_opts -soname=lib(PROG0PRFX)q.1.$SLSFX $GEOS_LD
 	if [ $? = 0 -a "$slvers" != "1" ] ; then
 	    cd $INGLIB
 	    ln -fs lib(PROG0PRFX)q.${slvers}.$SLSFX \

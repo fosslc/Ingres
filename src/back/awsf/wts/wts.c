@@ -97,6 +97,10 @@
 **          returned from the browser.
 **          Bug 106449
 **          Add initializations of mimetype pointers.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **/
 
 
@@ -384,7 +388,11 @@ WTSGetData(
             sizeof(value_hdr.gca_l_value))),
             E_WS0013_NO_INFO_RECEIVE);
             *type = value_hdr.gca_type;
-        if (*type == DB_LBYTE_TYPE)
+        if (*type == DB_LBYTE_TYPE || *type == DB_GEOM_TYPE   ||
+            *type == DB_POINT_TYPE || *type == DB_MPOINT_TYPE ||
+            *type == DB_LINE_TYPE  || *type == DB_MLINE_TYPE  ||
+            *type == DB_POLY_TYPE  || *type == DB_MPOLY_TYPE  ||
+            *type == DB_GEOMC_TYPE )
         {
             G_ASSERT(DB_FAILURE_MACRO(ascs_gca_get(
                 scb,
@@ -393,7 +401,11 @@ WTSGetData(
                 E_WS0013_NO_INFO_RECEIVE);
         }
     }
-    if (*type == DB_LBYTE_TYPE)
+    if (*type == DB_LBYTE_TYPE || *type == DB_GEOM_TYPE   ||
+        *type == DB_POINT_TYPE || *type == DB_MPOINT_TYPE || 
+        *type == DB_LINE_TYPE  || *type == DB_MLINE_TYPE  || 
+        *type == DB_POLY_TYPE  || *type == DB_MPOLY_TYPE  ||
+        *type == DB_GEOMC_TYPE )
     {
         G_ASSERT(DB_FAILURE_MACRO(ascs_gca_get(
                 scb,
@@ -535,7 +547,11 @@ WTSOpenSession(
                         err = WTSGetData(scb, &type, &query, &read, moredata);
                         if (err == GSTAT_OK)
                         {
-                            if (type != DB_LBYTE_TYPE)
+                            if (type != DB_LBYTE_TYPE && type != DB_GEOM_TYPE &&
+                              type != DB_POINT_TYPE && type != DB_MPOINT_TYPE &&
+                              type != DB_LINE_TYPE  && type != DB_MLINE_TYPE  &&
+                              type != DB_POLY_TYPE  && type != DB_MPOLY_TYPE  &&
+                              type != DB_GEOMC_TYPE )
                                 err = DDFStatusAlloc(E_WS0014_NO_INFO_AVAILABLE);
                             else if (session->status != NO_UPLOAD)
                             {

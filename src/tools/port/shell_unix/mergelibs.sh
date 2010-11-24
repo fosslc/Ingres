@@ -216,6 +216,8 @@
 ##          `which jam`
 ##	17-Jun-2009 (kschendel) SIR 122138
 ##	    New scheme for hybrid building.
+##      01-nov-2010 (joea)
+##          Change di_unix to di.
 
 [ $SHELL_DEBUG ] && set -x
 
@@ -408,7 +410,7 @@ if [ -n "$conf_BUILD_ICE" ] ; then
 fi
 
 # directory list for object removals (unwanted)
-dlist="cl/clf$tnoise/di_unix cl/clf$tnoise/ck_unix_win cl/clf$tnoise/jf_unix_win cl/clf$tnoise/sr_unix_win"
+dlist="cl/clf$tnoise/di cl/clf$tnoise/ck_unix_win cl/clf$tnoise/jf_unix_win cl/clf$tnoise/sr_unix_win"
 dlist="$dlist back/dmf$tnoise/lg back/dmf$tnoise/lgk \
 	back/dmf$tnoise/lk gl/glf$tnoise/cx"
 

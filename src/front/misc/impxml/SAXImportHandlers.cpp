@@ -47,6 +47,10 @@
  **	15-Jun-2005 (thaju02)
  **	    rowformat(): for long var[char|byte], break up data into 
  **	    segments. (B114689)
+ **	16-Jun-2009 (thich01)
+ **	    Treat GEOM type the same as LBYTE.
+ **	20-Aug-2009 (thich01)
+ **	    Treat all spatial types the same as LBYTE.
 **	21-Sep-2009 (hanje04)
 **	   Use new include method for stream headers on OSX (DARWIN) to
 **	   quiet compiler warnings.
@@ -1117,6 +1121,14 @@ rowformat( char *tab_name, char *col_name, bool is_null, bool is_base64, char *d
         case DB_LVCH_TYPE:
         case DB_LBIT_TYPE:
         case DB_LBYTE_TYPE:
+        case DB_GEOM_TYPE:
+        case DB_POINT_TYPE:
+        case DB_MPOINT_TYPE:
+        case DB_LINE_TYPE:
+        case DB_MLINE_TYPE:
+        case DB_POLY_TYPE:
+        case DB_MPOLY_TYPE:
+        case DB_GEOMC_TYPE:
 	    /* Output as variable length types */
 	    /* Embedded nulls will not print for binary
 	    ** but this wont work for blobs anyway
@@ -1182,6 +1194,14 @@ rowformat( char *tab_name, char *col_name, bool is_null, bool is_base64, char *d
 	case DB_LNVCHR_TYPE:
         case DB_LVCH_TYPE:
         case DB_LBYTE_TYPE:
+        case DB_GEOM_TYPE:
+        case DB_POINT_TYPE:
+        case DB_MPOINT_TYPE:
+        case DB_LINE_TYPE:
+        case DB_MLINE_TYPE:
+        case DB_POLY_TYPE:
+        case DB_MPOLY_TYPE:
+        case DB_GEOMC_TYPE:
 	    /* Output as variable length types */
 	    /* Embedded nulls will not print for binary
 	    ** but this wont work for blobs anyway

@@ -42,6 +42,7 @@
 #include    <scd.h>
 #include    <scfcontrol.h>
 #include    <sc0e.h>
+#include    <scfint.h>
 
 /**
 **
@@ -140,6 +141,8 @@
 **	    Bypass CSMT_get_wakeup_block on VMS.
 **      16-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include scfint.h to get scf_init_dbg() prototype.
 **/
 
 

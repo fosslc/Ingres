@@ -5510,11 +5510,13 @@ granted by VMS lock manager!\n");
 **	      resource and move on.
 **	15-Mar-2010 (jonj)
 **	    Earlier change to add stats by lock type missed one for clusters.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototyped LKdeadlock_thread(void *dmc)
 */
-DB_STATUS
-LKdeadlock_thread(
-DMC_CB		*dmc_cb)
+STATUS
+LKdeadlock_thread( void	*dmc )
 {
+    DMC_CB	*dmc_cb = (DMC_CB*)dmc;
     LKD		*lkd = (LKD *)LGK_base.lgk_lkd_ptr;
     LLB		*victim_llb;
     LKB		*victim_lkb;

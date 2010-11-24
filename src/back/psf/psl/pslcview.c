@@ -376,6 +376,9 @@ i4 psl_cv2_viewstmnt(
 **	11-Jun-2010 (kiria01) b123908
 **	    Initialise pointers after psf_mopen would have invalidated any
 **	    prior content.
+**	21-Jul-2010 (troal01)
+**		SRID and GeomType should now be set properly in iiattribute on
+**		creation of views with geometry types.
 */
 DB_STATUS
 psl_cv1_create_view(
@@ -783,11 +786,11 @@ psl_cv1_create_view(
 	attr->attr_collID = resdom->pst_sym.pst_dataval.db_collID;
         attr->attr_seqTuple = (DB_IISEQUENCE *) NULL;
 
-	/*
-	 * Put in geospatial attributes
-	 */
-	attr->attr_geomtype = -1;
-	attr->attr_srid = -1;
+    /*
+     * default geospatial values
+     */
+    attr->attr_srid = -1;
+    attr->attr_geomtype = -1;
 
 	attr->attr_encflags = 0;
 	attr->attr_encwid = 0;
@@ -841,6 +844,11 @@ psl_cv1_create_view(
 	    attr->attr_flags_mask = attribute->att_flags;
 	    attr->attr_defaultID  = attribute->att_defaultID;
 	    attr->attr_defaultTuple  = (DB_IIDEFAULT *) NULL;
+		/*
+		 * Make sure the right geospatial attributes are set
+		 */
+		attr->attr_geomtype = attribute->att_geomtype;
+		attr->attr_srid = attribute->att_srid;
 	}
     }
 

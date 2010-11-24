@@ -80,9 +80,11 @@
 **	    Bumped GCA protocol level for Blob/Clob locators.
 **	 1-Oct-09 (gordy)
 **	    Bumped GCA protocol level for long procedure names.
+**	 30-Aug-10 (thich01)
+**	    Bumped GCA protocol level for spatial types.
 */
 
-# define GCC_GCA_PROTOCOL_LEVEL	GCA_PROTOCOL_LEVEL_68
+# define GCC_GCA_PROTOCOL_LEVEL	GCA_PROTOCOL_LEVEL_69
 
 
 /*

@@ -153,6 +153,8 @@
 **	15-Jun-2004 (schka24)
 **	    It doesn't make sense to set II_GC_PROT at the shell level
 **	    since everyone has to agree on it.  Use NMgtIngAt.
+**	15-nov-2010 (stephenb)
+**	    Add proto for GC_get_driver.
 [@history_template@]...
 */
 
@@ -171,6 +173,8 @@ GLOBALREF char  listenbcb[];            /* allocated listen control block */
 GLOBALREF bool	iiunixlisten;		/* is this a listen server ? */
 GLOBALREF bool	iisynclisten;		/* is this a sync listen? */
 GLOBALDEF BS_DRIVER	*GCdriver;	/* protocol driver selected */
+
+BS_DRIVER *	GC_get_driver(char *);
 
 
 

@@ -28,7 +28,6 @@
 # include    <gwftrace.h>
 # include    "gwfsxa.h" 
 GLOBALREF  ULM_RCB gwsxa_ulm; 
-FUNC_EXTERN	DB_STATUS	scf_call(); 
 i4		 gwsxa_acctype_to_msgid(SXF_ACCESS acctype);
 i4		 gwsxa_evtype_to_msgid(SXF_EVENT evtype);
 VOID		 gwsxa_msgid_default(i4 msgid,DB_DATA_VALUE  *desc);
@@ -94,6 +93,8 @@ static SXA_MSG_DESC *mroot=NULL;
 **          Removed gwxit.h inclusion which is not required.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Delete local scf_call() declaration.
 */
 
 

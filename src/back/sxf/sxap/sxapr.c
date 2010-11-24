@@ -117,6 +117,8 @@ NO_OPTIM = nc4_us5
 **         has a valid value. Prevents an ACCVIO or E_SX102C.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing static prototypes.
 */
 
 /*
@@ -159,6 +161,8 @@ static  DB_STATUS  uncompress_record(
 static  i4   comp_field_len(
 	char		*field,
 	i4		length);
+
+static i4 sxap_qloc_compare (SXAP_QLOC *loc1, SXAP_QLOC *loc2);
 
 static VOID start_audit_writer(bool force_start);
 
@@ -2516,7 +2520,7 @@ sxap_dump_audit_rec(SXF_AUDIT_REC  *rec)
 **	2-apr-94 (robf)
 **        Created
 */
-i4
+static i4
 sxap_qloc_compare (SXAP_QLOC *loc1, SXAP_QLOC *loc2)
 {
 	if(loc1->trip < loc2->trip)

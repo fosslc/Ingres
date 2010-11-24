@@ -337,6 +337,11 @@ typedef struct _ADP_PERIPHERAL
 **	    Add pop_info field to avoid the use of temp tables.
 **	11-May-2004 (schka24)
 **	    Simplify temp flags.
+**	26-Feb-2010 (troal01)
+**	    Add ADP_C_GET_MASK to ensure that cpn_tcb isn't filled with a
+**	    bogus value in dmpe_allocate, this flag is very short-lived:
+**	    it is set before dmpe_allocate is called in dmpe_get and is removed
+**	    within dmpe_allocate right after it has been checked.
 [@history_template@]...
 */
 struct _ADP_POP_CB
@@ -359,6 +364,9 @@ struct _ADP_POP_CB
 #define                 ADP_C_RANDOM_MASK   0x4 /* Want a specific
     	    	    	    	    	    	** segment
     	    	    	    	    	    	*/
+#define			ADP_C_GET_MASK	    0x8 /* Indicates an ADP_GET, needed for SRID */
+#define			ADP_C_MOVE_MASK	    0x10 /* Indicates a dmpe_move, do
+                                                  * not overwrite the SRID */
 
     /* pop_temporary specifies what sort of target the POP should place
     ** the result value in, if it's a long object and if there is a result.

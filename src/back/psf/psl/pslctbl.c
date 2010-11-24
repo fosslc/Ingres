@@ -45,6 +45,7 @@
 #include    <psldef.h>
 #include    <psyaudit.h>
 #include    <uld.h>
+#include    <spatial.h>
 
 /*
 **  NO_OPTIM=dgi_us5 int_lnx int_rpl i64_aix
@@ -3638,6 +3639,13 @@ psl_ct13_newcolname(
 **      02-Nov-2009 (smeke01) b122751
 **          Flag qeu to call createDefaultTuples for 'alter table alter 
 **          column' from no default to default.
+**	04-Dec-2009 (troal01)
+**	    Should now set the proper geometry type code.
+**	21-Jan-2010 (troal01)
+**	    If SRID has been specified, it is put in *len_prec with
+**	    num_len_prec_vals set to zero. If it's a geospatial type
+**	    SRID is retrieved from the pointer and assigned to the
+**	    DMF_ATTR_ENTRY else, it defaults to -1.
 **      16-Feb-2010 (hanal04) Bug 123292
 **          Initialise attr_defaultTuple to avoid spurious values being
 **          picked up.
@@ -3670,6 +3678,7 @@ psl_ct14_typedesc(
     i4		err_code;
     i4		        colno;
     i4                  bits;
+    i4			i = 0;
     i4			enc_modulo;
     bool		nulldefaultproblem = FALSE;
     bool		identity = FALSE;
@@ -3839,12 +3848,25 @@ psl_ct14_typedesc(
     cur_attr->attr_collID = collationID;
 
     /*
-     * Initialize attr_geomtype and attr_srid, this will be filled out
-     * later with proper data.
+     * Initialize attr_geomtype and attr_srid
      */
-    cur_attr->attr_geomtype = -1;
-    cur_attr->attr_srid = -1;
-
+   	while(geom_type_mapping[i].geom_type != GEOM_TYPE_UNDEFINED)
+   	{
+   		if(geom_type_mapping[i].db_type == abs(dt_dv.db_datatype))
+   		{
+   			break;
+   		}
+   		i++;
+   	}
+    cur_attr->attr_geomtype = geom_type_mapping[i].geom_type;
+    if(cur_attr->attr_geomtype != GEOM_TYPE_UNDEFINED && len_prec != NULL)
+    {
+        cur_attr->attr_srid = *len_prec;
+    }
+    else
+    {
+    	cur_attr->attr_srid = SRID_UNDEFINED;
+    }
     /* store attribute encryption flags and length
     */
     cur_attr->attr_encflags = 0;

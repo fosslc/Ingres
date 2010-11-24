@@ -92,6 +92,9 @@
 **          Add IIAPI_DATE_TYPE to support ANSI Dates.
 **      24-May-2010 (stial01)
 **          Added buf5 param to RSmem_free()
+**      17-Aug-2010 (thich01)
+**          Add geospatial types to IIAPI types.  Make changes to treat spatial
+**          types like LBYTEs or NBR type as BYTE.
 **/
 
 # define ALRES_BYTES	sizeof(ALIGN_RESTRICT)
@@ -568,6 +571,14 @@ IIAPI_DATAVALUE		*dv)
 
 	case IIAPI_LVCH_TYPE:
 	case IIAPI_LBYTE_TYPE:
+	case IIAPI_GEOM_TYPE :
+	case IIAPI_POINT_TYPE :
+	case IIAPI_MPOINT_TYPE :
+	case IIAPI_LINE_TYPE :
+	case IIAPI_MLINE_TYPE :
+	case IIAPI_POLY_TYPE :
+	case IIAPI_MPOLY_TYPE :
+	case IIAPI_GEOMC_TYPE :
 		dv->dv_length = sizeof(RS_BLOB);
 		dv->dv_value = (char *)MEreqmem(0, dv->dv_length, TRUE, NULL);
 		if (dv->dv_value == NULL)
@@ -579,6 +590,7 @@ IIAPI_DATAVALUE		*dv)
 	case IIAPI_DEC_TYPE:
 	case IIAPI_DTE_TYPE:
 	case IIAPI_BYTE_TYPE:
+        case IIAPI_NBR_TYPE:
 	case IIAPI_DATE_TYPE:
 	default:
 		dv->dv_value = (char *)*pbuf;

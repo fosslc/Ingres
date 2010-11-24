@@ -78,6 +78,10 @@
 ** 30-Jun-2010 (drivi01)
 **    Bug #124006
 **    Add new BOOLEAN datatype.
+** 17-Aug-2010 (thich01)
+**    Add geospatial types to IISQ types.  Make changes to treat spatial
+**    types like LBYTEs or NBR type as BYTE.  Treat spatial types as 
+**    INGTYPE_LONGBYTE and NBR as INGTYPE_BYTE.
 **/
 
 #include "stdafx.h"
@@ -2740,6 +2744,7 @@ int INGRESII_llNeedLength(int iIngresDataType)
 	case IISQ_CHA_TYPE:
 	case IISQ_VCH_TYPE:
 	case IISQ_BYTE_TYPE:
+	case IISQ_NBR_TYPE:
 	case IISQ_VBYTE_TYPE:
 	case IISQ_CHR_TYPE:
 	case IISQ_TXT_TYPE:
@@ -2831,6 +2836,24 @@ int INGRESII_llIngresColumnType2i(LPCTSTR lpszColType, int nLen)
 		return IISQ_LNVCHR_TYPE;
 	if (strName.CompareNoCase(_T("long byte")) == 0)
 		return IISQ_LBYTE_TYPE;
+	if (strName.CompareNoCase(_T("geometry")) == 0)
+		return IISQ_GEOM_TYPE;
+	if (strName.CompareNoCase(_T("point")) == 0)
+		return IISQ_POINT_TYPE;
+	if (strName.CompareNoCase(_T("multipoint")) == 0)
+		return IISQ_MPOINT_TYPE;
+	if (strName.CompareNoCase(_T("linestring")) == 0)
+		return IISQ_LINE_TYPE;
+	if (strName.CompareNoCase(_T("multilinestring")) == 0)
+		return IISQ_MLINE_TYPE;
+	if (strName.CompareNoCase(_T("polygon")) == 0)
+		return IISQ_POLY_TYPE;
+	if (strName.CompareNoCase(_T("multipolygon")) == 0)
+		return IISQ_MPOLY_TYPE;
+	if (strName.CompareNoCase(_T("nbr")) == 0)
+		return IISQ_NBR_TYPE;
+	if (strName.CompareNoCase(_T("geometry collection")) == 0)
+		return IISQ_GEOMC_TYPE;
 	if (strName.CompareNoCase(_T("decimal")) == 0)
 		return IISQ_DEC_TYPE;
 	if (strName.CompareNoCase(_T("integer" )) == 0 ||
@@ -2908,6 +2931,24 @@ CString INGRESII_llIngresColumnType2Str(int iColType, int nLen)
 		return _T("long nvarchar");
 	case IISQ_LBYTE_TYPE:
 		return _T("long byte");
+	case IISQ_GEOM_TYPE:
+		return _T("geometry");
+	case IISQ_POINT_TYPE:
+		return _T("point");
+	case IISQ_MPOINT_TYPE:
+		return _T("multipoint");
+	case IISQ_LINE_TYPE:
+		return _T("linestring");
+	case IISQ_MLINE_TYPE:
+		return _T("multilinestring");
+	case IISQ_POLY_TYPE:
+		return _T("polygon");
+	case IISQ_MPOLY_TYPE:
+		return _T("multipolygon");
+	case IISQ_NBR_TYPE:
+		return _T("nbr");
+	case IISQ_GEOMC_TYPE:
+		return _T("geometry collection");
 	case IISQ_DEC_TYPE:
 		return _T("decimal");
 	case IISQ_INT_TYPE:
@@ -2970,6 +3011,7 @@ int INGRESII_llIngresColumnType2AppType(CaColumn* pCol)
 	case IISQ_NVCHR_TYPE:
 		return INGTYPE_UNICODE_NVCHR;
 	case IISQ_BYTE_TYPE:
+	case IISQ_NBR_TYPE:
 		return INGTYPE_BYTE;
 	case IISQ_VBYTE_TYPE:
 		return INGTYPE_BYTEVAR;
@@ -2982,6 +3024,14 @@ int INGRESII_llIngresColumnType2AppType(CaColumn* pCol)
 	case IISQ_LNVCHR_TYPE:
 		return INGTYPE_UNICODE_LNVCHR;
 	case IISQ_LBYTE_TYPE:
+	case IISQ_GEOM_TYPE:
+	case IISQ_POINT_TYPE:
+	case IISQ_MPOINT_TYPE:
+	case IISQ_LINE_TYPE:
+	case IISQ_MLINE_TYPE:
+	case IISQ_POLY_TYPE:
+	case IISQ_MPOLY_TYPE:
+	case IISQ_GEOMC_TYPE:
 		return INGTYPE_LONGBYTE;
 	case IISQ_DEC_TYPE:
 		return INGTYPE_DECIMAL;

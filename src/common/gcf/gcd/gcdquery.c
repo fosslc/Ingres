@@ -135,6 +135,8 @@
 **	25-Mar-10 (gordy)
 **	    Added support for batch processing.  Moved calc_params()
 **	    to gcdutil.c and renamed gcd_combine_qdata().
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
 */	
 
 #define	FOR_READONLY	" for readonly"
@@ -1754,6 +1756,7 @@ gcd_msg_data( GCD_CCB *ccb )
     IIAPI_DATAVALUE	*data;
     u_i2		param;
     bool		done, more_data;
+    i2 blobFound = 0;
 
     if ( ! (ccb->qry.flags & QRY_NEED_DATA) )
     {
@@ -1861,6 +1864,7 @@ gcd_msg_data( GCD_CCB *ccb )
 
 	case IIAPI_CHA_TYPE :
 	case IIAPI_BYTE_TYPE :
+	case IIAPI_NBR_TYPE :
 	    if ( ! gcd_get_bytes( ccb, desc[ param ].ds_length,
 				   (u_i1 *)data[ param ].dv_value ) )  
 		error = TRUE; 
@@ -1913,6 +1917,14 @@ gcd_msg_data( GCD_CCB *ccb )
 	case IIAPI_LVCH_TYPE :
 	case IIAPI_LNVCH_TYPE :
 	case IIAPI_LBYTE_TYPE :
+	case IIAPI_GEOM_TYPE :
+	case IIAPI_POINT_TYPE :
+	case IIAPI_MPOINT_TYPE :
+	case IIAPI_LINE_TYPE :
+	case IIAPI_MLINE_TYPE :
+	case IIAPI_POLY_TYPE :
+	case IIAPI_MPOLY_TYPE :
+	case IIAPI_GEOMC_TYPE :
 	    ccb->qry.qry_parms.more_segments = TRUE;
 
 	    if ( ! gcd_get_i2( ccb, (u_i1 *)&length ) )
@@ -2074,9 +2086,25 @@ gcd_msg_data( GCD_CCB *ccb )
 	** to be passed on to the server prior to
 	** processing subsequent segments or columns.
 	*/
-	if ( desc[ param ].ds_dataType == IIAPI_LVCH_TYPE ||
-	     desc[ param ].ds_dataType == IIAPI_LBYTE_TYPE ||
-	     desc[ param ].ds_dataType == IIAPI_LNVCH_TYPE  )
+	switch ( desc[ param ].ds_dataType )
+	{
+	     case IIAPI_LVCH_TYPE:
+	     case IIAPI_LBYTE_TYPE:
+	     case IIAPI_GEOM_TYPE:
+	     case IIAPI_POINT_TYPE:
+	     case IIAPI_MPOINT_TYPE:
+	     case IIAPI_LINE_TYPE:
+	     case IIAPI_MLINE_TYPE:
+	     case IIAPI_POLY_TYPE:
+	     case IIAPI_MPOLY_TYPE:
+	     case IIAPI_GEOMC_TYPE:
+	     case IIAPI_LNVCH_TYPE:
+	     {
+		blobFound = 1;
+		break;
+	     }
+	}
+	if( blobFound == 1)
 	{
 	    /*
 	    ** Must bump parameter count since we are
@@ -2298,10 +2326,19 @@ send_desc( GCD_CCB *ccb, GCD_RCB **rcb_ptr,
 	    break;
 
 	case IIAPI_BYTE_TYPE :	type = SQL_BINARY;		break;
+	case IIAPI_NBR_TYPE :	type = SQL_BINARY;		break;
 	case IIAPI_VBYTE_TYPE :	type = SQL_VARBINARY; len -= 2;	break;
 
 	case IIAPI_LBYTE_TYPE :	
 	case IIAPI_LBLOC_TYPE :
+	case IIAPI_GEOM_TYPE :
+	case IIAPI_POINT_TYPE :
+	case IIAPI_MPOINT_TYPE :
+	case IIAPI_LINE_TYPE :
+	case IIAPI_MLINE_TYPE :
+	case IIAPI_POLY_TYPE :
+	case IIAPI_MPOLY_TYPE :
+	case IIAPI_GEOMC_TYPE :
 	    type = SQL_LONGVARBINARY; 
 	    len = 0; 
 	    break;
@@ -2563,6 +2600,7 @@ calc_tuple_length
 	case IIAPI_VCH_TYPE :
 	case IIAPI_NVCH_TYPE :
 	case IIAPI_BYTE_TYPE :
+	case IIAPI_NBR_TYPE :
 	case IIAPI_VBYTE_TYPE :
 	case IIAPI_TXT_TYPE :
 	case IIAPI_LTXT_TYPE :
@@ -2578,6 +2616,14 @@ calc_tuple_length
 	case IIAPI_LVCH_TYPE :
 	case IIAPI_LNVCH_TYPE :
 	case IIAPI_LBYTE_TYPE :
+	case IIAPI_GEOM_TYPE :
+	case IIAPI_POINT_TYPE :
+	case IIAPI_MPOINT_TYPE :
+	case IIAPI_LINE_TYPE :
+	case IIAPI_MLINE_TYPE :
+	case IIAPI_POLY_TYPE :
+	case IIAPI_MPOLY_TYPE :
+	case IIAPI_GEOMC_TYPE :
 	    ccb->qry.flags |= QRY_BLOB;
 
 	    /*

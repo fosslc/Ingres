@@ -263,9 +263,6 @@ static DB_STATUS	cdds_lookup(
 				char			*record,
 				i2			*cdds_no,
 				DB_ERROR		*dberr);
-
-extern bool		LG_status_is_abort(
-				i4			*lx_id);
 
 /*
 ** Name: dm2rep_capture - check for and perform replication data capture
@@ -2131,6 +2128,9 @@ add_input_queue(
 **	    dm2rep_qman hanging, waiting on input_queue table lock which 
 **	    was previously granted to this session on user's xaction lock 
 **	    list.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Delete LG_status_is_abort(), LGshow is the proper way to get this
+**	    information.
 */
 DB_STATUS
 dm2rep_qman(
@@ -2191,6 +2191,9 @@ dm2rep_qman(
     bool		force_abort = FALSE;
     DB_ERROR		local_dberr;
     i4		    *err_code = &dberr->err_code;
+    CL_ERR_DESC		sys_err;
+    i4			length;
+    LG_TRANSACTION	lgTran;
 
     CLRDBERR(dberr);
 
@@ -2780,7 +2783,10 @@ dm2rep_qman(
 	    status = dm2r_delete(input_q_rcb, &tid, DM2R_BYPOSITION, dberr);
 	    if (status != E_DB_OK)
 		break;
-	    if (LG_status_is_abort(&log_id))
+	    MEcopy(&log_id, sizeof(log_id), (char*)&lgTran);
+	    status = LGshow(LG_S_ATRANSACTION, (PTR)&lgTran, sizeof(lgTran),
+	    			&length, &sys_err);
+	    if ( status || !length || lgTran.tr_status & TR_FORCE_ABORT )
 	    {
 		force_abort = TRUE;
 		status = E_DB_ERROR;

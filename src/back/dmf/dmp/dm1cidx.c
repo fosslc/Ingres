@@ -304,6 +304,8 @@
 **          new tids are added to rcb_new_tids without any update to the page,
 **      16-Jul-2010 (stial01) (SIR 121619 MVCC, B124076, B124077)
 **          dm1cxisnew() above change dropped a line.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype static xdelete().
 **        
 */
 
@@ -313,6 +315,12 @@ static	VOID	    page_dump(i4 page_type, i4 page_size, DMPP_PAGE *page);
 static	VOID	    clear(DMP_RCB *r, DMPP_PAGE *page);
 static	VOID	    dm1cxlength(i4 page_type, i4 page_size, DMPP_PAGE *b,
 		    i4 child, i4 *entry_size);
+static DB_STATUS    xdelete(
+			i4 page_type,
+			i4 page_size,
+			DMPP_PAGE *b,
+			i4 compression_type,
+			i4 child);
 
 GLOBALCONSTREF DMPP_PAGETYPE Dmpp_pgtype[];
 
@@ -826,7 +834,7 @@ dm1cxdel(i4 page_type, i4 page_size, DMPP_PAGE *b,
 **	    The maximum size of a Leaf is now DM1B_MAXLEAFLEN,
 **	    not DM1B_KEYLENGTH.
 */
-DB_STATUS
+static DB_STATUS
 xdelete(i4 page_type, i4 page_size, DMPP_PAGE *b, i4 compression_type,i4 child)
 {
     i4	    	    pos;

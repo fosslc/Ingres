@@ -1572,7 +1572,9 @@ psl_atbl_alter_lob(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
     ** combination rejects the alter.
     */
     if (old_bits & AD_PERIPHERAL && new_bits & AD_PERIPHERAL
-      && dmt_att->att_type == dmu_att->attr_type)
+      && (dmt_att->att_type == dmu_att->attr_type
+      || abs(dmt_att->att_type) == DB_GEOM_TYPE
+      || abs(dmu_att->attr_type) == DB_GEOM_TYPE))
 	return (E_DB_OK);
 
     (void) psf_error(3859, 0, PSF_USERERR, &err_code, &psq_cb->psq_error, 0);

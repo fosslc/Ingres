@@ -10,6 +10,8 @@
 # 	12-Mar-2010
 # 	    SIR 123296
 # 	    No GUI or PAX for LSB builds
+#	31-Aug-2010 (thich01)
+#	    Add WITH_GEO for platforms where spatial is not supported.
 # 	20-Sept-2010
 # 	    SIR 123296
 # 	    Bump version
@@ -39,4 +41,4 @@ PAX_CHECK = FALSE ;
 PLATFORM_JAMDEFS = hyb86_lnx ;
 BUILD_GTK_INST = FALSE ;
 BUILD_GTK_GUI = FALSE ;
-
+WITH_GEO = -D_WITH_GEO ; #set option: WITH_GEO

@@ -54,6 +54,8 @@
 **          Add IISQ_BOO_TYPE.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**      17-Aug-2010 (thich01)
+**          Add geospatial types to IISQ types skipped 60 for SECL consistency.
 **/
 
 /*
@@ -180,5 +182,15 @@ typedef struct sq_datahdlr_
 # define	IISQ_TSTMP_LEN  49  /* Timestamp with local time zone length */
 # define	IISQ_INTYM_LEN  15  /* Interval year to month length */
 # define	IISQ_INTDS_LEN  45  /* Interval day to second length */
+
+# define	IISQ_GEOM_TYPE   56 /* Spatial types */
+# define	IISQ_POINT_TYPE  57
+# define	IISQ_MPOINT_TYPE 58
+# define	IISQ_LINE_TYPE   59
+# define	IISQ_MLINE_TYPE  61
+# define	IISQ_POLY_TYPE   62
+# define	IISQ_MPOLY_TYPE  63
+# define	IISQ_NBR_TYPE    64
+# define	IISQ_GEOMC_TYPE  65
 
 #endif /* EQSQLDA_H_INCLUDED */

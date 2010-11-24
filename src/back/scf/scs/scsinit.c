@@ -840,17 +840,14 @@ NO_OPTIM =
 **      11-Aug-2010 (hanal04) Bug 124180
 **          Added money_compat for backwards compatibility of money
 **          string constants.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Move scs_check_external_password() prototype to scs.h
 **/
 
 /*
 **  Forward and/or External function references.
 */
 FUNC_EXTERN STATUS	adu_datenow(ADF_CB *, DB_DATA_VALUE *);
-FUNC_EXTERN DB_STATUS	scs_check_external_password(SCD_SCB *,
-						    DB_OWN_NAME *,
-						    DB_OWN_NAME *,
-						    DB_PASSWORD *,
-						    bool);
 
 /* Static routine called within this module. This routine is supposed */
 /* to be consistent with the routine IICXconv_to_struct_xa_xid in the */

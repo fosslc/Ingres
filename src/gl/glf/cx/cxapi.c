@@ -17,7 +17,7 @@
 #include    <cx.h>
 #include    <cxprivate.h>
 #include    <me.h>
-
+#include "cxlocal.h"
 
 /**
 **
@@ -110,6 +110,8 @@
 **	    Add <stdlib.h> as part of VMS port.
 **	07-jan-2008 (joea)
 **	    Remove cluster nickname functions.
+**      03-nov-2010 (joea)
+**          Include cxlocal.h for prototypes.
 */
 
 GLOBALREF	CX_PROC_CB	CX_Proc_CB;

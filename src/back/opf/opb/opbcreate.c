@@ -2080,12 +2080,17 @@ opb_nulljoin(
 **	    Correct loop logic with the quick scan for pre-sorted data in the inlist.
 **	    The loop previously exited one iteration too soon thereby missing the
 **	    last element.
+**      02-Apr-2010 (thich01)
+**          Add an exception for GEOM family when checking for Peripherals. 
 **	24-Jul-2010 (kiria01) b124124
 **	    Don't just check for pre-sorted - perform sort, biased to pre-sorted
 **	    data.
 **	28-Jul-2010 (kiria01) b124138
 **	    REPEATABLE queries with parameters in the IN list should block attempts
 **	    to pre-sort for ADE_COMPAREN.
+**	14-Sep-2010 (thich01)
+**	    Change the order of the GEOM family exception to ensure the
+**	    conditions are checked correctly.
 */
 bool
 opb_bfinit(
@@ -2755,19 +2760,31 @@ notsorted:	/* Reset constant in case list rearranged */
                 {
                     i4          dtmask = 0;
  
-                    /* Check that VAR's are NOT long types. */
+                    /*
+                     *  Check that VAR's are NOT long types. 
+                     *  Unless the long type is a member of the GEOM family.
+                     */
                     status = adi_dtinfo(subquery->ops_global->ops_adfcb,
                         lvar->pst_sym.pst_dataval.db_datatype, &dtmask);
-                    if (status != E_DB_OK || (dtmask & AD_PERIPHERAL))
-                        break;
- 
+                    if (status != E_DB_OK) break;
+                    if (dtmask & AD_PERIPHERAL)
+                    {
+                        DB_DT_ID family = adi_dtfamily_retrieve(lvar->pst_sym.pst_dataval.db_datatype);
+                        if(family != DB_GEOM_TYPE)
+                           break;
+                    } 
                     if (lvar->pst_sym.pst_type == PST_VAR &&
                         rvar->pst_sym.pst_type == PST_VAR)
                     {
                         status = adi_dtinfo(subquery->ops_global->ops_adfcb,
                             rvar->pst_sym.pst_dataval.db_datatype, &dtmask);
-                        if (status != E_DB_OK || (dtmask & AD_PERIPHERAL))
-                            break;      /* check 2nd operand, too */
+                        if (status != E_DB_OK) break;
+                        if (dtmask & AD_PERIPHERAL)
+                        {
+                            DB_DT_ID family = adi_dtfamily_retrieve(rvar->pst_sym.pst_dataval.db_datatype);
+                            if(family != DB_GEOM_TYPE)
+                               break;      /* check 2nd operand, too */
+                        } 
  
                         bfp->opb_mask |= OPB_SPATJ;
                         subquery->ops_bfs.opb_mask |= OPB_GOTSPATJ;

@@ -148,11 +148,23 @@
 **	    Added prototype for separated pattern compiler.
 **	05-Jan-2008 (kiria01) SIR120473
 **	    Switch eptr to esc_dv to allow for tracking datatype
+**	28-Feb-2009 (thich01)
+**	    Added geo_fromText function ref for spatial
+**	06-Mar-2009 (thich01)
+**	    Added type specific fromText function refs for spatial.
+**	13-Mar-2009 (thich01)
+**	    Added funtion refs for asText and asBinary
+**	20-Mar-2009 (thich01)
+**	    Added fromBinary function refs for spatial
 **      22-Apr-2009 (Marty Bowes) SIR 121969
 **          Add adu_strgenerate_digit() and adu_strvalidate_digit()
 **          for the generation and validation of checksum values.
 **      01-Aug-2009 (martin bowes) SIR122320
 **          Added soundex_dm (Daitch-Mokotoff soundex)
+**	20-Aug-2009 (thich01)
+**	    Add generic geom from text and from wkb.
+**	25-Aug-2009 (troal01)
+**	    Added iigeomname, iigeomdimensions function refs for spatial
 **	aug-2009 (stephenb)
 **		Remove various protos that are called outside ADF and
 **		prototype them in a more public location.
@@ -174,6 +186,14 @@
 **     Added NVL2
 **       01-Dec-2009 (coomi01) b122980
 **          Add adu_fltround prototype
+**      10-Mar-2010 (thich01)
+**          Add overlaps and inside.
+**	xx-Apr-2010 (iwawong)
+**		Added issimple isempty x y numpoints
+**		for the coordinate space.
+**      02-Apr-2010 (thich01)
+**          Add rtree_cmp and a specific inside function since it is different
+**          than contains.
 **	14-apr-2010 (toumi01) SIR 122403
 **	    Add adu_aesdecrypt and adu_aesencrypt.
 **	10-May-2010 (kschendel) b123712
@@ -700,7 +720,133 @@ FUNC_EXTERN ADU_NORM3_FUNC adu_26positionfrom;  /* ANSI position FROM */
 FUNC_EXTERN ADU_NORM1_FUNC adu_norm_date_hash;  /* Routine to normalise Ingresdates for hash */
 FUNC_EXTERN ADU_NORM0_FUNC adu_last_id;   	/* last identity in session */
 
+/*
+ * The following functions convert from well known text, or well known binary.
+ */
+FUNC_EXTERN ADU_NORM1_FUNC adu_point_fromText;
+FUNC_EXTERN ADU_NORM1_FUNC adu_point_fromWKB;
+FUNC_EXTERN ADU_NORM1_FUNC adu_linestring_fromText;
+FUNC_EXTERN ADU_NORM1_FUNC adu_linestring_fromWKB;
+FUNC_EXTERN ADU_NORM1_FUNC adu_polygon_fromText;
+FUNC_EXTERN ADU_NORM1_FUNC adu_polygon_fromWKB;
+FUNC_EXTERN ADU_NORM1_FUNC adu_multipoint_fromText;
+FUNC_EXTERN ADU_NORM1_FUNC adu_multipoint_fromWKB;
+FUNC_EXTERN ADU_NORM1_FUNC adu_multilinestring_fromText;
+FUNC_EXTERN ADU_NORM1_FUNC adu_multilinestring_fromWKB;
+FUNC_EXTERN ADU_NORM1_FUNC adu_multipolygon_fromText;
+FUNC_EXTERN ADU_NORM1_FUNC adu_multipolygon_fromWKB;
+FUNC_EXTERN ADU_NORM1_FUNC adu_geometry_fromText;
+FUNC_EXTERN ADU_NORM1_FUNC adu_geometry_fromWKB;
+FUNC_EXTERN ADU_NORM1_FUNC adu_geometrycollection_fromText;
+FUNC_EXTERN ADU_NORM1_FUNC adu_geometrycollection_fromWKB;
 
+FUNC_EXTERN ADU_NORM2_FUNC adu_point_srid_fromText;
+FUNC_EXTERN ADU_NORM2_FUNC adu_point_srid_fromWKB;
+FUNC_EXTERN ADU_NORM2_FUNC adu_linestring_srid_fromText;
+FUNC_EXTERN ADU_NORM2_FUNC adu_linestring_srid_fromWKB;
+FUNC_EXTERN ADU_NORM2_FUNC adu_polygon_srid_fromText;
+FUNC_EXTERN ADU_NORM2_FUNC adu_polygon_srid_fromWKB;
+FUNC_EXTERN ADU_NORM2_FUNC adu_multipoint_srid_fromText;
+FUNC_EXTERN ADU_NORM2_FUNC adu_multipoint_srid_fromWKB;
+FUNC_EXTERN ADU_NORM2_FUNC adu_multilinestring_srid_fromText;
+FUNC_EXTERN ADU_NORM2_FUNC adu_multilinestring_srid_fromWKB;
+FUNC_EXTERN ADU_NORM2_FUNC adu_multipolygon_srid_fromText;
+FUNC_EXTERN ADU_NORM2_FUNC adu_multipolygon_srid_fromWKB;
+FUNC_EXTERN ADU_NORM2_FUNC adu_geometry_srid_fromText;
+FUNC_EXTERN ADU_NORM2_FUNC adu_geometry_srid_fromWKB;
+FUNC_EXTERN ADU_NORM2_FUNC adu_geometrycollection_srid_fromText;
+FUNC_EXTERN ADU_NORM2_FUNC adu_geometrycollection_srid_fromWKB;
+
+/* The following functions act on all geospatial types. */
+FUNC_EXTERN ADU_NORM1_FUNC adu_geom_asText; /* Convert a geometry to WKT. */
+FUNC_EXTERN ADU_NORM1_FUNC adu_geom_asTextRaw; /* Convert a geometry to WKT
+                                                  *without* trim/rounding */
+FUNC_EXTERN ADU_NORM2_FUNC adu_geom_asTextRound; /* Convert a geometry to WKT
+                                                    with specified rounding */
+FUNC_EXTERN ADU_NORM1_FUNC adu_geom_asBinary; /* Convert a geometry to WKB. */
+
+FUNC_EXTERN ADU_NORM2_FUNC adu_geom_nbr; /* Extract an nbr for rtree indexing */
+FUNC_EXTERN ADU_NORM1_FUNC adu_geom_hilbert; /* Find the hilbert number for rtree indexing */
+FUNC_EXTERN ADU_NORM1_FUNC adu_geom_perimeter; /* Get the perimeter of a spatial objext. */
+FUNC_EXTERN ADU_NORM2_FUNC adu_geom_union; /* Get the union of two spatial objects */
+FUNC_EXTERN ADU_NORM2_FUNC adu_geom_overlaps; /* Does one geometry overlap another */
+FUNC_EXTERN ADU_NORM2_FUNC adu_geom_inside; /* Is one geometry inside the other */
+
+/*
+ * These act on generic geometries
+ */
+FUNC_EXTERN ADU_NORM1_FUNC adu_dimension; /* OGC 1.1 dimension SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_geometry_type; /* OGC 1.1 geometrytype SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_boundary; /* OGC 1.1 boundary SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_envelope; /* OGC 1.1 envelope SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_equals; /* OGC 1.1 equals SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_disjoint; /* OGC 1.1 disjoint SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_intersects; /* OGC 1.1 intersects SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_touches; /* OGC 1.1 touches SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_crosses; /* OGC 1.1 crosses SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_within; /* OGC 1.1 within SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_contains; /* OGC 1.1 contains SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_inside; /* OGC 1.1 inside SQL function */
+FUNC_EXTERN ADU_NORM3_FUNC adu_relate; /* OGC 1.1 relate SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_distance; /* OGC 1.1 distance SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_intersection; /* OGC 1.1 intersection SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_difference; /* OGC 1.1 difference SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_sym_difference; /* OGC 1.1 symdifference SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_buffer_one; /* OGC 1.1 buffer SQL function */
+FUNC_EXTERN ADU_NORM3_FUNC adu_buffer_two; /* OGC 1.1 buffer SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_convexhull; /* OGC 1.1 convexhull SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_srid; /* OGC 1.1 SRID SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_isempty; /* OGC 1.1 ISEMPTY SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_issimple; /* OGC 1.1 ISEMPTY SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_transform; /* OGC 1.1 transform SQL function */
+
+/*
+ * Curve functions
+ */
+FUNC_EXTERN ADU_NORM1_FUNC adu_startpoint; /* OGC 1.1 startpoint SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_endpoint; /* OGC 1.1 endpoint SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_isclosed; /* OGC 1.1  isclosed SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_isring; /* OGC 1.1 isring SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_stlength; /* OGC 1.1 st_length SQL function */
+
+/*
+ * Surface functions
+ */
+FUNC_EXTERN ADU_NORM1_FUNC adu_centroid; /* OGC 1.1 centroid SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_pointonsurface; /* OGC 1.1 pointonsurface SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_area; /* OGC 1.1 area SQL function */
+
+/*
+ * Polygon functions
+ */
+FUNC_EXTERN ADU_NORM1_FUNC adu_exteriorring; /* OGC 1.1 exteriorring SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_numinteriorring; /* OGC 1.1 numinteriorring SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_interiorringn; /* OGC 1.1 interiorringn SQL function */
+
+/*
+ * GeometryCollection functions
+ */
+FUNC_EXTERN ADU_NORM1_FUNC adu_numgeometries; /* OGC 1.1 numgeometries SQL function */
+FUNC_EXTERN ADU_NORM2_FUNC adu_geometryn; /* OGC 1.1 geometryn SQL function */
+
+/*
+ * LineString only functions
+ */
+FUNC_EXTERN ADU_NORM2_FUNC adu_pointn; /* OGC 1.1 pointn SQL function */
+FUNC_EXTERN ADU_NORM1_FUNC adu_numpoints; /* OGC 1.1 numpoints SQL function */
+
+/*
+ * Point functions
+ */
+FUNC_EXTERN ADU_NORM1_FUNC adu_point_x;         /* Routine to x(point)     */
+FUNC_EXTERN ADU_NORM1_FUNC adu_point_y;         /* Routine to y(point)     */
+ 
+/* The following are used by iigeometries */
+FUNC_EXTERN ADU_NORM1_FUNC adu_geom_name;
+FUNC_EXTERN ADU_NORM1_FUNC adu_geom_dimensions;
+
+
+
 /*
 **  Forward and/or External function references for aggregate functions.
 */
@@ -974,6 +1120,7 @@ FUNC_EXTERN ADU_COMPARE_FUNC adu_nvchrcomp;
 FUNC_EXTERN ADU_NORM3_FUNC adu_tableinfo;  /* Routine to do the tableinfo()
                                            ** func.
 					   */
+FUNC_EXTERN ADU_COMPARE_FUNC adu_rtree_cmp; /* Compare geometries for rtree*/
 
 /*
 **  Forward and/or External function references for other ADU routines.

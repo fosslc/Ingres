@@ -1967,6 +1967,8 @@ opc_tlqnatts(
 ** History:
 **      31-Oct-1989 (fred)
 **          Created for large object support.
+**      02-Apr-2010 (thich01)
+**          Add an exception for GEOM family types.
 [@history_template@]...
 */
 static	i4
@@ -1983,7 +1985,7 @@ opc_sortable(
 	opx_verror(status, E_OP0795_ADF_EXCEPTION,
 			    global->ops_adfcb->adf_errcb.ad_errcode);
     }
-    if (dt_bits & AD_NOSORT)
+    if (dt_bits & AD_NOSORT && adi_dtfamily_retrieve(datatype) != DB_GEOM_TYPE)
     {
 	return(FALSE);
     }

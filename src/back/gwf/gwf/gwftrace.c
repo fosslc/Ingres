@@ -82,10 +82,13 @@
 **	    replace nat and longnat with i4
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add static gwf_scc_trace() prototype,
+**	    delete local scf_call(), gwsxa_stats() declarations.
 **/
 GLOBALREF GW_FACILITY *Gwf_facility;
-FUNC_EXTERN	DB_STATUS	scf_call();
 static    	bool          	gwf_tracing_on;
+static VOID gwf_scc_trace( char *msg_buffer );
 
 /*{
 ** Name: gwf_trace	- GWF trace entry point.
@@ -116,7 +119,6 @@ gwf_trace(
 DB_DEBUG_CB  *debug_cb
 )
 {
-	FUNC_EXTERN VOID gwsxa_stats();
 	DB_DEBUG_CB *d = debug_cb;
 	GW_FACILITY *gwf=Gwf_facility;
 	i4	    bitno = d->db_trace_point;
@@ -181,7 +183,7 @@ DB_DEBUG_CB  *debug_cb
 **      24-sep-92 (robf)
 **          Created for C2/Security Audit gateway, cloned from dmf tracing
 **/
-VOID
+static VOID
 gwf_scc_trace( char *msg_buffer)
 {
     SCF_CB                 scf_cb;

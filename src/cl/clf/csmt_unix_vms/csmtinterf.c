@@ -963,6 +963,8 @@ GLOBALREF       CS_SERV_INFO    *Cs_svinfo;
 **	    a non-interruptable wait, doing so will surely screw up the caller.
 **	    Stop fooling with EDONE in cs_mask, it's not set there in CSMT.
 **	    (it's set in event_state instead.)
+**      04-nov-2010 (joea)
+**          Complete prototype for CSMTattn_scb.
 **/
 
 /*
@@ -986,7 +988,7 @@ FUNC_EXTERN VOID CS_mo_init(void);
 i4 CS_addrcmp( const char *a, const char *b );
 FUNC_EXTERN VOID GC_set_blocking(bool b);
 
-static VOID CSMTattn_scb();
+static void CSMTattn_scb(i4 eid, CS_SCB *scb);
 static i4  CSMT_usercnt(void);
 
 

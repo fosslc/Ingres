@@ -125,6 +125,17 @@
 **	    the dn_time in AD_DATENTRNL.
 **	18-Feb-2008 (kiria01) b120004
 **	    Consolidate timezone handling
+**      06-Jan-2009 (macde01)
+**          The type_name structure does not agree with 
+**          common/hdr/hdr/iicommon.h. TABKEY should be at location 12, not 55.
+**	16-Jun-2009 (thich01)
+**	    Add GEOM to 56.
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Add other spatial types 57-62.
+**	    Treat all spatial types the same as LBYTE.
+**	19-Aug-2010 (thich01)
+**	    Left a space at 60 for GCA SECL TYPE.
 **/
 
 /*
@@ -159,10 +170,10 @@ static char	*type_name[] = {
     NULL,	    "DB_LTXT_TYPE", NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
-    NULL,	    NULL,	    "DB_LOGKEY_TYPE", "DB_TABKEY_TYPE",
-    NULL,	    NULL,	    NULL,	    NULL,
-/* 60 - 79 */
-    NULL,	    NULL,	    NULL,	    NULL,
+    NULL,	    NULL,	    "DB_LOGKEY_TYPE", NULL,
+    "DB_GEOM_TYPE", "DB_POINT_TYPE", "DB_MPOINT_TYPE", "DB_LINE_TYPE",
+/* 60 - 79  60 is left for SECL */
+    NULL,	    "DB_MLINE_TYPE", "DB_POLY_TYPE", "DB_MPOLY_TYPE",
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
     NULL,	    NULL,	    NULL,	    NULL,
@@ -769,6 +780,14 @@ DB_DATA_VALUE      *db_dv)
 
 	  case DB_LVCH_TYPE:
   	  case DB_LBYTE_TYPE:
+  	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  case DB_LNVCHR_TYPE:
 	    {
 		ADP_PERIPHERAL	    *p = (ADP_PERIPHERAL *) data;
@@ -1136,6 +1155,14 @@ DB_DATA_VALUE      *db_dv)
 
 	  case DB_LVCH_TYPE:
   	  case DB_LBYTE_TYPE:
+  	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  case DB_LNVCHR_TYPE:
 	    {
 		ADP_PERIPHERAL	    *p = (ADP_PERIPHERAL *) data;
@@ -1779,6 +1806,14 @@ PTR file)
 
 	  case DB_LVCH_TYPE:
   	  case DB_LBYTE_TYPE:
+  	  case DB_GEOM_TYPE:
+          case DB_POINT_TYPE:
+          case DB_MPOINT_TYPE:
+          case DB_LINE_TYPE:
+          case DB_MLINE_TYPE:
+          case DB_POLY_TYPE:
+          case DB_MPOLY_TYPE:
+          case DB_GEOMC_TYPE:
 	  case DB_LNVCHR_TYPE:
 	    {
 		ADP_PERIPHERAL	*p = (ADP_PERIPHERAL *) data;

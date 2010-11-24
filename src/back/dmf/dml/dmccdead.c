@@ -16,13 +16,19 @@
 #include    <lk.h>
 #include    <ulf.h>
 #include    <dmf.h>
-#include    <dmccb.h>
 #include    <dm.h>
 #include    <dmp.h>
 #include    <dmpp.h>
 #include    <dm1b.h>
 #include    <dm0l.h>
 #include    <dmftrace.h>
+/* these to get dml.h */
+#include    <dmccb.h>
+#include    <dmrcb.h>
+#include    <dmscb.h>
+#include    <dmtcb.h>
+#include    <dmxcb.h>
+#include    <dml.h>
 
 /**
 ** Name: DMCCDEAD.C  - The check_dead thread of the recovery server
@@ -65,6 +71,8 @@
 **	    Need to include adf.h now.
 **	20-Oct-2008 (jonj)
 **	    SIR 120874 Modified to use new DB_ERROR based uleFormat 
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dml.h to get dmc_check_dead() prototype.
 **/
 
 /*{

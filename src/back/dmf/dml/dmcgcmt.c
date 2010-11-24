@@ -18,7 +18,6 @@
 #include    <lk.h>
 #include    <dmf.h>
 #include    <ulf.h>
-#include    <dmccb.h>
 #include    <dm.h>
 #include    <dmp.h>
 #include    <dmpp.h>
@@ -26,6 +25,13 @@
 #include    <dm0l.h>
 #include    <dmftrace.h>
 #include    <dm0llctx.h>
+/* these to get dml.h */
+#include    <dmccb.h>
+#include    <dmrcb.h>
+#include    <dmscb.h>
+#include    <dmtcb.h>
+#include    <dmxcb.h>
+#include    <dml.h>
 
 /**
 ** Name: DMCGCMT.C  - The group commit thread of the server
@@ -83,6 +89,8 @@
 **	    SIR 120874 Modified to use new DB_ERROR based uleFormat 
 **      16-nov-2008 (stial01)
 **          Redefined name constants without trailing blanks.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dml.h to get dmc_group_commit() prototype.
 **/
 
 /*{

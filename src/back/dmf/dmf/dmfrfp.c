@@ -816,6 +816,8 @@ NO_OPTIM = dr6_us5
 **          In rfp_error, check whether the DMVE_CB pointer is not null before
 **          formatting the entry.  In rfp_tbl_restore_ckp, trim the table
 **          names using cui_trmwhite.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Added missing static function prototypes.
 */
 
 /*
@@ -1292,6 +1294,28 @@ static DB_STATUS rfp_jnlswitch(
 static DB_STATUS dmf_jnlswitch(
     DMF_JSX		*jsx,
     DMP_DCB		*dcb);
+
+static DB_STATUS rfp_wait_free(
+    DMF_JSX     	*jsx,
+    DMCKP_CB    	*d);
+
+static DB_STATUS rfp_wait_all(
+    DMF_JSX     	*jsx);
+
+static DB_STATUS rfp_prescan_btime_qual(
+	DMF_JSX		*jsx,
+	DMF_RFP		*rfp,
+	DMVE_CB		*dmve);
+
+static DB_STATUS prescan_records(
+	DMF_RFP		*rfp,
+	DMVE_CB         *dmve,
+	PTR		log_rec);
+
+static DB_STATUS create_om_context(
+	DMF_RFP		*rfp,
+	DMVE_CB         *dmve,
+	DM0L_BSF	*log_rec);
 
 #define RFP_ROLLBACK			1
 #define RFP_CONTINUE_IGNORE_TBL		2
@@ -14907,7 +14931,7 @@ DMP_DCB             *dcb)
 **	    dev_pid to an i4 before testing it. Also, print out the
 **	    child's error condition, if necessary.
 */
-DB_STATUS
+static DB_STATUS
 rfp_wait_free(
     DMF_JSX     *jsx,
     DMCKP_CB    *d)
@@ -15042,7 +15066,7 @@ rfp_wait_free(
 **	    dev_pid to an i4 before testing it. Also, print out the
 **	    child's error condition, if necessary.
 */
-DB_STATUS
+static DB_STATUS
 rfp_wait_all(
     DMF_JSX     *jsx)
 {
@@ -15265,7 +15289,7 @@ EX_ARGS	    *ex_args)
 **	    Must pass pointer-to-pointer to close routine.
 **	
 */
-DB_STATUS
+static DB_STATUS
 rfp_prescan_btime_qual(
 DMF_JSX		*jsx,
 DMF_RFP		*rfp,
@@ -15560,7 +15584,7 @@ RFP_BQTX	*tx)
 }
 
 
-DB_STATUS
+static DB_STATUS
 prescan_records(
 DMF_RFP		*rfp,
 DMVE_CB         *dmve,
@@ -15583,7 +15607,7 @@ PTR		log_rec)
 	if (header->type == DM0LBSF)
 	{
 	    /* if DM0LBSF, create rfp_octx block */
-	    status = create_om_context(rfp, dmve, log_rec);
+	    status = create_om_context(rfp, dmve, (DM0L_BSF*)log_rec);
 	    break;
 	}
 
@@ -15689,7 +15713,7 @@ PTR		log_rec)
 } 
  
 
-DB_STATUS
+static DB_STATUS
 create_om_context(
 DMF_RFP		*rfp,
 DMVE_CB         *dmve,

@@ -24,6 +24,7 @@
 #include    <dmp.h>
 #include    <dmse.h>
 #include    <dm0pbmcb.h>
+#include    <dml.h>
 
 /**
 ** Name: DMTSCOST.C - Functions used to cost a SORT.
@@ -156,6 +157,8 @@
 **          dmt_s_estimated_records. Return an error if this happens to
 **          prevent MH_BADARG being signalled in MHln() from dmse_cost().
 **          If we generate a signal we'll bring down the DBMS.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dml.h to pick up dmt_sort_cost() prototype.
 */
 
 DB_STATUS

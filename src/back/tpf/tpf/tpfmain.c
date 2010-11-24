@@ -28,6 +28,7 @@
 #include    <tpfcat.h>
 #include    <tpfddb.h>
 #include    <tpfqry.h>
+#include    <tpfproto.h>
 
 /**
 **
@@ -157,12 +158,12 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include tpfproto.h to get prototypes.
+**	    Delete locally declared FUNC_EXTERNs.
 **/
 
 
-FUNC_EXTERN VOID		 tpd_m2_init_dx_cb();
-
-FUNC_EXTERN TPD_SP_CB		*tpd_s1_srch_sp();
 
 /* global variables */
 
@@ -962,7 +963,7 @@ tpf_m3_abort_to_svpt(
 
     /* set up to call RQF */
 
-    tpd_u0_trimtail(v_tpr_p->tpr_save_name, sizeof(DB_SP_NAME), svpt_name);
+    tpd_u0_trimtail((char*)v_tpr_p->tpr_save_name, sizeof(DB_SP_NAME), svpt_name);
 
     rqr_cb.rqr_q_language = v_tpr_p->tpr_lang_type;
     rqr_cb.rqr_session = sscb_p->tss_rqf;
@@ -973,7 +974,7 @@ tpf_m3_abort_to_svpt(
 
     /* abort to the target savepoint on all associations */
 
-    status = tpd_s4_abort_to_svpt(v_tpr_p, new_spcnt, svpt_name);
+    status = tpd_s4_abort_to_svpt(v_tpr_p, new_spcnt, (DB_SP_NAME*)svpt_name);
     if (status)
 	abort_ok = FALSE;
 
@@ -1167,7 +1168,7 @@ tpf_m4_savepoint(
 
     /* construct the save point query */
 
-    tpd_u0_trimtail(v_tpr_p->tpr_save_name, sizeof(DB_SP_NAME), svpt_name);
+    tpd_u0_trimtail((char*)v_tpr_p->tpr_save_name, sizeof(DB_SP_NAME), svpt_name);
 
     STprintf(qrytxt, "%s %s;", IITP_10_savepoint_p, svpt_name);
 

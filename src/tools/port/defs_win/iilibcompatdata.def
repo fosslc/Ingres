@@ -36,6 +36,8 @@
 ;	    Remove ex-globals WS_tcpip, WS_wintcp, WS_nvlspx.
 ;	    Add new global GCdrivers for GCA CL PCT.
 ;	    Remove deleted globals IIGCc_prot_init and IIGCc_prot_exit.
+;       03-nov-2010 (joea)
+;           Comment out GLDLLdummy.
 ;
 
 EXPORTS
@@ -318,7 +320,7 @@ ii_ver		@156	DATA
 gv_classes		@157	DATA			
 gv_cnf_classes		@158	DATA			
 gv_cnfdat_classes		@159	DATA			
-GLDLLdummy		@160				
+;GLDLLdummy		@160				
 MO_nalloc		@161	DATA			
 MO_bytes_alloc		@162	DATA			
 MO_nfree		@163	DATA			

@@ -118,6 +118,9 @@
 **          Store blank trimmed names in DMT_ATT_ENTRY
 **	13-Oct-2010 (kschendel) SIR 134544
 **	    DMU char array replaced with indicator bitmap, fix here.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Fix static gwsxa_stats() prototype.
+**	    Delete scf_call() declaration.
 */
 
 GLOBALREF	GW_FACILITY	*Gwf_facility;
@@ -126,11 +129,9 @@ GLOBALREF CS_SEMAPHORE GWsxa_sem; /* Semaphore to protect general increments*/
 GLOBALREF ULM_RCB gwsxa_ulm;
 GLOBALREF      GWSXA_XATT  Gwsxa_xatt_tidp;
 
-FUNC_EXTERN	DB_STATUS	scf_call();
-
 static    SIZE_TYPE sxa_ulm_memleft=0;
 
-static    VOID gwsxa_stats();
+static    VOID gwsxa_stats(void);
 
 /*
 **	Gateway Statistics

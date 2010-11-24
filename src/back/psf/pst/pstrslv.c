@@ -119,6 +119,10 @@
 **	    and union resolving since they do the same thing.
 **	    Recognize a standalone NULL when case or union resolving and
 **	    just adjust the type (e.g. don't max out decimal prec/scale!).
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
 **	08-Nov-2010 (kiria01) SIR 124685
@@ -2052,7 +2056,15 @@ pst_caseunion_resolve(PSS_SESBLK *sess_cb,
 
     if (best_fidesc->adi_dt[0] != DB_LVCH_TYPE && 
 	  best_fidesc->adi_dt[0] != DB_LBYTE_TYPE &&
-	  best_fidesc->adi_dt[0] != DB_LNVCHR_TYPE)
+	  best_fidesc->adi_dt[0] != DB_GEOM_TYPE &&
+	  best_fidesc->adi_dt[0] != DB_POINT_TYPE &&
+	  best_fidesc->adi_dt[0] != DB_MPOINT_TYPE &&
+	  best_fidesc->adi_dt[0] != DB_LINE_TYPE &&
+	  best_fidesc->adi_dt[0] != DB_MLINE_TYPE &&
+	  best_fidesc->adi_dt[0] != DB_POLY_TYPE &&
+	  best_fidesc->adi_dt[0] != DB_MPOLY_TYPE &&
+	  best_fidesc->adi_dt[0] != DB_LNVCHR_TYPE &&
+	  best_fidesc->adi_dt[0] != DB_GEOMC_TYPE )
     {                             /* not "long" - keep going */
 	DB_DATA_VALUE res_dv;
 	

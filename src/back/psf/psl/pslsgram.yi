@@ -3375,6 +3375,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    CASE related code now builds tree in reverse and reorders
 **	    applying constant folding at the appropriate time so that this
 **	    applies to target and where clause consistantly.
+**      16-Jun-2009 (thich01)
+**          Treat GEOM type like LBYTE.
 **      3-Aug-2009 (hanal04) Bug 122348
 **          When setting PSS_CACHEDYN_NORETRY turn off PSS_SUPPRESS_MSGS
 **          and turn on PSS_REPORT_MSGS to ensure the front end is
@@ -3382,6 +3384,8 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **      14-aug-2009 (huazh01)
 **          Allow Star server to pack constants into the "in_list". 
 **          b122391.
+**      20-Aug-2009 (thich01)
+**          Treat all spatial types like LBYTE.
 **      20-Aug-2009 (coomi01) b122499
 **          When constant folding removes an IF statement entirely, we must
 **          take care to ensure the compound statement builder rules do not
@@ -3450,6 +3454,9 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    Moved sub-select flattening code to be global to the query/command
 **	    and properly support sub-selects in groupby and orderby contexts.
 **	    Removed the redundant rngtab from psl_set_jrel() calls.
+**	21-Jan-2010 (troal01)
+**	    Added SRID keyword and case to allow specification of SRID when
+**	    creating a column.
 **	04-Feb-2010 (kiria01) SIR 121883 & b123218
 **	    Correct psq_mode on updates when subselects might have updated it - results
 **	    in pst_adresdom incorrectly setting the rsno field.
@@ -5032,6 +5039,8 @@ GLOBALREF PSF_SERVBLK *Psf_srvblk;
 /* "set role" taken as a single token. */
 %token		    SETROLE
 
+/* SRID token for spatial reference system */
+%token			SRID
 /* "set [no]batch_copy_optim" taken as a single token */
 %token		    SETBATCHCOPYOPTIM
 
@@ -10851,6 +10860,28 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	}
 	$$ = $1;
     }
+    |		tname SRID intconst_e type_qual_list
+    {
+    	i4 srid;
+    	DB_STATUS               status;
+    	
+    	srid = $3;
+    		
+		/*
+		 * We'll put SRID in the len_prec field and set
+		 * num_len_prec_vals to zero so it's not used before
+		 * we need it, the last argument (-1) is to set collation
+		 * ID to -1, as per previous rules.
+		 */
+		status = psl_ct14_typedesc(cb, $1, 0, &srid, $4,
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, 0);
+		if (DB_FAILURE_MACRO(status))
+		{
+			return(status);
+		}
+		
+    	$$ = $1;
+    }
 	|	tname dt_wquals tname type_qual_list encrypt_spec
     {
 	DB_STATUS		status;
@@ -15949,8 +15980,12 @@ cursor_open:	    curop_ini query for_rdonly
 			rsdmp->pst_sym.pst_type == PST_RESDOM;
 			rsdmp = rsdmp->pst_left)
 	     if ((rtype = abs(rsdmp->pst_sym.pst_dataval.db_datatype)) ==
-					DB_LVCH_TYPE ||
-		rtype == DB_LBYTE_TYPE || rtype == DB_LNVCHR_TYPE)
+			DB_LVCH_TYPE || rtype == DB_GEOM_TYPE ||
+			rtype == DB_POINT_TYPE || rtype == DB_MPOINT_TYPE ||
+                        rtype == DB_LINE_TYPE  || rtype == DB_MLINE_TYPE  ||
+                        rtype == DB_POLY_TYPE  || rtype == DB_MPOLY_TYPE  ||
+			rtype == DB_GEOMC_TYPE || rtype == DB_LBYTE_TYPE  ||
+			rtype == DB_LNVCHR_TYPE)
 	     {
 		/* Display error. */
 		(VOID) psf_error(2231L, 0L, PSF_USERERR,
@@ -16371,8 +16406,12 @@ repdyn0:
 			rsdmp->pst_sym.pst_type == PST_RESDOM;
 			rsdmp = rsdmp->pst_left)
 	     if ((rtype = abs(rsdmp->pst_sym.pst_dataval.db_datatype)) ==
-					DB_LVCH_TYPE ||
-		rtype == DB_LBYTE_TYPE || rtype == DB_LNVCHR_TYPE)
+			DB_LVCH_TYPE || rtype == DB_GEOM_TYPE ||
+			rtype == DB_POINT_TYPE || rtype == DB_MPOINT_TYPE ||
+			rtype == DB_LINE_TYPE  || rtype == DB_MLINE_TYPE  ||
+			rtype == DB_POLY_TYPE  || rtype == DB_MPOLY_TYPE  ||
+			rtype == DB_GEOMC_TYPE || rtype == DB_LBYTE_TYPE  ||
+			rtype == DB_LNVCHR_TYPE)
 	     {
 		/* Display error. */
 		(VOID) psf_error(2231L, 0L, PSF_USERERR,

@@ -30,6 +30,8 @@ NEEDLIBS = COMPAT MALLOCLIB
 **          allow synchronized short messages of 32 bytes.
 **	20-apr-2005 (devjo01)
 **	    Port to VMS.
+**      03-nov-2010 (joea)
+**          Declare local functions static.
 */
 
 
@@ -152,7 +154,7 @@ i4 Vsem( CS_SEMAPHORE *sp );
 /*
 ** Adjust a counter under mutex protection.
 */
-i4	
+static i4	
 adj_counter( i4 *counter, i4 adjustment )
 {
     i4		retval;
@@ -166,7 +168,7 @@ adj_counter( i4 *counter, i4 adjustment )
 /*
 **  Get text eqiv of error code.
 */
-char *
+static char *
 get_err_name( STATUS status, char *buf )
 {
     *buf = '\0';
@@ -181,7 +183,7 @@ get_err_name( STATUS status, char *buf )
 /*
 **  Free format error formatting routine.
 */
-void
+static void
 report_error( i4 instance, STATUS status, char *fmt, ... )
 {
     time_t	errtime;
@@ -212,7 +214,7 @@ report_error( i4 instance, STATUS status, char *fmt, ... )
 **  Empty function for ease in setting break points
 **  to catch sever errors when using a debugger.
 */
-void
+static void
 bad_error( i4 lineno, i4 self, STATUS status )
 {
     report_error( self, status, "Unexpected error from line %d", lineno );
@@ -222,7 +224,7 @@ bad_error( i4 lineno, i4 self, STATUS status )
 
 /* If we get semaphore errors, do simple decoding */
 
-char *
+static char *
 mapsemerr( i4 rv )
 {
     switch( rv )
@@ -245,7 +247,7 @@ mapsemerr( i4 rv )
 
 /* Report semaphore error */
 
-VOID
+static void
 semerr( i4 rv, CS_SEMAPHORE *sp, char *msg )
 {
     MY_SCB *scb;
@@ -292,7 +294,7 @@ Vsem( CS_SEMAPHORE *sp )
 
 /* ------------- MSG sub-system routines -------------- */
 
-bool
+static bool
 message_handler( CX_MSG *pmessage, PTR pudata, bool invalid )
 {
     bool	 done = TRUE;
@@ -368,7 +370,7 @@ message_handler( CX_MSG *pmessage, PTR pudata, bool invalid )
 }
 
 
-STATUS
+static STATUS
 message_send( CX_MSG *curval, CX_MSG *newval, PTR pudata, bool invalid )
 {
     TEST_MSG    *ptmsgi = (TEST_MSG*)curval;
@@ -409,7 +411,7 @@ message_send( CX_MSG *curval, CX_MSG *newval, PTR pudata, bool invalid )
 
 /* ---------------- actual application ---------------- */
 
-STATUS
+static STATUS
 test_startup(void)
 {
     STATUS	status;
@@ -483,7 +485,7 @@ test_startup(void)
 }
 
 
-void
+static void
 test_shutdown(void)
 {
     STATUS	status;
@@ -511,7 +513,7 @@ test_shutdown(void)
 **	Setup global variables and add each thread.
 **	Called by CSinitialize before threads are started
 */
-STATUS
+static STATUS
 hello( CS_INFO_CB *csib )
 {
     STATUS stat;
@@ -550,7 +552,7 @@ hello( CS_INFO_CB *csib )
 
 
 /* Called when all thread functions return from the TERMINATE state */
-STATUS
+static STATUS
 bye(void)
 {
     test_shutdown();
@@ -575,7 +577,7 @@ bye(void)
 /*
 ** Generic thread function, called out of CSdispatch 
 */
-STATUS
+static STATUS
 threadproc( i4 mode, MY_SCB *scb, i4 *next_mode )
 {
     STATUS status;
@@ -650,7 +652,7 @@ threadproc( i4 mode, MY_SCB *scb, i4 *next_mode )
 
 /* log function, called as the output when needed */
 
-VOID
+static void
 logger( i4 errnum, i4 arg1, i4 arg2 )
 {
     char buf[ ER_MAX_LEN ];
@@ -672,7 +674,7 @@ logger( i4 errnum, i4 arg1, i4 arg2 )
 ** 'type', passed by 6.1 CS, is ignored here for compatibility with 6.0 CS.
 */
 
-STATUS
+static STATUS
 newscbf( MY_SCB **newscb, PTR crb, i4 type )
 {
     *newscb = (MY_SCB*) calloc( 1, sizeof( **newscb ) );
@@ -681,7 +683,7 @@ newscbf( MY_SCB **newscb, PTR crb, i4 type )
 
 /* release an scb */
 
-STATUS
+static STATUS
 freescb( MY_SCB *oldscb )
 {
     free( oldscb );
@@ -690,20 +692,20 @@ freescb( MY_SCB *oldscb )
 
 /* Function used when CS_CB insists on having one and we don't care */
 
-STATUS
+static STATUS
 fnull(void)
 {
     return( OK );
 }
 
 
-VOID
+static void
 vnull(void)
 {
 }
 
 /* Function needed for read and write stub */
-STATUS
+static STATUS
 rwnull( MY_SCB *scb, i4 sync )
 {
     CS_SID sid;
@@ -714,7 +716,7 @@ rwnull( MY_SCB *scb, i4 sync )
 }
 
 
-void
+static void
 usage( char *badparm )
 {
     if ( badparm )

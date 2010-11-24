@@ -8,7 +8,7 @@
 #include <drviiapi.h>
 #include <drviiutil.h>
 
-#define  IsBlobColumn(X) (X.ds_dataType == IIAPI_LBYTE_TYPE || X.ds_dataType == IIAPI_LVCH_TYPE)
+#define  IsBlobColumn(X) (X.ds_dataType == IIAPI_LBYTE_TYPE || X.ds_dataType == IIAPI_LVCH_TYPE || X.ds_dataType == IIAPI_GEOM_TYPE || X.ds_dataType == IIAPI_POINT_TYPE || X.ds_dataType == IIAPI_MPOINT_TYPE || X.ds_dataType == IIAPI_LINE_TYPE || X.ds_dataType == IIAPI_MLINE_TYPE || X.ds_dataType == IIAPI_POLY_TYPE || X.ds_dataType == IIAPI_MPOLY_TYPE || X.ds_dataType == IIAPI_GEOMC_TYPE)
  
 /**
 **
@@ -83,6 +83,8 @@
 **	11-oct-2002 (somsa01)
 **	    Changed PDBParams() such that we pass in addresses of int and
 **	    float arguments.
+**      17-Aug-2010 (thich01)
+**          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
 **/
 
 /*
@@ -1224,6 +1226,14 @@ PDBParams (
 				}
 				break;
 			case IIAPI_LBYTE_TYPE:
+			case IIAPI_GEOM_TYPE :
+			case IIAPI_POINT_TYPE :
+			case IIAPI_MPOINT_TYPE :
+			case IIAPI_LINE_TYPE :
+			case IIAPI_MLINE_TYPE :
+			case IIAPI_POLY_TYPE :
+			case IIAPI_MPOLY_TYPE :
+			case IIAPI_GEOMC_TYPE :
 #ifdef DEBUG
 				if (*paramdef++ != DDF_DB_BLOB) 
 				{
@@ -1324,6 +1334,14 @@ PDBParamsFromTab (
 			case IIAPI_CHA_TYPE :
 			case IIAPI_DTE_TYPE :
 			case IIAPI_LBYTE_TYPE:
+			case IIAPI_GEOM_TYPE :
+			case IIAPI_POINT_TYPE :
+			case IIAPI_MPOINT_TYPE :
+			case IIAPI_LINE_TYPE :
+			case IIAPI_MLINE_TYPE :
+			case IIAPI_POLY_TYPE :
+			case IIAPI_MPOLY_TYPE :
+			case IIAPI_GEOMC_TYPE :
 				first->value = values[i++];
 				if (first->value == NULL)
 					first->size = 0;
@@ -1792,6 +1810,14 @@ PDBText (
                 case IIAPI_LBYTE_TYPE:
                 case IIAPI_LTXT_TYPE:
                 case IIAPI_LVCH_TYPE:
+		case IIAPI_GEOM_TYPE :
+		case IIAPI_POINT_TYPE :
+		case IIAPI_MPOINT_TYPE :
+		case IIAPI_LINE_TYPE :
+		case IIAPI_MLINE_TYPE :
+		case IIAPI_POLY_TYPE :
+		case IIAPI_MPOLY_TYPE :
+		case IIAPI_GEOMC_TYPE :
                 {
                         char *cat = NULL;
                         char *ext = NULL;
@@ -1864,6 +1890,7 @@ PDBText (
                     break;
 
                 case IIAPI_BYTE_TYPE:
+                case IIAPI_NBR_TYPE:
                 case IIAPI_CHA_TYPE:
                 case IIAPI_CHR_TYPE:
                     size = dataValue->dv_length;
@@ -2286,6 +2313,15 @@ GSTATUS  PDBType (
 		*type = DDF_DB_TEXT;
 		break;
 	case IIAPI_LBYTE_TYPE:
+	case IIAPI_GEOM_TYPE :
+	case IIAPI_POINT_TYPE :
+	case IIAPI_MPOINT_TYPE :
+	case IIAPI_LINE_TYPE :
+	case IIAPI_MLINE_TYPE :
+	case IIAPI_POLY_TYPE :
+	case IIAPI_MPOLY_TYPE :
+	case IIAPI_NBR_TYPE :
+	case IIAPI_GEOMC_TYPE :
 	case IIAPI_LTXT_TYPE:
 	case IIAPI_LVCH_TYPE:
         case IIAPI_LNVCH_TYPE:

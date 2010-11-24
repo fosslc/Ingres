@@ -770,6 +770,10 @@
 **	    Add conditional compilation for ICE
 **	20-Jul-2010 (bonro01)
 **	    Update version for Ingres 10.1
+**	31-Aug-2010 (troal01)
+**	    Added R_GEODEPS for Linux 32/64 bit if not LSB build
+**	30-Sep-2010 (troal01)
+**	    Only define R_GEODEPS if conf_WITH_GEO is defined
 **  08-Nov-2010 (clach04)
 **      Enterprise Access gateways moving to Ingres style version numbers.
 **      I.e. instead of 2 part number with genlevel, X.Y/GENLEVEL now have
@@ -1429,6 +1433,13 @@
 # define R_INGRES
 # define R_EQUEL
 # define R_ABF
+
+/*
+** geospatial
+*/
+# if defined(conf_WITH_GEO)
+# define R_GEODEPS
+# endif /* conf_WITH_GEO */
 
 /*
 ** miscellany

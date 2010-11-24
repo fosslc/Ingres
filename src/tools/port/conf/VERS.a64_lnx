@@ -6,6 +6,10 @@
 #	    control jam variables as well as shell/compile options.
 #       21-May-2010 (bonro01)
 #           Remove ICE from standard builds.
+#       31-Aug-2010 (thich01)
+#           Add WITH_GEO for platforms where spatial is not supported.
+#       30-Sep-2010 (troal01)
+#           Fixed a typo in set option WITH_GEO
 
 
 #set: config32 int_lnx
@@ -15,7 +19,7 @@
 #set: option CAS_ENABLED
 #set: param ADI_MAX_OPERANDS 5
 #set: build 00
-#
+
 
 # Any jam definitions go here, e.g. VAR = value ;
 # Don't forget spaces around the = and before the ;
@@ -25,8 +29,10 @@ SVR_ARLIB = "TRUE" ;	#set: option SVR_AR
 
 # Hybridization...
 # a64_lnx normally builds reverse hybrid
-BUILD_ARCH = "64+32" ;	#set: arch 64+32
+# Temporarily set to pure 64
+BUILD_ARCH = "64" ;	#set: arch 64
 XERCES_ARCH ?= 64 ;
 
 PAX_CHECK = TRUE ;
 PLATFORM_JAMDEFS = hyb86_lnx ;
+WITH_GEO = -D_WITH_GEO ; #set: option WITH_GEO

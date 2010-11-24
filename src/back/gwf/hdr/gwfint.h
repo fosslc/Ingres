@@ -69,6 +69,8 @@
 **          Changes for Long IDs
 **      12-Aug-2010 (horda03) b124109
 **          Defined prototype for gws_gt_parent_gw_sess().
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes.
 **/
 
 /* forward declarations */
@@ -655,12 +657,30 @@ FUNC_EXTERN DB_STATUS gwt_open(GW_RCB *gw_rcb);
 FUNC_EXTERN DB_STATUS gwt_register( GW_RCB *gw_rcb );
 FUNC_EXTERN DB_STATUS gwt_remove(GW_RCB *gw_rcb);
 FUNC_EXTERN DB_STATUS gwu_info(GW_RCB *gw_rcb);
+FUNC_EXTERN DB_STATUS gwu_validgw(GW_RCB *gw_rcb);
 FUNC_EXTERN DB_STATUS gwx_abort(GW_RCB *gw_rcb);
 FUNC_EXTERN DB_STATUS gwx_begin(GW_RCB *gw_rcb);
 FUNC_EXTERN DB_STATUS gwx_commit(GW_RCB *gw_rcb);
 
 /* VARARGS */
-FUNC_EXTERN VOID gwf_error();
+
+FUNC_EXTERN VOID gwfErrorFcn(i4		err_code,
+			     i4 	err_type,
+			     PTR	FileName,
+			     i4		LineNumber,
+			     i4 	num_parms,
+			     ...);
+
+FUNC_EXTERN VOID gwfErrorNV( i4 	err_code,
+			     i4 	err_type,
+			     i4 	num_parms,
+			     ...);
+#ifdef HAS_VARIADIC_MACROS
+#define gwf_error(err_code,err_type,...) \
+	gwfErrorFcn(err_code,err_type,__FILE__,__LINE__,__VA_ARGS__)
+#else
+#define gwf_error gwfErrorNV
+#endif /* HAS_VARIADIC_MACROS */
 
 GW_SESSION *gws_gt_gw_sess( void );
 
@@ -700,3 +720,9 @@ FUNC_EXTERN DB_STATUS gwf_adf_error(
 		DB_STATUS	status,
 		GW_SESSION	*scb,
 		i4		*err_code);
+
+FUNC_EXTERN DB_STATUS gwf_validgw(
+		   GW_RCB	*gw_rcb );
+
+FUNC_EXTERN DB_STATUS gwf_session_id(
+		   GW_SESSION	**session );

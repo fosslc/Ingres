@@ -332,6 +332,9 @@
 **          options -disable_mustlog and -enable_mustlog.
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Define new ATP control blobks for auditdb table info.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototyped dmfinfo1(), unconditionally prototype
+**	    dmfWriteMsgNV(), prototype online_cx_phase()
 [@history_template@]...
 **/
 
@@ -1229,6 +1232,10 @@ FUNC_EXTERN DB_STATUS dmfinfo(
     DMF_JSX	*jsx,
     DMP_DCB	*dcb);
 
+FUNC_EXTERN DB_STATUS dmfinfo1(
+    DMF_JSX	*jsx,
+    DMP_DCB	*dcb);
+
 FUNC_EXTERN DB_STATUS dmffload(
     DMF_JSX	*jsx,
     DMP_DCB	*dcb,
@@ -1274,6 +1281,12 @@ FUNC_EXTERN VOID dmfWriteMsgFcn(
     i4		numparams,
     ...);
 
+FUNC_EXTERN VOID dmfWriteMsgNV(
+    DB_ERROR	*dberr,
+    i4		err_code,
+    i4		numparams,
+    ...);
+
 #ifdef HAS_VARIADIC_MACROS
 
 /* Preferred macros, with DB_ERROR *dberr */
@@ -1284,12 +1297,6 @@ FUNC_EXTERN VOID dmfWriteMsgFcn(
 
 /* Variadic macros not supported */
 #define dmfWriteMsg dmfWriteMsgNV
-
-FUNC_EXTERN VOID dmfWriteMsgNV(
-    DB_ERROR	*dberr,
-    i4		err_code,
-    i4		numparams,
-    ...);
 
 #endif /* HAS_VARIADIC_MACROS */
 
@@ -1379,3 +1386,6 @@ FUNC_EXTERN DB_STATUS tbllst_write(
 DMF_JSX         *jsx,
 TBLLST_CTX	*tblctx);
 
+FUNC_EXTERN DB_STATUS online_cx_phase(
+i4		phase,
+DMF_JSX		*jsx);

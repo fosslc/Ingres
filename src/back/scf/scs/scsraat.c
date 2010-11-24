@@ -261,12 +261,23 @@
 **          Store blank trimmed names in DMT_ATT_ENTRY
 **      13-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Sync DMT_ATT_ENTRY/RAAT_ATT_ENTRY and DMT_TBL_ENTRY/RAAT_TBL_ENTRY
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototyped static allocate_message(), get_bkey()
 */
 
 /* Forward declarations */
 
 
 static STATUS scs_raat_bigbuffer(SCD_SCB *scb, i4 buf_size);
+
+static DB_STATUS allocate_message(
+    				SCD_SCB		*scb,
+    				SCS_RAAT_MSG	**raat_mptr);
+
+static DB_STATUS get_bkey(
+				char		**inbuf,
+				DMR_CB          *dmr_cb,
+				i4		*err_code);
 
 /*
 ** Name: scs_raat_call - scs entry to raat thread.
@@ -2742,7 +2753,7 @@ scs_raat_call(i4  op_code,
 **      19-aug-1996 (sweeney)
 **          Allocate GC header too, else much badness ensues.
 */
-DB_STATUS
+static DB_STATUS
 allocate_message(
     SCD_SCB		*scb,
     SCS_RAAT_MSG	**raat_mptr)
@@ -3023,7 +3034,7 @@ scs_raat_term_msg(SCD_SCB *scb, i4 err_code)
     return(status);  /* will probably be ignored at this point */
 }
 
-DB_STATUS get_bkey(
+static DB_STATUS get_bkey(
 char		**inbuf,
 DMR_CB          *dmr_cb,
 i4		*err_code)

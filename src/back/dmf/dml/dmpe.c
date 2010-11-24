@@ -59,6 +59,7 @@
 #include    <sxf.h>
 #include    <dmd.h>
 
+#include    <spatial.h>
 /**
 **
 **  Name: DMPE.C - DMF routines to aid in large object management
@@ -513,6 +514,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Prototype changes for dmpp_get/put/delete
+**	24-Feb-2010 (troal01)
+**	    Changes to facilitate the SRID stored inline in geometries.
 **	26-Mar-2010 (toumi01) SIR 122403
 **	    For encryption project add attr_encflags, attr_encwid.
 **	12-Apr-2010 (kschendel) SIR 123485
@@ -531,6 +534,9 @@
 **	    DMU characteristics structure changed, fix here.
 **      13-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Minor fix to 01-oct-2010 change
+**	02-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Deleted dmd_petrace() prototype, now in dmd.h with
+**	    DMPE_RECORD pointer parameter typed as PTR.
 **/
 
 /*
@@ -638,12 +644,6 @@ static DB_STATUS dmpe_locator_to_cpn(
 # define DMPE_DEF_TBL_SIZE  	    	128
 # define DMPE_DEF_TBL_EXTEND            128
 # define DMPE_DEFAULT_ATTID		1  /* default attid for temp etabs */
-
-FUNC_EXTERN VOID dmd_petrace(
-			char		*operation,
-			DMPE_RECORD	*record,
-			i4		base,
-			i4		extension );
 
 
 
@@ -1111,6 +1111,38 @@ dmpe_put(ADP_POP_CB	*pop_cb)
 	}
 	att_id = pcb->pcb_att_id;
 
+	/*
+	 * Validate the SRID in the data if this is a geospatial data type
+	 * and a permanent move. Only use the most current version of DB_ATTS
+	 */
+	if(pop_cb->pop_temporary == 0 &&
+			pcb->pcb_tcb->tcb_atts_ptr[att_id].geomtype != GEOM_TYPE_UNDEFINED)
+	{
+		i2 version;
+		i4 srid = SRID_UNDEFINED;
+		i4 find_bqcb_att;
+
+		GEOM_VERS_ASSIGN_MACRO(pop_cb->pop_segment->db_data, version);
+		if(version == SPATIAL_DATA_V1)
+		{
+			GEOM_SRID_ASSIGN_MACRO(pop_cb->pop_segment->db_data, srid);
+		}
+
+		for(find_bqcb_att = 0; find_bqcb_att < pcb->pcb_bqcb->bqcb_natts;
+				find_bqcb_att++)
+		{
+			if(pcb->pcb_bqcb->bqcb_atts[find_bqcb_att].bqcb_att_id == att_id)
+				break;
+		}
+
+		if(srid != pcb->pcb_bqcb->bqcb_atts[find_bqcb_att].bqcb_srid)
+		{	    	/* Check failed */
+			status = E_DB_ERROR;
+			SETDBERR(&pop_cb->pop_error, 0, E_DM5423_SRID_MISMATCH);
+			break;
+		}
+
+	}
 	/* Build the tuple based on the pointers in the pcb */
 
 	/*
@@ -1196,7 +1228,7 @@ dmpe_put(ADP_POP_CB	*pop_cb)
 		    {
 			if (DMZ_SES_MACRO(11) && pcb->pcb_tcb)
 			{
-			    dmd_petrace("DMPE_PUT: ", pcb->pcb_record,
+			    dmd_petrace("DMPE_PUT: ", (PTR)pcb->pcb_record,
 				pcb->pcb_tcb->tcb_rel.reltid.db_tab_base,
 				pcb->pcb_dmtcb->dmt_id.db_tab_base);
 			}
@@ -1215,7 +1247,7 @@ dmpe_put(ADP_POP_CB	*pop_cb)
 			    */
 
 			    if (DMZ_SES_MACRO(11))
-				dmd_petrace("DMPE_PUT: Fixup required", 0, 0, 0);
+				dmd_petrace("DMPE_PUT: Fixup required", NULL, 0, 0);
 			    status = dmpe_nextchain_fixup(pop_cb);
 			    if (status)
 				break;
@@ -1798,6 +1830,8 @@ dmpe_put(ADP_POP_CB	*pop_cb)
 **	    Call dml-begin routine to get context set up.  Use context
 **	    for opening etabs.  Using txn-logging as a key for DM11 tracing
 **	    on gets is weird, delete.
+**	18-Oct-2010 (troal01)
+**	    Before SRID is rewritten, check that it's the first segment.
 */
 static DB_STATUS
 dmpe_get(i4	  op_code ,
@@ -2087,9 +2121,50 @@ dmpe_get(i4	  op_code ,
 
 	if (status == E_DB_OK)
 	{
+		/*
+		 * If the ADP_C_MOVE_MASK is set that means dmpe_get was called from
+		 * dmpe_move and we should not try to rewrite the SRID, only for a true
+		 * get should this be done.
+		 */
+		if(op_code == ADP_GET && !(pop_cb->pop_continuation & ADP_C_MOVE_MASK) &&
+				db_datatype_is_geom(pop_cb->pop_coupon->db_datatype) &&
+				pcb->pcb_bqcb != NULL && (pcb->pcb_record->prd_segment0 == 0 &&
+				pcb->pcb_record->prd_segment1 == 1))
+		{
+			i2 geo_vers;
+			i4 srid_tcb;
+			i4 srid_data;
+			i4 find_bqcb_att;
+			GEOM_VERS_ASSIGN_MACRO(pcb->pcb_record->prd_user_space, geo_vers);
+			for(find_bqcb_att = 0; find_bqcb_att < pcb->pcb_bqcb->bqcb_natts;
+					find_bqcb_att++)
+			{
+				if(pcb->pcb_bqcb->bqcb_atts[find_bqcb_att].bqcb_att_id == input->cpn_att_id)
+					break;
+			}
+			srid_tcb = pcb->pcb_bqcb->bqcb_atts[find_bqcb_att].bqcb_srid;
+			/*
+			 * We have an SRID in there, so this must be a geospatial col
+			 */
+			switch(geo_vers)
+			{
+			case SPATIAL_DATA_V1:
+				GEOM_SRID_ASSIGN_MACRO(pcb->pcb_record->prd_user_space, srid_data);
+				if(srid_tcb != srid_data)
+				{
+					GEOM_SRID_COPY_MACRO(pcb->pcb_record->prd_user_space, srid_tcb);
+				}
+				break;
+			default:
+				status = E_DB_ERROR;
+				SETDBERR(&pop_cb->pop_error, 0, E_AD5602_SPATIAL_VERSION);
+				break;
+			}
+		}
+
 	    if (DMZ_SES_MACRO(11))
 	    {
-		dmd_petrace("DMPE_GET", pcb->pcb_record,
+		dmd_petrace("DMPE_GET", (PTR)pcb->pcb_record,
 		    0,  /* base table id */
 		    pcb->pcb_dmtcb->dmt_id.db_tab_base);
 	    }
@@ -2236,7 +2311,7 @@ dmpe_delete(ADP_POP_CB     *pop_cb )
 
 #ifdef xDEBUG
     if (DMZ_SES_MACRO(11))
-	dmd_petrace("DMPE_DELETE requested", 0, 0 , 0);
+	dmd_petrace("DMPE_DELETE requested", NULL, 0 , 0);
 #endif
 
     CLRDBERR(&pop_cb->pop_error);
@@ -2468,7 +2543,7 @@ dmpe_move(ADP_POP_CB *pop_cb, bool cleanup_source)
     CLRDBERR(&pop_cb->pop_error);
 
     if (DMZ_SES_MACRO(11))
-	dmd_petrace("DMPE_MOVE requested", 0, 0 , 0);
+	dmd_petrace("DMPE_MOVE requested", NULL, 0 , 0);
 
     if ( (((ADP_PERIPHERAL *) pop_cb->pop_segment->db_data)->per_length0 == 0)
 	&& (((ADP_PERIPHERAL *) pop_cb->pop_segment->db_data)->per_length1 == 0)
@@ -2531,8 +2606,8 @@ dmpe_move(ADP_POP_CB *pop_cb, bool cleanup_source)
 	get_pop->pop_coupon = pop_cb->pop_segment;
 	get_pop->pop_segment = &seg_dv;
 	put_pop->pop_segment = &seg_dv;
-	get_pop->pop_continuation = ADP_C_BEGIN_MASK;
-	put_pop->pop_continuation = ADP_C_BEGIN_MASK;
+	get_pop->pop_continuation = ADP_C_BEGIN_MASK | ADP_C_MOVE_MASK;
+	put_pop->pop_continuation = ADP_C_BEGIN_MASK | ADP_C_MOVE_MASK;
 	CLRDBERR(&get_pop->pop_error);
 	CLRDBERR(&put_pop->pop_error);
 	STRUCT_ASSIGN_MACRO(under_dv, seg_dv);
@@ -2732,7 +2807,7 @@ dmpe_destroy(DMU_CB	  *base_dmu ,
     CLRDBERR(&pop_cb.pop_error);
 
     if (DMZ_SES_MACRO(11))
-	dmd_petrace("DMPE_DESTROY requested", 0, 0 , 0);
+	dmd_petrace("DMPE_DESTROY requested", NULL, 0 , 0);
 
     pop_cb.pop_temporary = ADP_POP_TEMPORARY;
     pop_cb.pop_coupon = NULL;
@@ -2878,7 +2953,7 @@ dmpe_modify(DMU_CB	  *base_dmu ,
     CLRDBERR(&pop_cb.pop_error);
 
     if (DMZ_SES_MACRO(11))
-	dmd_petrace("DMPE_MODIFY requested", 0, 0 , 0);
+	dmd_petrace("DMPE_MODIFY requested", NULL, 0 , 0);
 
     pop_cb.pop_temporary = ADP_POP_TEMPORARY;
     pop_cb.pop_coupon = NULL;
@@ -3105,7 +3180,7 @@ dmpe_relocate(DMU_CB	  *base_dmu ,
     CLRDBERR(&pop_cb.pop_error);
 
     if (DMZ_SES_MACRO(11))
-	dmd_petrace("DMPE_RELOCATE requested", 0, 0 , 0);
+	dmd_petrace("DMPE_RELOCATE requested", NULL, 0 , 0);
 
     pop_cb.pop_temporary = ADP_POP_TEMPORARY;
     pop_cb.pop_coupon = NULL;
@@ -7391,7 +7466,7 @@ DB_ERROR	*dberr)
     CLRDBERR(&pop_cb.pop_error);
 
     if (DMZ_SES_MACRO(11))
-	dmd_petrace("DMPE_JOURNAL requested", 0, 0 , 0);
+	dmd_petrace("DMPE_JOURNAL requested", NULL, 0 , 0);
 
     MEfill(sizeof(DMT_CB), 0, (PTR) &dmt_cb);
     dmt_cb.length = sizeof(DMT_CB);

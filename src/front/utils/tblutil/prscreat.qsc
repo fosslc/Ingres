@@ -101,6 +101,10 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 */
 
 /* # define's */
@@ -400,6 +404,14 @@ i4     *errcol;		/* scroll to this row if error occurs */
 		{
                  /* #60821:Don't put 'DEFAULT NULL' if large object datatypes */
 		  if (!((dbv.db_datatype==DB_LVCH_TYPE ||
+                       dbv.db_datatype==DB_GEOM_TYPE ||
+                       dbv.db_datatype==DB_POINT_TYPE ||
+                       dbv.db_datatype==DB_MPOINT_TYPE ||
+                       dbv.db_datatype==DB_LINE_TYPE ||
+                       dbv.db_datatype==DB_MLINE_TYPE ||
+                       dbv.db_datatype==DB_POLY_TYPE ||
+                       dbv.db_datatype==DB_MPOLY_TYPE ||
+                       dbv.db_datatype==DB_GEOMC_TYPE ||
                        dbv.db_datatype==DB_LBYTE_TYPE) &&
                       IIUGyn(isnullable, NULL)))	/* column is NULLable */
            {

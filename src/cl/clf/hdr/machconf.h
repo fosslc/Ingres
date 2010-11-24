@@ -26,6 +26,8 @@
 **	25th-Dec-2004 (shaha03)
 **	    SIR #113754 Added macro "GETNUMSPUS" definition for i64_hpu, as 
 **	    HP-UX itanium system headers don't have it.	
+**      03-nov-2010 (joea)
+**          Complete prototype for ii_sysconf.
 **/
 
 
@@ -33,7 +35,7 @@
 **  Forward and/or External function references.
 */
 
-FUNC_EXTERN i4 ii_sysconf();    /* return system config info */
+FUNC_EXTERN i4 ii_sysconf(i4 item, i4 *value);  /* return system config info */
 
 
 /*

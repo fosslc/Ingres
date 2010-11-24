@@ -22,6 +22,8 @@
 **	    replace nat and longnat with i4
 **       8-Jun-2009 (hanal04) Code Sprint SIR 122168 Ticket 387
 **          Added mllist for must log DB list
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype scd_options()
 **/
 
 /*
@@ -55,3 +57,15 @@ struct _SCD_CB {
     i4  num_readahead;  /* number of readahead  threads, for IOMASTER only */
     i4  num_ioslaves;   /* number of slaves, for IOMASTER only */
 } ;
+
+FUNC_EXTERN STATUS scd_options(
+	DMC_CHAR_ENTRY  *dca,
+	i4		*dca_index,
+	OPF_CB		*opf_cb,
+	RDF_CCB		*rdf_ccb,
+	DMC_CB          *dmc,
+	PSQ_CB		*psq_cb,
+	QEF_SRCB	*qef_cb,
+	QSF_RCB		*qsf_rcb,
+	SXF_RCB		*sxf_rcb,
+	SCD_CB		*scd_cb );

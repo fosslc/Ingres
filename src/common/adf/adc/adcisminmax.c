@@ -86,6 +86,8 @@ GLOBALREF   u_char    *Bit_max;
 **          Change case for DB_BOO_TYPE in adc_1isminmax_rti.
 **      4-dec-2009 (stial01)
 **          Added NCHR,NVCHR
+**      09-mar-2010 (thich01)
+**          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
 
 
@@ -402,6 +404,7 @@ DB_DATA_VALUE	    *adc_dv)
 	  case DB_CHA_TYPE:
 	  case DB_NCHR_TYPE:
 	  case DB_BYTE_TYPE:
+          case DB_NBR_TYPE:
 	    if (MEcmp((PTR)data, (PTR)Cha_min, len) == 0)
 		adf_scb->adf_errcb.ad_errcode = E_AD0117_IS_MINIMUM;
 	    else if (MEcmp((PTR)data, (PTR)Cha_max, len) == 0)

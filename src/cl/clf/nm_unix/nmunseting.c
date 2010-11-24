@@ -9,6 +9,7 @@
 #include "nmlocal.h"
 
 
+
 /*{
 ** Name: NMzapIngAt- unset a value in the symbol.tbl.
 **
@@ -58,6 +59,8 @@
 **	31-Aug-2004 (jenjo02)
 **	    Added calls to NMlocksyms()/NMunlocksyms() to
 **	    lock the symbol table while being updated.
+**	15-nov-2010 (stephenb)
+**	    Proto NMzapIngAt().
 */
 
 STATUS

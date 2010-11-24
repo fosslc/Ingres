@@ -34,6 +34,8 @@
 **	    Added AP002D for Boolean data type.
 **	25-Mar-10 (gordy)
 **	    Added E_AP001F_BATCH_UNSUPPORTED.
+**	30-Aug-10 (thich01)
+**	    Added E_AP002E_LVL7_DATA_TYPE for spatial types.
 */
 
 #define	_AP_CLASS 201
@@ -166,4 +168,9 @@ E_AP002D_LVL6_DATA_TYPE
 "Invalid data type.\n
 A minimum connection level of IIAPI_LEVEL_6 is required.\n
 IIapi_initialize() requires at least IIAPI_VERSION_7."
+
+E_AP002E_LVL7_DATA_TYPE
+"Invalid data type.\n
+A minimum connection level of IIAPI_LEVEL_7 is required.\n
+IIapi_initialize() requires at least IIAPI_VERSION_8."
 

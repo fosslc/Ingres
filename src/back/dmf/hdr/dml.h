@@ -211,6 +211,9 @@
 **	    Move SEQ_VALUE declaration up so that it can be used in DML_SCB.
 **	    Add scb_last_id field to DML_SCB to hold last identity number
 **	    generated for the current session.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototyped FEXI functions dmf_tbl_info(), dmf_last_id(),
+**	    several missing dmc_, dmx_xa_ functions.
 **/
 
 
@@ -1708,6 +1711,11 @@ FUNC_EXTERN DB_STATUS dmc_check_dead(DMC_CB *dmc_cb);
 FUNC_EXTERN DB_STATUS dmc_force_abort(DMC_CB *dmc_cb);
 FUNC_EXTERN DB_STATUS dmc_cp_timer(DMC_CB *dmc_cb);
 
+FUNC_EXTERN DB_STATUS dmc_write_along(DMC_CB *dmc_cb);
+FUNC_EXTERN DB_STATUS dmc_repq(DMC_CB *dmc_cb);
+FUNC_EXTERN DB_STATUS dmc_repq(DMC_CB *dmc_cb);
+FUNC_EXTERN DB_STATUS dmc_read_ahead(DMC_CB *dmc_cb);
+
     /* Opens a database for a session. */
 FUNC_EXTERN DB_STATUS dmc_open_db(
     DMC_CB	*dmc_cb);
@@ -1831,6 +1839,26 @@ FUNC_EXTERN DB_STATUS dmx_abort(
 FUNC_EXTERN DB_STATUS dmx_xa_abort(
     DMX_CB      *dmx_cb);
 
+    /* Start xa distributed transaction */
+FUNC_EXTERN DB_STATUS dmx_xa_start(
+    DMX_CB      *dmx_cb);
+
+    /* End xa distributed transaction */
+FUNC_EXTERN DB_STATUS dmx_xa_end(
+    DMX_CB      *dmx_cb);
+
+    /* Prepare xa distributed transaction */
+FUNC_EXTERN DB_STATUS dmx_xa_prepare(
+    DMX_CB      *dmx_cb);
+
+    /* Commit xa distributed transaction */
+FUNC_EXTERN DB_STATUS dmx_xa_commit(
+    DMX_CB      *dmx_cb);
+
+    /* Rollback xa distributed transaction */
+FUNC_EXTERN DB_STATUS dmx_xa_rollback(
+    DMX_CB      *dmx_cb);
+
     /* Check transaction for external interrupts */
 FUNC_EXTERN DB_STATUS dmxCheckForInterrupt(
     DML_XCB	*xcb,
@@ -1901,7 +1929,7 @@ FUNC_EXTERN VOID	dms_close_db(
 			DMP_DCB		*dcb);
 FUNC_EXTERN VOID	dms_destroy_db(
 			i4		db_id);
-FUNC_EXTERN VOID	dms_stop_server();
+FUNC_EXTERN VOID	dms_stop_server(void);
 FUNC_EXTERN DB_STATUS	dms_end_tran(
 			i4		txn_state,
 #define		DMS_TRAN_COMMIT	1L
@@ -1919,3 +1947,14 @@ FUNC_EXTERN DB_STATUS	dms_update_iiseq(
 FUNC_EXTERN i8		dms_nextUnorderedVal(
 			i8		currval,
 			i4		seqlen);
+
+    /* FEXI functions in DMF */
+FUNC_EXTERN DB_STATUS	dmf_last_id(
+			i8		*id);
+
+FUNC_EXTERN DB_STATUS	dmf_tbl_info(
+			i4		*reltid,
+			i4		*reltidx,
+			i4		op_code,
+			char		*tableinfo_request,
+			i4		*return_count);

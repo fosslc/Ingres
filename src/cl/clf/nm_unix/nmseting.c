@@ -192,9 +192,11 @@ GLOBALREF LOCATION      NMBakSymloc;            /* location of symbol.bak */
 **	    Apply umask fix (bug #71890) from ingres63p
 **	07-apr-2004 (somsa01)
 **	    Added backup of symbol.tbl logic.
+**	15-nov-2010 (stephenb)
+**	    Define NMwritesyms() for prototyping.
 */
 STATUS
-NMwritesyms()
+NMwritesyms(void)
 {
     register SYM	*sp;
     FILE		*fp, *tfp = NULL;

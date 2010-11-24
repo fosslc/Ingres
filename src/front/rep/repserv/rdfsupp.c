@@ -69,6 +69,10 @@
 **      22-apr-2009 (joea)
 **          In RSicc_InitColCache, retrieve column_always_ident and
 **          column_bydefault_ident to support identity columns.
+**	16-Jun-2009 (thich01)
+**	    Add GEOM type.
+**	20-Aug-2009 (thich01)
+**	    Add all spatial types.
 **      05-nov-2009 (joea)
 **          Add test for BOOLEAN in RSicc_InitColCache.
 **/
@@ -470,6 +474,46 @@ d.column_sequence != 0 ORDER BY 1"),
 			c->coldesc.ds_dataType = DB_LBYTE_TYPE;
 			t->has_blob = TRUE;
 		}
+		else if (STequal(datatype, ERx("GEOM")))
+		{
+			c->coldesc.ds_dataType = DB_GEOM_TYPE;
+			t->has_blob = TRUE;
+		}
+		else if (STequal(datatype, ERx("POINT")))
+		{
+			c->coldesc.ds_dataType = DB_POINT_TYPE;
+			t->has_blob = TRUE;
+		}
+		else if (STequal(datatype, ERx("MPOINT")))
+		{
+			c->coldesc.ds_dataType = DB_MPOINT_TYPE;
+			t->has_blob = TRUE;
+                }
+		else if (STequal(datatype, ERx("LINE")))
+		{
+			c->coldesc.ds_dataType = DB_LINE_TYPE;
+			t->has_blob = TRUE;
+                }
+		else if (STequal(datatype, ERx("MLINE")))
+		{
+			c->coldesc.ds_dataType = DB_MLINE_TYPE;
+			t->has_blob = TRUE;
+                }
+		else if (STequal(datatype, ERx("POLY")))
+		{
+			c->coldesc.ds_dataType = DB_POLY_TYPE;
+			t->has_blob = TRUE;
+                }
+		else if (STequal(datatype, ERx("MPOLY")))
+		{
+			c->coldesc.ds_dataType = DB_MPOLY_TYPE;
+			t->has_blob = TRUE;
+                }
+		else if (STequal(datatype, ERx("GEOMC")))
+		{
+			c->coldesc.ds_dataType = DB_GEOMC_TYPE;
+			t->has_blob = TRUE;
+                }
 		else if (STequal(datatype, ERx("LONG VARCHAR")))
 		{
 			c->coldesc.ds_dataType = DB_LVCH_TYPE;
