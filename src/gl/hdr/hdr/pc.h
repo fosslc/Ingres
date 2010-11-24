@@ -7,6 +7,8 @@
 #ifdef CL_PROTOTYPED
 /* for LOCATION definition */
 #include    <lo.h>
+/* for EX definition */
+#include    <ex.h>
 #endif
 #include    <pccl.h>
 
@@ -59,10 +61,8 @@
 **	   Added prototype for PCreap to eliminate gcc 4.3 warnings.
 **/
 
-FUNC_EXTERN STATUS PCatexit(
-#ifdef CL_PROTOTYPED
+VOID PCatexit(
 	    VOID	(*func)()
-#endif
 );
 
 FUNC_EXTERN STATUS  PCcmdline(
@@ -169,5 +169,16 @@ FUNC_EXTERN STATUS  PCexeclp64(
 #endif
 );
 
-FUNC_EXTERN i4 PCreap();
+FUNC_EXTERN i4 PCreap(void);
+STATUS	PCread(char *, char *);
+STATUS	PCfspawn(i4, char **, bool, FILE **, FILE **, PID *);
+#ifdef xPURIFY
+VOID	purify_override_PCexit(i4);
+#endif
+STATUS	PCspawnlp64(i4 argc, char **argv);
+STATUS	PCexeclp32(i4 argc, char **argv);
+STATUS	PCspawnlp32(i4 argc, char **argv);
+STATUS	PCendpipe(PIPE);
+void	PCcleanup(EX);
+
 # endif /* ! PC_HDR_INCLUDED */

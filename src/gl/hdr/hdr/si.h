@@ -154,11 +154,9 @@ FUNC_EXTERN VOID SIfprintf(
 
 #ifndef SIfseek
 FUNC_EXTERN STATUS  SIfseek(
-#ifdef CL_PROTOTYPED
 	FILE		*fp, 
 	OFFSET_TYPE	offset, 
 	i4		mode
-#endif
 );
 #endif
 
@@ -236,10 +234,8 @@ FUNC_EXTERN i4      SIputc(
 
 #ifndef SIputrec
 FUNC_EXTERN STATUS  SIputrec(
-#ifdef CL_PROTOTYPED
 	char		*buf, 
 	FILE		*stream
-#endif
 );
 #endif
 
@@ -301,7 +297,7 @@ FUNC_EXTERN STATUS  SIhistgetrec(
 #endif
 
 #ifndef SIclearhistory
-FUNC_EXTERN void SIclearhistory();
+FUNC_EXTERN void SIclearhistory(void);
 #endif
 
 #ifdef NT_GENERIC
@@ -316,5 +312,8 @@ FUNC_EXTERN STATUS SIstd_write(
 	char		*str
 #endif
 );
+
+VOID
+SIdofrmt(i4, void *, const char *, va_list);
 
 #endif /*SI_INCLUDE*/
