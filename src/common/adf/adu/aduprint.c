@@ -1413,6 +1413,9 @@ ADI_FI_ID	    *instr)
 **          Corrected a couple of accidental format changes associated with
 **          the above change - i8s weren't getting printed and empty strings
 **          were output as '<empty>' instead of ''
+**      20-Oct-2010 (maspa05) b124617
+**          Timezone offset for ingresdates was being output as minutes 
+**          instead of seconds.
 */
 
 STATUS
@@ -1546,7 +1549,7 @@ PTR file)
 		datep->dn_seconds / AD_39DTE_ISECPERHOUR,
 		(datep->dn_seconds / AD_10DTE_ISECPERMIN) % 60,
 		datep->dn_seconds % 60,
-		(datep->dn_nsecond % AD_29DTE_NSPERMS), datep->dn_tzoffset);
+		(datep->dn_nsecond % AD_29DTE_NSPERMS), AD_TZ_OFFSETNEW(datep));
 	    break;
 
 	  case DB_ADTE_TYPE:
