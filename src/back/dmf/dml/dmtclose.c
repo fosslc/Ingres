@@ -73,6 +73,8 @@
 **	    SIR 120874 Modified to use new DB_ERROR based uleFormat 
 **	28-Nov-2008 (jonj)
 **	    SIR 120874: dm2t_? functions converted to DB_ERROR *
+**      25-Oct-2010 (stial01) (b124640)
+	    dmt_close() get next rcb for this tran BEFORE releasing next_rcb
 **/
 
 /*{
@@ -154,6 +156,8 @@
 **	03-Mar-2010 (jonj)
 **	    SIR 121619 MVCC: Blob support: Consistently reference tcb_extended
 **	    instead of relstat2 & TCB2_EXTENSION.
+**      25-Oct-2010 (stial01) (b124640)
+	    dmt_close() get next rcb for this tran BEFORE releasing next_rcb
 */
 DB_STATUS
 dmt_close(
@@ -197,8 +201,7 @@ DMT_CB  *dmt_cb)
 		** Scan the queue of open RCB's.
 		*/
 		for (next = (DML_XCB*) rcb->rcb_xcb_ptr->xcb_rq_next;
-		    next != (DML_XCB*) &rcb->rcb_xcb_ptr->xcb_rq_next;
-		    next = next->xcb_q_next)
+		    next != (DML_XCB*) &rcb->rcb_xcb_ptr->xcb_rq_next; )
 		{
 		    DMP_RCB	*next_rcb;
 
@@ -207,6 +210,13 @@ DMT_CB  *dmt_cb)
 		    */
 		    next_rcb = (DMP_RCB *)(
 		    (char *)next - ((char *)&((DMP_RCB*)0)->rcb_xq_next));
+
+		    /*
+		    ** next == &next_rcb->rcb_xq_next
+		    ** (it's pointing inside next_rcb memory)
+		    ** get next rcb for this tran BEFORE releasing next_rcb
+		    */
+		    next = next->xcb_q_next;
 
 		    /*
 		    ** If this table is an extension table, see if its
