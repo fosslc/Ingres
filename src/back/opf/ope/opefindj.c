@@ -637,6 +637,9 @@ ope_rqfunc(
 **		Repaired tests for ifnull, tests are now 
 **		nodep->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags & 
 **		nodep->ADI_F32768_IFNULL
+**      3-jun-2010 (huazh01)
+**          Modify the fix to b117793 by using pst_joinid to test if
+**          the ifnull() is in the where clause of the query. (b123744) 
 [@history_line@]...
 */
 static bool
@@ -663,6 +666,7 @@ ope_jnclaus(
     /* note that there has been a check to ensure that the left and
     ** right branches of the qualification do not have identical varmaps
     */
+
     l = and_node->pst_left->pst_left;
     r = and_node->pst_left->pst_right;
 
@@ -822,8 +826,9 @@ ope_jnclaus(
 	  lattid = rattid = -1; 
 	 
 	  if ((l->pst_sym.pst_type == PST_BOP || l->pst_sym.pst_type == PST_MOP) &&
-	  l->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags
+	       l->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags
 			& ADI_F32768_IFNULL &&
+               l->pst_sym.pst_value.pst_s_op.pst_joinid <= OPL_NOOUTER &&
 	      (l->pst_left->pst_sym.pst_type == PST_VAR ||
                l->pst_left->pst_sym.pst_type == PST_UOP)
              ) 
@@ -834,8 +839,9 @@ ope_jnclaus(
 	  }
 
 	  if ((r->pst_sym.pst_type == PST_BOP || r->pst_sym.pst_type == PST_MOP) &&
-	  r->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags
+               r->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags
 			& ADI_F32768_IFNULL &&
+               r->pst_sym.pst_value.pst_s_op.pst_joinid <= OPL_NOOUTER &&
               (r->pst_left->pst_sym.pst_type == PST_VAR ||
                r->pst_left->pst_sym.pst_type == PST_UOP)
              )
@@ -866,10 +872,6 @@ ope_jnclaus(
 				               (char *)outerp->opl_ovmap, 
 					       (i4)BITS_IN(outerp->opl_ovmap))
 				      )
-		                  && (BTsubset((char *)lojattrmap, 
-				               (char *)outerp->opl_ojattr, 
-					       (i4)BITS_IN(outerp->opl_ojattr))
-                                     )
 		     )
 		     ||
 		     (rattid > -1 && (BTsubset((char *)&rvarmap, 
@@ -880,10 +882,6 @@ ope_jnclaus(
 					       (char *)outerp->opl_ovmap, 
 				               (i4)BITS_IN(outerp->opl_ovmap))
 				     )
-                                  && (BTsubset((char *)rojattrmap, 
-				               (char *)outerp->opl_ojattr, 
-					       (i4)BITS_IN(outerp->opl_ojattr))
-			             )
 		     )
 		 )
 	       )
@@ -1434,13 +1432,13 @@ ope_findjoins(
 				    ** from a NULL join */
     PST_QNODE	    **njoinpp;      /* ptr to next insertion point for NULL joins
 				    */
-    bool            findOJ = FALSE; 
 
     if ( subquery->ops_vars.opv_prv <= 1 )
 	return;			    /* return if no possibility of a join */
     njoinp = (PST_QNODE *)NULL;
     njoinpp = &njoinp;
     previous = subquery->ops_root;
+ 
     for (and_node = previous->pst_right;
 	and_node && and_node->pst_sym.pst_type != PST_QLEND;
 	and_node = and_node->pst_right)
