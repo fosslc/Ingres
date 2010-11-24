@@ -1803,6 +1803,9 @@ psl_sscan(
     i4		    lineno = 0;
     i4		    nonwhite = 0;
     DB_STATUS	    status;
+# ifdef BYTE_ALIGN
+    i4		    left;
+# endif
     bool	    leave_loop = TRUE;
     const KEYTABLE  *kwd_table;
     bool	    hexconst_0xNN = FALSE;

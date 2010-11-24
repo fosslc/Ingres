@@ -11374,6 +11374,9 @@ qdata_cvt(
     ADI_DT_NAME		dt_fname;
     ADI_DT_NAME		dt_tname;
     i4		err_code;
+# ifdef BYTE_ALIGN
+    i4			left;
+#endif
 
     if (fval->db_datatype == totype)
 	dv_size = fval->db_length;

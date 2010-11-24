@@ -847,6 +847,9 @@ psl_scan(
     DB_CURSOR_ID	*db_cursid;
     i4		lineno;
     DB_STATUS		status;
+# ifdef BYTE_ALIGN
+    i4			left;
+# endif
 				/*
 				** will point to the first non-white character
 				** in a token (if any); will skip over any
