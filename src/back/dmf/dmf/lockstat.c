@@ -268,13 +268,14 @@ static STATUS ex_handler(EX_ARGS *ex_args);
 **	    For supportability add process info to shared memory.
 **      06-Aug-2009 (wanfr01)
 **          Bug 122418 - Print OS generic LKinitialize error
+**	04-Nov-2010 (bonro01) SIR 124685
+**	    Fix windows syntax error introduced by previous change.
 */
 
 # ifdef	II_DMF_MERGE
 int MAIN(argc, argv)
 # else
-VOID 
-int(argc, argv)
+int main(argc, argv)
 # endif
 i4	argc;
 char	*argv[];
