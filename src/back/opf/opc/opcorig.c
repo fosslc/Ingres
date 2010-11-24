@@ -3437,6 +3437,9 @@ opc_get_resource(
 **	09-Oct-2008 (kiria01) b118384
 **	    Use cnode.opc_below_rows to better calculate qen_base
 **	    requirements.
+**	21-Oct-2010 (kiria01) b123345
+**	    Support PST_DV_TYPE even outside DBP context so that we can support
+**	    the use of temporary variables.
 [@history_template@]...
 */
 VOID
@@ -3623,10 +3626,8 @@ opc_bgmkey(
 
     /* make sure that there is space for any local vars to be filled */
     first_stmt = global->ops_procedure->pst_stmts;
-    if (global->ops_procedure->pst_isdbp == TRUE &&
-	(global->ops_cstate.opc_flags & OPC_LVARS_FILLED) == 0 &&
-	first_stmt->pst_type == PST_DV_TYPE
-	)
+    if ((global->ops_cstate.opc_flags & OPC_LVARS_FILLED) == 0 &&
+	first_stmt->pst_type == PST_DV_TYPE)
     {
 	/* add enough bases for the local vars */
 	max_base += first_stmt->pst_specific.pst_dbpvar->pst_nvars;
@@ -3739,13 +3740,10 @@ opc_bgmkey(
 	}
     }
 
-    /* If this is a database procedure that has local vars and they haven't
-    ** already been filled with default values, then compile code to fill 
-    ** them.
-    */
+    /* If this has local vars and they haven't already been filled
+    ** with default values, then compile code to fill them. */
     first_stmt = global->ops_procedure->pst_stmts;
-    if (global->ops_procedure->pst_isdbp == TRUE &&
-	(global->ops_cstate.opc_flags & OPC_LVARS_FILLED) == 0 &&
+    if ((global->ops_cstate.opc_flags & OPC_LVARS_FILLED) == 0 &&
 	first_stmt->pst_type == PST_DV_TYPE
 	)
     {

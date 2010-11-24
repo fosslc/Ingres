@@ -218,6 +218,10 @@ ops_gqtree(
 **	    Init opn_fragcolist for greedy enumeration.
 **	15-june-06 (dougi)
 **	    Add support for "before" triggers.
+**	21-Oct-2010 (kiria01) b123345
+**	    Do not assume PST_DV_TYPE is only present when the
+**	    context is a DBP. It may also be present from temporaries
+**	    created by the parser.
 [@history_template@]...
 */
 VOID
@@ -283,7 +287,18 @@ ops_qinit(
 	    + decvarp->pst_specific.pst_dbpvar->pst_first_varno - 1;
     }
     else
+    {
 	global->ops_parmtotal = global->ops_qheader->pst_numparm;
+	if (global->ops_procedure->pst_stmts->pst_type == PST_DV_TYPE)
+	{
+	    /* Support local variables that may have been introduced
+	    ** as temporaries */
+	    PST_DECVAR *decvarp = global->ops_procedure->
+				pst_stmts->pst_specific.pst_dbpvar;
+	    global->ops_parmtotal += decvarp->pst_nvars
+				+ decvarp->pst_first_varno - 1;
+	}
+    }
    {
         /* initialize outer join descriptors */
         global->ops_goj.opl_gbase = (OPL_GOJT *) NULL;

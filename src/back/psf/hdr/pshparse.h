@@ -3306,6 +3306,9 @@ typedef struct _PSS_IFSTMT
 **	28-Oct-2008 (kiria01) SIR121012
 **	    For manipulating the pss_list it is necessary to have a list
 **	    head: .pss_head_stmt is added for this purpose.
+**	21-Oct-2010 (kiria01) b123345
+**	    Add PSS_NONDBP_INFO as flag indicating global statement context
+**	    for executing outside of DBPs.
 */
 typedef struct _PSS_DBPINFO
 {
@@ -3379,7 +3382,9 @@ typedef struct _PSS_DBPINFO
 					/* set ==> processing select statement
 					** of DBP FOR loop */
 #define PSS_INFORQ		((i4) 0x10)
-
+					/* set ==> a local dbpinfo for non-DBP
+					** use */
+#define PSS_NONDBP_INFO		((i4) 0x20)
     DB_PROCEDURE    pss_ptuple;		/* IIPROCEDURE row for this procedure */
     PST_STATEMENT   *pss_head_stmt;	/* This will point to the first allocated
 					** statement block; This is used so that
@@ -5004,6 +5009,9 @@ enum pss_with_enum {
 **	    Add more with-clause flags and some stuff for WITH-option
 **	    semantics unification.  Delete with_clauses bitmap, we're
 **	    going to use the DMU_CHARACTERISTICS directly.
+**	21-Oct-2010 (kiria01) b123345
+**	    Add .nondbpinfo as pre-allocated dbpinfo data for outside of
+**	    DBP contexts.
 **/
 
 /* For passing opflags to arg_stack users */
@@ -5168,6 +5176,7 @@ typedef struct PSS_YYVARS_ {
     bool	    in_from_tproc;	/* TRUE if were parsing tproc */
     bool	    isdbp;		/* TRUE for CREATE PROCEDURE stmt.    */
     PSS_DBPINFO	    *dbpinfo;		/* holds info about current dbproc    */
+    PSS_DBPINFO	    nondbpinfo;		/* holds info about non dbp comands   */
     PST_QNODE	    *updcollst;		/* root of update column list	      */
 
     

@@ -3633,6 +3633,13 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    flag, create-stmt flag is plenty.
 **	21-Oct-2010 (kiria01) b124629
 **	    Use the macro symbol with ult_check_macro instead of literal.
+**	21-Oct-2010 (kiria01) b123345
+**	    Consolidate the DBproc variable lookup/define code and the
+**	    common prolog code for procedures.
+**	    Extended EXECUTE PROCEDURE to allow it to pre-evaluate any
+**	    SSQs into temporary variables and extended the PST_STATEMENT
+**	    calls to allow for a sequence of these to be passed outside
+**	    a DBproc context - including a DECLARE.
 */
 %{
 
@@ -3641,9 +3648,6 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 */
 
 GLOBALREF PSF_SERVBLK *Psf_srvblk;
-FUNC_EXTERN DB_STATUS	gwf_call();
-FUNC_EXTERN DB_STATUS	rdf_call();
-FUNC_EXTERN DB_STATUS	qsf_call();
 
 static DB_STATUS psl_do_insert(
 	PSS_SESBLK	*cb,
@@ -3981,6 +3985,43 @@ PSS_SESBLK      *cb,
 PSQ_CB          *psq_cb,
 PSS_RNGTAB      *resrange,
 QUEUE		*col_list);
+
+static DB_STATUS
+psl_define_var(
+	PSS_SESBLK	*sess_cb,
+	char		*name,
+	bool		chk_unique,
+	PSS_DBPINFO	*dbpinfo,
+	DB_ERROR	*err_blk);
+
+static DB_STATUS
+psl_lookup_var(
+	QUEUE		*q,
+	char		*name,
+	bool		required,
+	PSS_DECVAR	**pvar,
+	DB_ERROR	*err_blk);
+
+static DB_STATUS
+psl_dbp_finalize(
+	PSS_SESBLK	*cb,
+	PST_STATEMENT	*stmt_body,
+	bool		full_funct,
+	PSS_DBPINFO	*dbpinfo,
+	PST_DECVAR	**decvarp,
+	DB_ERROR	*err_blk);
+
+static DB_STATUS
+psl_dbp_init_nondbp(
+	PSS_SESBLK	*cb,
+	PSS_YYVARS	*yyvarsp,
+	DB_ERROR	*err_blk);
+
+static DB_STATUS
+psl_dbp_define_builtins(
+	PSS_SESBLK	*cb,
+	PSS_DBPINFO	*dbpinfo,
+	DB_ERROR	*err_blk);
 
 /*[@function_reference@]...*/
 
@@ -5373,8 +5414,6 @@ index_prefix:	    CREATE
     }
 		    index_unique INDEX
     {
-	DB_STATUS		status;
-
 	/*
 	** set query mode here since psl_ci2_index_prefix() also gets called for
 	** RMSGW's REGISTER INDEX
@@ -8401,8 +8440,6 @@ crl_tbl_with_clause:	/* empty: normal row-level rule */
 		|	FOR nonkeyword crl_tbl_row_or_stmt
     {
 	i4	err_code;
-	i4 lineno = 1;
-	i4	val1=0, val2=0;  /* for trace point checking */
 	
 	/* this is for internal statement-level rules,
 	** for which the syntax is RULE_SCOPE = STATEMENT.
@@ -11374,7 +11411,6 @@ part_value_or_default:	part_composite_value
 	char buf[2];
 	DB_DATA_VALUE emptyval;
 	i4 toss_err;
-	i4 len;
 
 	if (STcompare($1,"default") != 0)
 	{
@@ -11957,18 +11993,11 @@ create_dbproc:	    cdbp_kwd cdbp_procname cdbp_parmspec
     {
 	PST_PROCEDURE	*pnode;
 	DB_STATUS	status;
-	i4		count = 0;
-	i4		firstno=0;
 	QSF_RCB		qsf_rb;
 	i4		err_code;
 	PSS_DBPALIAS	dbpid;
-	ADF_CB		*adf_scb = (ADF_CB*) cb->pss_adfcb;
 	PST_DECVAR	*decvar;
 	i4		qsf_op;
-	register PSS_DECVAR	*parm;
-	register DB_DATA_VALUE	*db_data;
-	register DB_PARM_NAME	*parm_name;
-	register i4		*parm_mode;
 
 	/* Set the query mode, as it was probably altered. */
    	psq_cb->psq_mode = PSQ_CREDBP;
@@ -11981,101 +12010,12 @@ create_dbproc:	    cdbp_kwd cdbp_procname cdbp_parmspec
 	** the actions in the body of this production (e.g. creating a new QP
 	** object) is highly unadvisable)
 	*/
+
 	if (!(cb->pss_dbp_flags & (PSS_0DBPGRANT_CHECK | PSS_CHECK_IF_ACTIVE)))
 	{
-	    /* Count parms. */
-	    for (parm = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-		 parm != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-		 parm = (PSS_DECVAR *) parm->pss_queue.q_next
-		)
-	    {
-		if (parm->pss_out)
-		    continue;
-
-		/* We're moving in the next direction, the last
-		** one is really the first parm specified.
-		*/
-		firstno = parm->pss_no;
-
-		count++;
-	    }
-
-	    /* Allocate memory for PST_DECVAR */
-	    status = psf_malloc(cb, &cb->pss_ostream, (i4) (sizeof(PST_DECVAR)), 
-		(PTR *) &decvar, &psq_cb->psq_error);
-	    if (DB_FAILURE_MACRO(status))
-		return (status);
-
-	    decvar->pst_nvars = count;
-	    decvar->pst_first_varno = firstno;
-
-	    if (count)
-	    {
-		/* Allocate memory for parm db_data array */
-		status = psf_malloc(cb, &cb->pss_ostream,
-		    (i4) (count * sizeof(DB_DATA_VALUE)), 
-		    (PTR *) &decvar->pst_vardef, &psq_cb->psq_error);
-		if (DB_FAILURE_MACRO(status))
-		    return (status);
-
-		/* Allocate memory for parm name array */
-		status = psf_malloc(cb, &cb->pss_ostream,
-		    (i4) (count * sizeof(DB_PARM_NAME)), 
-		    (PTR *) &decvar->pst_varname, &psq_cb->psq_error);
-		if (DB_FAILURE_MACRO(status))
-		    return (status);
-
-		/* Allocate memory for parm mode array */
-		status = psf_malloc(cb, &cb->pss_ostream,
-		    (i4) (count * sizeof(i4)), 
-		    (PTR *) &decvar->pst_parmmode, &psq_cb->psq_error);
-		if (DB_FAILURE_MACRO(status))
-		    return (status);
-
-		/* Copy db data values, oldest one first */
-		for (parm = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_prev,
-		     db_data = decvar->pst_vardef,
-		     parm_name = decvar->pst_varname,
-		     parm_mode = decvar->pst_parmmode;
-		     parm != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-		     parm = (PSS_DECVAR *) parm->pss_queue.q_prev
-		    )
-		{
-		    if (parm->pss_out)
-			continue;
-
-		    STRUCT_ASSIGN_MACRO(parm->pss_dbdata, *db_data);
-		    STRUCT_ASSIGN_MACRO(parm->pss_varname, *parm_name);
-		    if (parm->pss_flags & PSS_PPOUT)
-			*parm_mode = PST_PMOUT;
-		    else if (parm->pss_flags & PSS_PPINOUT)
-			*parm_mode = PST_PMINOUT;
-		    else *parm_mode = PST_PMIN;
-
-		    /* Allocate memory for default values as necessary. */
-		    if (parm->pss_default)
-		    {
-			status = psf_malloc(cb, &cb->pss_ostream,
-			    db_data->db_length, (PTR *) &db_data->db_data,
-			    &psq_cb->psq_error);
-			if (DB_FAILURE_MACRO(status))
-			    return (status);
-			status = adc_getempty (adf_scb, db_data);
-			if (DB_FAILURE_MACRO(status))
-			    return (status);
-		    }
-
-		    /* Increment array ptrs */
-		    db_data++;
-		    parm_name++;
-		    parm_mode++;
-		}
-	    }
-	    else
-	    {
-		decvar->pst_vardef = (DB_DATA_VALUE *) NULL;
-		decvar->pst_varname = (DB_PARM_NAME *) NULL;
-	    }
+	    if (status = psl_dbp_finalize(cb, $6, TRUE, $Ydbpinfo,
+					&decvar, &psq_cb->psq_error))
+		return status;
 
 	    /* Allocate a procedure node */
 	    status = psf_malloc(cb, &cb->pss_ostream, sizeof(PST_PROCEDURE),
@@ -12540,13 +12480,7 @@ cdbp_procname:	    obj_spec
         if (!(cb->pss_dbp_flags & PSS_RECREATE))
         {
 	    char	*ch1 = $1->pss_orig_obj_name;
-# ifndef DOUBLEBYTE
 	    char	*ch2 = ch1 + CMbytecnt(ch1);
-# else
-	    char	*ch2;
-	    
-	    ch2 = ch1 + CMbytecnt(ch1);
-# endif /* #ifndef DOUBLEBYTE */
 	    
             status = psy_ckdbpr(psq_cb, (u_i4)DBPR_PROC_CREATE);
             if (status)
@@ -12635,70 +12569,8 @@ cdbp_procname:	    obj_spec
 	** first parm is seen by the parser, since built-ins are to occupy
 	** first n slots in var array.
 	*/
-	{
-	    DB_PARM_NAME	varname;
-	    PSS_DECVAR	*var;
-            char		*tempstr;
-
-	    /* iirowcount must be first, iierrornumber must be second;
-	    ** (see defn of PST_RCNT and PST_ERNO).
-	    */
-            if (*cb->pss_dbxlate & CUI_ID_REG_U)
-	        tempstr = "IIROWCOUNT";
-            else
-	        tempstr = "iirowcount";
-	    STmove(tempstr, ' ', DB_PARM_MAXNAME, (char *) &varname);
-
-	    /* Allocate memory for the var entry */
-	    status = psf_malloc(cb, &cb->pss_ostream, (i4) sizeof(PSS_DECVAR), 
-		(PTR *) &var, &psq_cb->psq_error);
-	    if (DB_FAILURE_MACRO(status))
-		return (status);
-
-	    var->pss_next = (PSS_DECVAR *) NULL;
-	    var->pss_no = $Ydbpinfo->pss_varno++;
-	    STRUCT_ASSIGN_MACRO(varname, var->pss_varname);
-	    var->pss_scope = $Ydbpinfo->pss_bescope;	/* universal */
-	    var->pss_out = FALSE;
-	    var->pss_flags = 0;
-
-	    var->pss_dbdata.db_data = (PTR) NULL;
-	    var->pss_dbdata.db_length = 4;
-	    var->pss_dbdata.db_prec = 0;
-	    var->pss_dbdata.db_collID = DB_NOCOLLATION;
-	    var->pss_dbdata.db_datatype = DB_INT_TYPE;
-	    var->pss_default = 1;
-
-	    /* Attach element to the list, last one will be at the queue head. */
-	    (VOID) QUinsert((QUEUE *) var, &$Ydbpinfo->pss_varq);
-            if (*cb->pss_dbxlate & CUI_ID_REG_U)
-	        tempstr = "IIERRORNUMBER";
-            else
-	        tempstr = "iierrornumber";
-	    STmove(tempstr, ' ', DB_PARM_MAXNAME, (char *) &varname);
-
-	    /* Allocate memory for the var entry */
-	    status = psf_malloc(cb, &cb->pss_ostream, (i4) sizeof(PSS_DECVAR), 
-		(PTR *) &var, &psq_cb->psq_error);
-	    if (DB_FAILURE_MACRO(status))
-		return (status);
-
-	    var->pss_next = (PSS_DECVAR *) NULL;
-	    var->pss_no = $Ydbpinfo->pss_varno++;
-	    STRUCT_ASSIGN_MACRO(varname, var->pss_varname);
-	    var->pss_scope = $Ydbpinfo->pss_bescope;	/* universal */
-	    var->pss_out = FALSE;
-	    var->pss_flags = 0;
-
-	    var->pss_dbdata.db_data = (PTR) NULL;
-	    var->pss_dbdata.db_prec = 0;
-	    var->pss_dbdata.db_length = 4;
-	    var->pss_dbdata.db_datatype = DB_INT_TYPE;
-	    var->pss_default = 1;
-	    
-	    /* Attach element to the list, last one will be at the queue head */
-	    (VOID) QUinsert((QUEUE *) var, &$Ydbpinfo->pss_varq);
-	}
+	if (status = psl_dbp_define_builtins(cb, $Ydbpinfo, &psq_cb->psq_error))
+	    return status;
 
 	if (~cb->pss_dbp_flags & PSS_RECREATE)
 	{
@@ -12899,14 +12771,8 @@ cdbp_varname:	    cdbp_parmmode generic_ident
     {
 	i4		err_code;
 	DB_STATUS	status;
-	bool		found = FALSE;
-	DB_PARM_NAME	varname;
-	PSS_DECVAR	*var;
-	QUEUE		*varq;
 	char		*ch1 = $2;
 	char		*ch2 = ch1 + CMbytecnt(ch1);
-
-	STmove($2, ' ', DB_PARM_MAXNAME, (char *) &varname);
 
 	/* Name must not start with 'ii'... */
 	/*
@@ -12930,76 +12796,13 @@ cdbp_varname:	    cdbp_parmmode generic_ident
 	if (PSL_IS_RESERVED_IDENT($2, cb, psq_cb, TRUE))
 	    return(E_DB_ERROR);
 
-	/* Check if var specified for the first time
-	** at this scope level.
-	** Actually in this release scope levels should
-	** not be implemented, there can be only one
-	** BEGIN-END block, moreover parameters should
-	** be treated as being at the same scope as local vars
-	** which implies that names should be unique.
-	*/
-
-	/* get appropriate queue
-	 */
-	if (cb->pss_dbp_flags & PSS_PARSING_SET_PARAM)
-	    varq = &($Ydbpinfo->pss_setparmq);
-	else
-	    varq = &($Ydbpinfo->pss_varq);
-
-	for (var = (PSS_DECVAR *) varq->q_next;
-	     var != (PSS_DECVAR *) varq;
-	     var = (PSS_DECVAR *) var->pss_queue.q_next
-	    )
-	{
-	    /* Commented out for the reason mentioned in
-	    ** the comment above.
-	    if (var->pss_scope != $Ydbpinfo->pss_bescope)
-		continue;
-	    */
-
-	    if (MEcmp((PTR) &varname, (PTR) &var->pss_varname,
-		sizeof(var->pss_varname)) == 0
-	       )
-	    {
-		found = TRUE;
-		break;
-	    }
-	}
-
-	if (found == TRUE)
-	{
-	    /* Found a duplicate name */
-	    (VOID) psf_error(2401L, 0L, PSF_USERERR,
-		&err_code, &psq_cb->psq_error, 1, STlength($2), $2);
-	    return (E_DB_ERROR);
-	}
-
-	/* Allocate memory for the var entry */
-	status = psf_malloc(cb, &cb->pss_ostream, (i4) sizeof(PSS_DECVAR), 
-	    (PTR *) &var, &psq_cb->psq_error);
-	if (DB_FAILURE_MACRO(status))
+	if (status = psl_define_var(cb, $2, TRUE,
+				$Ydbpinfo, &psq_cb->psq_error))
 	    return (status);
-
-	var->pss_next = (PSS_DECVAR *) NULL;
-	STRUCT_ASSIGN_MACRO(varname, var->pss_varname);
-	var->pss_scope = $Ydbpinfo->pss_bescope;
-	var->pss_out = FALSE;
-	var->pss_flags = $1;
+	/* Set specified flags */
+	$Ydbpinfo->pss_curvar->pss_flags = $1;
 	
-	/* Attach element to the list, last one will be at the queue head.
-	 */
-	(VOID) QUinsert((QUEUE *) var, varq);
-
-	/* Store var number and increment the appropriate counter
-	 */
-	if (cb->pss_dbp_flags & PSS_PARSING_SET_PARAM)
-	    var->pss_no = $Ydbpinfo->pss_setparmno++;
-	else
-	    var->pss_no = $Ydbpinfo->pss_varno++;
-
-	$Ydbpinfo->pss_curvar = var;
-
-	$$ = var;
+	$$ = $Ydbpinfo->pss_curvar;
     }
 ;
 
@@ -13066,65 +12869,15 @@ cdbp_named_rowelem_list:  cdbp_named_rowelem
 
 cdbp_named_rowelem:	generic_ident
     {
-	i4		err_code;
 	DB_STATUS	status;
-	bool		found = FALSE;
-	DB_PARM_NAME	varname;
-	PSS_DECVAR	*var;
-	QUEUE		*varq;
-
-	STmove($1, ' ', DB_PARM_MAXNAME, (char *) &varname);
 
 	/* Name must not start with '$'. */
 	if (PSL_IS_RESERVED_IDENT($1, cb, psq_cb, TRUE))
 	    return(E_DB_ERROR);
 
-	/* Get result row queue. */
-	varq = &($Ydbpinfo->pss_resrowq);
-
-	for (var = (PSS_DECVAR *) varq->q_next;
-	     var != (PSS_DECVAR *) varq;
-	     var = (PSS_DECVAR *) var->pss_queue.q_next
-	    )
-	{
-	    if (MEcmp((PTR) &varname, (PTR) &var->pss_varname,
-		sizeof(var->pss_varname)) == 0
-	       )
-	    {
-		found = TRUE;
-		break;
-	    }
-	}
-
-	if (found == TRUE)
-	{
-	    /* Found a duplicate name */
-	    (VOID) psf_error(2401L, 0L, PSF_USERERR,
-		&err_code, &psq_cb->psq_error, 1, STlength($1), $1);
-	    return (E_DB_ERROR);
-	}
-
-	/* Allocate memory for the var entry */
-	status = psf_malloc(cb, &cb->pss_ostream, (i4) sizeof(PSS_DECVAR), 
-	    (PTR *) &var, &psq_cb->psq_error);
-	if (DB_FAILURE_MACRO(status))
+	if (status = psl_define_var(cb, $1, TRUE,
+				$Ydbpinfo, &psq_cb->psq_error))
 	    return (status);
-
-	var->pss_next = (PSS_DECVAR *) NULL;
-	STRUCT_ASSIGN_MACRO(varname, var->pss_varname);
-	var->pss_scope = $Ydbpinfo->pss_bescope;
-	var->pss_out = FALSE;
-	var->pss_flags = 0;
-
-	/* Attach element to the list, last one will be at the queue head.
-	 */
-	(VOID) QUinsert((QUEUE *) var, varq);
-
-	/* Store var number and increment the appropriate counter
-	 */
-	var->pss_no = $Ydbpinfo->pss_resrowno++;
-
-	$Ydbpinfo->pss_curvar = var;
     }
 	cdbp_typedesc	/* above code (cloned from cdbp_varname) required
 			** to set up result row descriptor list - but entries
@@ -13156,36 +12909,20 @@ cdbp_unnamed_rowelem_list:  cdbp_unnamed_rowelem
 cdbp_unnamed_rowelem:   /* Do the code first. */	
     {
 	DB_STATUS	status;
-	DB_PARM_NAME	varname;
-	PSS_DECVAR	*var;
-	QUEUE		*varq;
 
-	/* Get result row queue. */
-	varq = &($Ydbpinfo->pss_resrowq);
-
-	/* Allocate memory for the var entry */
-	status = psf_malloc(cb, &cb->pss_ostream, (i4) sizeof(PSS_DECVAR), 
-	    (PTR *) &var, &psq_cb->psq_error);
-	if (DB_FAILURE_MACRO(status))
+	if (status = psl_define_var(cb, NULL, FALSE,
+				$Ydbpinfo, &psq_cb->psq_error))
 	    return (status);
+	else
+	{
+	    DB_PARM_NAME name;
+	    PSS_DECVAR *var = $Ydbpinfo->pss_curvar;
 
-	var->pss_next = (PSS_DECVAR *) NULL;
-	var->pss_scope = $Ydbpinfo->pss_bescope;
-	var->pss_out = FALSE;
-	var->pss_flags = 0;
-	
-	/* Attach element to the list, last one will be at the queue head.
-	 */
-	(VOID) QUinsert((QUEUE *) var, varq);
-
-	/* Store var number, increment the appropriate counter and 
-	** fabricate result column name. */
-	var->pss_no = $Ydbpinfo->pss_resrowno++;
-	STprintf((char *)&varname, "result_column%d", var->pss_no);
-	STmove((char *)&varname, ' ', sizeof(DB_PARM_NAME), 
-						(char *)&var->pss_varname);
-
-	$Ydbpinfo->pss_curvar = var;
+	    /* Store var number, increment the appropriate counter and 
+	    ** fabricate result column name. */
+	    STprintf((char *)&name, "result_column%d", var->pss_no);
+	    STmove((char *)&name, ' ', sizeof(name), (char *)&var->pss_varname);
+	}
     }
 	cdbp_typedesc	/* above code (cloned from cdbp_varname) required
 			** to set up result row descriptor list - but entries
@@ -13200,55 +12937,15 @@ cdbp_asword:	    AS
 
 cdbp_beblock:	    cdbp_declare cdbp_begin cdbp_stmtlist cdbp_end
     {
-	PSS_DECVAR  	*var;
-	PST_STATEMENT	*rnode, *lastnd;
 	DB_STATUS	status;
+	PST_DECVAR	*decvar = NULL;
 
-	if ((!$3) || ($3 == PST_STATEMENT_REMOVED))
-	{
-	    i4 err_code;
+	if (status = psl_dbp_finalize(cb, $3, FALSE, $Ydbpinfo,
+				&decvar, &psq_cb->psq_error))
+	    return status;
 
-	    /* Empty statement blocks not allowed yet. */
-	    (VOID) psf_error(2425L, 0L, PSF_USERERR,
-		&err_code, &psq_cb->psq_error, 0);
-	    return (E_DB_ERROR);
-	}
-	/*
-	** Always allocate and add trailing RETURN statement node.  This cheap
-	** node clarifies control during execution.  Lastnd could be null after
-	** ENDLOOP though a trailing ENDLOOP couldn't really happen here.
-	** Do not attach the RETURN node for internal procedures (PSQ_IPROC)
-	** as they handle their own return status in QEF.
-	*/
-	for (lastnd = $3; lastnd != NULL && lastnd->pst_next != NULL;
-	     lastnd = lastnd->pst_next)
-	    ;
-	if (   lastnd == NULL
-	    || (lastnd->pst_mode != PSQ_RETURN && lastnd->pst_mode != PSQ_IPROC)
-	   )
-	{
-	    status = psl_init_dbp_stmt(cb, $Ydbpinfo, PSQ_RETURN, PST_RTN_TYPE,
-		&rnode, &psq_cb->psq_error);
-	    if (DB_FAILURE_MACRO(status))
-		return (status);
-
-	    rnode->pst_specific.pst_rtn.pst_rtn_value = NULL;
-
-	    if (lastnd != NULL)
-		lastnd->pst_next = rnode;
-	}
-
+	$1->pst_specific.pst_dbpvar = decvar;
 	$1->pst_next = $3;
-
-	/* Place local vars out of scope */
-	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-	     var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-	     var = (PSS_DECVAR *) var->pss_queue.q_next
-	    )
-	{
-	    if (var->pss_scope == $Ydbpinfo->pss_bescope)
-		var->pss_out = TRUE;	    
-	}
 
 	/* The definition of the new scope ends here. */
 	$Ydbpinfo->pss_bescope--;
@@ -13276,103 +12973,15 @@ cdbp_end:	    END
 cdbp_declare:	    cdbp_declare1
     {
 	DB_STATUS	status;
-	i4		count = 0;
-	i4		firstno = 0;
-	PST_STATEMENT	*snode;
-	ADF_CB		*adf_scb = (ADF_CB*) cb->pss_adfcb;
-	PST_DECVAR	*decvar;
-	register PSS_DECVAR	*var;
-	register DB_DATA_VALUE	*db_data;
-
-	/* Count vars. at this scope level */
-	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-	     var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-	     var = (PSS_DECVAR *) var->pss_queue.q_next
-	    )
-	{
-	    if (var->pss_scope != $Ydbpinfo->pss_bescope)
-		continue;
-
-	    /* We're moving in the next direction, therefore
-	    ** the last local var is really the first one specified.
-	    */
-	    firstno = var->pss_no;
-
-	    count++;
-	}
-
-	/* Allocate memory for PST_DECVAR */
-	status = psf_malloc(cb, &cb->pss_ostream, (i4) (sizeof(PST_DECVAR)), 
-	    (PTR *) &decvar, &psq_cb->psq_error);
-	if (DB_FAILURE_MACRO(status))
-	    return (status);
-
-	decvar->pst_nvars = count;
-
-	/*
-	** if no vars were declared, both firstno and count will remain 0.
-	** In this case, OPF would like to know the number of the first var in
-	** this declare, had there been one
-	*/
-	decvar->pst_first_varno = (count > 0) ? firstno : $Ydbpinfo->pss_varno;
-
-	if (count)
-	{
-	    /* Allocate memory for local variable array */
-	    status = psf_malloc(cb, &cb->pss_ostream,
-		(i4) (count * sizeof(DB_DATA_VALUE)), 
-		(PTR *) &decvar->pst_vardef, &psq_cb->psq_error);
-	    if (DB_FAILURE_MACRO(status))
-		return (status);
-
-	    /* Copy db data values, oldest one first. */
-	    for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_prev,
-		 db_data = decvar->pst_vardef;
-		 var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-		 var = (PSS_DECVAR *) var->pss_queue.q_prev
-		)
-	    {
-		if (var->pss_scope != $Ydbpinfo->pss_bescope)
-		    continue;
-
-		STRUCT_ASSIGN_MACRO(var->pss_dbdata, *db_data);
-
-		/* LRC requested that all local vars have a default value
-		** assigned, even if 'not null not default' has been specified,
-		** for this reason the if below has been commented out and
-		** getempty will be called for all local vars.
-		**
-		** Allocate memory for default values as necessary. *
-		if (var->pss_default)
-		{ */
-		    status = psf_malloc(cb, &cb->pss_ostream, db_data->db_length,
-			(PTR *) &db_data->db_data, &psq_cb->psq_error);
-		    if (DB_FAILURE_MACRO(status))
-			return (status);
-		    status = adc_getempty (adf_scb, db_data);
-		    if (DB_FAILURE_MACRO(status))
-			return (status);
-	      /*}*/
-		db_data++;
-	    }
-	}
-	else
-	{
-	    decvar->pst_vardef = (DB_DATA_VALUE *) NULL;
-	}
-
-	decvar->pst_varname = (DB_PARM_NAME *) NULL;
-	decvar->pst_parmmode = (i4 *) NULL;
 
 	/* Allocate statement node. */
-	status = psl_init_dbp_stmt(cb, $Ydbpinfo, psq_cb->psq_mode, PST_DV_TYPE,
-	    &snode, &psq_cb->psq_error);
-	if (DB_FAILURE_MACRO(status))
+	if (status = psl_init_dbp_stmt(cb, $Ydbpinfo, psq_cb->psq_mode, PST_DV_TYPE,
+		    &$$, &psq_cb->psq_error))
 	    return (status);
 
-	snode->pst_specific.pst_dbpvar = decvar;
-
-	$$ = snode;
+	/* The .pst_dbpvar is setup later in psl_dbp_finalize() if needed
+	** allowing temporaries to be added as needed between
+	** now and block end. Structure was zeroed by psl_init_dbp_stmt */
     }
 ;
 
@@ -13406,18 +13015,16 @@ cdbp_varspec:	    cdbp_varitem
 cdbp_varitem:	    cdbp_varnamelst cdbp_equalnoise
 		    cdbp_typedesc SEMICOLON
     {
-	register PSS_DECVAR  *decvar;
+	register PSS_DECVAR *var;
 
 	/* The current one is already initialized. */
-	for (decvar = $Ydbpinfo->pss_curvar->pss_next;
-	     decvar != (PSS_DECVAR *) NULL;
-	     decvar = decvar->pss_next
-	    )
+	for (var = $Ydbpinfo->pss_curvar->pss_next;
+	     var != (PSS_DECVAR *) NULL;
+	     var = var->pss_next)
 	{
 	    /* Copy db_data_value and default info. */
-	    STRUCT_ASSIGN_MACRO($Ydbpinfo->pss_curvar->pss_dbdata,
-		decvar->pss_dbdata);
-	    decvar->pss_default = $Ydbpinfo->pss_curvar->pss_default;
+	    var->pss_dbdata = $Ydbpinfo->pss_curvar->pss_dbdata;
+	    var->pss_default = $Ydbpinfo->pss_curvar->pss_default;
 	}
     }
 ;
@@ -14850,37 +14457,12 @@ cdbp_retval:	    int2_int4
 	DB_STATUS	    status;
 	PST_CNST_NODE	    cconst;
 	PST_QNODE	    *newnode;
-	DB_PARM_NAME	    varname;
-	bool		    found = FALSE;
 	i4		    err_code;
-	register PSS_DECVAR *var;
+	PSS_DECVAR *var;
 
-	STmove($1, ' ', DB_PARM_MAXNAME, varname.db_parm_name);
-
-	/* Find local var/parm by the specified name. */
-	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-	     var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-	     var = (PSS_DECVAR *) var->pss_queue.q_next
-	    )
-	{
-	    if (var->pss_out)
-		continue;
-	    if (MEcmp((PTR) &varname, (PTR) &var->pss_varname,
-		sizeof(var->pss_varname)) == 0
-	       )
-	    {
-		found = TRUE;
-		break;
-	    }
-	}
-
-	if (!found)
-	{
-	    /* Unknown local variable or parm spec'd. */
-	    (VOID) psf_error(2403L, 0L, PSF_USERERR, &err_code,
-		&psq_cb->psq_error, 1, STlength($1), $1);
-	    return (E_DB_ERROR);
-	}
+	if (status = psl_lookup_var(&$Ydbpinfo->pss_varq, $1, TRUE,
+			&var, &psq_cb->psq_error))
+	    return status;
 
 	if (var->pss_dbdata.db_datatype < 0)
 	{
@@ -15245,38 +14827,11 @@ cdbp_mesparm:	    int2_int4
 	DB_STATUS       status;
 	PST_CNST_NODE	cconst;
 	PST_QNODE	*newnode;
-	DB_PARM_NAME	varname;
-	bool		found = FALSE;
-	i4		err_code;
-	register PSS_DECVAR *var;
+	PSS_DECVAR *var;
 
-	STmove($1, ' ', DB_PARM_MAXNAME, varname.db_parm_name);
-
-	/* Find local var/parm by the specified name. */
-	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-	     var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-	     var = (PSS_DECVAR *) var->pss_queue.q_next
-	    )
-	{
-	    if (var->pss_out)
-		continue;
-	    if (MEcmp((PTR) &varname, (PTR) &var->pss_varname,
-		sizeof(var->pss_varname)) == 0
-	       )
-	    {
-		found = TRUE;
-		break;
-	    }
-	}
-
-	if (!found)
-	{
-	    /* Unknown local variable or parm spec'd. */
-	    (VOID) psf_error(2403L, 0L, PSF_USERERR,
-		&err_code, &psq_cb->psq_error, 1,
-		STlength($1), $1);
-	    return (E_DB_ERROR);
-	}
+	if (status = psl_lookup_var(&$Ydbpinfo->pss_varq, $1, TRUE,
+				&var, &psq_cb->psq_error))
+	    return status;
 
 	/* Parm or local variable */
 	cconst.pst_tparmtype = PST_LOCALVARNO;
@@ -15306,10 +14861,8 @@ cdbp_parmlvar:	    COLON generic_ident
 	DB_STATUS       status;
 	PST_CNST_NODE	cconst;
 	PST_QNODE	*newnode;
-	DB_PARM_NAME	varname;
-	bool		found = FALSE;
 	i4		err_code;
-	register PSS_DECVAR *var;
+	PSS_DECVAR *var;
 
         if (psq_cb->psq_mode == PSQ_DDEXECPROC)
         {
@@ -15326,33 +14879,9 @@ cdbp_parmlvar:	    COLON generic_ident
 	    return (E_DB_ERROR);	    
 	}
 
-	STmove($2, ' ', DB_PARM_MAXNAME, varname.db_parm_name);
-
-	/* Find local var/parm by the specified name. */
-	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-	     var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-	     var = (PSS_DECVAR *) var->pss_queue.q_next
-	    )
-	{
-	    if (var->pss_out)
-		continue;
-	    if (MEcmp((PTR) &varname, (PTR) &var->pss_varname,
-		sizeof(var->pss_varname)) == 0
-	       )
-	    {
-		found = TRUE;
-		break;
-	    }
-	}
-
-	if (!found)
-	{
-	    /* Unknown local variable or parm spec'd. */
-	    (VOID) psf_error(2403L, 0L, PSF_USERERR,
-		&err_code, &psq_cb->psq_error, 1,
-		STlength($2), $2);
-	    return (E_DB_ERROR);
-	}
+	if (status = psl_lookup_var(&$Ydbpinfo->pss_varq, $2, TRUE,
+				&var, &psq_cb->psq_error))
+	    return status;
 
 	/* Parm or local variable */
 	cconst.pst_tparmtype = PST_LOCALVARNO;
@@ -15648,42 +15177,24 @@ cdbp_assignstmt:    cdbp_lhs_asgn
 
 cdbp_lhs_asgn:	    cdbp_lhs_var
     {
-        DB_PARM_NAME	    varname;
 	i4		    err_code;
-	bool		    found = FALSE;
 	PSS_DECVAR	    *var;
 
-	/* normalize the var name */
-	STmove((char *)$1, ' ', (u_i4)sizeof(DB_ATT_NAME), (char *)&varname);
-
-	/* Search for the variable; innermost scope first. */
-	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-	     var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-	     var = (PSS_DECVAR *) var->pss_queue.q_next
-	    )
-	{
-	    if (var->pss_out)
-		continue;
-	    if (MEcmp((PTR) &varname, (PTR) &var->pss_varname,
-		sizeof(var->pss_varname)) == 0)
-	    {
-		/* Must not be a built-in variable (READONLY). */
-		if (var->pss_no == PST_RCNT || var->pss_no == PST_ERNO)
-		{
-		    (VOID) psf_error(2434L, 0L, PSF_USERERR,
-			&err_code, &psq_cb->psq_error, 1,
-			sizeof(cb->pss_lineno), &cb->pss_lineno);
-		    return (E_DB_ERROR);
-		}
-		found = TRUE;
-		break;
-	    }
-	}
-	if (found == FALSE)
+	/* Don't force required flag, check explicitly for different error */
+	if (psl_lookup_var(&$Ydbpinfo->pss_varq, $1, FALSE, &var, NULL))
 	{
 	    /* Var unknown */
 	    (VOID) psf_error(2413L, 0L, PSF_USERERR,
 		&err_code, &psq_cb->psq_error, 1, STlength($1), $1);
+	    return (E_DB_ERROR);
+	}
+	
+	/* Must not be a built-in variable (READONLY). */
+	if (var->pss_no == PST_RCNT || var->pss_no == PST_ERNO)
+	{
+	    (VOID) psf_error(2434L, 0L, PSF_USERERR,
+		&err_code, &psq_cb->psq_error, 1,
+		sizeof(cb->pss_lineno), &cb->pss_lineno);
 	    return (E_DB_ERROR);
 	}
 	$$ = var;
@@ -15824,56 +15335,37 @@ cdbp_exec_dbproc:	execute_dbproc
   
  cdbp_into:              cdbp_into_var
      {
-         DB_PARM_NAME        varname;
-         i4             err_code;
-         bool                found = FALSE;
-         PSS_DECVAR          *var;
+         i4		err_code;
+         PSS_DECVAR	*var;
   
-         /* normalize the var name */
-         STmove((char *)$1, ' ', sizeof(DB_ATT_NAME), (char *)&varname);
+	/* Don't force required flag, check explicitly for different error */
+	if (psl_lookup_var(&$Ydbpinfo->pss_varq, $1, FALSE, &var, NULL))
+        {
+	    /* Var unknown */
+	    (VOID) psf_error(2413L, 0L, PSF_USERERR,
+			&err_code, &psq_cb->psq_error, 1, STlength($1), $1);
+	    return (E_DB_ERROR);
+        }
+	/* Must not be a built-in variable (READONLY). */
+	if (var->pss_no == PST_RCNT || var->pss_no == PST_ERNO)
+	{
+	    (VOID) psf_error(2434L, 0L, PSF_USERERR,
+			&err_code, &psq_cb->psq_error, 1,
+			sizeof(cb->pss_lineno), &cb->pss_lineno);
+	    return (E_DB_ERROR);
+	}
+	$$ = var;
+    }
+;
   
-         /* Search for the variable; innermost scope first. */
-         for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-              var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-              var = (PSS_DECVAR *) var->pss_queue.q_next
-             )
-         {
-             if (var->pss_out)
-                 continue;
-             if (MEcmp((PTR) &varname, (PTR) &var->pss_varname,
-                 sizeof(var->pss_varname)) == 0)
-             {
-                 /* Must not be a built-in variable (READONLY). */
-                 if (var->pss_no == PST_RCNT || var->pss_no == PST_ERNO)
-                 {
-                     (VOID) psf_error(2434L, 0L, PSF_USERERR,
-                         &err_code, &psq_cb->psq_error, 1,
-                         sizeof(cb->pss_lineno), &cb->pss_lineno);
-                     return (E_DB_ERROR);
-                 }
-                 found = TRUE;
-                 break;
-             }
-         }
-         if (found == FALSE)
-         {
-             /* Var unknown */
-             (VOID) psf_error(2413L, 0L, PSF_USERERR,
-                 &err_code, &psq_cb->psq_error, 1, STlength($1), $1);
-             return (E_DB_ERROR);
-         }
-         $$ = var;
-     }
- ;
-  
- cdbp_into_var:  INTO generic_ident
- {
-         $$ = $2;
- }
-              |  INTO COLON generic_ident
- {
-         $$ = $3;
- }
+cdbp_into_var:  INTO generic_ident
+    {
+	$$ = $2;
+    }
+	|	INTO COLON generic_ident
+    {
+	$$ = $3;
+    }
 ;
 
 /*
@@ -19149,14 +18641,15 @@ etransact:	    ENDXACT
 */
 execute_dbproc:	exdbp_kword exdbp_name exdbp_arguments
     {
-	PST_STATEMENT	*stmt_cp;	/* CALLPROC statement */
-	PST_CPROCSTMT	*cps;	
+	PST_STATEMENT	*stmt_dv = NULL;	/* DECLARE statement */
+	PST_STATEMENT	*stmt_qt = NULL;	/* QUERY statement */
+	PST_STATEMENT	*stmt_cp;		/* CALLPROC statement */
 	DB_STATUS	status;
+	PST_QNODE	*ssroot = NULL, **ssptr = &ssroot;
+	PST_QNODE	*node;
+	PST_PROCEDURE	*prnode;
 
-	/* Flatten singleton sub-selects */
-	if ((status = psl_ss_flatten(&$3, yyvarsp, cb, psq_cb)))
-	    return status;
-
+	/* First deal with distributed execute */
         if (psq_cb->psq_mode == PSQ_DDEXECPROC)
 	{
 	    /* 
@@ -19178,103 +18671,245 @@ execute_dbproc:	exdbp_kword exdbp_name exdbp_arguments
 	    $$ = NULL;
 	    break;		/* done for distributed case */
         }
-	
-	/*
-	** Allocate CALLPROC statement and fill.  If this is not inside a
-	** DBP then package the whole thing as a statement in a procedure and
-	** ship.  If this is in a procedure then just build the statement.
-	**
-	** Note that this statement may have a result variable attached to it
-	** later (when nested in a DBP).
-	*/
 
-	/*
-	** Allocate CALLPROC statement node and initialize fields
-	** NOTE: we do not use psl_init_dbp_stmt() here since we do not want
-	**       this statement node linked into the statement list (especially
-	**	 if we are not parsing a dbproc, in which case there is no list
-	**	 to speak of); if this is a statement in a database procedure,
-	**	 it will be linked in later.
-	*/
-	status = psf_malloc(cb, &cb->pss_ostream, sizeof(PST_STATEMENT),
-			    (PTR *)&stmt_cp, &psq_cb->psq_error);
-	if (status != E_DB_OK)
-	    return (status);
-	MEfill(sizeof(PST_STATEMENT), (u_char) 0, (PTR) stmt_cp);
-
-	stmt_cp->pst_mode = PSQ_CALLPROC;
-	stmt_cp->pst_type = PST_CP_TYPE;
-#ifdef xDEBUG
-	stmt_cp->pst_lineno = cb->pss_lineno;
-#endif
-	stmt_cp->pst_lineno = cb->pss_stmtno;
-	cps = &stmt_cp->pst_specific.pst_callproc;
-	cps->pst_pmask = PST_CPUSER;
-	cps->pst_rulename.db_name[0] = EOS;
-
-	cps->pst_procname.qso_n_id.db_cursor_id[0] =
-	    cps->pst_procname.qso_n_id.db_cursor_id[1] = 0;
-
-	/* DB_DBP_MAXNAME = DB_CURSOR_MAXNAME */
-	MEcopy((PTR)&$2->pss_ptuple.db_dbpname, 
-	    DB_CURSOR_MAXNAME, (PTR)cps->pst_procname.qso_n_id.db_cur_name);
-	STRUCT_ASSIGN_MACRO($2->pss_ptuple.db_owner,
-			    cps->pst_procname.qso_n_own);
-	cps->pst_procname.qso_n_dbid = cb->pss_udbid;
-
-	/* Are there arguments? */
-	if ((cps->pst_arglist = $3) != (PST_QNODE *) NULL)
-	    cps->pst_argcnt = $3->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
-	else
-	    cps->pst_argcnt = 0;
-
-	if ($Yisdbp) 		/* Return statement to be patched later */
+	if (!$Yisdbp)
 	{
-	    /*
-	    ** if this statement is not reachable, do not attach it to the
-	    ** list of statements used by OPF (to save the cost of
-	    ** optimizing it)
-	    */
-	    if ($Ydbpinfo->pss_unreachable_stmt_lvl == 0)
+	    /* Init nonDBP setup so we can use the common code to setup statement
+	    ** blocks. Also, if we need temporaries for subselects we will need
+	    ** this even more. */
+	    if (status = psl_dbp_init_nondbp(cb, yyvarsp, &psq_cb->psq_error))
+		return status;
+	}
+
+	/* Singleton subselects as parameters need sepecial handling.
+	** If any are present, they will need executing before the call
+	** is executed. To do this we will create a temporary variable
+	** for each subselect and setup a dummy select to encompass the
+	** set of subselects. The actual parameters for these will then
+	** reference the temporaries.
+	** The nex loop scans for such subselects and starts pulling
+	** them out and creating temporaries. In DBP or not will not
+	** matter as in both cases we have arranged that temporaries
+	** can be added to the local symbol table. */
+	for (node = $3; node &&
+		    node->pst_sym.pst_type == PST_RESDOM; node = node->pst_left)
+	{
+	    PST_QNODE *ss = node->pst_right;
+	    if (ss->pst_sym.pst_type == PST_ROOT ||
+		ss->pst_sym.pst_type == PST_SUBSEL ||
+		ss->pst_sym.pst_type == PST_AGHEAD)
 	    {
-		if ($Ydbpinfo->pss_link != (PST_STATEMENT *) NULL)
+		PSS_DECVAR *var;
+		PST_QNODE *resdom;
+
+		/* If we're not in a DBP then we are going to need temporaries
+		** that will involve us creating a local symbol block. Do this now
+		** if we haven't already. This will also use the fake DBP setup. */
+		if (!$Yisdbp && !stmt_dv)
 		{
-		    $Ydbpinfo->pss_link->pst_link = stmt_cp;
+		    /* Define the mandatory locals needed */
+		    if (status = psl_dbp_define_builtins(cb, $Ydbpinfo, &psq_cb->psq_error))
+			return status;
+
+		    /* Add the DECLARE statement to ensure that the temporaries are allocated.
+		    ** The .pst_dbpvar is setup later in psl_dbp_finalize() if needed. */
+		    if (status = psl_init_dbp_stmt(cb, $Ydbpinfo, psq_cb->psq_mode, PST_DV_TYPE,
+				&stmt_dv, &psq_cb->psq_error))
+			return (status);
+		}
+
+		/* Create the temporary variable in the symbol table */
+		if (status = psl_define_var(cb, NULL, FALSE,
+			    $Ydbpinfo, &psq_cb->psq_error))
+		    return (status);
+		var = $Ydbpinfo->pss_curvar;
+		/* Add a new RESDOM node to the encompasing query pointing
+		** to the subselect found */
+		if (status = pst_adresdom((char*)&var->pss_varname,
+				NULL, ss, cb, psq_cb, &resdom))
+		    return (status);
+		/* Set the resdom to point to the temporary variable */
+		resdom->pst_sym.pst_value.pst_s_rsdm.pst_ntargno =
+				$Ydbpinfo->pss_curvar->pss_no;
+		/* Update resdom for local variable assignement */
+		resdom->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype =
+				PST_LOCALVARNO;
+		/* Set datatype of temporary from resdom */
+		$Ydbpinfo->pss_curvar->pss_dbdata =
+				resdom->pst_sym.pst_dataval;
+		*ssptr = resdom;
+		ssptr = &resdom->pst_left;
+
+		/* Now create a CONST node to refer to the temporary
+		** variable from where we are removing the subselect */
+		{
+		    PST_CNST_NODE cconst;
+		    cconst.pst_tparmtype = PST_LOCALVARNO;
+		    cconst.pst_parm_no = var->pss_no;
+		    cconst.pst_pmspec  = PST_PMNOTUSED;
+		    cconst.pst_cqlang = DB_SQL;
+		    cconst.pst_origtxt = NULL;
+		    if (status = pst_node(cb, &cb->pss_ostream, NULL, NULL,
+				PST_CONST, (char *)&cconst, sizeof(cconst),
+				var->pss_dbdata.db_datatype, var->pss_dbdata.db_prec,
+				var->pss_dbdata.db_length,
+				(DB_ANYTYPE *)var->pss_dbdata.db_data,
+				&node->pst_right, &psq_cb->psq_error, 0))
+			return (status);
+		}
+	    }
+	}
+	/* If subqueries were found, ssroot will have the list for processing.
+	**
+	** Allocate CALLPROC statement and fill.
+	** Note that this statement may have a result variable attached to it
+	** later (when nested in a DBP). */
+	if (status = psl_init_dbp_stmt(cb, $Ydbpinfo, PSQ_CALLPROC, PST_CP_TYPE,
+		    &stmt_cp, &psq_cb->psq_error))
+	    return (status);
+	else
+	{
+	    PST_CPROCSTMT *cps = &stmt_cp->pst_specific.pst_callproc;
+	    cps->pst_pmask = PST_CPUSER;
+
+	    /* DB_DBP_MAXNAME = DB_CURSOR_MAXNAME */
+	    MEcopy((PTR)&$2->pss_ptuple.db_dbpname, DB_CURSOR_MAXNAME,
+			(PTR)cps->pst_procname.qso_n_id.db_cur_name);
+	    STRUCT_ASSIGN_MACRO($2->pss_ptuple.db_owner,
+			cps->pst_procname.qso_n_own);
+	    cps->pst_procname.qso_n_dbid = cb->pss_udbid;
+
+	    /* Are there arguments? */
+	    if (cps->pst_arglist = $3)
+		cps->pst_argcnt = $3->pst_sym.pst_value.pst_s_rsdm.pst_rsno;
+	}
+
+	/* If we have got here with ssroot set, we are handling subselects:
+	** To start with we need to complete the encompassing query by adding the ROOT,
+	** TREE and QLEND nodes. We can then apply any flattening that is outstanding.
+	** This will tend to erradicate the container query in effect.
+	**
+	** Then we will also need to setup the statement block for the query and ensure
+	** it gets linked in.
+	**
+	** We will also call pst_header at this point primarily to associate the
+	** constructed query with the range table it needs.
+	** For the non-DBP case this will also create the PST_PROCEDURE which will
+	** be what we pass to OPF. */
+	if (ssroot)
+	{
+	    PST_RT_NODE root;
+
+	    /* Append the PST_TREE node to the list of resdoms */
+	    if (status = pst_trfix(cb, &cb->pss_ostream, ssroot, &psq_cb->psq_error))
+		return (status);
+
+	    /* Create the ROOT node */
+	    MEfill(sizeof(root), 0, (char *)&root);
+	    root.pst_rtuser = TRUE;
+	    root.pst_dups = PST_ALLDUPS;
+	    if (status = pst_node(cb, &cb->pss_ostream, ssroot, NULL,
+				PST_ROOT, (PTR)&root, sizeof(PST_RT_NODE),
+				DB_NODT, 0, 0, NULL, &ssroot,
+				&psq_cb->psq_error, 0))
+		return (status);
+
+	    /* Append the QLEND node */
+	    if (status = pst_node(cb, &cb->pss_ostream, NULL, NULL,
+				PST_QLEND, NULL, 0, DB_NODT, 0, 0, NULL,
+				&ssroot->pst_right, &psq_cb->psq_error, 0))
+		return (status);
+
+	    /* Flatten it */
+	    if ((status = psl_ss_flatten(&ssroot, yyvarsp, cb, psq_cb)))
+		return status;
+
+	    /* Allocate & setup the query statement */
+	    if (status = psl_init_dbp_stmt(cb, $Ydbpinfo, psq_cb->psq_mode, PST_QT_TYPE,
+			&stmt_qt, &psq_cb->psq_error))
+		return (status);
+
+	    {
+		PSQ_MODE save_mode = psq_cb->psq_mode;
+		psq_cb->psq_mode = PSQ_RETRIEVE;
+		/* Allocate query header into statement */
+		if (status = pst_header(cb, psq_cb, PST_UNSPECIFIED, NULL, ssroot,
+			&stmt_qt->pst_specific.pst_tree, &prnode,
+			($Yisdbp) ? 0 : PST_0FULL_HEADER, &$Yxlated_qry))
+		    return (status);
+		psq_cb->psq_mode = save_mode;
+	    }
+	    stmt_qt->pst_specific.pst_tree->pst_numjoins = $Yjoin_id;
+
+	    /* Chain CP onto QT and expect to return QT */
+	    stmt_qt->pst_next = stmt_cp;
+
+	    if ($Yisdbp)
+	    {
+		/* Return statement(list) to be patched later but otherwise complete */
+		$$ = stmt_qt;
+	    }
+	    else /* Not a DBP */
+	    {
+		static bool dbg = TRUE;
+		PST_DECVAR *decvar = NULL;
+		/* There were temporaries created - ensure they come with us. */
+		if (status = psl_dbp_finalize(cb, stmt_qt, !dbg, $Ydbpinfo, &decvar,
+				&psq_cb->psq_error))
+		    return status;
+
+		stmt_dv->pst_specific.pst_dbpvar = decvar;
+		/* Chain the QT-CP behind the DV which we will pass to OPF. */
+		prnode->pst_flags = 0;
+		if (dbg)
+		{/* As decvars */
+		    stmt_dv->pst_next = stmt_qt;
+		    prnode->pst_stmts = stmt_dv;
+		    prnode->pst_parms = NULL;
 		}
 		else
-		    $Ydbpinfo->pss_head_stmt = stmt_cp;
+		{/* As params */
+		    prnode->pst_stmts = stmt_qt;
+		    prnode->pst_parms = decvar;
+		}
+		if (cb->pss_dbp_flags & PSS_SET_INPUT_PARAM)
+		    prnode->pst_flags |= PST_SET_INPUT_PARAM;
 
-		$Ydbpinfo->pss_link = stmt_cp;
+		if (status = psf_mroot(cb, &cb->pss_ostream, (PTR)prnode,
+				   &psq_cb->psq_error))
+		    return (status);
+		$Ydbpinfo = NULL;	/* Local dbpinfo finished with */
+		$$ = NULL;		/* Unused outside of DBP */
 	    }
-
-	    $Ydbpinfo->pss_last_stmt = stmt_cp;
-	    $Ydbpinfo->pss_patch = &stmt_cp->pst_next;
-
-	    $$ = stmt_cp;
 	}
-	else			/* Not a DBP */
+	else /* No subselects */
 	{
-	    PST_PROCEDURE   *prnode;	/* Procedure node to create */
+	    if ($Yisdbp)
+	    {
+		/* Return the CP statement to be patched later */
+		$$ = stmt_cp;
+	    }
+	    else /* No subselects AND not a DBP */
+	    {
+		/* As there is no query context we haven't called pst_header so
+		** will need to make our own PST_PROCEDURE to attach the CP to. */
+		if (status = psf_malloc(cb, &cb->pss_ostream, sizeof(PST_PROCEDURE),
+				    (PTR *)&prnode, &psq_cb->psq_error))
+		    return (status);
 
-	    /* Create procedure (for OPC) and attach the CALLPROC statement */
-	    status = psf_malloc(cb, &cb->pss_ostream, sizeof(PST_PROCEDURE),
-				(PTR *)&prnode, &psq_cb->psq_error);
-	    if (status != E_DB_OK)
-		return (status);
-
-	    prnode->pst_mode = 0;
-	    prnode->pst_vsn = PST_CUR_VSN;
-	    prnode->pst_isdbp = FALSE;
-	    prnode->pst_flags = 0;
-	    prnode->pst_stmts = stmt_cp;
-	    prnode->pst_parms = (PST_DECVAR *)NULL;
-	    MEfill(sizeof(prnode->pst_dbpid), (u_char)0,
-		   (PTR)&prnode->pst_dbpid);
-	    status = psf_mroot(cb, &cb->pss_ostream, (PTR)prnode,
-			       &psq_cb->psq_error);
-	    if (status != E_DB_OK)
-		return (status);
-	    $$ = NULL;		/* Unused outside of DBP */
+		prnode->pst_mode = 0;
+		prnode->pst_vsn = PST_CUR_VSN;
+		prnode->pst_isdbp = FALSE;
+		prnode->pst_flags = 0;
+		prnode->pst_stmts = stmt_cp;
+		prnode->pst_parms = NULL;
+		MEfill(sizeof(prnode->pst_dbpid), 0, (PTR)&prnode->pst_dbpid);
+		if (status = psf_mroot(cb, &cb->pss_ostream, (PTR)prnode,
+				   &psq_cb->psq_error))
+		    return (status);
+		$Ydbpinfo = NULL;	/* Local dbpinfo finished with */
+		$$ = NULL;		/* Unused outside of DBP */
+	    }
 	}
     }
 ;
@@ -23522,7 +23157,6 @@ alm_event_spec: RAISEEVENT obj_spec alm_ev_text
 	    i4		stmt_type;
 	    i4		priv_to_check;
 	    i4		ev_mask;
-	    i4		err_code;
 
 	    stmt_type = PST_EVRAISE_TYPE;
 	    priv_to_check = (i4) DB_EVRAISE;
@@ -29954,38 +29588,11 @@ cdbp_lvar:		colon generic_ident
 	PST_QNODE	*resdomnode;
 	PST_RSDM_NODE	resdom;
 	DB_STATUS       status;
-	DB_PARM_NAME	varname;
-	bool		found = FALSE;
-	i4		err_code;
-	register PSS_DECVAR *var;
+	PSS_DECVAR	*var;
 
-	STmove($2, ' ', DB_PARM_MAXNAME, varname.db_parm_name);
-
-	/* Find local var/parm by the specified name. */
-	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-	     var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-	     var = (PSS_DECVAR *) var->pss_queue.q_next
-	    )
-	{
-	    if (var->pss_out)
-		continue;
-	    if (MEcmp((PTR) &varname, (PTR) &var->pss_varname,
-		sizeof(var->pss_varname)) == 0
-	       )
-	    {
-		found = TRUE;
-		break;
-	    }
-	}
-
-	if (!found)
-	{
-	    /* Unknown local variable or parm spec'd. */
-	    (VOID) psf_error(2403L, 0L, PSF_USERERR,
-		&err_code, &psq_cb->psq_error, 1,
-		STlength($2), $2);
-	    return (E_DB_ERROR);
-	}
+	if (status = psl_lookup_var(&$Ydbpinfo->pss_varq, $2, TRUE,
+				&var, &psq_cb->psq_error))
+	    return status;
 
 	/* Normalize the attribute name */
 	STmove($2, ' ', sizeof(resdom.pst_rsname),
@@ -30311,8 +29918,7 @@ target_item:	    BAOP
 	PST_QNODE	    *resdomnode;
         DB_ATT_NAME	    colname;
 	i4		    err_code;
-	bool		    found = FALSE;
-	PSS_DECVAR	    *var;
+	PSS_DECVAR	    *var = NULL;
 	char		    *name = (char *) &colname;
 
 	/* normalize the attribute name */
@@ -30323,53 +29929,33 @@ target_item:	    BAOP
 	    /* If the outermost scope, treat as local variable. */
 	    if (cb->pss_qualdepth == 1)
 	    {
-		/* Search for the variable; innermost scope first. */
-		for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-		     var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-		     var = (PSS_DECVAR *) var->pss_queue.q_next
-		    )
-		{
-		    if (var->pss_out)
-			continue;
-
-		    if (MEcmp((PTR) &colname, (PTR) &var->pss_varname,
-			sizeof(var->pss_varname)) == 0
-		       )
-		    {
-			found = TRUE;
-			break;
-		    }
-		}
-
-		if (found == TRUE)
-		{
-		    /* The resdom name needs to be the same
-		    ** as of select_expr.
-		    */
-		    if ($3->pst_sym.pst_type == PST_VAR ||
-			$3->pst_sym.pst_type == PST_FWDVAR)
-		    {
-		     name = (char *)&$3->pst_sym.pst_value.pst_s_var.pst_atname;
-		    }
-		    else
-		    {
-			(VOID) MEfill(sizeof(DB_ATT_NAME), (u_char) ' ',
-				(PTR) &colname);
-		    }
-
-		    /*
-		    ** Remember that local var related target list element was
-		    ** seen
-		    */
-		    $Ydbpinfo->pss_flags |= PSS_LVAR_SEEN;
-		}
-		else
+		/* Don't force required flag, check explicitly for different error */
+		if (psl_lookup_var(&$Ydbpinfo->pss_varq, $1, FALSE, &var, NULL))
 		{
 		    /* Var unknown */
 		    (VOID) psf_error(2413L, 0L, PSF_USERERR,
 			&err_code, &psq_cb->psq_error, 1, STlength($1), $1);
 		    return (E_DB_ERROR);
 		}
+		/* The resdom name needs to be the same
+		** as of select_expr.
+		*/
+		if ($3->pst_sym.pst_type == PST_VAR ||
+		    $3->pst_sym.pst_type == PST_FWDVAR)
+		{
+		    name = (char *)&$3->pst_sym.pst_value.pst_s_var.pst_atname;
+		}
+		else
+		{
+		    (VOID) MEfill(sizeof(DB_ATT_NAME), (u_char) ' ',
+			    (PTR) &colname);
+		}
+
+		/*
+		** Remember that local var related target list element was
+		** seen
+		*/
+		$Ydbpinfo->pss_flags |= PSS_LVAR_SEEN;
 	    }
 	}
 
@@ -30378,11 +29964,11 @@ target_item:	    BAOP
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
 
-	if (found == TRUE)
+	if (var)
 	{
 	    resdomnode->pst_sym.pst_value.pst_s_rsdm.pst_ntargno = var->pss_no;
 	    resdomnode->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype = PST_LOCALVARNO;
-	    STRUCT_ASSIGN_MACRO(var->pss_dbdata, resdomnode->pst_sym.pst_dataval);
+	    resdomnode->pst_sym.pst_dataval = var->pss_dbdata;
 	}
 	else
 	{
@@ -30398,7 +29984,6 @@ target_item:	    BAOP
 	PST_QNODE	    *resdomnode;
         DB_ATT_NAME	    colname;
 	i4		    err_code;
-	bool		    found = FALSE;
 	PSS_DECVAR	    *var;
 	char		    *name = (char *) &colname;
 
@@ -30425,25 +30010,7 @@ target_item:	    BAOP
 	/* normalize the attribute name */
 	STmove((char *) $2, ' ', (u_i4)sizeof(DB_ATT_NAME), (char *)&colname);
 
-	/* Search for the variable; innermost scope first. */
-	for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-	     var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-	     var = (PSS_DECVAR *) var->pss_queue.q_next
-	    )
-	{
-	    if (var->pss_out)
-		continue;
-
-	    if (MEcmp((PTR) &colname, (PTR) &var->pss_varname,
-		sizeof(var->pss_varname)) == 0
-	       )
-	    {
-		found = TRUE;
-		break;
-	    }
-	}
-
-	if (found == FALSE)
+	if (psl_lookup_var(&$Ydbpinfo->pss_varq, $2, FALSE, &var, NULL))
 	{
 	    /* Var unknown */
 	    (VOID) psf_error(2413L, 0L, PSF_USERERR,
@@ -32632,8 +32199,7 @@ cname:			col_ref
 	    
 	    DB_ATT_NAME	    colname;
             bool            found_resdom = FALSE;
-            bool            found_var = FALSE;
-	    PSS_DECVAR	    *var;
+	    PSS_DECVAR	    *var = NULL;
 	    PSS_RNGTAB	    *rngvar = NULL;
 
 	    if ($Yin_rule == TRUE)
@@ -32648,29 +32214,12 @@ cname:			col_ref
 	    STmove($1->pss_col_name, ' ', sizeof(DB_ATT_NAME),
 		(char *) &colname);
 
-	    if ($Yisdbp == TRUE)
-	    {
-		/* Search for the variable; innermost scope first. */
-		for (var = (PSS_DECVAR *) $Ydbpinfo->pss_varq.q_next;
-		     var != (PSS_DECVAR *) &$Ydbpinfo->pss_varq;
-		     var = (PSS_DECVAR *) var->pss_queue.q_next
-		    )
-		{
-		    if (var->pss_out)
-			continue;
-
-		    if (MEcmp((PTR) &colname, (PTR) &var->pss_varname,
-			sizeof(var->pss_varname)) == 0
-		       )
-		    {
-			found_var = TRUE;
-			break;
-		    }
-		}
-	    }
+	    if ($Yisdbp)
+		(VOID) psl_lookup_var(&$Ydbpinfo->pss_varq, $1->pss_col_name,
+					FALSE, &var, NULL);
 
 	    /* If CALLPROC and either not a local var or simple column name */
-	    if (psq_cb->psq_mode == PSQ_CALLPROC && !found_var && !$Yqual_depth)
+	    if (psq_cb->psq_mode == PSQ_CALLPROC && var == NULL && !$Yqual_depth)
 	    {
 		/* Unknown local variable or isolated column specified */
 		(VOID) psf_error($Yisdbp ? 2403L : E_US0986_2438_EXEC_COL, 0L,
@@ -32741,7 +32290,7 @@ cname:			col_ref
 		*/
 		status = pst_node(cb, &cb->pss_ostream, (PST_QNODE *) NULL,
 		    (PST_QNODE *) NULL, PST_FWDVAR, (char *) &fwdvar,
-		    (found_var) ? max(sizeof(PST_FWDVAR_NODE), 
+		    (var != NULL) ? max(sizeof(PST_FWDVAR_NODE), 
                     sizeof(PST_CNST_NODE)) : sizeof(fwdvar),
 		    DB_NODT, (i2) 0, (i4) 0, (DB_ANYTYPE *) NULL, &newnode,
 		    &psq_cb->psq_error, (i4) 0);
@@ -32762,7 +32311,7 @@ cname:			col_ref
 		    !BTcount((char *)&$Yflists[cb->pss_qualdepth], PST_NUMVARS))
 		{
 		    /* If column was not found but there is a var */
-		    if ($Yisdbp && found_var)
+		    if ($Yisdbp && var != NULL)
 		    {
 			/* Create a CNST node for the var. */
 			PST_CNST_NODE	cconst;
@@ -32833,7 +32382,7 @@ cname:			col_ref
 			MEfill(sizeof(PST_J_MASK), 0, (char *)&join_rels);
 		    }
 			
-                    /* found_var (previously found) may be true but
+                    /* The var may be non-NULL and valid but
                     ** if we are in an ORDER BY the host variable would
                     ** not be valid anyway so we should over-ride the
                     ** 'find' if we have a matching resdom and we're in
@@ -32877,9 +32426,9 @@ cname:			col_ref
                         }
                     }
 		    
-		    if (!found_var || found_resdom)
+		    if (var == NULL || found_resdom)
 		    {
-			if (!found_var && !found_resdom) /* there must be a column */
+			if (var == NULL && !found_resdom) /* there must be a column */
 			{
 			    /* Find attribute - maybe.
 			    ** If in target list we are prepared to be allocate
@@ -39170,7 +38719,6 @@ ras_ev_value:	/* No optional text */
 	DB_PARM_NAME	varname;
 	PSS_DECVAR 	*var;
 	DB_DT_ID	dtype;
-	bool		found = FALSE;
 	i4		err_code;
 
 	if ($Yisdbp == FALSE)
@@ -39184,22 +38732,9 @@ ras_ev_value:	/* No optional text */
 	/* Find local var/parm by the specified name */
 	STmove($2, ' ', DB_PARM_MAXNAME, varname.db_parm_name);
 
-	for (var = (PSS_DECVAR *)$Ydbpinfo->pss_varq.q_next;
-	     var != (PSS_DECVAR *)&$Ydbpinfo->pss_varq;
-	     var = (PSS_DECVAR *)var->pss_queue.q_next)
+	if (psl_lookup_var(&$Ydbpinfo->pss_varq, $2, FALSE, &var, NULL))
 	{
-	    if (var->pss_out)
-		continue;
-	    if (MEcmp((PTR)&varname, (PTR)&var->pss_varname,
-		sizeof(var->pss_varname)) == 0)
-	    {
-		found = TRUE;
-		break;
-	    }
-	}
-
-	if (!found)	/* Unknown local var/parm specified */
-	{
+	    /* Unknown local var/parm specified */
 	    _VOID_ psf_error(2403L, 0L, PSF_USERERR, &err_code,
 			     &psq_cb->psq_error, 1, STlength($2), $2);
 	    return (E_DB_ERROR);
@@ -44908,7 +44443,7 @@ reg_keywd:	    reg_tvp
 
         if (ult_check_macro(&cb->pss_trace,
 			PSS_TRACE_REGISTER, &val1, &val2))
-	{
+        {
 	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 		"Read REGISTER keyword (value %d)\n", $1);
 	}
@@ -51023,8 +50558,7 @@ psl_p_telem(
 	}
 	case PST_FWDVAR:
 	{
-	    register DB_ATT_NAME    *colname =
-					&sym->pst_value.pst_s_fwdvar.pst_atname;
+	    register DB_ATT_NAME *colname = &sym->pst_value.pst_s_fwdvar.pst_atname;
 	    i4 pst_qualdepth_ref = sym->pst_value.pst_s_fwdvar.pst_qualdepth_ref;
 	    PSS_RNGTAB *rngvar = NULL;
 
@@ -51152,28 +50686,12 @@ psl_p_telem(
 	    {
 		PST_J_MASK		*from_list =
 					    &from_list_stack[ctx->cb->pss_qualdepth];
-		bool			found = FALSE;
-		PSS_DECVAR		*var;
+		PSS_DECVAR		*var = NULL;
 
 		if (ctx->yyvarsp->isdbp)
 		{
-		    /* Search for the variable; innermost scope first. */
-		    for (var = (PSS_DECVAR *) ctx->yyvarsp->dbpinfo->pss_varq.q_next;
-			 var != (PSS_DECVAR *) &ctx->yyvarsp->dbpinfo->pss_varq;
-			 var = (PSS_DECVAR *) var->pss_queue.q_next
-			)
-		    {
-			if (var->pss_out)
-			    continue;
-
-			if (MEcmp((PTR) colname, (PTR) &var->pss_varname,
-			    sizeof(var->pss_varname)) == 0
-			   )
-			{
-			    found = TRUE;
-			    break;
-			}
-		    }
+		    (VOID) psl_lookup_var(&ctx->yyvarsp->dbpinfo->pss_varq,
+					(char*)colname, FALSE, &var, NULL);
 		}
 
 		/*
@@ -51185,7 +50703,7 @@ psl_p_telem(
 		if (BTcount((char *)from_list, PST_NUMVARS) == 0)
 		{
 		    /* If column was not found but there is a var */
-		    if (ctx->yyvarsp->isdbp && found)
+		    if (ctx->yyvarsp->isdbp && var != NULL)
 		    {
 			/*
 			** Fill in a CONST node.  We may have to allocate
@@ -51229,7 +50747,7 @@ psl_p_telem(
 		    ** as yet unseen from list table. However, to retain scope
 		    ** differences we do need to process what we can.
 		    */
-		    if (!found)	/* This must be a column as not dbproc symbol */
+		    if (var == NULL) /* This must be a column as not dbproc symbol */
 		    {
 			/* find attribute */
 			status = psl_fatt(ctx->cb, ctx->psq_cb, TRUE, colname, node,
@@ -52398,7 +51916,7 @@ psl_for_cond(
     ** Create a constant node for system variable "iirowcount".
     */
     rowcnt.pst_tparmtype = PST_LOCALVARNO;
-    rowcnt.pst_parm_no = 0;
+    rowcnt.pst_parm_no = PST_RCNT;
     rowcnt.pst_pmspec = PST_PMNOTUSED;
     rowcnt.pst_cqlang = DB_SQL;
     rowcnt.pst_origtxt = (char *) NULL;
@@ -59707,4 +59225,473 @@ QUEUE		*col_list)
     }
 
     return (E_DB_OK);
+}
+
+
+/*
+** Name: psl_define_var - Define a variable
+**
+** Description:
+**	Define a variable for dbp or temporaries.
+**	    
+** Input:
+**	cb		    ptr to PSF session CB
+**	name		    char pointer to name - null terminated
+**			    or max length that of DB_PARM_NAME
+**      chk_unique	    boolean to enforce uniqueness
+**	dbpinfo		    Address of relevant PSS_DBPINFO 
+**
+** Output
+**	err_blk		    address to receive error data
+**
+** Returns:
+**	E_DB_{OK,ERROR}
+**
+** History:
+**      21-Oct-2010 (kiria01) b123345
+**          Created consolidating repeated code.
+**	
+*/
+static DB_STATUS
+psl_define_var(
+	PSS_SESBLK	*cb,
+	char		*name,
+	bool		chk_unique,
+	PSS_DBPINFO	*dbpinfo,
+	DB_ERROR	*err_blk)
+{
+    DB_STATUS	status = E_DB_OK;
+    PSS_DECVAR	*var;
+
+    if (name && chk_unique)
+    {
+	QUEUE *varq;
+	DB_PARM_NAME varname;
+
+	STmove(name, ' ', sizeof(varname), (char *)&varname);
+
+	if (cb->pss_dbp_flags & PSS_PARSING_SET_PARAM)
+	    varq = &dbpinfo->pss_setparmq;
+	else if (cb->pss_dbp_flags & PSS_PARSING_RESULT_ROW)
+	    varq = &dbpinfo->pss_resrowq;
+	else
+	    varq = &dbpinfo->pss_varq;
+
+	for (var = (PSS_DECVAR *)varq->q_next;
+	     var != (PSS_DECVAR *)varq;
+	     var = (PSS_DECVAR *)var->pss_queue.q_next)
+	{
+	    /* In the current release, scope levels are not
+	    ** implemented thus there can be only one
+	    ** BEGIN-END block, moreover parameters should
+	    ** be treated as being at the same scope as local vars
+	    ** which implies that names should be unique. */
+	    if (MEcmp((PTR)&varname, (PTR)&var->pss_varname,
+		sizeof(var->pss_varname)) == 0)
+	    {
+		i4 err_code;
+		/* Found a duplicate name */
+		(VOID) psf_error(2401L, 0L, PSF_USERERR,
+			&err_code, err_blk, 1, STlen(name), name);
+		return (E_DB_ERROR);
+	    }
+	}
+    }
+    /* Allocate memory for the var entry */
+    if (status = psf_malloc(cb, &cb->pss_ostream, (i4)sizeof(PSS_DECVAR), 
+		(PTR *)&var, err_blk))
+	return (status);
+    dbpinfo->pss_curvar = var;
+    var->pss_next = NULL;
+    if (name)
+	STmove((char*)name, ' ', (i4)sizeof(var->pss_varname), (char *)&var->pss_varname);
+    else
+	/* Un-named temporary or filled in later */
+	MEfill((i4)sizeof(var->pss_varname), 0, (PTR)&var->pss_varname);
+
+    var->pss_scope = dbpinfo->pss_bescope;
+    var->pss_out = FALSE;
+    var->pss_flags = 0;
+
+    var->pss_dbdata.db_data = NULL;
+    var->pss_dbdata.db_length = (i4)sizeof(i4);
+    var->pss_dbdata.db_prec = 0;
+    var->pss_dbdata.db_collID = DB_NOCOLLATION;
+    var->pss_dbdata.db_datatype = DB_INT_TYPE;
+    var->pss_default = 1;
+
+    /* Attach element to the list, last one will be at the queue head. */
+    if (cb->pss_dbp_flags & PSS_PARSING_SET_PARAM)
+    {
+	var->pss_no = dbpinfo->pss_setparmno++;
+	QUinsert((QUEUE *)var, &dbpinfo->pss_setparmq);
+    }
+    else if (cb->pss_dbp_flags & PSS_PARSING_RESULT_ROW)
+    {
+	var->pss_no = dbpinfo->pss_resrowno++;
+	QUinsert((QUEUE *)var, &dbpinfo->pss_resrowq);
+    }
+    else
+    {
+	var->pss_no = dbpinfo->pss_varno++;
+	QUinsert((QUEUE *)var, &dbpinfo->pss_varq);
+    }
+    return status;
+}
+
+
+/*
+** Name: psl_lookup_var - Lookup a variable
+**
+** Description:
+**	Lookup a variable for dbp or check existance
+**	    
+** Input:
+**	q		    Symbol queue to use
+**	name		    char pointer to name - null terminated
+**			    or max length that of DB_PARM_NAME
+**      required	    boolean to enforce presence
+**
+** Output
+**	pvar		    address to receive address of block found
+**	err_blk		    address to receive error data
+**
+** Returns:
+**	E_DB_OK		    Symbol found & potentially returned
+**	E_DB_INFO	    Symbol not found
+**	E_DB_ERROR	    Serious error
+**
+** History:
+**      21-Oct-2010 (kiria01) b123345
+**          Created consolidating repeated code.
+**	
+*/
+static DB_STATUS
+psl_lookup_var(
+	QUEUE		*q,
+	char		*name,
+	bool		required,
+	PSS_DECVAR	**pvar,
+	DB_ERROR	*err_blk)
+{
+    PSS_DECVAR	*var = (PSS_DECVAR *)q->q_next;
+    DB_PARM_NAME varname;
+
+    STmove(name, ' ', sizeof(varname), (char *)&varname);
+
+    /* Find local var/parm by the specified name. */
+    while (var != (PSS_DECVAR *)q)
+    {
+	if (var->pss_out)
+	    continue;
+	if (MEcmp((PTR) &varname, (PTR) &var->pss_varname,
+			sizeof(var->pss_varname)) == 0)
+	{
+	    if (pvar)
+		*pvar = var;
+	    return E_DB_OK;
+	}
+	var = (PSS_DECVAR *)var->pss_queue.q_next;
+    }
+
+    if (required)
+    {
+	i4 err_code;
+	/* Unknown local variable or parm spec'd. */
+	(VOID) psf_error(2403L, 0L, PSF_USERERR,
+		&err_code, err_blk, 1, STlen(name), name);
+	return (E_DB_ERROR);
+    }
+    if (pvar)
+	*pvar = NULL;
+    return E_DB_INFO;
+}
+
+
+/*
+** Name: psl_dbp_finalize - Finalize a DBP definition.
+**
+** Description:
+**	Completes the definition of a procedure or level 0 statement lists
+**	    
+** Input:
+**	cb		    ptr to PSF session CB
+**	stmt_body	    pointer to list of statements
+**      full_funct	    boolean to apply fuller finalisation
+**	dbpinfo		    Address of relevant PSS_DBPINFO 
+**
+** Output
+**	decvarp		    address of PST_DECVAR to receive address of block found.
+**			    (don't confuse with PSS_DECVAR)
+**	err_blk		    address to receive error data
+**
+** Returns:
+**	E_DB_OK		    Successful
+**	E_DB_ERROR	    Serious error
+**
+** History:
+**      21-Oct-2010 (kiria01) b123345
+**          Created consolidating repeated code.
+**	
+*/
+static DB_STATUS
+psl_dbp_finalize(
+	PSS_SESBLK	*cb,
+	PST_STATEMENT	*stmt_body,
+	bool		full_funct,
+	PSS_DBPINFO	*dbpinfo,
+	PST_DECVAR	**decvarp,
+	DB_ERROR	*err_blk)
+{
+    DB_STATUS status = E_DB_OK;
+    PST_STATEMENT *lastnd;
+    PST_DECVAR *decvar;
+    register PSS_DECVAR *var;
+
+    if (!stmt_body || stmt_body == PST_STATEMENT_REMOVED)
+    {
+	i4 err_code;
+
+	/* Empty statement blocks not allowed yet. */
+	(VOID) psf_error(2425L, 0L, PSF_USERERR,
+		    &err_code, err_blk, 0);
+	return (E_DB_ERROR);
+    }
+
+    if (~dbpinfo->pss_flags & PSS_NONDBP_INFO)
+    {
+	/*
+	** Always allocate and add trailing RETURN statement node if in DBP.  This
+	** cheap node clarifies control during execution.  Lastnd could be null after
+	** ENDLOOP though a trailing ENDLOOP couldn't really happen here.
+	** Do not attach the RETURN node for internal procedures (PSQ_IPROC)
+	** as they handle their own return status in QEF.
+	*/
+	for (lastnd = stmt_body; lastnd && lastnd->pst_next; lastnd = lastnd->pst_next)
+	    /*SKIP*/;
+
+	if (lastnd &&
+	    lastnd->pst_mode != PSQ_RETURN && lastnd->pst_mode != PSQ_IPROC)
+	{
+	    PST_STATEMENT *rnode;
+
+	    if (status = psl_init_dbp_stmt(cb, dbpinfo, PSQ_RETURN, PST_RTN_TYPE,
+			&rnode, err_blk))
+		return status;
+
+	    /*rnode->pst_specific.pst_rtn.pst_rtn_value = NULL;*/
+	    lastnd->pst_next = rnode;
+	}
+    }
+
+    /* Allocate memory for PST_DECVAR */
+    if (status = psf_malloc(cb, &cb->pss_ostream, (i4)sizeof(*decvar), 
+			    (PTR *)&decvar, err_blk))
+	return status;
+    *decvarp = decvar;
+
+    /* Init var count to zero */
+    decvar->pst_nvars = 0;
+
+    /* If no vars are declared, OPF would like to know the number of the first
+    ** var in this declare, had there been one so default to $Ydbpinfo->pss_varno */
+    decvar->pst_first_varno = dbpinfo->pss_varno;
+
+    /* Place local vars out of scope and count them */
+    for (var = (PSS_DECVAR *)dbpinfo->pss_varq.q_next;
+	    var != (PSS_DECVAR *)&dbpinfo->pss_varq;
+		    var = (PSS_DECVAR *)var->pss_queue.q_next)
+    {
+	if (var->pss_scope == dbpinfo->pss_bescope)
+	{
+	    var->pss_out = TRUE;
+
+	    /* We're moving in the next direction, therefore
+	    ** the last local var is really the first one specified. */
+	    decvar->pst_first_varno = var->pss_no;
+	    decvar->pst_nvars++;
+	}
+    }
+
+    decvar->pst_vardef = NULL;
+    decvar->pst_varname = NULL;
+    decvar->pst_parmmode = NULL;
+
+    if (decvar->pst_nvars)
+    {
+	i4 i = 0;
+
+	/* Allocate memory for local variable array */
+	if (status = psf_malloc(cb, &cb->pss_ostream,
+			decvar->pst_nvars * (i4)sizeof(DB_DATA_VALUE), 
+			(PTR *)&decvar->pst_vardef, err_blk))
+	    return status;
+
+	if (full_funct)
+	{
+	    /* Allocate memory for parm name array */
+	    if (status = psf_malloc(cb, &cb->pss_ostream,
+			decvar->pst_nvars * (i4)sizeof(DB_PARM_NAME), 
+			(PTR *)&decvar->pst_varname, err_blk))
+		return (status);
+
+	    /* Allocate memory for parm mode array */
+	    if (status = psf_malloc(cb, &cb->pss_ostream,
+			decvar->pst_nvars * (i4)sizeof(i4), 
+			(PTR *)&decvar->pst_parmmode, err_blk))
+		return (status);
+	}
+
+	/* Copy db data values, oldest one first. */
+	for (var = (PSS_DECVAR *)dbpinfo->pss_varq.q_prev;
+		    var != (PSS_DECVAR *)&dbpinfo->pss_varq;
+			    var = (PSS_DECVAR *)var->pss_queue.q_prev)
+	{
+	    if (var->pss_scope != dbpinfo->pss_bescope)
+		continue;
+
+	    decvar->pst_vardef[i] = var->pss_dbdata;
+	    if (full_funct)
+	    {
+		decvar->pst_varname[i] = var->pss_varname;
+		decvar->pst_parmmode[i] =
+			(var->pss_flags & PSS_PPOUT)
+			? PST_PMOUT
+			: (var->pss_flags & PSS_PPINOUT)
+			? PST_PMINOUT
+			: PST_PMIN;
+	    }
+
+	    /* LRC requested that all local vars have a default value
+	    ** assigned, even if 'not null not default' has been specified,
+	    ** for this reason the if below has been commented out and
+	    ** getempty will be called for all local vars.
+	    **
+	    **  Allocate memory for default values as necessary. *
+	    **	if (var->pss_default)
+	    **
+	    ** NOTE: The initialisation is correct in as much as the
+	    **	variables should have well defined values except
+	    **	there may have been DEFAULT values specified and
+	    **	we are simply ignoring them!
+	    */
+	    if (var->pss_default || !full_funct)
+	    {
+		ADF_CB *adf_scb = (ADF_CB*)cb->pss_adfcb;
+		if (status = psf_malloc(cb, &cb->pss_ostream,
+				decvar->pst_vardef[i].db_length,
+				(PTR *)&decvar->pst_vardef[i].db_data, err_blk))
+		    return status;
+		if (status = adc_getempty (adf_scb, &decvar->pst_vardef[i]))
+		    return status;
+	    }
+	    i++;
+	}
+    }
+
+    return status;
+}
+
+
+/*
+** Name: psl_dbp_init_nondbp - Setuo a non-DBP DBP definition.
+**
+** Description:
+**	Sets up the definition of a 0 level procedure
+**	    
+** Input:
+**	cb		    ptr to PSF session CB
+**	yyvarsp		    parser stack
+**
+** Output
+**	err_blk		    address to receive error data
+**
+** Returns:
+**	E_DB_OK		    Successful
+**	E_DB_ERROR	    Serious error
+**
+** History:
+**      21-Oct-2010 (kiria01) b123345
+**          Created consolidating repeated code.
+**	
+*/
+static DB_STATUS
+psl_dbp_init_nondbp(
+	PSS_SESBLK	*cb,
+	PSS_YYVARS	*yyvarsp,
+	DB_ERROR	*err_blk)
+{
+    DB_STATUS status = E_DB_OK;
+
+    MEfill((i4)sizeof(yyvarsp->nondbpinfo), 0, &yyvarsp->nondbpinfo);
+    (VOID) QUinit(&yyvarsp->nondbpinfo.pss_loopq);
+    (VOID) QUinit(&yyvarsp->nondbpinfo.pss_ifq);
+    (VOID) QUinit(&yyvarsp->nondbpinfo.pss_setparmq);
+    (VOID) QUinit(&yyvarsp->nondbpinfo.pss_varq);
+    (VOID) QUinit(&yyvarsp->nondbpinfo.pss_resrowq);
+        	    
+    /* Declare that we are in a pseudo-DBP context as we may want a
+    ** series of statements executing including especially a block
+    ** of local variables as temporaries. */
+    yyvarsp->nondbpinfo.pss_flags |= PSS_NONDBP_INFO;
+
+    yyvarsp->dbpinfo = &yyvarsp->nondbpinfo;
+
+    if (!cb->pss_ostream.psf_mstream.qso_handle)
+	status = psf_mopen(cb, QSO_QTREE_OBJ, &cb->pss_ostream, err_blk);
+
+    return status;
+}
+
+
+/*
+** Name: psl_dbp_define_builtins - Define the builtins
+**
+** Description:
+**	Defines the core readonly symbols
+**	    
+** Input:
+**	cb		    ptr to PSF session CB
+**	dbpinfo		    Address of relevant PSS_DBPINFO 
+**
+** Output
+**	err_blk		    address to receive error data
+**
+** Returns:
+**	E_DB_OK		    Successful
+**	E_DB_ERROR	    Serious error
+**
+** History:
+**      21-Oct-2010 (kiria01) b123345
+**          Created consolidating repeated code.
+**	
+*/
+static DB_STATUS
+psl_dbp_define_builtins(
+	PSS_SESBLK	*cb,
+	PSS_DBPINFO	*dbpinfo,
+	DB_ERROR	*err_blk)
+{
+    DB_STATUS status = E_DB_OK;
+    bool upcase = (*cb->pss_dbxlate & CUI_ID_REG_U) != 0;
+
+    /*
+    ** iirowcount must be first and iierrornumber must be second;
+    ** (see defn of PST_RCNT and PST_ERNO).
+    ** This is due to fundamental assumption in OPF. Thus, even if not needed
+    ** by a caller these must be defined.
+    */
+    if (status = psl_define_var(cb, NULL, FALSE, dbpinfo, err_blk))
+	return (status);
+    STmove(upcase?"IIROWCOUNT":"iirowcount", ' ',
+		(i4)sizeof(dbpinfo->pss_curvar->pss_varname),
+		(char *)&dbpinfo->pss_curvar->pss_varname);
+
+    if (status = psl_define_var(cb, NULL, FALSE, dbpinfo, err_blk))
+	return (status);
+    STmove(upcase?"IIERRORNUMBER":"iierrornumber", ' ',
+		(i4)sizeof(dbpinfo->pss_curvar->pss_varname),
+		(char *)&dbpinfo->pss_curvar->pss_varname);
+
+    return status;
 }

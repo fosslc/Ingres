@@ -6177,6 +6177,10 @@ opc_cparmret(
 ** History:
 **      12-nov-92 (jhahn)
 **          created (from opc_lvar_row)
+**	21-Oct-2010 (kiria01) b123345
+**	    Support PST_DV_TYPE even outside DBP context so that we can support
+**	    the use of temporary variables. In this case do not assume the
+**	    presence of the .pst_parms - it might not be valid.
 [@history_template@]...
 */
 VOID
@@ -6194,7 +6198,8 @@ opc_lvar_info(
     i4			first_rowno;
 
     decvar = global->ops_procedure->pst_parms;
-    if (lvarno >= decvar->pst_first_varno &&
+    if (decvar &&
+	    decvar->pst_first_varno <= lvarno &&
 	    lvarno < decvar->pst_first_varno + decvar->pst_nvars
 	)
     {
@@ -6210,7 +6215,7 @@ opc_lvar_info(
 	    opc_pst = (OPC_PST_STATEMENT *) decvar_stmt->pst_opf;
 	    decvar = decvar_stmt->pst_specific.pst_dbpvar;
 
-	    if (lvarno >= decvar->pst_first_varno &&
+	    if (decvar->pst_first_varno <= lvarno &&
 		    lvarno < decvar->pst_first_varno + decvar->pst_nvars
 		)
 	    {
