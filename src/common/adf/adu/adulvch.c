@@ -917,6 +917,10 @@ adu_5lvch_lower(ADF_CB      	*scb,
 **         Created.
 **	09-may-2007 (gupsh01)
 **	   Added support for UTF8.
+**	13-Oct-2010 (thaju02) B124469
+**	    Cpn's per_length is in byte units. Adu_redeem is expecting 
+**	    length in bytes. For UTF8, tally bytes and push byte count into 
+**	    cpn for adu_redeem.
 */
 static DB_STATUS
 adu_6lvch_left_slave(ADF_CB	    *scb,
@@ -928,7 +932,7 @@ adu_6lvch_left_slave(ADF_CB	    *scb,
     DB_TEXT_STRING   *in_seg = (DB_TEXT_STRING *) dv_in->db_data;
     DB_TEXT_STRING   *out_seg = (DB_TEXT_STRING *) dv_out->db_data;
     DB_DATA_VALUE    count_dv;
-    i4               count;
+    i4               count, byte_count = 0;
 
     for (;;)
     {
@@ -969,6 +973,16 @@ adu_6lvch_left_slave(ADF_CB	    *scb,
 				  dv_out);
 	    if (status)
 		break;
+
+	    if ((scb->adf_utf8_flag & AD_UTF8_ENABLED) && 
+		(work->adw_fip.fip_under_dv.db_datatype == DB_VCH_TYPE))
+	    {
+		count_dv.db_data = (PTR) &byte_count;
+
+		if (status = adu_23octetlength(scb, dv_out, &count_dv))
+		    break;
+		work->adw_adc.adc_longs[ADW_L_CPNBYTES] += byte_count;
+	    }
 	}
 	else /* count of char's still needed > 0 */
 	{
@@ -976,6 +990,16 @@ adu_6lvch_left_slave(ADF_CB	    *scb,
 			     dv_in->db_length,
 			     dv_out->db_data);
 	    dv_out->db_length = dv_in->db_length;
+
+	    if ((scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		(work->adw_fip.fip_under_dv.db_datatype == DB_VCH_TYPE))
+	    {
+		count_dv.db_data = (PTR) &byte_count;
+
+		if (status = adu_23octetlength(scb, dv_in, &count_dv))
+		    break;
+		work->adw_adc.adc_longs[ADW_L_CPNBYTES] += byte_count;
+	    }
 
 	    work->adw_shared.shd_exp_action = ADW_CONTINUE;
 	}
@@ -1053,6 +1077,10 @@ adu_6lvch_left_slave(ADF_CB	    *scb,
 **         Make left cope with negative counts.
 **      23-may-2007 (smeke01) b118342/b118344
 **	    Work with i8.
+**	13-Oct-2010 (thaju02) B124469
+**	    Cpn's per_length is in byte units. Adu_redeem is expecting
+**	    length in bytes. For UTF8, tally bytes and push byte count into
+**	    cpn for adu_redeem.
 */
 DB_STATUS
 adu_7lvch_left(ADF_CB        *scb,
@@ -1119,6 +1147,8 @@ adu_7lvch_left(ADF_CB        *scb,
 	    work->adw_shared.shd_l1_check = 0;
 	    work->adw_shared.shd_l0_check = 0;
 
+	    work->adw_adc.adc_longs[ADW_L_CPNBYTES] = 0;
+
 	    status = adu_lo_filter(scb,
 				   dv_in,
 				   dv_out,
@@ -1126,9 +1156,13 @@ adu_7lvch_left(ADF_CB        *scb,
 				   work,
 				   (ADP_C_BEGIN_MASK | ADP_C_END_MASK),
 				   NULL);
+	    
 	    out_cpn->per_length0 = work->adw_shared.shd_l0_check;
 	    out_cpn->per_length1 = work->adw_shared.shd_l1_check;
 
+	    if ((scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		(work->adw_fip.fip_under_dv.db_datatype == DB_VCH_TYPE))
+		out_cpn->per_length1 = work->adw_adc.adc_longs[ADW_L_CPNBYTES];
 	}
 	else
 	{
@@ -1210,6 +1244,10 @@ adu_7lvch_left(ADF_CB        *scb,
 **         Created.
 **	09-may-2007 (gupsh01)
 **	   Added support for UTF8.
+**      13-Oct-2010 (thaju02) B124469
+**          Cpn's per_length is in byte units. Adu_redeem is expecting
+**          length in bytes. For UTF8, tally bytes and push byte count into
+**          cpn for adu_redeem.
 */
 static DB_STATUS
 adu_8lvch_right_slave(ADF_CB	    *scb,
@@ -1221,7 +1259,7 @@ adu_8lvch_right_slave(ADF_CB	    *scb,
     DB_TEXT_STRING   *in_seg = (DB_TEXT_STRING *) dv_in->db_data;
     DB_TEXT_STRING   *out_seg = (DB_TEXT_STRING *) dv_out->db_data;
     DB_DATA_VALUE    count_dv;
-    i4          count;
+    i4          count, byte_count = 0;
     i4          amount_needed = 0;
 
     for (;;)
@@ -1282,6 +1320,16 @@ adu_8lvch_right_slave(ADF_CB	    *scb,
 		    status = adu_7strlength(scb, dv_out, &count_dv);
 		    if (status)
 		        break;
+
+		    if ((scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			(work->adw_fip.fip_under_dv.db_datatype == DB_VCH_TYPE))
+		    {
+			count_dv.db_data = (PTR) &byte_count;
+
+			if (status = adu_23octetlength(scb, dv_out, &count_dv))
+			    break;
+			work->adw_adc.adc_longs[ADW_L_CPNBYTES] += byte_count;
+		    }
 	    	}
 		else
 		    count = out_seg->db_t_count;
@@ -1292,6 +1340,16 @@ adu_8lvch_right_slave(ADF_CB	    *scb,
 				 dv_in->db_length,
 				 dv_out->db_data);
 		dv_out->db_length = dv_in->db_length;
+
+		if ((scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		    (work->adw_fip.fip_under_dv.db_datatype == DB_VCH_TYPE))
+		{
+		    count_dv.db_data = (PTR) &byte_count;
+
+		    if (status = adu_23octetlength(scb, dv_in, &count_dv))
+			break;
+		    work->adw_adc.adc_longs[ADW_L_CPNBYTES] += byte_count;
+		} 
 	    }
 	    work->adw_shared.shd_l1_check += count;
 	}
@@ -1368,6 +1426,10 @@ adu_8lvch_right_slave(ADF_CB	    *scb,
 **         Created.
 **      23-may-2007 (smeke01) b118342/b118344
 **	    Work with i8.
+**	13-Oct-2010 (thaju02) B124469
+**	    inp_cpn per_length1 is in byte units, whereas N is in char units.
+**	    Convert inp_cpn per_length from byte to char units and  feed 
+**	    adu_redeem length in bytes. 
 */
 DB_STATUS
 adu_9lvch_right(ADF_CB        *scb,
@@ -1382,6 +1444,7 @@ adu_9lvch_right(ADF_CB        *scb,
     ADP_LO_WKSP            *work = (ADP_LO_WKSP *) dv_work->db_data;
     ADP_POP_CB		   *inpop;
     i4                count;
+    i4		      incpn_length1 = 0;
 
     for (;;)
     {
@@ -1422,20 +1485,38 @@ adu_9lvch_right(ADF_CB        *scb,
 	    }
 
 	    /* Now, need to ignore all char's before that */
-	    
+	    if ((scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		(work->adw_fip.fip_under_dv.db_datatype == DB_VCH_TYPE))
+	    {
+		/*
+		** for utf8, cpn per_length1 is in byte units, but count 
+		** is in char units. Compute lob length in char units.
+		*/
+		DB_DATA_VALUE	count_dv;
+
+		count_dv.db_data = (PTR)&incpn_length1;
+		count_dv.db_length = sizeof(incpn_length1);
+		count_dv.db_datatype = DB_INT_TYPE;
+		count_dv.db_prec = 0;
+		if (status = adu_7strlength(scb, dv_in, &count_dv))
+		    break;
+	    }
+	    else
+		incpn_length1 = inp_cpn->per_length1;
+
 	    work->adw_adc.adc_longs[ADW_L_LRCOUNT] =
-		                  inp_cpn->per_length1 - count;
+		                  incpn_length1 - count;
 
 #ifdef RIGHTOPZ
 	    inpop = &work->adw_fip.fip_pop_cb;
-	    if (inp_cpn->per_length1 > count)
+	    if (incpn_length1 > count)
 	    {
 		i4			redeem_offset;
 		i4			seek_offset;
 		i4			seek_segno;
 
 		/* Try to skip reading segments we don't need  */
-		redeem_offset = inp_cpn->per_length1 - count;
+		redeem_offset = incpn_length1 - count;
 		seek_offset = 0;
 		seek_segno = 0;
 		status = adu_opz_skip(scb, dv_in, work, redeem_offset, 
@@ -1454,6 +1535,7 @@ adu_9lvch_right(ADF_CB        *scb,
 
 	    work->adw_shared.shd_l1_check = 0;
 	    work->adw_shared.shd_l0_check = 0;
+	    work->adw_adc.adc_longs[ADW_L_CPNBYTES] = 0;
 
 	    status = adu_lo_filter(scb,
 				   dv_in,
@@ -1464,6 +1546,9 @@ adu_9lvch_right(ADF_CB        *scb,
                                    NULL);
 	    out_cpn->per_length0 = work->adw_shared.shd_l0_check;
 	    out_cpn->per_length1 = work->adw_shared.shd_l1_check;
+            if ((scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+                (work->adw_fip.fip_under_dv.db_datatype == DB_VCH_TYPE))
+                out_cpn->per_length1 = work->adw_adc.adc_longs[ADW_L_CPNBYTES];
 	}
 	else
 	{
@@ -1767,6 +1852,10 @@ adu_free_objects(PTR 	    storage_location,
 ** History:
 **	04-Oct-2006 (stial01)
 **         Created.
+**	13-Oct-2010 (thaju02) B124469
+**	    Cpn's per_length is in byte units. Adu_redeem is expecting
+**	    length in bytes. For UTF8, tally bytes and push byte count into
+**	    cpn for adu_redeem.
 */
 static DB_STATUS
 adu_12lvch_substr_slave(ADF_CB	    *scb,
@@ -1778,7 +1867,7 @@ adu_12lvch_substr_slave(ADF_CB	    *scb,
     DB_TEXT_STRING   *in_seg = (DB_TEXT_STRING *) dv_in->db_data;
     DB_TEXT_STRING   *out_seg = (DB_TEXT_STRING *) dv_out->db_data;
     DB_DATA_VALUE    count_dv;
-    i4          count = 0;
+    i4          count = 0, byte_count = 0;
     i4          amount_needed = 0;
 
     if (!work->adw_adc.adc_longs[ADW_L_SUBSTR_POS] &&
@@ -1822,7 +1911,9 @@ adu_12lvch_substr_slave(ADF_CB	    *scb,
 	    if (work->adw_fip.fip_under_dv.db_datatype == DB_NVCHR_TYPE)
 		status = adu_nvchr_right(scb, dv_in, &count_dv, dv_in);
 	    else /* string or byte type */
+	    {
 		status = adu_10strright(scb, dv_in, &count_dv, dv_in);
+	    }
 	    work->adw_adc.adc_longs[ADW_L_SUBSTR_POS] = 0;
 	}
 
@@ -1839,7 +1930,18 @@ adu_12lvch_substr_slave(ADF_CB	    *scb,
 	    if (work->adw_fip.fip_under_dv.db_datatype == DB_NVCHR_TYPE)
 		status = adu_nvchr_left(scb, dv_in, &count_dv, dv_out);
 	    else /* string or byte type */
+	    {
 		status = adu_6strleft(scb, dv_in, &count_dv, dv_out);
+
+		if ((scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		    (work->adw_fip.fip_under_dv.db_datatype == DB_VCH_TYPE))
+		{
+		    count_dv.db_data = (PTR) &byte_count;
+
+		    status = adu_23octetlength(scb, dv_out, &count_dv);
+		    work->adw_adc.adc_longs[ADW_L_CPNBYTES] += byte_count;
+		}
+	    }
 	    work->adw_shared.shd_exp_action = ADW_FLUSH_STOP;
 	}
 	else
@@ -1847,6 +1949,15 @@ adu_12lvch_substr_slave(ADF_CB	    *scb,
 	    work->adw_shared.shd_exp_action = ADW_CONTINUE;
 	    MECOPY_VAR_MACRO(dv_in->db_data, dv_in->db_length, dv_out->db_data);
 	    dv_out->db_length = dv_in->db_length;
+            if ((scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		(work->adw_fip.fip_under_dv.db_datatype == DB_VCH_TYPE))
+	    {
+                count_dv.db_data = (PTR) &byte_count;
+
+                if (status = adu_23octetlength(scb, dv_in, &count_dv))
+		    break;
+                work->adw_adc.adc_longs[ADW_L_CPNBYTES] += byte_count;
+	    }
 	}
 
 	/* Maintain l1_check only if ADW_L_SUBSTR_CNT */
@@ -1952,6 +2063,10 @@ adu_13lvch_substr(ADF_CB        *scb,
 **         Created.
 **      23-may-2007 (smeke01) b118342/b118344
 **	    Work with i8.
+**	13-Oct-2010 (thaju02) B124469
+**	    Cpn's per_length is in byte units. Adu_redeem is expecting
+**	    length in bytes. For UTF8, tally bytes and push byte count into
+**	    cpn for adu_redeem.
 **
 */
 DB_STATUS
@@ -2078,6 +2193,7 @@ adu_14lvch_substrlen(ADF_CB        *scb,
 	    work->adw_shared.shd_l0_check = 0;
 
 	    work->adw_adc.adc_longs[ADW_L_SUBSTR_CNT] = count;
+	    work->adw_adc.adc_longs[ADW_L_CPNBYTES] = 0;
 
 	    status = adu_lo_filter(scb,
 				   dv_in,
@@ -2088,6 +2204,10 @@ adu_14lvch_substrlen(ADF_CB        *scb,
 				   NULL);
 	    out_cpn->per_length0 = work->adw_shared.shd_l0_check;
 	    out_cpn->per_length1 = work->adw_shared.shd_l1_check;
+
+	    if ((scb->adf_utf8_flag & AD_UTF8_ENABLED) && 
+		(work->adw_fip.fip_under_dv.db_datatype == DB_VCH_TYPE))
+		out_cpn->per_length1 = work->adw_adc.adc_longs[ADW_L_CPNBYTES];
 	}
 	else
 	{
@@ -3748,4 +3868,141 @@ adu_long_unorm(ADF_CB      	*adf_scb,
     else
 	*out_cpn = *inp_cpn;
     return status;
+}
+
+/*
+** Name: adu_19lvch_chrlen - return length of lob in char units.
+**	 
+** Description:
+**	This file implements length(long varchar) for UTF8.
+**	Result is in char units.
+**
+** Inputs:
+**      scb                              ADF session control block.
+**      cpn_dv                           Ptr to DB_DATA_VALUE describing
+**                                       input coupon
+**      rdv                              Ptr to DB_DATA_VALUE describing
+**                                       output area for resulting length
+**
+** Outputs:
+**      scb->adf_errcb                   Filled as appropriate.
+**      *rdv->db_data                    resulting length
+**
+** Returns:
+**	DB_STATUS
+**
+** Exceptions:
+**      None.
+**
+** Side Effects: 
+**      None.
+**
+** History:
+**	13-Oct-2010 (thaju02) B124469
+**	    Created. 
+*/
+DB_STATUS
+adu_19lvch_chrlen(ADF_CB	*scb,
+		DB_DATA_VALUE	*cpn_dv,
+		DB_DATA_VALUE	*rdv)
+{
+    DB_STATUS		status = E_DB_OK;
+    DB_STATUS		local_stat = E_DB_OK;
+    ADP_PERIPHERAL	*inp_cpn = (ADP_PERIPHERAL *) cpn_dv->db_data;
+    DB_DATA_VALUE	work_dv;
+    ADP_LO_WKSP		*work = 0;
+    i4			per_length1;
+    i4			count = 0;
+    i4			totcount = 0;
+    bool                done = 0;
+    ADP_POP_CB 		in_pop_cb;
+    ADP_POP_CB		*pop_cb_ptr =  &in_pop_cb;
+    DB_DATA_VALUE	under_dv, count_dv;
+    DB_STATUS		(*fcn_fexi)() = NULL;
+
+    for (;;)
+    {
+	work = (ADP_LO_WKSP *)MEreqmem(0, sizeof(ADP_LO_WKSP) +
+                                            (2 * DB_MAXTUP), TRUE, &status);
+	if (work == NULL || status != OK)
+	    break;
+	work_dv.db_data = (PTR)work;
+	work_dv.db_length = sizeof(ADP_LO_WKSP) + (2 * DB_MAXTUP);
+	work_dv.db_datatype = work_dv.db_prec = 0;
+	work_dv.db_collID = -1;
+	
+	if ((inp_cpn->per_length0 != 0) || (inp_cpn->per_length1 != 0))
+	{
+	    if (status = adu_0lo_setup_workspace(scb, cpn_dv, &work_dv))
+		break;
+
+	    work->adw_shared.shd_l1_check = 0;
+	    work->adw_shared.shd_l0_check = 0;
+
+	    if (status = adi_per_under(scb, cpn_dv->db_datatype, &under_dv))
+		break;
+
+	    *pop_cb_ptr = work->adw_fip.fip_pop_cb;
+	    pop_cb_ptr->pop_segment = &work->adw_fip.fip_seg_dv;
+	    pop_cb_ptr->pop_coupon = cpn_dv;
+	    pop_cb_ptr->pop_continuation = ADP_C_BEGIN_MASK;
+
+            count_dv.db_data = (PTR) &count;
+            count_dv.db_length = sizeof(count);
+            count_dv.db_datatype = DB_INT_TYPE;
+            count_dv.db_prec = 0;
+
+	    fcn_fexi = Adf_globs->Adi_fexi[ADI_01PERIPH_FEXI].adi_fcn_fexi;
+    
+	    while (status == E_DB_OK &&
+	    	!(done && work->adw_shared.shd_exp_action != ADW_FLUSH_SEGMENT))
+	    {
+		if (work->adw_shared.shd_exp_action != ADW_FLUSH_SEGMENT)
+		{
+		    if (status = (*fcn_fexi)(ADP_GET, pop_cb_ptr))
+		    {
+			if (DB_FAILURE_MACRO(status) ||
+				(pop_cb_ptr->pop_error.err_code != 
+				E_AD7001_ADP_NONEXT))
+			    return adu_error(scb, 
+				pop_cb_ptr->pop_error.err_code, 0);
+
+			if (pop_cb_ptr->pop_error.err_code == 
+				E_AD7001_ADP_NONEXT)
+			{
+			    status = E_DB_OK;
+			    done = TRUE;
+			}
+		    }
+		    pop_cb_ptr->pop_continuation &= ~ADP_C_BEGIN_MASK;
+		    pop_cb_ptr->pop_continuation &= ~ADP_C_RANDOM_MASK;
+		}
+
+		if (status = adu_22charlength(scb, pop_cb_ptr->pop_segment, 
+		    	&count_dv))
+		    break;
+
+		totcount += count;
+
+		work->adw_shared.shd_exp_action = ADW_CONTINUE;
+
+		if (done && work->adw_shared.shd_exp_action != ADW_FLUSH_SEGMENT)
+		    pop_cb_ptr->pop_continuation |= ADP_C_END_MASK;
+	    }
+	}
+
+        if (rdv->db_length == 2)
+            *(i2 *)rdv->db_data = totcount;
+        else
+            *(i4 *)rdv->db_data = totcount;
+	break;
+    }
+
+    /* clean up */
+    local_stat = (*fcn_fexi)(ADP_CLEANUP, pop_cb_ptr);
+
+    if (work)
+	MEfree((PTR)work);
+
+    return(status);
 }

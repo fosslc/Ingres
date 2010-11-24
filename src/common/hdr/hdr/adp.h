@@ -101,6 +101,8 @@
 **	    adu_long_coerce
 **	05-May-2009 (kiria01) b122030
 **	    Added prototype for adu_long_unorm
+**	13-Oct-2010 (thaju02) B124469
+**	    Added prototype for adu_19lvch_chrlen.
 */
 
 /*
@@ -808,6 +810,11 @@ adu_18lvch_position(ADF_CB        *scb,
 		DB_DATA_VALUE *dv_from,
                 DB_DATA_VALUE *dv_work,
                 DB_DATA_VALUE *dv_pos);
+
+FUNC_EXTERN DB_STATUS
+adu_19lvch_chrlen(ADF_CB        *scb,
+                DB_DATA_VALUE   *cpn_dv,
+                DB_DATA_VALUE   *rdv);
 
 FUNC_EXTERN DB_STATUS
 adu_couponify(ADF_CB             *scb,
