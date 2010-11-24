@@ -11,6 +11,7 @@
 #include    <ulm.h>
 #include    <ulf.h>
 #include    <adf.h>
+#include    <adfops.h>
 #include    <dmf.h>
 #include    <dmtcb.h>
 #include    <scf.h>
@@ -772,12 +773,15 @@ opj_jeqc(
 **	    Added call to opv_pcjnbl for partitioned tables/|| queries.
 **	4-july-05 (inkdo01)
 **	    Add BY list columns to EQCs requiring histograms.
-[@history_line@]...
+**	19-oct-2010 (dougi)
+**	    Flag "0=1" type where clauses.
 */
 static bool
 opj_translate(
 	OPS_SUBQUERY       *subquery)
 {
+    PST_QNODE *nodep;
+
     opj_incopy(subquery,FALSE);		/* copy info from the subquery
 					** into the large arrays so that
 					** future expansion of the entries
@@ -801,6 +805,16 @@ opj_translate(
                                         ** which is always FALSE then return
                                         ** FALSE - FIXME -test ops_qfalse
                                         */
+
+    /* Now look for a constant folded FALSE predicate. */
+    if (subquery->ops_bfs.opb_bfconstants != (PST_QNODE *) NULL)
+     for (nodep = subquery->ops_bfs.opb_bfconstants; nodep &&
+		nodep->pst_sym.pst_type == PST_AND; nodep = nodep->pst_right)
+      if (nodep->pst_left && nodep->pst_left->pst_sym.pst_type == PST_COP &&
+		nodep->pst_left->pst_sym.pst_value.pst_s_op.pst_opno == 
+						ADI_IIFALSE_OP)
+	subquery->ops_bfs.opb_qfalse = TRUE;
+
     if (subquery->ops_sunion.opu_mask & OPU_NOROWS)
     {
 	if((subquery->ops_sqtype == OPS_UNION)
