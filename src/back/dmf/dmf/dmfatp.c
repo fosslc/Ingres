@@ -570,6 +570,8 @@
 **	12-Aug-2010 (miket) SIR 122403 SD 146192
 **	    Minor fix for hex encrypted tables - missed test to adjust
 **	    buffer for hex output display.
+**	30-Nov-2010 (kschendel) SIR 124685
+**	    dmf-get-srs proto now in dml.h.
 **/
 
 /*
@@ -5659,9 +5661,6 @@ DMP_DCB	    *dcb)
 	** Setup the FEXI functions for large object processing.
 	*/
 	{
-	    FUNC_EXTERN DB_STATUS	dmf_tbl_info();
-	    FUNC_EXTERN DB_STATUS	dmf_last_id();
-	    FUNC_EXTERN DB_STATUS	dmf_get_srs();
  
 	    status = adg_add_fexi(&adf_cb, ADI_01PERIPH_FEXI, dmpe_call);
 	    if (status != E_DB_OK)

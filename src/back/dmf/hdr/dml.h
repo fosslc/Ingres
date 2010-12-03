@@ -2,6 +2,9 @@
 **Copyright (c) 2004, 2010 Ingres Corporation
 */
 
+#include <spatial.h>
+
+
 /**
 ** Name: DML.H - Typedefs and constants for the logical layer.
 **
@@ -214,6 +217,8 @@
 **	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    Prototyped FEXI functions dmf_tbl_info(), dmf_last_id(),
 **	    several missing dmc_, dmx_xa_ functions.
+**	30-Nov-2010 (kschendel) SIR 124685
+**	    Add new dmf-get-srs to the prototypes.
 **/
 
 
@@ -1958,3 +1963,7 @@ FUNC_EXTERN DB_STATUS	dmf_tbl_info(
 			i4		op_code,
 			char		*tableinfo_request,
 			i4		*return_count);
+
+FUNC_EXTERN DB_STATUS	dmf_get_srs(
+			DB_SPATIAL_REF_SYS *db_srs,
+			i4	*errcode);

@@ -873,6 +873,8 @@ static STATUS dmcm_lkinit(
 **	    Add trdisplay of direct IO settings.
 **	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    dmf_tbl_info(), dmf_last_id() prototyped in dml.h
+**	30-Nov-2010 (kschendel) SIR 124685
+**	    dmf-get-srs proto now in dml.h.
 */
 
 DB_STATUS
@@ -2697,7 +2699,6 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	*/
 	{
 	    ADF_CB		    adf_scb;
-	    FUNC_EXTERN DB_STATUS   dmf_get_srs();
 
 	    MEfill(sizeof(ADF_CB),0,(PTR)&adf_scb);
 
