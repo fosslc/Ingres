@@ -6,6 +6,9 @@ This version of Ingres includes the following noteworthy updates:
 Code for geo_phase1 branch was merged to main as of November 24, 2010.
 Please use the code from main. This branch will no longer be updating.
 
+This branch contains the code precisely as when main and geospatial
+merged.
+
 10.1.0-3
 - Fixed ST_Within()
 - Merged latest from 10.0.0's GA
