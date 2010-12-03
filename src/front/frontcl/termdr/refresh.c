@@ -193,6 +193,10 @@
 **      23-Aug-2010 (huazh01)
 **          On HP-UX, clean up display attribute if previous frame has a reverse 
 **          video field. (b124215)
+**      19-nov-2010 (huazh01)
+**          Ensure reverse video display attribute has been cleaned up properly 
+**          by writing a 'RE' to output buffer.
+**          (b124610)
 */
 u_char		TDsaveLast();
 
@@ -1342,6 +1346,8 @@ i4	wy;
 		char	zda;		/* work var for attr/font cleanup */
 		i4	wrk;		/* work var for HP term mumbo-jumbo */
                 bool    printAble = TRUE; 
+                bool    clr_da;         /* true if display attribute needs 
+                                        ** to be cleared. */
 
 # ifdef TRACING
 	if (dbgout == NULL)
@@ -1612,6 +1618,11 @@ i4	wy;
 				if (XS && !lcurwin)
 				{
 				    zda = (pda | pfonts | pcolor);
+
+                                    /* clear reverse video display */
+                                    clr_da = (*cda == _RVVID && 
+                                              *cda != (ndaval & _DAMASK)); 
+
 				    if ((!IITDcda_prev &&
 					*cda && !(!zda && ndaval)) ||
 					(IITDcda_prev &&
@@ -1620,8 +1631,7 @@ i4	wy;
 					  (ndaval && (IITDcda_prev != *cda) &&
 					   (ndaval != *cda))))
                                         ||
-                                        (*cda == _RVVID && 
-                                         *cda != (ndaval & _DAMASK))
+                                        clr_da
                                        )
 				    {
 					/*
@@ -1680,6 +1690,17 @@ i4	wy;
 						win->_maxx;
 					}
 					_puts(CE);
+
+                                        /* end reverse video display (RE) after
+                                        ** we clear the rest of the line (CE). 
+                                        ** Note that this will also clear all
+                                        ** enhance video display attributes coz 
+                                        ** HP70092's termcap define RE, BE, EB,
+                                        ** UE, EA and EAW to the same value. 
+                                        */
+                                        if (clr_da) 
+                                           _puts(RE); 
+
 					clr_eol = TRUE;
 					MEfill((u_i2) (cscr->_maxx -
 					    (wx + invc_wx)), (u_char) ' ', csp);
