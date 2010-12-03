@@ -194,6 +194,15 @@ package com.ingres.gcf.jdbc;
 **	    BUG 124214 - Fix isBeforeFirst() and isLast().
 **	16-Nov-10 (gordy)
 **	    Added configuration property for LOB locator streaming access.
+**	18-Nov-10 (rajus01)
+**	    Bumped patch version to 6 for the following fixes and enhancements:
+**	    SIR 124588 -  Add ability to store blank date in the DBMS.
+**	    Bug 124712 -  Fix BigDecimal query param values specified in 
+**			  scientific notation.
+**	    Bug 124716 -  Fix UTF8 Clob data mishandling when accessed via 
+**			  a locator.
+**	    SIR 124722 -  Change JDBC DATE_ALIAS default to ANSIDATE.
+**	    SIR 124734 -  Provide streaming LOB data access via locators.
 */
 
 import	com.ingres.gcf.dam.MsgConst;
@@ -371,7 +380,7 @@ DrvConst
     String	DRV_VENDOR_NAME		= "Ingres Corporation";
     int		DRV_MAJOR_VERSION	= 4;
     int		DRV_MINOR_VERSION	= 0;
-    int		DRV_PATCH_VERSION	= 5;
+    int		DRV_PATCH_VERSION	= 6;
     String	DRV_JDBC_VERSION	= "JDBC 4.0";
     int		DRV_JDBC_MAJ_VERS	= 4;
     int		DRV_JDBC_MIN_VERS	= 0;
