@@ -1479,6 +1479,9 @@
 #	24-Nov-2010 (bonro01)
 #	    Fix typo from Geospatial change which used the wrong
 #	    compile flags for Hybrid builds.
+#        1-DEC-2010 (hanal04) Bug b124731
+#           Add ARMERGELIB to the GeoSpatial dependency list to ensure
+#           geo libraries are copied/linked before building iimerge.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -3953,8 +3956,10 @@ rule IINEEDLIBS
 		{
 			LINKLIBS on $(<) += $(LDLIBMACH) ;		    
 			#if WITH_GEO is defined we need to do some special handling of
-			#the linking of binaries that need ADFLIB, LIBINGRES or INGRESLIB
-			if $(WITH_GEO) && ( ADFLIB in $(>) || LIBINGRES in $(>) || INGRESLIB in $(>) )
+                        #the linking of binaries that need ADFLIB, LIBINGRES,
+			# INGRESLIB or ARMERGELIB
+                        if $(WITH_GEO) && ( ADFLIB in $(>) || LIBINGRES in $(>) || INGRESLIB in $(>) || ARMERGELIB in $(>) )
+
 			{
 				#if it requires a static link we must also link with C++
 				if $(<) in $(GEOLINKSTATIC)
