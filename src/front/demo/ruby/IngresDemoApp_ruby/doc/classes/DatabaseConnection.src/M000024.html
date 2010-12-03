@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>connect (DatabaseConnection)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File src/database_connection.rb, line 435</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">connect</span>()
+    <span class="ruby-keyword kw">begin</span>
+      <span class="ruby-keyword kw">if</span> (<span class="ruby-operator">!</span><span class="ruby-ivar">@connected</span>) <span class="ruby-keyword kw">then</span>
+        <span class="ruby-ivar">@connecting</span> = <span class="ruby-keyword kw">true</span>
+        <span class="ruby-ivar">@connection</span> = <span class="ruby-constant">Ingres</span>.<span class="ruby-identifier">new</span>() <span class="ruby-keyword kw">if</span> (<span class="ruby-operator">!</span><span class="ruby-ivar">@connection</span>)
+        <span class="ruby-keyword kw">if</span> (<span class="ruby-identifier">hostname</span>().<span class="ruby-identifier">length</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">instance</span>().<span class="ruby-identifier">length</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">username</span>().<span class="ruby-identifier">length</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">password</span>().<span class="ruby-identifier">length</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>) <span class="ruby-keyword kw">then</span>
+          <span class="ruby-ivar">@connection</span>.<span class="ruby-identifier">connect</span>(<span class="ruby-value str">&quot;@&quot;</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">hostname</span>() <span class="ruby-operator">+</span> <span class="ruby-value str">&quot;,tcp_ip,&quot;</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">instance</span>() <span class="ruby-operator">+</span> <span class="ruby-value str">&quot;[&quot;</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">username</span>() <span class="ruby-operator">+</span> <span class="ruby-value str">&quot;,&quot;</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">password</span>() <span class="ruby-operator">+</span> <span class="ruby-value str">&quot;]::&quot;</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">database</span>(), <span class="ruby-identifier">username</span>(), <span class="ruby-identifier">password</span>())
+        <span class="ruby-keyword kw">elsif</span> (<span class="ruby-identifier">username</span>().<span class="ruby-identifier">length</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span> <span class="ruby-operator">&amp;&amp;</span> <span class="ruby-identifier">password</span>().<span class="ruby-identifier">length</span> <span class="ruby-operator">&gt;</span> <span class="ruby-value">0</span>) <span class="ruby-keyword kw">then</span>
+          <span class="ruby-ivar">@connection</span>.<span class="ruby-identifier">connect</span>(<span class="ruby-identifier">database</span>(), <span class="ruby-identifier">username</span>(), <span class="ruby-identifier">password</span>())
+        <span class="ruby-keyword kw">else</span>
+          <span class="ruby-ivar">@connection</span>.<span class="ruby-identifier">connect</span>(<span class="ruby-identifier">database</span>())
+        <span class="ruby-keyword kw">end</span>
+        <span class="ruby-ivar">@countryCodes</span> = <span class="ruby-keyword kw">nil</span>
+        <span class="ruby-keyword kw">begin</span>
+          <span class="ruby-constant">StatusBar</span>.<span class="ruby-identifier">instance</span>.<span class="ruby-identifier">setStatusBarText</span>(<span class="ruby-identifier">hostname</span>, <span class="ruby-identifier">instance</span>, <span class="ruby-identifier">database</span>, <span class="ruby-identifier">username</span>)
+        <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Exception</span>
+        <span class="ruby-keyword kw">end</span>
+        <span class="ruby-ivar">@connecting</span> = <span class="ruby-keyword kw">false</span>
+      <span class="ruby-keyword kw">end</span>
+      <span class="ruby-ivar">@connected</span> = <span class="ruby-keyword kw">true</span>
+    <span class="ruby-keyword kw">rescue</span> <span class="ruby-constant">Exception</span>
+      <span class="ruby-identifier">buttons</span> = [ <span class="ruby-value str">&quot;     OK     &quot;</span> ]
+      <span class="ruby-identifier">msg</span> = <span class="ruby-value str">&quot;Connection to database failed due to &quot;</span> <span class="ruby-operator">+</span> <span class="ruby-identifier">$!</span>
+      <span class="ruby-keyword kw">begin</span>
+        <span class="ruby-constant">TkDialog</span>.<span class="ruby-identifier">new</span>(<span class="ruby-value str">'title'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-value str">&quot;Database Connection Error&quot;</span>, <span class="ruby-value str">'message'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">msg</span>, <span class="ruby-value str">'buttons'</span> =<span class="ruby-operator">&gt;</span> <span class="ruby-identifier">buttons</span>)
+      <span class="ruby-keyword kw">rescue</span>
+        <span class="ruby-identifier">puts</span> <span class="ruby-identifier">msg</span>
+      <span class="ruby-keyword kw">end</span>
+      <span class="ruby-identifier">disconnect</span>
+      <span class="ruby-ivar">@connected</span> = <span class="ruby-keyword kw">false</span>
+    <span class="ruby-keyword kw">end</span>
+    <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@connected</span>
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

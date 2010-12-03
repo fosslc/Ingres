@@ -1,0 +1,773 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Class: DatabaseConnection</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <meta http-equiv="Content-Script-Type" content="text/javascript" />
+  <link rel="stylesheet" href=".././rdoc-style.css" type="text/css" media="screen" />
+  <script type="text/javascript">
+  // <![CDATA[
+
+  function popupCode( url ) {
+    window.open(url, "Code", "resizable=yes,scrollbars=yes,toolbar=no,status=no,height=150,width=400")
+  }
+
+  function toggleCode( id ) {
+    if ( document.getElementById )
+      elem = document.getElementById( id );
+    else if ( document.all )
+      elem = eval( "document.all." + id );
+    else
+      return false;
+
+    elemStyle = elem.style;
+    
+    if ( elemStyle.display != "block" ) {
+      elemStyle.display = "block"
+    } else {
+      elemStyle.display = "none"
+    }
+
+    return true;
+  }
+  
+  // Make codeblocks hidden by default
+  document.writeln( "<style type=\"text/css\">div.method-source-code { display: none }</style>" )
+  
+  // ]]>
+  </script>
+
+</head>
+<body>
+
+
+
+    <div id="classHeader">
+        <table class="header-table">
+        <tr class="top-aligned-row">
+          <td><strong>Class</strong></td>
+          <td class="class-name-in-header">DatabaseConnection</td>
+        </tr>
+        <tr class="top-aligned-row">
+            <td><strong>In:</strong></td>
+            <td>
+                <a href="../files/src/database_connection_rb.html">
+                src/database_connection.rb
+                </a>
+        <br />
+            </td>
+        </tr>
+
+        <tr class="top-aligned-row">
+            <td><strong>Parent:</strong></td>
+            <td>
+                Object
+            </td>
+        </tr>
+        </table>
+    </div>
+  <!-- banner header -->
+
+  <div id="bodyContent">
+
+
+
+  <div id="contextContent">
+
+    <div id="description">
+      <p>
+Document-class: <a href="DatabaseConnection.html">DatabaseConnection</a>
+</p>
+<p>
+Provides <a href="DatabaseConnection.html#M000020">database</a> access and
+canned queries for the Frequent Flyer demo
+</p>
+<p>
+See README.rdoc for information on the methods provided in this class
+</p>
+
+    </div>
+
+
+   </div>
+
+    <div id="method-list">
+      <h3 class="section-bar">Methods</h3>
+
+      <div class="name-list">
+      <a href="#M000007">airports</a>&nbsp;&nbsp;
+      <a href="#M000024">connect</a>&nbsp;&nbsp;
+      <a href="#M000003">countries</a>&nbsp;&nbsp;
+      <a href="#M000020">database</a>&nbsp;&nbsp;
+      <a href="#M000014">deleteProfile</a>&nbsp;&nbsp;
+      <a href="#M000001">disconnect</a>&nbsp;&nbsp;
+      <a href="#M000002">execute</a>&nbsp;&nbsp;
+      <a href="#M000005">getAirportDetails</a>&nbsp;&nbsp;
+      <a href="#M000021">getConnectionInfo</a>&nbsp;&nbsp;
+      <a href="#M000013">getDefaultProfile</a>&nbsp;&nbsp;
+      <a href="#M000009">getEmailAddresses</a>&nbsp;&nbsp;
+      <a href="#M000012">getProfile</a>&nbsp;&nbsp;
+      <a href="#M000008">getRoutes</a>&nbsp;&nbsp;
+      <a href="#M000016">hostname</a>&nbsp;&nbsp;
+      <a href="#M000010">insertProfile</a>&nbsp;&nbsp;
+      <a href="#M000017">instance</a>&nbsp;&nbsp;
+      <a href="#M000025">isConnected</a>&nbsp;&nbsp;
+      <a href="#M000019">password</a>&nbsp;&nbsp;
+      <a href="#M000004">regions</a>&nbsp;&nbsp;
+      <a href="#M000006">regions</a>&nbsp;&nbsp;
+      <a href="#M000023">saveConnectionInfo</a>&nbsp;&nbsp;
+      <a href="#M000022">setConnectionInfo</a>&nbsp;&nbsp;
+      <a href="#M000015">setDebugFlag</a>&nbsp;&nbsp;
+      <a href="#M000011">updateProfile</a>&nbsp;&nbsp;
+      <a href="#M000018">username</a>&nbsp;&nbsp;
+      </div>
+    </div>
+
+  </div>
+
+
+    <!-- if includes -->
+    <div id="includes">
+      <h3 class="section-bar">Included Modules</h3>
+
+      <div id="includes-list">
+        <span class="include-name">Singleton</span>
+      </div>
+    </div>
+
+    <div id="section">
+
+
+
+
+
+      
+
+
+    <!-- if method_list -->
+    <div id="methods">
+      <h3 class="section-bar">Public Instance methods</h3>
+
+      <div id="method-M000007" class="method-detail">
+        <a name="M000007"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000007.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000007.html');return false;">
+          <span class="method-name">airports(country,region) &rarr; Array<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000007">airports</a>
+</p>
+<p>
+Returns a list of <a href="DatabaseConnection.html#M000007">airports</a>
+based on a search of a country and region using a row producing procedure.
+To list all <a href="DatabaseConnection.html#M000007">airports</a> whose
+country code is &#8216;ES&#8217;, specify <tt>region</tt> as
+&#8217;%&#8217;. The results from the procedure are treated like a SELECT
+from a table or a view.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000024" class="method-detail">
+        <a name="M000024"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000024.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000024.html');return false;">
+          <span class="method-name">connect() &rarr; instance_variable<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000024">connect</a>
+</p>
+<p>
+Connects to the specified Ingres _database one of 3 ways:
+</p>
+<ul>
+<li>If a <a href="DatabaseConnection.html#M000016">hostname</a> is defined <a
+href="DatabaseConnection.html#M000024">connect</a> using the form
+
+</li>
+</ul>
+<p>
+** <tt>@<a
+href="DatabaseConnection.html#M000016">hostname</a>,tcp_ip,listen_address:[user,<a
+href="DatabaseConnection.html#M000019">password</a>]::<a
+href="DatabaseConnection.html#M000020">database</a></tt>
+</p>
+<ul>
+<li>If no <a href="DatabaseConnection.html#M000016">hostname</a> is available,
+but there is a <a href="DatabaseConnection.html#M000018">username</a> and
+<a href="DatabaseConnection.html#M000019">password</a>, <a
+href="DatabaseConnection.html#M000024">connect</a> to the local <a
+href="DatabaseConnection.html#M000020">database</a> with the supplied
+credentials
+
+</li>
+<li>Connect to the <a href="DatabaseConnection.html#M000020">database</a> as
+the current user
+
+</li>
+</ul>
+        </div>
+      </div>
+
+      <div id="method-M000003" class="method-detail">
+        <a name="M000003"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000003.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000003.html');return false;">
+          <span class="method-name">countries() &rarr; Array<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000003">countries</a>
+</p>
+<p>
+Provide a list of <a href="DatabaseConnection.html#M000003">countries</a>
+stored in the <tt>country</tt> table using the SQL query:
+</p>
+<pre>
+  &lt;tt&gt;SELECT ct_name, ct_code FROM country ORDER BY ct_name&lt;/tt&gt;
+</pre>
+<p>
+The countryCode can then be used to get a list of aiports for that country
+with the <a href="DatabaseConnection.html#M000004">regions</a> method.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000020" class="method-detail">
+        <a name="M000020"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000020.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000020.html');return false;">
+          <span class="method-name">database() &rarr; String<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000020">database</a>
+</p>
+<p>
+Return the <a href="DatabaseConnection.html#M000020">database</a> used to
+<a href="DatabaseConnection.html#M000024">connect</a> to the server. If no
+<a href="DatabaseConnection.html#M000020">database</a> has been defined,
+get the default configuration.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000014" class="method-detail">
+        <a name="M000014"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000014.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000014.html');return false;">
+          <span class="method-name">deleteProfile(emailAddress) &rarr; nil<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a
+href="DatabaseConnection.html#M000014">deleteProfile</a>
+</p>
+<p>
+Delete the specified profile, based on the provided <tt>emailAddress</tt>.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000001" class="method-detail">
+        <a name="M000001"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000001.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000001.html');return false;">
+          <span class="method-name">disconnect() &rarr; nil<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000001">disconnect</a>
+</p>
+<p>
+Disconnects from the <a href="DatabaseConnection.html#M000020">database</a>
+server
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000002" class="method-detail">
+        <a name="M000002"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000002.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000002.html');return false;">
+          <span class="method-name">execute</span><span class="method-args">(*args)</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+        </div>
+      </div>
+
+      <div id="method-M000005" class="method-detail">
+        <a name="M000005"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000005.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000005.html');return false;">
+          <span class="method-name">getAirportDetails(airport) &rarr; String, String<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a
+href="DatabaseConnection.html#M000005">getAirportDetails</a>
+</p>
+<p>
+For a given airport code, e.g. LHR (London Heathrow), provide the
+region/place and country code
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000021" class="method-detail">
+        <a name="M000021"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000021.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000021.html');return false;">
+          <span class="method-name">getConnectionInfo() &rarr; nil<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a
+href="DatabaseConnection.html#M000021">getConnectionInfo</a>
+</p>
+<p>
+Fetch the configuration needed to form a connection to Ingres, from the
+file, _dbconn.xml_. If this file has not been created, use pre-defined
+connection settings defined in <tt>fp_constants.rb</tt>. Once the settings
+have been attained a connection to Ingres is attempted.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000013" class="method-detail">
+        <a name="M000013"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000013.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000013.html');return false;">
+          <span class="method-name">getDefaultProfile(forceGet = false) &rarr; Profile<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a
+href="DatabaseConnection.html#M000013">getDefaultProfile</a>
+</p>
+<p>
+Load the default profile based on the value contained in
+<tt>dbconn.xml</tt>.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000009" class="method-detail">
+        <a name="M000009"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000009.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000009.html');return false;">
+          <span class="method-name">getEmailAddresses() &rarr; Array<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a
+href="DatabaseConnection.html#M000009">getEmailAddresses</a>
+</p>
+<p>
+Returns a Array of email addresses stored in the <tt>user_profile</tt>
+table.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000012" class="method-detail">
+        <a name="M000012"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000012.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000012.html');return false;">
+          <span class="method-name">getProfile(emailAddress) &rarr; Profile<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000012">getProfile</a>
+</p>
+<p>
+Load the profile for a given <tt>emailAddress</tt>.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000008" class="method-detail">
+        <a name="M000008"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000008.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000008.html');return false;">
+          <span class="method-name">getRouters(departFrom, arriveTo, days, includeReturn) &rarr; Array<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000008">getRoutes</a>
+</p>
+<p>
+Returns an Array of flights between <tt>departFrom</tt> and
+<tt>arriveTo</tt> on <tt>days</tt>. If <tt>includeReturn</tt> is set
+provide details for return flights on the same <tt>days</tt>
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000016" class="method-detail">
+        <a name="M000016"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000016.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000016.html');return false;">
+          <span class="method-name">hostname() &rarr; String<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000016">hostname</a>
+</p>
+<p>
+Return the <a href="DatabaseConnection.html#M000016">hostname</a> or <a
+href="DatabaseConnection.html#M000020">database</a> name used to <a
+href="DatabaseConnection.html#M000024">connect</a> to the server.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000010" class="method-detail">
+        <a name="M000010"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000010.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000010.html');return false;">
+          <span class="method-name">insertProfile(lastname, firstname, iataCode, emailAddress, isDefault = false, profileImage = nil) &rarr; nil<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a
+href="DatabaseConnection.html#M000010">insertProfile</a>
+</p>
+<p>
+Add a new frequent flyer profile to the <tt>user_profile</tt> table. With
+the exception of isDefault and profileImage, the other parameters are
+required.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000017" class="method-detail">
+        <a name="M000017"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000017.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000017.html');return false;">
+          <span class="method-name">instance() &rarr; String<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000017">instance</a>
+</p>
+<p>
+Return the instance/listen address used to <a
+href="DatabaseConnection.html#M000024">connect</a> to the server.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000025" class="method-detail">
+        <a name="M000025"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000025.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000025.html');return false;">
+          <span class="method-name">isConnected() &rarr; Boolean<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000025">isConnected</a>
+</p>
+<p>
+Returns <tt>TRUE</tt> or <tt>FALSE</tt> based on the current connection
+state
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000019" class="method-detail">
+        <a name="M000019"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000019.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000019.html');return false;">
+          <span class="method-name">password() &rarr; String<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000019">password</a>
+</p>
+<p>
+Return the <a href="DatabaseConnection.html#M000019">password</a> used to
+<a href="DatabaseConnection.html#M000024">connect</a> to the server.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000004" class="method-detail">
+        <a name="M000004"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000004.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000004.html');return false;">
+          <span class="method-name">regions(country)<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000004">regions</a>
+</p>
+<p>
+Provide a list of <a href="DatabaseConnection.html#M000004">regions</a>
+which have an airport in the country supplied using the query:
+</p>
+<pre>
+  &lt;tt&gt;SELECT DISTINCT ap_place, ap_ccode FROM airport WHERE ap_ccode = '#{@countryCodes[country]}' ORDER BY ap_place&quot;&lt;/tt&gt;
+</pre>
+        </div>
+      </div>
+
+      <div id="method-M000006" class="method-detail">
+        <a name="M000006"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000006.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000006.html');return false;">
+          <span class="method-name">regions(country) &rarr; Array<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000004">regions</a>
+</p>
+<p>
+Provide a list of <a href="DatabaseConnection.html#M000004">regions</a>
+which have an airport in the country supplied using the query:
+</p>
+<pre>
+  &lt;tt&gt;SELECT DISTINCT ap_place, ap_ccode FROM airport WHERE ap_ccode = '#{@countryCodes[country]}' ORDER BY ap_place&quot;&lt;/tt&gt;
+</pre>
+        </div>
+      </div>
+
+      <div id="method-M000023" class="method-detail">
+        <a name="M000023"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000023.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000023.html');return false;">
+          <span class="method-name">saveConnectionInfo() &rarr; nil<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a
+href="DatabaseConnection.html#M000023">saveConnectionInfo</a>
+</p>
+<p>
+Takes the connection <a href="DatabaseConnection.html#M000017">instance</a>
+variables and places them in XML format. This XML is then saved in the
+file, _dbconn.xml_.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000022" class="method-detail">
+        <a name="M000022"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000022.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000022.html');return false;">
+          <span class="method-name">setConnectionInfo() &rarr; nil<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a
+href="DatabaseConnection.html#M000022">setConnectionInfo</a>
+</p>
+<p>
+Disconnects and connects to Ingres using the supplied connection
+information. The connection parameters are assigned to <a
+href="DatabaseConnection.html#M000017">instance</a> variables before a
+connection request is made.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000015" class="method-detail">
+        <a name="M000015"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000015.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000015.html');return false;">
+          <span class="method-name">setDebugFlag(flag,value) &rarr; nil<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000015">setDebugFlag</a>
+</p>
+<p>
+Enable trace debugging in the Ruby driver. Valid values for flag are:
+<tt>GLOBAL_DEBUG</tt>, <tt>DEBUG_TRANSACTIONS</tt>, <tt>DEBUG_SQL</tt>,
+<tt>DEBUG_TERMINATION</tt> <em>value</em> can either be <tt>TRUE</tt> or
+<tt>FALSE</tt> to enable or disable the specified <em>flag</em> see <a
+href="http://code.ingres.com/ingres/drivers/ruby/tags/ingres-ruby-1.4.1/doc/Ingres.html#method-i-set_debug_flag">code.ingres.com/ingres/drivers/ruby/tags/ingres-ruby-1.4.1/doc/Ingres.html#method-i-set_debug_flag</a>
+for more information.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000011" class="method-detail">
+        <a name="M000011"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000011.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000011.html');return false;">
+          <span class="method-name">updateProfile(lastname, firstname, iataCode, emailAddress, isDefault = false, profileImage = nil) &rarr; nil<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a
+href="DatabaseConnection.html#M000011">updateProfile</a>
+</p>
+<p>
+Update the details for the user profile for the matching
+<tt>emailAddress</tt>. With the exception of isDefault and profileImage,
+the other parameters are required.
+</p>
+        </div>
+      </div>
+
+      <div id="method-M000018" class="method-detail">
+        <a name="M000018"></a>
+
+        <div class="method-heading">
+          <a href="DatabaseConnection.src/M000018.html" target="Code" class="method-signature"
+            onclick="popupCode('DatabaseConnection.src/M000018.html');return false;">
+          <span class="method-name">username() &rarr; String<br />
+</span>
+          </a>
+        </div>
+      
+        <div class="method-description">
+          <p>
+Document-method: <a href="DatabaseConnection.html#M000018">username</a>
+</p>
+<p>
+Return the <a href="DatabaseConnection.html#M000018">username</a> used to
+<a href="DatabaseConnection.html#M000024">connect</a> to the server.
+</p>
+        </div>
+      </div>
+
+
+    </div>
+
+
+  </div>
+
+
+<div id="validator-badges">
+  <p><small><a href="http://validator.w3.org/check/referer">[Validate]</a></small></p>
+</div>
+
+</body>
+</html>

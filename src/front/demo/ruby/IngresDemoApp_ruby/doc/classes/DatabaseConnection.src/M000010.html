@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>insertProfile (DatabaseConnection)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File src/database_connection.rb, line 176</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">insertProfile</span>(<span class="ruby-identifier">lastname</span>, <span class="ruby-identifier">firstname</span>, <span class="ruby-identifier">iataCode</span>, <span class="ruby-identifier">emailAddress</span>, <span class="ruby-identifier">isDefault</span> = <span class="ruby-keyword kw">false</span>, <span class="ruby-identifier">profileImage</span> = <span class="ruby-keyword kw">nil</span>)
+    <span class="ruby-identifier">profileImage</span> = <span class="ruby-value str">&quot;&quot;</span> <span class="ruby-keyword kw">if</span> (<span class="ruby-identifier">profileImage</span> <span class="ruby-operator">==</span> <span class="ruby-keyword kw">nil</span>)
+    <span class="ruby-identifier">execute</span>(<span class="ruby-value str">&quot;INSERT INTO user_profile (up_id, up_last, up_first, up_airport, up_email, up_image) VALUES (next value FOR up_id, ?, ?, ?, ?, ?)&quot;</span>, 
+            <span class="ruby-value str">&quot;N&quot;</span>, <span class="ruby-identifier">lastname</span>, <span class="ruby-value str">&quot;N&quot;</span>, <span class="ruby-identifier">firstname</span>, <span class="ruby-value str">&quot;v&quot;</span>, <span class="ruby-identifier">iataCode</span>, <span class="ruby-value str">&quot;v&quot;</span>, <span class="ruby-identifier">emailAddress</span>, <span class="ruby-value str">&quot;B&quot;</span>, <span class="ruby-identifier">profileImage</span>)
+    <span class="ruby-keyword kw">if</span> (<span class="ruby-identifier">isDefault</span>) <span class="ruby-keyword kw">then</span>
+      <span class="ruby-ivar">@defaultProfileEmailAddress</span> = <span class="ruby-constant">String</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">emailAddress</span>)
+      <span class="ruby-identifier">saveConnectionInfo</span>
+      <span class="ruby-identifier">getDefaultProfile</span>(<span class="ruby-keyword kw">true</span>)
+    <span class="ruby-keyword kw">end</span>
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>airports (DatabaseConnection)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File src/database_connection.rb, line 124</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">airports</span>(<span class="ruby-identifier">country</span>, <span class="ruby-identifier">region</span>)
+    <span class="ruby-identifier">airportResults</span> = <span class="ruby-identifier">execute</span>(<span class="ruby-value str">&quot;{call get_my_airports ( ccode = ?, area = ? )}&quot;</span>,  <span class="ruby-value str">&quot;ccode&quot;</span>, <span class="ruby-value str">&quot;n&quot;</span>, <span class="ruby-ivar">@countryCodes</span>[<span class="ruby-identifier">country</span>] , <span class="ruby-value str">&quot;area&quot;</span>, <span class="ruby-value str">&quot;n&quot;</span>, <span class="ruby-identifier">region</span>)
+    <span class="ruby-identifier">airportCodes</span> = <span class="ruby-constant">Hash</span>.<span class="ruby-identifier">new</span>
+    <span class="ruby-identifier">airports</span> = <span class="ruby-constant">Array</span>.<span class="ruby-identifier">new</span>
+    <span class="ruby-identifier">airportResults</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span> <span class="ruby-identifier">airportDetails</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">airportCodes</span>[<span class="ruby-identifier">airportDetails</span>[<span class="ruby-value">0</span>]]= <span class="ruby-identifier">airportDetails</span>[<span class="ruby-value">2</span>] ; <span class="ruby-identifier">airports</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">airportDetails</span>[<span class="ruby-value">0</span>] }
+    <span class="ruby-ivar">@airportCodes</span> = <span class="ruby-identifier">airportCodes</span>
+    <span class="ruby-identifier">airports</span>
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>
