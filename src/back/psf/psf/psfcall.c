@@ -27,13 +27,14 @@
 #include    <rdf.h>
 #include    <qefmain.h>
 #include    <qefqeu.h>
+#include    <sxf.h>
 #include    <psfparse.h>
 #include    <psfindep.h>
 #include    <pshparse.h>
 #include    <psyrereg.h>
 #include    <psydint.h>
 #include    <psykview.h>
-
+#include    <psyaudit.h>
 /**
 **
 **  Name: PSFCALL.C - Entry points to the parser.
@@ -174,19 +175,32 @@
 **	    Blob optimization for updates only if PSQ_REPCURS (b112427, b113501)
 **	10-Sep-2008 (jonj)
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value DB_ERROR structures.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
-
-/* static funcs */
-static STATUS
-psf_ses_handle(
-	EX_ARGS            *exargs);
-static STATUS
-psf_2handle(
-	EX_ARGS            *exargs);
-static STATUS
-psf_svr_handle(
-	EX_ARGS            *exargs);
+
+/* TABLE OF CONTENTS */
+i4 psq_call(
+	i4 opcode,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+bool psf_retry(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	i4 ret_val);
+bool psf_in_retry(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psy_call(
+	i4 opcode,
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+static i4 psf_ses_handle(
+	EX_ARGS *exargs);
+static i4 psf_2handle(
+	EX_ARGS *exargs);
+static i4 psf_svr_handle(
+	EX_ARGS *exargs);
 
 /*{
 ** Name: psq_call	- Call a query-related or general-purpose operation.
@@ -599,7 +613,6 @@ psq_call(
     {
 	i4        undoWork;
 	i4        oldLock;
-	DB_STATUS  status;
 	QSF_RCB   *qsfcb = (QSF_RCB *)psq_cb->psq_qsfcb;
 
 	/*
@@ -731,7 +744,7 @@ psq_call(
     case PSQ_COPYBUF:
     {
 	if (psq_cb->psq_ret_flag & PSQ_FINISH_COPY)
-	    sess_cb->pss_last_sname[0] == EOS;
+	    sess_cb->pss_last_sname[0] = EOS;
 	psq_cb->psq_ret_flag &= ~(PSQ_INSERT_TO_COPY | PSQ_CONTINUE_COPY | PSQ_FINISH_COPY);
 
 	ret_val = pst_cpdata(sess_cb, psq_cb, NULL, TRUE);

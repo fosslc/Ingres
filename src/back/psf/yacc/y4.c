@@ -43,6 +43,21 @@
 **          Replace READONLY/WSCREADONLY by const.
 */
 
+/* TABLE OF CONTENTS */
+void callopt (void);
+static void gin (
+	i4	i);
+static void stin (
+	i4	i);
+static i4 nxti (void);
+static void osummary (void);
+static void aoutput (void);
+static void arout (
+	i4	s,
+	i4	*v,
+	i4	n);
+static i4 gtnm (void);
+
 GLOBALREF i4     *ggreed;
 GLOBALREF i4     *pgo;
 GLOBALREF i4     *yypgo;
@@ -56,7 +71,8 @@ GLOBALREF i4     *maxa;
 GLOBALREF i4      nxdb;
 GLOBALREF i4      adb;
 
-callopt ()
+void
+callopt (void)
 {
 
     register i4     i,
@@ -218,8 +234,9 @@ callopt ()
     ZAPFILE (&temploc);
 }
 
-gin (i)
-i4	i;
+static void
+gin (
+	i4	i)
 {
 
     register i4     *p,
@@ -280,8 +297,9 @@ nextgp: ;
 nextgi: ;
 }
 
-stin (i)
-i4	i;
+static void
+stin (
+	i4	i)
 {
     register i4     *r,
 		    *s,
@@ -361,11 +379,12 @@ nextn: 	;
 
 }
 
-nxti ()
+static i4
+nxti (void)
 {				/* finds the next i */
     register i4     i,
 		    maximum,
-		    maxi;
+		    maxi = NOMORE;
 
     maximum = 0;
 
@@ -391,7 +410,8 @@ nxti ()
 	return (maxi);
 }
 
-osummary ()
+static void
+osummary (void)
 {
  /* write summary */
 
@@ -414,7 +434,8 @@ osummary ()
 
 }
 
-aoutput ()
+static void
+aoutput (void)
 {				/* this version is for C */
 
 
@@ -428,10 +449,11 @@ aoutput ()
 
 }
 
-arout (s, v, n)
-i4	s;
-i4	*v,
-        n;
+static void
+arout (
+	i4	s,
+	i4	*v,
+	i4	n)
 {
 
     register i4     i;
@@ -462,7 +484,8 @@ i4	*v,
 }
 
 
-gtnm ()
+static i4
+gtnm (void)
 {
 
     register i4     s,

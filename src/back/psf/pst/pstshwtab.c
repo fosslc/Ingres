@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -146,8 +146,47 @@
 **	    Don't allow partitions.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 pst_showtab(
+	PSS_SESBLK *sess_cb,
+	i4 showtype,
+	DB_TAB_NAME *tabname,
+	DB_TAB_OWN *tabown,
+	DB_TAB_ID *tabid,
+	bool tabonly,
+	PSS_RNGTAB *rngentry,
+	i4 query_mode,
+	DB_ERROR *err_blk);
+i4 pst_dbpshow(
+	PSS_SESBLK *sess_cb,
+	DB_DBP_NAME *dbpname,
+	PSS_DBPINFO **dbpinfop,
+	DB_OWN_NAME *dbp_owner,
+	DB_TAB_ID *dbp_id,
+	i4 dbp_mask,
+	PSQ_CB *psq_cb,
+	i4 *ret_flags);
+i4 pst_add_1indepobj(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_ID *obj_id,
+	i4 obj_type,
+	DB_DBP_NAME *dbpname,
+	PSQ_OBJ **obj_list,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+void pst_rdfcb_init(
+	RDF_CB *rdf_cb,
+	PSS_SESBLK *sess_cb);
+i4 pst_ldbtab_desc(
+	PSS_SESBLK *sess_cb,
+	QED_DDL_INFO *ddl_info,
+	PSF_MSTREAM *mem_stream,
+	i4 flag,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: pst_showtab	- Get a table description for a range variable.
@@ -878,6 +917,8 @@ pst_showtab(
 **	    can cause all sorts of problems.  The observed symptom was a
 **	    bad error message from a table proc caused by the mask showing
 **	    DBP_ROW_PROC, but almost anything could happen.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Update psl-command-string call.
 */
 DB_STATUS
 pst_dbpshow(
@@ -891,15 +932,12 @@ pst_dbpshow(
 	i4		*ret_flags)
 {
     DB_STATUS           status, stat;
-    DB_STATUS	        local_status;
     RDF_CB		rdf_cb;
     PSS_DBPINFO		*dbpinfo;
     DB_ERROR		*err_blk = &psq_cb->psq_error;
     i4		err_code;
     bool		leave_loop = TRUE;
     DB_PROCEDURE	*dbp;
-    i4		msgid;
-    i4		access;
 
     *dbpinfop = (PSS_DBPINFO *) NULL;
     *ret_flags = 0;
@@ -1039,7 +1077,7 @@ pst_dbpshow(
 			** which he possesses no privileges
 			*/
 
-			psl_command_string(psq_cb->psq_mode, sess_cb->pss_lang,
+			psl_command_string(psq_cb->psq_mode, sess_cb,
 			    command, &length);
 
 			_VOID_ psf_error(E_US0890_2192_INACCESSIBLE_DBP,
@@ -1591,9 +1629,6 @@ pst_ldbtab_desc(
 				     
     register i4	    col_cnt;
     register DD_COLUMN_DESC **col_names;
-
-    i4			    *name_case =
-      &ldb_tab_info->dd_t9_ldb_p->dd_i2_ldb_plus.dd_p3_ldb_caps.dd_c6_name_case;
     bool		    duplicate_table = FALSE;
       
     /* populate the RDF request block */

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -57,7 +57,6 @@
 **  Description:
 **      Routines used to process outer join structures 
 **
-{@func_list@}...
 **
 **
 **  History:
@@ -113,8 +112,104 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opl_resolve(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *qnode);
+void opl_iftrue(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **rootpp,
+	OPL_IOUTER ojid);
+PST_QNODE *opl_findresdom(
+	OPS_SUBQUERY *subquery,
+	OPZ_IATTS rsno);
+void opl_nulltype(
+	PST_QNODE *qnodep);
+static void opl_target(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qnodepp);
+static void opl_ojeqcls(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS varno,
+	OPV_VARS *varp);
+void opl_ojoin(
+	OPS_SUBQUERY *subquery);
+void opl_index(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS basevar,
+	OPV_IVARS indexvar);
+static void opl_inner(
+	OPS_SUBQUERY *subquery,
+	OPL_OUTER *ojp,
+	OPV_BMVARS *varmap);
+static void opl_fjinner(
+	OPS_SUBQUERY *subquery,
+	OPL_OUTER *ojp,
+	OPV_BMVARS *varmap);
+static void opl_reverse(
+	OPS_SUBQUERY *subquery,
+	OPL_IOUTER fj_ojid,
+	OPL_IOUTER inner_ojid);
+void opl_ojmaps(
+	OPS_SUBQUERY *subquery);
+bool opl_fojeqc(
+	OPS_SUBQUERY *subquery,
+	OPV_GBMVARS *lvarmap,
+	OPV_GBMVARS *rvarmap,
+	OPL_IOUTER ojid);
+OPL_OJTYPE opl_ojtype(
+	OPS_SUBQUERY *subquery,
+	OPL_IOUTER ojid,
+	OPV_BMVARS *lvarmap,
+	OPV_BMVARS *rvarmap);
+bool opl_histogram(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *np,
+	OPN_SUBTREE *lsubtp,
+	OPN_EQS *leqclp,
+	OPN_RLS *lrlmp,
+	OPN_SUBTREE *rsubtp,
+	OPN_EQS *reqclp,
+	OPN_RLS *rrlmp,
+	OPO_ISORT jordering,
+	OPO_ISORT jxordering,
+	OPE_BMEQCLS *jeqh,
+	OPE_BMEQCLS *byeqcmap,
+	OPB_BMBF *bfm,
+	OPE_BMEQCLS *eqh,
+	OPN_RLS **rlmp_resultpp,
+	OPN_JEQCOUNT jxcnt);
+void opl_relabel(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *qnode,
+	OPV_IVARS primary,
+	OPE_IEQCLS primaryeqc,
+	OPV_IVARS indexvno);
+static void opl_innervar(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS varno,
+	OPL_IOUTER ojid);
+void opl_subselect(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS varno,
+	OPL_IOUTER ojid);
+void opl_ijcheck(
+	OPS_SUBQUERY *subquery,
+	OPL_BMOJ *linnermap,
+	OPL_BMOJ *rinnermap,
+	OPL_BMOJ *ojinnermap,
+	OPL_BMOJ *oevalmap,
+	OPL_BMOJ *ievalmap,
+	OPV_BMVARS *varmap);
+void opl_sjij(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS varno,
+	OPL_BMOJ *innermap,
+	OPL_BMOJ *ojmap);
 
 /*{
 ** Name: opl_resolve	- resolve parse tree for IFTRUE function
@@ -269,6 +364,8 @@ opl_findresdom(
 	    return(resdomp);
     }
     opx_error(E_OP068F_MISSING_RESDOM);
+    /*NOTREACHED*/
+    return NULL;
 }
 
 /*{
@@ -709,6 +806,11 @@ opl_ojeqcls(
 **	    3349.
 **	31-Aug-2006 (kschendel)
 **	    Watch for HFAGG as well as RFAGG.
+**      14-oct-2010 (huazh01)
+**          remove the block of codes that call opl_resolve() if OPB_RESOLVE
+**          is set. OPB_RESOLVE is not being used after change 409457. 
+**          OPB_RESOLVE is renamed to OPB_NOCOMPHIST as part of fix to 
+**          bug 124287.
 */
 VOID
 opl_ojoin(
@@ -814,27 +916,7 @@ opl_ojoin(
 		BTset( (i4)varp->opv_ojeqc, (char *)ojp1->opl_innereqc);
 	}
     }
-    {	/* traverse the boolean factors in which an IFTRUE function was
-	** inserted which changed the result type of an operation
-	** so that the conjunct can be re-resolved
-	*/
-	
-	OPB_IBF             maxbf;          /* number of boolean factors allocated*/
-	OPB_BFT             *bfbase;        /* ptr to base of array of ptrs to
-					    ** boolean factor elements */
-	OPB_IBF		    bf;
 
-	maxbf = subquery->ops_bfs.opb_bv;   /* number of boolean factors allocated*/
-	bfbase = subquery->ops_bfs.opb_base;/* ptr to base of array of ptrs to 
-					    ** boolean factors */
-	for (bf = maxbf; --bf >= 0;)
-	{
-	    OPB_BOOLFACT	*bfp;
-	    bfp = bfbase->opb_boolfact[bf];
-	    if (bfp->opb_mask & OPB_RESOLVE)
-		opl_resolve(subquery, bfp->opb_qnode);
-	}
-    }
     for (ojid1 = subquery->ops_oj.opl_lv; --ojid1 >= 0;)
     {	/* set max outer join maps used for relation placement */
 	OPL_OUTER	*outerp1;

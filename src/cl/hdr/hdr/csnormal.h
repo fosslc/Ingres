@@ -994,6 +994,9 @@ static int pthread_create_detached = 1;
 **      14-sep-2010 (stephenb)
 **          Reverse meaning of CScas, CScas4, and CScas8 returns; Ingres appears
 **          to want them defined the opposite way to the system builtins
+**      30-sep-2010 (joea)
+**          Add defines for CSadjust_i8counter and CScas8 for VMS.  Add
+**          versions of CScas4/CScasptr for IA64 VMS.
 */
 
 
@@ -3117,6 +3120,12 @@ FUNC_EXTERN i4 CS_tas(CS_ASET *);
 # define  CScas8(a, b, c) \
 	(__sync_bool_compare_and_swap((a), (b), (c)) == 0)
 
+#elif defined(i64_vms) || defined(axm_vms)
+
+#define CSadjust_i8counter(addr, expr)  __ATOMIC_ADD_QUAD((addr), (expr))
+#define CScas8(addr, old, new) \
+                 (__CMP_STORE_QUAD((addr), (old), (new), (addr)) == 0)
+
 # elif defined (conf_CAS8_ENABLED)
 /*
 ** There are currently no platforms which define conf_CAS8_ENABLED which
@@ -3230,13 +3239,30 @@ FUNC_EXTERN i4 CS_tas(CS_ASET *);
 ** region.  Macro returns OK (0) if update was performed,
 ** otherwise, reread oldval, recalc newval, and try again.
 */
+#if defined(i64_vms)
+#define CScas4(target, oldval, newval) \
+        (__CMP_SWAP_LONG((volatile void *)(target), (int)(oldval), \
+                         (int)(newval)) == 0)
+#else /* axm_vms */
 # define CScas4(target,oldval,newval) \
    (0 == __CMP_STORE_LONG( (volatile void *)(target), \
     (int)(oldval), (int)(newval), (volatile void *)(target) ))
+#endif
 
 /*
-** Perform atomic C&S op on pointer size arg. (Change builtin func.
+** Perform atomic C&S op on pointer size arg.
 */
+#if defined(i64_vms)
+#if defined(__INITIAL_POINTER_SIZE) && (__INITIAL_POINTER_SIZE == 64)
+#define CScasptr(target, oldval, newval) \
+        (__CMP_SWAP_QUAD((volatile void *)(target), (int)(oldval), \
+                         (int)(newval)) == 0)
+#else
+#define CScasptr(target, oldval, newval) \
+        (__CMP_SWAP_LONG((volatile void *)(target), (int)(oldval), \
+                         (int)(newval)) == 0)
+#endif
+#else /* axm_vms */
 #if defined(__INITIAL_POINTER_SIZE) && (__INITIAL_POINTER_SIZE == 64)
 # define CScasptr(target,oldval,newval) \
  (0 == __CMP_STORE_QUAD( (volatile void *)(target), \
@@ -3245,6 +3271,7 @@ FUNC_EXTERN i4 CS_tas(CS_ASET *);
 # define CScasptr(target,oldval,newval) \
    (0 == __CMP_STORE_LONG( (volatile void *)(target), \
     (int)(oldval), (int)(newval), (volatile void *)(target) ))
+#endif
 #endif
 
 # else

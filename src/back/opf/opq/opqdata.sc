@@ -88,7 +88,7 @@ LIBRARY	=	IMPOPFLIBDATA
 */
 
 GLOBALDEF OPQ_GLOBAL	    opq_global;		/* global data struct */
-GLOBALDEF ER_ARGUMENT	    er_args[OPQ_MERROR]	    ZERO_FILL;
+GLOBALDEF ER_ARGUMENT	    er_args[OPQ_MERROR];
 						/* array of arg structs for
 						** ERslookup.
 						*/ 
@@ -100,7 +100,7 @@ GLOBALDEF i4		    opq_excstat = OPQ_SERIAL;
 						/* additional info about 
 						** exception processed.
 						*/
-GLOBALDEF IISQLDA	    _sqlda	ZERO_FILL;
+GLOBALDEF IISQLDA	    _sqlda;
 						/* SQLDA area for all
 						** dynamically built queries.
 						*/

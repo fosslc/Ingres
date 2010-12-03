@@ -94,6 +94,8 @@
 **	    Add support for VMS.
 **	20-Jun-2009 (kschendel) SIR 122138
 **	    New sparc and hp symbols no longer imply old ones, fix here.
+**      03-nov-2010 (joea)
+**          Complete prototypes for ii_num_processors and get_value.
 **/
 
 
@@ -101,9 +103,9 @@
 **  Forward and/or External function references.
 */
 
-static i4  	ii_num_processors();    /* best guess at number of processors */
+static i4 ii_num_processors(void);    /* best guess at number of processors */
 
-static i4	get_value();
+static i4 get_value(char *symbol, i4 default_value);
 
 #if defined(any_hpux)
 static i4     hp8_us5_get_num_of_processors();
@@ -157,9 +159,7 @@ static i4     hp8_us5_get_num_of_processors();
 **	   IISYSCONF_MAX_DESCHED_USEC_SLEEP.
 */
 STATUS
-ii_sysconf(item, value)
-i4    item;
-i4	   *value;
+ii_sysconf(i4 item, i4 *value)
 {
     i4	ret_val = OK;
 
@@ -344,9 +344,7 @@ ii_num_processors()
 **         Created.
 */
 static i4
-get_value(symbol, default_value)
-char	*symbol;
-i4	default_value;
+get_value(char *symbol, i4 default_value)
 {
     i4		value = default_value; 
     char	*string;

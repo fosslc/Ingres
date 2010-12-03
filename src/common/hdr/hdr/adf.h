@@ -809,6 +809,8 @@
 **	31-Aug-2010 (thich01)
 **	    Add E_AD5606_SPATIAL_NOT_SUPPORTED for platforms where spatial is
 **	    not supported.
+**	19-Oct-2010 (maspa05) b124551
+**	    adu_valuetomystr has been replaced with adu_sc930prtdataval
 */
 
 #ifndef ADF_HDR_INCLUDED
@@ -2083,6 +2085,9 @@ typedef struct _ADK_CONST_BLK
 **          Add adf_misc_flags, and ADF_LONG_DATE_STRINGS to signal a
 **          String of AD_11_MAX_STRING_LEN length should be returned
 **          for a DATE->CHAR conversion.
+**      12-Oct-2010 (maspa05) b124551
+**          Removed char * arg and added PTR arg to adu_valuetomystr
+**          Also it now returns a STATUS
 */
 
 typedef struct _ADF_CB
@@ -4442,5 +4447,6 @@ FUNC_EXTERN DB_STATUS aduErrorFcn(
 	i4	pcnt,
 		...);
 
-FUNC_EXTERN char *adu_valuetomystr(char *, DB_DATA_VALUE *, ADF_CB *);
+FUNC_EXTERN STATUS adu_sc930prtdataval(i4,char *,i4,DB_DATA_VALUE *, ADF_CB *,
+		PTR);
 #endif /* ADF_HDR_INCLUDED */

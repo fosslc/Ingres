@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -63,8 +63,16 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      14-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opn_numeric(
+	DB_DT_ID type);
+DB_DATA_VALUE *ope_type(
+	OPS_SUBQUERY *subquery,
+	OPE_IEQCLS eqcls);
 
 /*{
 ** Name: opn_numeric	- test for numeric datatype
@@ -89,7 +97,8 @@
 **          initial creation from numtype
 [@history_line@]...
 */
-static opn_numeric(
+static bool
+opn_numeric(
 	    DB_DT_ID		type)
 {
     return(type == DB_INT_TYPE || type == DB_FLT_TYPE);

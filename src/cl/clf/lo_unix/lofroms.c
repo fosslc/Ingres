@@ -4,6 +4,10 @@
 #include	"lolocal.h"
 #include	<lo.h>
 
+/*
+** Forward references
+*/
+STATUS	LOreadfname(register char *, register i2 *);
 
 /*LOfroms.c
 **	Convert a string to a LOCATION.
@@ -36,6 +40,8 @@
 **	    Use new-style function declaration to avoid compiler warning.
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	15-nov-2010 (stephenb)
+**	    Proto LOreadfname()
 **	
 */
 
@@ -51,7 +57,6 @@ LOfroms(
     				** characters scanned
     				*/
     i2		count;
-    STATUS		LOreadfname();
     STATUS		LOclear();
 
     strsize = 0;

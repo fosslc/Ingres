@@ -36,6 +36,8 @@
 ;	    add ult_trace_longqry and ult_set_trace_longqry
 ;	04-oct-2010 (maspa05) Bug 124541
 ;           add ult_tracefile_loc
+;	27-Oct-2010 (bonro01)
+;	    Add uld_struct_name for bug 124544
 ;
 
 EXPORTS
@@ -103,4 +105,5 @@ uld_prtree_x		@59
 ult_trace_longqry	@62
 ult_set_trace_longqry	@63
 ult_tracefile_loc	@64
+uld_struct_name		@65
 

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -57,13 +57,19 @@
 **
 **  History:    
 **      24-may-86 (seputis)    
-{@history_line@}...
 **	14-jul-93 (ed)
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **       7-oct-94 (inkdo01)
 **          fix for bug 63550. Need to get minimum of sizeof(OPH_COERCE) 
 **          bytes so that freelist template can overlay the acquired stge.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+OPH_COUNTS oph_ccmemory(
+	OPS_SUBQUERY *subquery,
+	OPH_INTERVAL *intervalp);
 
 /*{
 ** Name: oph_memory	- get new histogram cell count array element
@@ -112,7 +118,7 @@ oph_ccmemory(
     OPH_COERCE		**coercepp; /* coercion use to traverse linked list*/
 
     required = intervalp->oph_numcells * sizeof( OPN_PERCENT ) ;
-    if (required < sizeof(OPH_COERCE)) required = sizeof(OPH_COERCE);
+    if (required < (i4)sizeof(OPH_COERCE)) required = sizeof(OPH_COERCE);
 					     /* fix for bug 63550 */
     for (coercepp =(OPH_COERCE **)&subquery->ops_global->ops_estate.opn_ccfree; 
 	*coercepp; 

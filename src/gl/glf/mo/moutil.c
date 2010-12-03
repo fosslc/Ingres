@@ -75,6 +75,8 @@
 **	    Cleaned up compiler warnings.
 **      09-Feb-2010 (smeke01) b123226, b113797 
 **          Added handling of 8-byte integers.
+**      03-nov-2010 (joea)
+**          Declare MO_instance_compare and MO_mon_compare as static.
 **/
 
 /* external variables */
@@ -149,7 +151,7 @@ GLOBALREF MO_CLASS_DEF MO_cdefs[];
 **	    cast PTRs before use.
 */
 
-i4
+static i4
 MO_instance_compare( const char *aptr, const char *bptr )
 {
     MO_INSTANCE *a = (MO_INSTANCE *)aptr;
@@ -221,7 +223,7 @@ MO_instance_compare( const char *aptr, const char *bptr )
 **	    cast PTRs before use.
 */
 
-i4
+static i4
 MO_mon_compare( const char *aptr, const char *bptr )
 {
     MO_MON_BLOCK *a = (MO_MON_BLOCK *)aptr;

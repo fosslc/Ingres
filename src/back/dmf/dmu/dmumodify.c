@@ -1,9 +1,10 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
 #include    <gl.h>
+#include    <bt.h>
 #include    <tm.h>
 #include    <cs.h>
 #include    <me.h>
@@ -261,6 +262,7 @@
 **                                          begin transaction operation.
 **          .dmu_tbl_id                     Internal name of table to be 
 **                                          modified.
+**	    .dmu_action			    What kind of modify to perform
 **          .dmu_location.data_address      Pointer to array of locations.
 **                                          Each entry in array is of type
 **                                          DB_LOC_NAME.  Must be zero if
@@ -273,12 +275,7 @@
 **                                          below for description of entry.
 **          .dmu_key_array.ptr_in_count     The number of pointers in the array.
 **	    .dmu_key_array.ptr_size	    The size of each element pointed at
-**          .dmu_char_array.data_address    Pointer to an area used to input
-**                                          and array of entries of type
-**                                          DMU_CHAR_ENTRY.
-**                                          See below for description of 
-**                                          <dmu_char_array> entries.
-**          .dmu_char_array.data_in_size    Length of char_array in bytes.
+**	    .dmu_chars			    Various table characteristics
 **
 **          <dmu_key_array> entries are of type DMU_KEY_ENTRY and
 **          must have following format:
@@ -286,40 +283,6 @@
 **          key_order                       Must be DMU_ASCENDING or 
 **                                          DMU_DESCENDING. DMU_DESCENDING 
 **                                          is only legal on a heap structure.
-**
-**          <dmu_char_array> entries are of type DMU_CHAR_ENTRY and
-**          must have following format:
-**          char_id                         Must be one of the dmu 
-**                                          characteristics:
-**                                          DMU_STRUCTURE.
-**					    DMU_IFILL
-**                                          DMU_LEAFFILL
-**					    DMU_DATAFILL
-**                                          DMU_MINPAGES
-**                                          DMU_MAXPAGES
-**                                          DMU_UNIQUE
-**					    DMU_MERGE
-**					    DMU_COMPRESSED
-**                                          DMU_JOURNALED
-**                                          DMU_VIEW_CREATE
-**				            DMU_TRUNCATE
-**                                          DMU_INDEX_COMP
-**					    DMU_TEMP_TABLE
-**					    DMU_RECOVERY - does this temporary
-**						table perform recovery?
-**						(IF GIVEN, MUST BE DMU_C_OFF)
-**					    DMU_ADD_EXTEND
-**					    DMU_READONLY
-**					    DMU_NOREADONLY
-**					    DMU_ROW_SEC_AUDIT
-**					    DMU_PHYS_INCONSISTENT 
-**					    DMU_LOG_INCONSISTENT
-**					    DMU_TABLE_RECOVERY_DISALLOWED 
-**					    DMU_TABLE_PRIORITY
-**					    DMU_TO_TABLE_PRIORITY
-**					    DMU_CLUSTERED
-**          char_value                      The value to associate with above
-**                                          characteristic.
 **
 ** Output:
 **      dmu_cb
@@ -531,6 +494,9 @@
 **          Fixed DMU_COMPRESSED to accept char_value DMU_C_HIGH
 **	22-Oct-2009 (kschendel) SIR 122739
 **	    Minor rejuggling of how compression, relstat, relstat2 are passed.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
+**	    Fix the operation preamble here.
 */
 
 DB_STATUS
@@ -540,14 +506,13 @@ dmu_modify(DMU_CB    *dmu_cb)
     DMU_CB		*dmu = dmu_cb;
     DML_XCB		*xcb;
     DML_ODCB		*odcb;
-    DMU_CHAR_ENTRY	*chr;
     DM2U_MOD_CB		local_mcb, *mcb = &local_mcb;
 
     i4			recovery;
-    i4             	truncate;
-    i4             	duplicates, reorg;
+    i4			truncate;
+    i4			duplicates;
     i4			i,j;
-    i4			chr_count;
+    i4			indicator;
     i4			error, local_error;
     DB_STATUS		status;
     bool                bad_loc;
@@ -561,6 +526,7 @@ dmu_modify(DMU_CB    *dmu_cb)
     DB_TAB_NAME		table_name;
     bool		got_action;
     bool		is_table_debug;
+    bool		reorg;
 
     CLRDBERR(&dmu->error);
 
@@ -672,20 +638,10 @@ dmu_modify(DMU_CB    *dmu_cb)
 
 	dmu->dmu_tup_cnt = 0;
         truncate = 0;
-	reorg = -1;
+	reorg = FALSE;
 	duplicates = -1;
 	verify_options = 0;
 	got_action = FALSE;
-
-	/*  Check the characteristics. */
-
-	chr = (DMU_CHAR_ENTRY*) dmu->dmu_char_array.data_address;
-	chr_count = dmu->dmu_char_array.data_in_size / sizeof(DMU_CHAR_ENTRY);
-	if (chr_count && chr == NULL)
-	{
-	    SETDBERR(&dmu->error, 0, E_DM002A_BAD_PARAMETER);
-	    break;
-	}
 
 	/* FIXME better messages (in general) */
 	/* If there's a partdef it has to be one-piece, else bad param */
@@ -697,264 +653,311 @@ dmu_modify(DMU_CB    *dmu_cb)
 	    break;
 	}
 
-	for (i = 0; i < chr_count; i++)
+	/* Disassemble the modify action.
+	** FIXME this used to be buried in the characteristics array.
+	** It would make much more sense to just carry the action
+	** code through, but that will have to wait for another day.
+	*/
+	got_action = FALSE;
+	switch (dmu->dmu_action)
 	{
-	    switch (chr[i].char_id)
+	case DMU_ACT_STORAGE:
+	    if (BTtest(DMU_STRUCTURE, dmu->dmu_chars.dmu_indicators))
 	    {
-	    case DMU_STRUCTURE:
 		got_action = TRUE;
-		mcb->mcb_structure = chr[i].char_value;
-		if ((mcb->mcb_structure != DB_HEAP_STORE) &&
-		    (mcb->mcb_structure != DB_HASH_STORE) &&
-		    (mcb->mcb_structure != DB_ISAM_STORE) &&
-		    (mcb->mcb_structure != DB_BTRE_STORE)
-		   )
-		{
-		    SETDBERR(&dmu->error, i, E_DM000E_BAD_CHAR_VALUE);
-		    break;
-		}
+		mcb->mcb_structure = dmu->dmu_chars.dmu_struct;
+	    }
+	    break;
+
+	case DMU_ACT_ADDEXTEND:
+	    got_action = TRUE;
+	    mcb->mcb_mod_options2 |= DM2U_2_ADD_EXTEND;
+	    break;
+
+	case DMU_ACT_ENCRYPT:
+	    got_action = TRUE;
+	    mcb->mcb_mod_options2 |= DM2U_2_ENCRYPT;
+	    break;
+
+	case DMU_ACT_LOG_CONSISTENT:
+	    if (BTtest(DMU_ACTION_ONOFF, dmu->dmu_chars.dmu_indicators))
+	    {
+		got_action = TRUE;
+		mcb->mcb_mod_options2 &= ~DM2U_2_TBL_RECOVERY_DEFAULT;
+		if ( dmu->dmu_chars.dmu_flags & DMU_FLAG_ACTON )
+		    mcb->mcb_mod_options2 |= DM2U_2_LOG_CONSISTENT;
+		else
+		    mcb->mcb_mod_options2 |= DM2U_2_LOG_INCONSISTENT;
+	    }
+	    break;
+
+	case DMU_ACT_MERGE:
+	    got_action = TRUE;
+	    mcb->mcb_merge = TRUE;
+	    break;
+
+	case DMU_ACT_PERSISTENCE:
+	    if (BTtest(DMU_PERSISTS_OVER_MODIFIES, dmu->dmu_chars.dmu_indicators))
+	    {
+		got_action = TRUE;
+		mcb->mcb_mod_options2 |= (dmu->dmu_chars.dmu_flags & DMU_FLAG_PERSISTENCE) ?
+			DM2U_2_PERSISTS_OVER_MODIFIES :
+			DM2U_2_NOPERSIST_OVER_MODIFIES;
+	    }
+	    break;
+
+	case DMU_ACT_PHYS_CONSISTENT:
+	    if (BTtest(DMU_ACTION_ONOFF, dmu->dmu_chars.dmu_indicators))
+	    {
+		got_action = TRUE;
+		mcb->mcb_mod_options2 &= ~DM2U_2_TBL_RECOVERY_DEFAULT;
+		if ( dmu->dmu_chars.dmu_flags & DMU_FLAG_ACTON )
+		    mcb->mcb_mod_options2 |= DM2U_2_PHYS_CONSISTENT;
+		else
+		    mcb->mcb_mod_options2 |= DM2U_2_PHYS_INCONSISTENT;
+	    }
+	    break;
+
+	case DMU_ACT_PRIORITY:
+	    if (BTtest(DMU_TABLE_PRIORITY, dmu->dmu_chars.dmu_indicators))
+		got_action = TRUE;
+	    /* flag setting when we hit the priority char */
+	    break;
+
+	case DMU_ACT_READONLY:
+	    if (BTtest(DMU_ACTION_ONOFF, dmu->dmu_chars.dmu_indicators))
+	    {
+		got_action = TRUE;
+		if ( dmu->dmu_chars.dmu_flags & DMU_FLAG_ACTON )
+		    mcb->mcb_mod_options2 |= DM2U_2_READONLY;
+		else
+		    mcb->mcb_mod_options2 |= DM2U_2_NOREADONLY;
+	    }
+	    break;
+
+	case DMU_ACT_REORG:
+	    got_action = TRUE;
+	    reorg = TRUE;
+	    break;
+
+	case DMU_ACT_TABLE_RECOVERY:
+	    if (BTtest(DMU_ACTION_ONOFF, dmu->dmu_chars.dmu_indicators))
+	    {
+		got_action = TRUE;
+		mcb->mcb_mod_options2 &= ~DM2U_2_TBL_RECOVERY_DEFAULT;
+		if ( dmu->dmu_chars.dmu_flags & DMU_FLAG_ACTON )
+		    mcb->mcb_mod_options2 |= DM2U_2_TBL_RECOVERY_ALLOWED;
+		else
+		    mcb->mcb_mod_options2 |= DM2U_2_TBL_RECOVERY_DISALLOWED;
+	    }
+	    break;
+
+	case DMU_ACT_TRUNC:
+	    got_action = TRUE;
+	    truncate++;
+	    break;
+
+	case DMU_ACT_USCOPE:
+	    if (BTtest(DMU_STATEMENT_LEVEL_UNIQUE, dmu->dmu_chars.dmu_indicators))
+	    {
+		got_action = TRUE;
+		mcb->mcb_mod_options2 |= DM2U_2_STATEMENT_LEVEL_UNIQUE;
+	    }
+	    break;
+
+	case DMU_ACT_VERIFY:
+	    if (BTtest(DMU_VACTION, dmu->dmu_chars.dmu_indicators))
+	    {
+		got_action = TRUE;
+		mcb->mcb_verify = dmu->dmu_chars.dmu_vaction;
+	    }
+	    break;
+	} /* switch */
+
+	if (! got_action)
+	{
+	    SETDBERR(&dmu->error, 0, E_DM000E_BAD_CHAR_VALUE);
+	    break;
+	}
+
+	/* Disassemble the characteristics.
+	** FIXME probably better to just carry it through, but one step
+	** at a time!
+	*/
+	indicator = -1;
+	while ((indicator = BTnext(indicator, dmu->dmu_chars.dmu_indicators, DMU_CHARIND_LAST)) != -1)
+	{
+	    switch (indicator)
+	    {
+	    case DMU_ACTION_ONOFF:
+	    case DMU_STRUCTURE:
+		/* Already picked it up, just skip on */
 		continue;
 
 	    case DMU_IFILL:
-		mcb->mcb_i_fill = chr[i].char_value;
+		mcb->mcb_i_fill = dmu->dmu_chars.dmu_nonleaff;
 		if (mcb->mcb_i_fill > 100)
 		    mcb->mcb_i_fill = 100;
 		continue;
 
 	    case DMU_LEAFFILL:
-		mcb->mcb_l_fill = chr[i].char_value;
+		mcb->mcb_l_fill = dmu->dmu_chars.dmu_leaff;
 		if (mcb->mcb_l_fill > 100)
 		    mcb->mcb_l_fill = 100;
 		continue;
 
 	    case DMU_DATAFILL:
-		mcb->mcb_d_fill = chr[i].char_value;
+		mcb->mcb_d_fill = dmu->dmu_chars.dmu_fillfac;
 		if (mcb->mcb_d_fill > 100)
 		    mcb->mcb_d_fill = 100;
 		continue;
 
 	    case DMU_PAGE_SIZE:
 		used_default_page_size = FALSE;
-		mcb->mcb_page_size = chr[i].char_value;
+		mcb->mcb_page_size = dmu->dmu_chars.dmu_page_size;
 		if (mcb->mcb_page_size != 2048   && mcb->mcb_page_size != 4096  &&
 		    mcb->mcb_page_size != 8192   && mcb->mcb_page_size != 16384 &&
 		    mcb->mcb_page_size != 32768  && mcb->mcb_page_size != 65536)
 		{
-		    SETDBERR(&dmu->error, i, E_DM000E_BAD_CHAR_VALUE);
+		    SETDBERR(&dmu->error, indicator, E_DM000E_BAD_CHAR_VALUE);
 		    break;
-		}		    
+		}
 		else if (!dm0p_has_buffers(mcb->mcb_page_size))
 		{
-		    SETDBERR(&dmu->error, i, E_DM0157_NO_BMCACHE_BUFFERS);
+		    SETDBERR(&dmu->error, 0, E_DM0157_NO_BMCACHE_BUFFERS);
 		    break;
 		}		    
 		else
 		{
 		    continue;
-		}		    
+		}
 
 	    case DMU_MINPAGES:
-		mcb->mcb_min_pages = chr[i].char_value;
+		mcb->mcb_min_pages = dmu->dmu_chars.dmu_minpgs;
 		continue;
 
 	    case DMU_MAXPAGES:
-		mcb->mcb_max_pages = chr[i].char_value;
+		mcb->mcb_max_pages = dmu->dmu_chars.dmu_maxpgs;
 		continue;
 
 	    case DMU_UNIQUE:
-		mcb->mcb_unique = chr[i].char_value == DMU_C_ON;
+		mcb->mcb_unique = TRUE;
 		continue;
 
-	    case DMU_COMPRESSED:
+	    case DMU_DCOMPRESSION:
 		/* Translate DMU_xxx to TCB compression types */
-		if (chr[i].char_value == DMU_C_ON)
+		if (dmu->dmu_chars.dmu_dcompress == DMU_COMP_ON)
 		    mcb->mcb_compressed = TCB_C_DEFAULT;
-		else if (chr[i].char_value == DMU_C_HIGH)
+		else if (dmu->dmu_chars.dmu_dcompress == DMU_COMP_HI)
 		    mcb->mcb_compressed = TCB_C_HICOMPRESS;
 		continue;
 
-            case DMU_INDEX_COMP:
-                mcb->mcb_index_compressed = chr[i].char_value == DMU_C_ON;
+            case DMU_KCOMPRESSION:
+                mcb->mcb_index_compressed =
+			(dmu->dmu_chars.dmu_kcompress != DMU_COMP_OFF);
                 continue;
 
 	    case DMU_TEMP_TABLE:
-		mcb->mcb_temporary = chr[i].char_value == DMU_C_ON;
+		mcb->mcb_temporary = TRUE;
 		continue;
 
 	    case DMU_RECOVERY:
-		recovery = chr[i].char_value == DMU_C_ON;
+		recovery = (dmu->dmu_chars.dmu_flags & DMU_FLAG_RECOVERY) != 0;
 		if (recovery)
 		{
 		    /* recovery isn't currently supported */
-		    SETDBERR(&dmu->error, i, E_DM000D_BAD_CHAR_ID);
+		    SETDBERR(&dmu->error, indicator, E_DM000D_BAD_CHAR_ID);
 		    break;
 		}
 		continue;
 
-	    case DMU_MERGE:
-		got_action = TRUE;
-		mcb->mcb_merge = TRUE;
-		continue;
-
-	    case DMU_ADD_EXTEND:
-		got_action = TRUE;
-		if ( chr[i].char_value == DMU_C_ON )
-		    mcb->mcb_mod_options2 |= DM2U_2_ADD_EXTEND;
-		continue;
-
-	    case DMU_READONLY:
-		got_action = TRUE;
-		if ( chr[i].char_value == DMU_C_ON )
-		    mcb->mcb_mod_options2 |= DM2U_2_READONLY;
-		else
-		    mcb->mcb_mod_options2 |= DM2U_2_NOREADONLY;
-		continue;
-
 	    case DMU_DUPLICATES:
-		duplicates = chr[i].char_value == DMU_C_ON;
-		continue;
-
-	    case DMU_REORG:
-		got_action = TRUE;
-		reorg = chr[i].char_value == DMU_C_ON;
-		continue;
-
-	    case DMU_TRUNCATE:
-		got_action = TRUE;
-		truncate++;
+		duplicates = 0;
+		if (dmu->dmu_chars.dmu_flags & DMU_FLAG_DUPS)
+		    duplicates = 1;
 		continue;
 
 	    case DMU_ALLOCATION:
-		mcb->mcb_allocation = chr[i].char_value;
+		mcb->mcb_allocation = dmu->dmu_chars.dmu_alloc;
 		continue;
 
 	    case DMU_EXTEND:
-		mcb->mcb_extend = chr[i].char_value;
+		mcb->mcb_extend = dmu->dmu_chars.dmu_extend;
 		continue;
 
-	    case DMU_VERIFY:
-		got_action = TRUE;
-		mcb->mcb_verify = chr[i].char_value;
+	    case DMU_VACTION:
+		/* Already got it, just skip on */
 		continue;
 
 	    case DMU_VOPTION:
-		verify_options = chr[i].char_value;
+		verify_options = dmu->dmu_chars.dmu_voption;
 		continue;
 
-	    case DMU_TO_STATEMENT_LEVEL_UNIQUE:
-		got_action = TRUE;
-		mcb->mcb_mod_options2 |= DM2U_2_STATEMENT_LEVEL_UNIQUE;
-		/* Fall thru, value always ON */
 	    case DMU_STATEMENT_LEVEL_UNIQUE:
-		if (chr[i].char_value == DMU_C_ON)
+		if (dmu->dmu_chars.dmu_flags & DMU_FLAG_UNIQUE_STMT)
 		    mcb->mcb_relstat2 |= TCB_STATEMENT_LEVEL_UNIQUE;
 		continue;
 
-	    case DMU_TO_PERSISTS_OVER_MODIFIES:
-		got_action = TRUE;
-		mcb->mcb_mod_options2 |= (chr[i].char_value == DMU_C_ON) ?
-			DM2U_2_PERSISTS_OVER_MODIFIES :
-			DM2U_2_NOPERSIST_OVER_MODIFIES;
-		/* Fall thru */
 	    case DMU_PERSISTS_OVER_MODIFIES:
-		if (chr[i].char_value == DMU_C_ON)
+		if (dmu->dmu_chars.dmu_flags & DMU_FLAG_PERSISTENCE)
 		    mcb->mcb_relstat2 |= TCB_PERSISTS_OVER_MODIFIES;
 		continue;
 
 	    case DMU_SYSTEM_GENERATED:
-		if (chr[i].char_value == DMU_C_ON)
-		    mcb->mcb_relstat2 |= TCB_SYSTEM_GENERATED;
+		mcb->mcb_relstat2 |= TCB_SYSTEM_GENERATED;
 		continue;
 
 	    case DMU_SUPPORTS_CONSTRAINT:
-		if (chr[i].char_value == DMU_C_ON)
-		    mcb->mcb_relstat2 |= TCB_SUPPORTS_CONSTRAINT;
+		mcb->mcb_relstat2 |= TCB_SUPPORTS_CONSTRAINT;
 		continue;
 
 	    case DMU_NOT_UNIQUE:
-		if (chr[i].char_value == DMU_C_ON)
-		    mcb->mcb_relstat2 |= TCB_NOT_UNIQUE;
+		mcb->mcb_relstat2 |= TCB_NOT_UNIQUE;
 		continue;
 
 	    case DMU_NOT_DROPPABLE:
-		if (chr[i].char_value == DMU_C_ON)
-		    mcb->mcb_relstat2 |= TCB_NOT_DROPPABLE;
+		mcb->mcb_relstat2 |= TCB_NOT_DROPPABLE;
 		continue;
 
 	    case DMU_ROW_SEC_AUDIT:
-		if (chr[i].char_value == DMU_C_ON)
-		    mcb->mcb_relstat2 |= TCB_ROW_AUDIT;
+		mcb->mcb_relstat2 |= TCB_ROW_AUDIT;
 		continue;
 
-	    case DMU_PHYS_INCONSISTENT: 
-		got_action = TRUE;
-		mcb->mcb_mod_options2 &= ~DM2U_2_TBL_RECOVERY_DEFAULT;
-		if ( chr[i].char_value == DMU_C_ON )
-		    mcb->mcb_mod_options2 |= DM2U_2_PHYS_INCONSISTENT;
-		else
-		    mcb->mcb_mod_options2 |= DM2U_2_PHYS_CONSISTENT;
-		continue;
-
-	    case DMU_LOG_INCONSISTENT:
-		got_action = TRUE;
-		mcb->mcb_mod_options2 &= ~DM2U_2_TBL_RECOVERY_DEFAULT;
-		if ( chr[i].char_value == DMU_C_ON )
-		    mcb->mcb_mod_options2 |= DM2U_2_LOG_INCONSISTENT;
-		else
-		    mcb->mcb_mod_options2 |= DM2U_2_LOG_CONSISTENT;
-		continue;
-
-	    case DMU_TABLE_RECOVERY_DISALLOWED:
-		got_action = TRUE;
-		mcb->mcb_mod_options2 &= ~DM2U_2_TBL_RECOVERY_DEFAULT;
-		if ( chr[i].char_value == DMU_C_ON )
-		    mcb->mcb_mod_options2 |= DM2U_2_TBL_RECOVERY_DISALLOWED;
-		else
-		    mcb->mcb_mod_options2 |= DM2U_2_TBL_RECOVERY_ALLOWED;
-		continue;
-
-	    case DMU_TO_TABLE_PRIORITY:
-		got_action = TRUE;
 	    case DMU_TABLE_PRIORITY:
-		mcb->mcb_tbl_pri = chr[i].char_value;
+		mcb->mcb_tbl_pri = dmu->dmu_chars.dmu_cache_priority;
 		if (mcb->mcb_tbl_pri < 0 || mcb->mcb_tbl_pri > DB_MAX_TABLEPRI)
 		{
-		    SETDBERR(&dmu->error, i, E_DM000E_BAD_CHAR_VALUE);
+		    SETDBERR(&dmu->error, indicator, E_DM000E_BAD_CHAR_VALUE);
 		    break;
 		}
 		/*
 		** DMU_TABLE_PRIORITY    is set if priority came from WITH clause.
 		** DMU_TO_TABLE_PRIORITY is set if priority came from MODIFY TO clause.
 		*/
-		if (chr[i].char_id == DMU_TABLE_PRIORITY)
+		if (dmu->dmu_action != DMU_ACT_PRIORITY)
 		    mcb->mcb_mod_options2 |= DM2U_2_TABLE_PRIORITY;
 		else
 		    mcb->mcb_mod_options2 |= DM2U_2_TO_TABLE_PRIORITY;
 		continue;
 
 	    case DMU_BLOBEXTEND:
-		blob_add_extend = chr[i].char_value;
+		blob_add_extend = dmu->dmu_chars.dmu_blobextend;
 		continue;
 
 	    case DMU_CLUSTERED:
-		mcb->mcb_clustered = chr[i].char_value == DMU_C_ON;
+		mcb->mcb_clustered = (dmu->dmu_chars.dmu_flags & DMU_FLAG_CLUSTERED) != 0;
 		continue;
 
-	    case DMU_ENCRYPT:
-		got_action = TRUE;
-		mcb->mcb_mod_options2 |= DM2U_2_ENCRYPT;
-	        continue;
+	    case DMU_CONCURRENT_UPDATES:
+		/* Translate from PSF flag to DMU internal flag */
+		if (dmu->dmu_chars.dmu_flags & DMU_FLAG_CONCUR_U)
+		    mcb->mcb_flagsmask |= DMU_ONLINE_START;
+		continue;
 
 	    default:
-		SETDBERR(&dmu->error, i, E_DM000D_BAD_CHAR_ID);
+		/* Ignore anything else, might be for CREATE, who knows */
+		continue;
 	    }
-	    break;
-	}
-	if (i < chr_count)
-	    break;
-	if (! got_action)
-	{
-	    SETDBERR(&dmu->error, 0, E_DM000E_BAD_CHAR_VALUE);
 	    break;
 	}
 
@@ -1041,9 +1044,9 @@ dmu_modify(DMU_CB    *dmu_cb)
 	}
 
 	mcb->mcb_kcount = dmu->dmu_key_array.ptr_in_count;
-	mcb->mcb_key = (DM2U_KEY_ENTRY**) dmu->dmu_key_array.ptr_address;
-	if (mcb->mcb_kcount && (mcb->mcb_key == (DM2U_KEY_ENTRY**)NULL || 
-              dmu->dmu_key_array.ptr_size != sizeof(DM2U_KEY_ENTRY)))
+	mcb->mcb_key = (DMU_KEY_ENTRY**) dmu->dmu_key_array.ptr_address;
+	if (mcb->mcb_kcount && (mcb->mcb_key == (DMU_KEY_ENTRY**)NULL ||
+              dmu->dmu_key_array.ptr_size != sizeof(DMU_KEY_ENTRY)))
 	{
 	    SETDBERR(&dmu->error, 0, E_DM002A_BAD_PARAMETER);
 	    break;
@@ -1054,11 +1057,12 @@ dmu_modify(DMU_CB    *dmu_cb)
 	    mcb->mcb_kcount = 0;
 	    mcb->mcb_modoptions |= DM2U_TRUNCATE;
 	}
-	if (duplicates == DMU_C_ON)
+	if (duplicates == 1)
 	    mcb->mcb_modoptions |= DM2U_DUPLICATES;
-	else if (duplicates == DMU_C_OFF)
+	else if (duplicates == 0)
 	    mcb->mcb_modoptions |= DM2U_NODUPLICATES;
-	if (reorg == DMU_C_ON)
+	/* else duplicates == -1, set neither flag */
+	if (reorg)
 	    mcb->mcb_modoptions |= DM2U_REORG;
 
 	/* CLUSTERED implies and requires Unique */
@@ -1138,10 +1142,10 @@ dmu_modify(DMU_CB    *dmu_cb)
 	}
 	else
 	{
-	    /* There must a location list if you are reorginizing
+	    /* There must a location list if you are reorganizing
             ** to a different number of locations.
             */
-	    if (reorg == DMU_C_ON)
+	    if (reorg)
 	    {
 		if (dmu->dmu_location.data_address &&
 					    dmu->dmu_location.data_in_size)
@@ -1243,7 +1247,7 @@ dmu_modify(DMU_CB    *dmu_cb)
 	if (status == E_DB_OK)
 	{
 	    /* If modify to reorg or merge then return no tuple count info. */
-	    if ((reorg == DMU_C_ON) || (mcb->mcb_merge) || (mcb->mcb_verify != 0))
+	    if (reorg || (mcb->mcb_merge) || (mcb->mcb_verify != 0))
 	    {
 		dmu->dmu_tup_cnt = DM_NO_TUPINFO;
 	    }

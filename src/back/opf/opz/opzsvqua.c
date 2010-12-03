@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -73,8 +73,25 @@
 **          replace nat and longnat with i4
 **	10-Mar-1999 (shero03)
 **	    support SQL functions with 4 operands
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static OPZ_FACLASS opz_fclass(
+	i4 nodetype,
+	OPV_GBMVARS *varmap,
+	bool conversion,
+	bool iftrue);
+void opz_savequal(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *andnode,
+	OPV_GBMVARS *lvarmap,
+	OPV_GBMVARS *rvarmap,
+	PST_QNODE *oldnodep,
+	PST_QNODE *inodep,
+	bool left_iftrue,
+	bool right_iftrue);
 
 /*{
 ** Name: opz_fclass	- predict type of function attribute class

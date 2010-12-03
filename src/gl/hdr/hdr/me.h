@@ -192,4 +192,11 @@ MEtls_get( METLS_KEY *tls_key, PTR *tls_value );
 FUNC_EXTERN STATUS
 MEtls_destroy( METLS_KEY *tls_key, STATUS (*destructor)( void * ) );
 
+#ifdef xDEBUG
+VOID	MEshow(void);
+#endif
+#ifdef xPURIFY
+VOID	IIME_purify_tag_exit(void);
+#endif
+
 # endif /* ME_HDR_INCLUDED */

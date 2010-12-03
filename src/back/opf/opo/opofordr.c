@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -53,9 +53,7 @@
 **  Name: OPOFORDR.C - {@comment_text@}
 **
 **  Description:
-{@comment_line@}...
 **
-{@func_list@}...
 **
 **
 **  History:    
@@ -66,21 +64,23 @@
 **	15-sep-93 (swm)
 **	    Moved cs.h include above other header files which need its
 **	    definition of CS_SID.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+OPO_ISORT opo_fordering(
+	OPS_SUBQUERY *subquery,
+	OPE_BMEQCLS *eqcmap);
 
 /*{
 ** Name: opo_fordering	- find or create multi-attribute ordering
 **
 ** Description:
-{@comment_line@}...
 **
 ** Inputs:
-[@PARAM_DESCR@]...
 **
 ** Outputs:
-[@PARAM_DESCR@]...
 **	Returns:
 **	    {@return_description@}
 **	Exceptions:
@@ -90,7 +90,6 @@
 **	    [@description_or_none@]
 **
 ** History:
-[@history_template@]...
 */
 OPO_ISORT
 opo_fordering(

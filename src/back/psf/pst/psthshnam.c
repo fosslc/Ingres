@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -40,8 +40,13 @@
 **      16-sep-93 (smc)
 **          Added/moved <cs.h> for CS_SID. Added history_template so we
 **          can automate this next time.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 pst_hshname(
+	DB_ATT_NAME *colname);
 
 /*{
 ** Name: pst_hashname	- Hash a column name
@@ -83,7 +88,7 @@ pst_hshname(
 
     /* Add up all the chars in the name */
     p = (char *) colname;
-    for (i = 0; i < sizeof(DB_ATT_NAME); i++)
+    for (i = 0; i < (i4)sizeof(DB_ATT_NAME); i++)
     {
 	ret_val += *p;
 	p++;

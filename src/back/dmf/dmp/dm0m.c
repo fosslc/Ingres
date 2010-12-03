@@ -165,6 +165,8 @@
 **	24-Nov-2008 (jonj)
 **	    SIR 120874: dm0m_? functions converted to DB_ERROR *, use
 **	    new form uleFormat.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Fix dm0m_object_align() prototype
 */
 
 /*
@@ -186,7 +188,7 @@ static DB_STATUS expand_pool(
 	i4		flag,
 	DB_ERROR	*dberr);
 
-static i4  dm0m_object_align();
+static i4  dm0m_object_align(void);
 
 static VOID dm0m_fmt_cb(
 	i4             *flag_ptr,
@@ -305,7 +307,7 @@ dm0m_allocate(
     DM_SVCB	    *svcb = dmf_svcb;
     DM_OBJECT	    *next;
     DM_OBJECT	    *pool;
-    SIZE_TYPE	    dm_obj_align = dm0m_object_align();
+    i4	    	    dm_obj_align = dm0m_object_align();
     SIZE_TYPE	    adjusted_size;
     DM_OBJECT	    *obj;
     DM_OBJECT       *best_obj = 0;
@@ -669,7 +671,7 @@ expand_pool(
     STATUS		mestatus;
     SCF_CB		scf_cb;
     i4			loc_err_code;
-    SIZE_TYPE	 	dm_obj_align = dm0m_object_align();
+    i4	 		dm_obj_align = dm0m_object_align();
     i4			expand_pages;
     i4			hint_pages;
     i4			page_bucket;

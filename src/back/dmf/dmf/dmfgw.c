@@ -355,7 +355,7 @@ DB_ERROR    *dberr)
 **			  transaction id.
 **	source		- a pointer to the source (file, path, etc) for object
 **	gw_id		- gateway id for foreign database owner of table.
-**	char_array	- list of table attributes
+**	dmu_chars	- Pointer to DMU_CHARACTERISTICS with more info
 **
 ** Outputs:
 **	tuple_count	- number of rows in gateway table.
@@ -407,6 +407,8 @@ DB_ERROR    *dberr)
 **	     Change i4 cast to PTR now that gwr_database_id is a PTR.
 **	14-Jan-2004 (jenjo02)
 **	    Check db_tab_index > 0 for index, not simply != 0.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
 */
 DB_STATUS
 dmf_gwt_register(
@@ -424,7 +426,7 @@ DMU_FROM_PATH_ENTRY *source,
 i4		    gw_id,
 i4		    *tuple_count,
 i4		    *page_count,
-DM_DATA		    *char_array,
+DMU_CHARACTERISTICS *dmu_chars,
 DB_ERROR	    *dberr)
 {
     GW_RCB		gw_rcb;
@@ -533,16 +535,7 @@ DB_ERROR	    *dberr)
     gw_rcb.gwr_in_vdata_lst.ptr_address = gwattr_array->ptr_address;
     gw_rcb.gwr_in_vdata_lst.ptr_in_count = gwattr_array->ptr_in_count;
     gw_rcb.gwr_in_vdata_lst.ptr_size = gwattr_array->ptr_size;
-    if (char_array)
-    {
-	gw_rcb.gwr_char_array.data_address = char_array->data_address;
-	gw_rcb.gwr_char_array.data_in_size = char_array->data_in_size;
-    }
-    else
-    {
-	gw_rcb.gwr_char_array.data_address = 0;
-	gw_rcb.gwr_char_array.data_in_size = 0;
-    }
+    gw_rcb.gwr_dmf_chars = dmu_chars;
 
     /*
     ** If this is a secondary index, then pass in the gateway id of the parent
@@ -1665,8 +1658,7 @@ DB_ERROR	    *dberr)
     gw_rcb.gwr_out_vdata1.data_address = record;
     gw_rcb.gwr_out_vdata1.data_in_size = tcb->tcb_rel.relwid;
 
-    gw_rcb.gwr_char_array.data_address = 0;
-    gw_rcb.gwr_char_array.data_in_size = 0;
+    gw_rcb.gwr_dmf_chars = NULL;
 
     /* now we can reset the tcb for indices */
 

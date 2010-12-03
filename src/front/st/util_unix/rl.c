@@ -461,6 +461,10 @@
 **	    SIR 123296
 **	    Use full paths (via NMloc) when calling iisyslim so they can
 **	    can be found for LSB installation without being in the path.
+**	12-Oct-2010 (hanje04)
+**	    Bug 124611
+**	    Fix up find_symbols() for Linux to stop SEGVs when /proc isn't
+**	    mounted.
 **
 */
 
@@ -1373,8 +1377,11 @@ static bool kmem_no_read = FALSE;
 static STATUS
 open_kmem( i4  argc, char **argv)
 {
-/* If we don't return sucess limits are never queried */
-    return( OK );
+    LOCATION	loc;
+
+    /* Check /proc is mounted and return an error if it's not */
+    LOfroms( PATH, "/proc/sys/kernel", &loc );
+    return( LOexist(&loc) );
 }
 
 /* Use /proc/sys/kernel special files to return the
@@ -1390,31 +1397,39 @@ find_symbols()
 
     inrecord[0] = 0;
     LOfroms(PATH & FILENAME, "/proc/sys/kernel/shmmax", &loc);
-    SIopen(&loc, "r", &infile);
-    SIgetrec(inrecord, sizeof(inrecord), infile);
-    STscanf(inrecord, "%Ld", &shminfo.shmmax);
-    SIclose(infile);
+    if ( SIopen(&loc, "r", &infile) == OK )
+    {
+        SIgetrec(inrecord, sizeof(inrecord), infile);
+        STscanf(inrecord, "%Ld", &shminfo.shmmax);
+        SIclose(infile);
+    }
 
     inrecord[0] = 0;
     LOfroms(PATH & FILENAME, "/proc/sys/kernel/shmmni", &loc);
-    SIopen(&loc, "r", &infile);
-    SIgetrec(inrecord, sizeof(inrecord), infile);
-    STscanf(inrecord, "%Ld", &shminfo.shmmni);
-    SIclose(infile);
+    if ( SIopen(&loc, "r", &infile) == OK )
+    {
+        SIgetrec(inrecord, sizeof(inrecord), infile);
+        STscanf(inrecord, "%Ld", &shminfo.shmmni);
+        SIclose(infile);
+    }
 
     inrecord[0] = 0;
     LOfroms(PATH & FILENAME, "/proc/sys/kernel/shmall", &loc);
-    SIopen(&loc, "r", &infile);
-    SIgetrec(inrecord, sizeof(inrecord), infile);
-    STscanf(inrecord, "%Ld", &shminfo.shmall);
-    SIclose(infile);
+    if ( SIopen(&loc, "r", &infile) == OK )
+    {
+        SIgetrec(inrecord, sizeof(inrecord), infile);
+        STscanf(inrecord, "%Ld", &shminfo.shmall);
+        SIclose(infile);
+    }
 
     inrecord[0] = 0;
     LOfroms(PATH & FILENAME, "/proc/sys/kernel/sem", &loc);
-    SIopen(&loc, "r", &infile);
-    SIgetrec(inrecord, sizeof(inrecord), infile);
-    STscanf(inrecord, "%Ld %Ld %Ld %Ld", &seminfo.semmsl, &seminfo.semmns, &seminfo.semopm, &seminfo.semmni);
-    SIclose(infile);
+    if ( SIopen(&loc, "r", &infile) == OK )
+    {
+        SIgetrec(inrecord, sizeof(inrecord), infile);
+        STscanf(inrecord, "%Ld %Ld %Ld %Ld", &seminfo.semmsl, &seminfo.semmns, &seminfo.semopm, &seminfo.semmni);
+        SIclose(infile);
+    }
     
 }
 
@@ -2380,7 +2395,7 @@ RLcheck( i4  id, char *buf, i4  argc, char **argv )
 		case RL_SYS_SEM_SETS_HARD:
 		case RL_SYS_SEMS_PER_ID_HARD:
 # if !defined(any_aix) && !defined(a64_sol) && !defined(dg8_us5) && \
-     !defined(dgi_us5) && !defined(LNX)
+     !defined(dgi_us5)
 			/* The following doesn't work on AIX 3.1.
 			   nor AIX 4.x                         */
 			if( kernel < 0 && !kmem_no_read )

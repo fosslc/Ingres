@@ -191,6 +191,8 @@
 **          LG/LK shared memory.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Return int instead of VOID to agree with function prototype.
 **/
 
 /*
@@ -322,7 +324,7 @@ static char *rcpstat_warning_msg[] = {
 **	15-May-2007 (toumi01)
 **	    For supportability add process info to shared memory.
 */
-VOID
+int
 # ifdef	II_DMF_MERGE
 MAIN(argc, argv)
 # else
@@ -335,6 +337,9 @@ char		    *argv[];
     MEadvise(ME_INGRES_ALLOC);
 # endif
     PCexit(_rcpstat(argc, argv));
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 static VOID

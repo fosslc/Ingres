@@ -522,22 +522,6 @@ buildPersistentIndexDMU_CB(
     DMT_SHW_CB		*indexDMT_SHW_CB
 );
 
-static DB_STATUS
-initCharacteristics(
-    QEF_RCB		*qef_rcb,
-    ULM_RCB		*ulm,
-    i4			pass,
-    DM_DATA		*dm_data
-);
-
-static VOID
-addCharacteristic(
-    i4			pass,
-    DM_DATA		*dm_data,
-    i4			characteristic,
-    i4			value
-);
-
 static	DB_STATUS
 buildDM_PTR(
     ULM_RCB		*ulm,
@@ -643,14 +627,6 @@ qeu_valid_srid(
     QEF_CB *qef,
     i4 *errcode);
 
-/* definitions needed for the characteristics compiler */
-
-#define	NUMBER_OF_PASSES	2
-
-#define ADD_CHARACTERISTIC( characteristic, value )	\
-	addCharacteristic( pass, &dmu_cb->dmu_char_array, \
-			   characteristic, value );
-
 /* Value passed around in "changing_part" */
 
 #define NO_CHANGE		0
@@ -722,8 +698,7 @@ qeu_valid_srid(
 **		.dmu_owner	    owner
 **		.dmu_location	    location where table resides
 **		.dmu_attr_array.ptr_in_count number of entries
-**		.dmu_attr_array.ptr_address ptr to an area used to pass
-**					ptrs of type DMU_CHAR_ENTRY
+**		.dmu_attr_array.ptr_address ptr to an area used to pass attrs
 **		.dmu_attr_array.ptr_size    size of an entry
 **		<dmu_attr_array> are of type DMF_ATTR_ENTRY
 **		attr_name
@@ -732,11 +707,7 @@ qeu_valid_srid(
 **		attr_precision
 **		attr_collID
 **		attr_flags_mask
-**		.dmu_char_array.data_address
-**		.dmu_char_array.data_in_size
-**		<dmu_char_array> is of type DMU_CHAR_ENTRY
-**		char_id
-**		char_value
+**		.dmu_chars
 **		
 **	destroy statements require
 **		.dmu_tbl_id	    internal name of table
@@ -750,11 +721,8 @@ qeu_valid_srid(
 **		<dmu_key_array> is of type DMU_KEY_ENTRY
 **		key_attr_name
 **		key_order
-**		.dmu_char_array.data_address
-**		.dmu_char_array.data_in_size
-**		<dmu_char_array> is of type DMU_CHAR_ENTRY
-**		char_id
-**		char_value
+**		.dmu_chars
+**
 **	modify statements require
 **		.dmu_key_array.ptr_in_count
 **		.dmu_key_array.ptr_address
@@ -762,11 +730,8 @@ qeu_valid_srid(
 **		<dmu_key_array> is of type DMU_KEY_ENTRY
 **		key_attr_name
 **		key_order
-**		.dmu_char_array.data_address
-**		.dmu_char_array.data_in_size
-**		<dmu_char_array> is of type DMU_CHAR_ENTRY
-**		char_id
-**		char_value
+**		.dmu_chars
+**
 **	relocate statements require
 **		.dmu_tbl_id	    internal name of relation
 **		.dmu_location	    location where table resides
@@ -1085,6 +1050,8 @@ qeu_valid_srid(
 **	21-Sep-2010 (gupsh01) BUG 124572
 **	    Report correct column name for rename column error message
 **	    E_QE0181_RENAME_COL_HAS_OBJS.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS, dmu_action.
 **
 */
 DB_STATUS
@@ -1116,9 +1083,7 @@ i4		caller )
     bool	    just_drop_base_table =
 			(qeu_cb->qeu_flag & QEU_DROP_BASE_TBL_ONLY) != 0;
     bool	    rebuild_pindex = FALSE;	/* rebuild persistent index */
-    DMU_CHAR_ENTRY  chr;
     QED_DDL_INFO    *ddl_p = &qef_rcb.qef_r3_ddb_req.qer_d7_ddl_info;
-    DB_TAB_ID	    *tableID;
     DMU_CB	    *persistentIndexDMU_CBs = (DMU_CB *)0;
     DB_TAB_ID	    *oldPersistentIndexIDs;
     DB_TAB_ID	    *newPersistentIndexIDs;
@@ -1126,11 +1091,7 @@ i4		caller )
     ULM_RCB         ulm;
     GLOBALREF	    QEF_S_CB	  *Qef_s_cb;
     bool	    memoryStreamOpened = FALSE;
-    i4		    flag = IMPSCH_FOR_TABLE;	
-    QEUQ_CB	    *qeuq_cbs = (QEUQ_CB *)NULL;
-    DMU_CHAR_ENTRY  *char_entry;			
-    i4	    	    char_count;
-    i4	    	    i, NumofIndices, j;
+    i4	    	    NumofIndices, j;
     bool	    dmu_atbl_addcol  = FALSE;
     bool	    dmu_atbl_dropcol = FALSE;
     bool	    dmu_atbl_cascade = FALSE;
@@ -1388,42 +1349,32 @@ ddb_refresh:
     }
     else
     {
-	if ( (opcode == DMU_ALTER_TABLE) &&
-	     (char_entry = (DMU_CHAR_ENTRY*)
-			   dmu_ptr->dmu_char_array.data_address) &&
-	     (char_count = dmu_ptr->dmu_char_array.data_in_size
-			   / sizeof(DMU_CHAR_ENTRY) ) )
-
+	if (opcode == DMU_ALTER_TABLE)
 	{
-	   for (i = 0; i < char_count; i++)
-	   {
-	       switch (char_entry[i].char_id)
-	       {
-		   case DMU_ALTER_TYPE:
-
-			dmu_atbl_addcol =
-				(char_entry[i].char_value == DMU_C_ADD_ALTER);
-			dmu_atbl_dropcol = 
-				(char_entry[i].char_value == DMU_C_DROP_ALTER);
-			dmu_atbl_altcol =
-				(char_entry[i].char_value == DMU_C_ALTCOL_ALTER);
-			dmu_atbl_rencol =
-				(char_entry[i].char_value == DMU_C_ALTCOL_RENAME);
-			dmu_atbl_rentab =
-				(char_entry[i].char_value == DMU_C_ALTTBL_RENAME);
-                        break;
-
-		   case DMU_CASCADE:
-
-			dmu_atbl_cascade =
-					(char_entry[i].char_value == DMU_C_ON);
-                        break;
-		   default:
-
-			continue;
-
-		}
+	    /* Set a bunch of bools instead of just using the action.
+	    ** Maybe someday get rid of the bools now that seeing the
+	    ** action code is easier!
+	    */
+	    switch (dmu_ptr->dmu_action)
+	    {
+	    case DMU_ALT_ADDCOL:
+		dmu_atbl_addcol = TRUE;
+		break;
+	    case DMU_ALT_DROPCOL:
+		dmu_atbl_dropcol = TRUE;
+		break;
+	    case DMU_ALT_ALTERCOL:
+		dmu_atbl_altcol = TRUE;
+		break;
+	    case DMU_ALT_TBL_RENAME:
+		dmu_atbl_rentab = TRUE;
+		break;
+	    case DMU_ALT_COL_RENAME:
+		dmu_atbl_rencol = TRUE;
+		break;
 	    }
+	    if (BTtest(DMU_CASCADE, dmu_ptr->dmu_chars.dmu_indicators))
+		dmu_atbl_cascade = TRUE;
 	}
 
 	if (NumofIndices > 1)
@@ -1661,7 +1612,8 @@ ddb_refresh:
 				~dmt_tbl_entry.tbl_status_mask & DMT_VIEW) )
 	    {
 		DMU_CB	dmucb, *dmu_cb_p = &dmucb;
-		
+
+		MEfill(sizeof(DMU_CB), 0, &dmucb);
 		dmu_cb_p->length = sizeof(DMU_CB);
 		dmu_cb_p->type = DMU_UTILITY_CB;
 		dmu_cb_p->dmu_flags_mask = 0;
@@ -1672,19 +1624,8 @@ ddb_refresh:
 		dmu_cb_p->dmu_db_id = qeu_cb->qeu_db_id;
 		dmu_cb_p->dmu_tran_id = qef_cb->qef_dmt_id;
 		if (TempTable)
-		{
-		    chr.char_id = DMU_TEMP_TABLE;
-		    chr.char_value = DMU_C_ON;
-		    dmu_cb_p->dmu_char_array.data_address = (char *) &chr;
-		    dmu_cb_p->dmu_char_array.data_in_size =
-			sizeof(DMU_CHAR_ENTRY);
-		}
-		else
-		{
-		    dmu_cb_p->dmu_char_array.data_address = 0;
-		    dmu_cb_p->dmu_char_array.data_in_size = 0;
-		}
-		
+		    BTset(DMU_TEMP_TABLE,dmu_cb_p->dmu_chars.dmu_indicators);
+
 		ret_stat = dmf_call(DMU_DESTROY_TABLE, dmu_cb_p);
 		if (DB_FAILURE_MACRO(ret_stat))
 		{
@@ -2129,15 +2070,12 @@ ddb_refresh:
 	    ** 
 	    ** Note that only persistent indexes will be rebuilt.
 	    */
-	    if ( opcode == DMU_MODIFY_TABLE && dmu_ptr->dmu_tbl_id.db_tab_index <= 0 )
+	    if ( opcode == DMU_MODIFY_TABLE
+	      && dmu_ptr->dmu_tbl_id.db_tab_index <= 0
+	      && (dmu_ptr->dmu_action == DMU_ACT_STORAGE
+		  || dmu_ptr->dmu_action == DMU_ACT_TRUNC) )
 	    {
-	        chr = * ((DMU_CHAR_ENTRY *) dmu_cb.dmu_char_array.data_address);
-		if (chr.char_id == DMU_STRUCTURE
-		  || chr.char_id == DMU_TRUNCATE )
-		{
-		    rebuild_pindex = TRUE;
-		}
-
+		rebuild_pindex = TRUE;
 	    }
 
 	    /* There are several reasons why we might want a memory stream for
@@ -2641,8 +2579,8 @@ exit:
 	*/
 	if (! suppress_rowcount(opcode, dmu_ptr)
 	  && (opcode != DMU_MODIFY_TABLE
-	      || ((DMU_CHAR_ENTRY *) dmu_ptr->dmu_char_array.data_address)->char_id == DMU_STRUCTURE
-	      || ((DMU_CHAR_ENTRY *) dmu_ptr->dmu_char_array.data_address)->char_id == DMU_TRUNCATE) )
+	      || dmu_ptr->dmu_action == DMU_ACT_STORAGE
+	      || dmu_ptr->dmu_action == DMU_ACT_TRUNC) )
 	    *row_count = dmu_ptr->dmu_tup_cnt;
     }
 
@@ -3486,6 +3424,8 @@ i4	    *error)
 **	    (plus it makes sense.)
 **	13-Feb-2007 (kschendel)
 **	    Replace CSswitch with better cancel check.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
 */
 
 DB_STATUS
@@ -3545,9 +3485,7 @@ qeu_create_table(QEF_RCB *qefrcb, DMU_CB *dmucb,
     {
 	char tabname[DB_TAB_MAXNAME+30];/* iixxxxx ppnnnnn-master name */
 	DB_PART_DEF *part_def;
-	DMU_CHAR_ENTRY *chr;		/* DMU characteristics array entry */
 	i4 dim;
-	i4 i;
 	i4 ndims;
 	QEU_LOGPART_CHAR *cur_lpc[DBDS_MAX_LEVELS];
 	QEU_LOGPART_CHAR *logpart_ptr;
@@ -3576,21 +3514,11 @@ qeu_create_table(QEF_RCB *qefrcb, DMU_CB *dmucb,
 	** of partitions conveniently.)
 	*/
 
-	i = dmucb->dmu_char_array.data_in_size / sizeof(DMU_CHAR_ENTRY);
-	chr = (DMU_CHAR_ENTRY *) dmucb->dmu_char_array.data_address;
-	if (chr != NULL)
+	if (BTtest(DMU_ALLOCATION, dmucb->dmu_chars.dmu_indicators))
 	{
-	    while (--i >= 0)
-	    {
-		if (chr->char_id == DMU_ALLOCATION)
-		{
-		    chr->char_value = chr->char_value / part_def->nphys_parts;
-		    if (chr->char_value < 4)
-			chr->char_value = 0;	/* Maintain reasonable min */
-		    break;
-		}
-		++chr;
-	    }
+	    dmucb->dmu_chars.dmu_alloc = dmucb->dmu_chars.dmu_alloc / part_def->nphys_parts;
+	    if (dmucb->dmu_chars.dmu_alloc < 4)
+		dmucb->dmu_chars.dmu_alloc = 0;	/* Maintain reasonable min */
 	}
 
 	/* Get things started by finding the logpart block with the
@@ -3842,12 +3770,10 @@ error_xlate:
 **	15-Feb-2005 (thaju02)
 **	    For online modify, don't create new partitions here (locks
 **	    table). Do it in do_online_modify().
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
+**	    Makes copying characteristics to partition a lot easier!
 */
-
-/* Definitions strictly local for this routine */
-
-#define NUM_CRE_DMU_CHAR 10	/* See setupDmuChar, has to be enough! */
-
 
 DB_STATUS
 qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
@@ -3865,8 +3791,6 @@ qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
     DMT_SHW_CB *dmtshow;		/* Table info request cb */
     DMT_TBL_ENTRY *tbl;			/* Table info from show */
     DMU_CB cre_dmucb;			/* DMU cb for creating tables */
-    DMU_CHAR_ENTRY cre_char_array[NUM_CRE_DMU_CHAR];  /* DMU characteristics
-					** for newly created partitions */
     DMU_PHYPART_CHAR *ppc_base;		/* Base of physical partition directives */
     DMU_PHYPART_CHAR *phypart_ptr;	/* Ptr to one phys-partition directive */
     i4 dim;				/* A dimension index */
@@ -3887,16 +3811,20 @@ qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
     /* See if we need to be here */
     opcode = qeucb->qeu_d_op;
     if (opcode == DMU_MODIFY_TABLE)
-	opcode = ((DMU_CHAR_ENTRY *) dmucb->dmu_char_array.data_address)->char_id;
+	opcode = dmucb->dmu_action;
+    else if (opcode == DMU_RELOCATE_TABLE)
+	opcode = DMU_ACT_RELOC;
+    else
+	return (E_DB_OK);
 
     /* We only care about relocating and restructuring */
-    if (opcode != DMU_RELOCATE_TABLE
-      && opcode != DMU_STRUCTURE
-      && opcode != DMU_REORG)
+    if (opcode != DMU_ACT_RELOC
+      && opcode != DMU_ACT_STORAGE
+      && opcode != DMU_ACT_REORG)
 	return (E_DB_OK);
 
     /* If restructuring, and not relocating and not repartitioning, leave */
-    if (opcode == DMU_STRUCTURE
+    if (opcode == DMU_ACT_STORAGE
       && dmucb->dmu_location.data_in_size == 0
       && dmucb->dmu_part_def == NULL)
 	return (E_DB_OK);
@@ -4175,7 +4103,7 @@ qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
 		** If this is relocate or reorganize, this partition can
 		** be skipped.
 		*/
-		if (opcode == DMU_RELOCATE_TABLE || opcode == DMU_REORG)
+		if (opcode == DMU_ACT_RELOC || opcode == DMU_ACT_REORG)
 		{
 		    ppc_base[partno].flags |= DMU_PPCF_IGNORE_ME;
 		}
@@ -4262,19 +4190,7 @@ qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
     status = setupAttrInfo(&cre_dmucb, dmtshow, natts, nametot, ulm, err_code);
     if (DB_FAILURE_MACRO(status))
 	return (status);
-    cre_dmucb.dmu_char_array.data_address = (PTR) &cre_char_array[0];
-    cre_dmucb.dmu_char_array.data_in_size = 0;
     setupDmuChar(&cre_dmucb, dmtshow);
-    if (cre_dmucb.dmu_char_array.data_in_size / sizeof(DMU_CHAR_ENTRY) > NUM_CRE_DMU_CHAR)
-    {
-	/* Whoops, internal error, local array too small.  Stack is
-	** probably hosed out as well...
-	*/
-	TRdisplay("%@Modify prep: cre_char_array too small, want %d\n",
-			cre_dmucb.dmu_char_array.data_in_size / sizeof(DMU_CHAR_ENTRY));
-	*err_code = E_QE0002_INTERNAL_ERROR;
-	return (E_DB_FATAL);
-    }
     cre_dmucb.dmu_ppchar_array.data_address = NULL;
     cre_dmucb.dmu_ppchar_array.data_in_size = 0;
 
@@ -4307,7 +4223,8 @@ qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
 	    }
 	}
 	/* if online, don't create new parts here */
-	if (!(dmucb->dmu_flags_mask & DMU_ONLINE_START))
+	if (! BTtest(DMU_CONCURRENT_UPDATES, dmucb->dmu_chars.dmu_indicators)
+	  || (dmucb->dmu_chars.dmu_flags & DMU_FLAG_CONCUR_U) == 0)
 	{
 	    STRUCT_ASSIGN_MACRO((*new_loc), cre_dmucb.dmu_location);
 
@@ -4419,7 +4336,7 @@ qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
 
 /*
 ** copyPartDef copies a partition definition, asking for a minimalist
-** copy (no names, no text strings).  The partition copied utility,
+** copy (no names, no text strings).  The partition copier utility,
 ** which just happens to live in RDF, always creates a contiguously
 ** allocated definition.  This is a Good Thing(TM), as DMF is going
 ** to insist on a contiguous definition.
@@ -4808,7 +4725,11 @@ setupAttrInfo(DMU_CB *dmucb, DMT_SHW_CB *dmtshow,
 ** same characteristics as the master.  In particular, they MUST share
 ** the same journaling status and page size.  There are a handful of
 ** other things we'll detect from the master as well.  Each of these
-** things are passed to DMF as DMU characteristics entries.
+** things are passed to DMF in the DMU characteristics struct.
+** Unfortunately, simply copying in the DMU characteristics from
+** the modify DMU-CB probably doesn't cut it, since it likely doesn't
+** include journaling (in particular).  So, figure out what we need
+** from the DMT-SHOW info, which alas is in a slightly different format.
 **
 ** It's arguable whether or not DMF should be doing this.  Given that
 ** many things will fall over if the partitions look different from the
@@ -4816,17 +4737,15 @@ setupAttrInfo(DMU_CB *dmucb, DMT_SHW_CB *dmtshow,
 ** a bunch of stuff out of the master.  But, it's a little too inconvenient
 ** at this point -- we have the master info, and DMU create doesn't.
 **
-** The caller should point the DMU CB char-array pointer at an array
-** that has enough room for all the entries we'll create, and start
-** the char-array data_in_size at zero.
-**
 ** Call: setupDmuChar(dmucb, dmtshow);
-**	DMU_CB *dmucb;  -- DMU request block with char-array ready
+**	DMU_CB *dmucb;  -- DMU request block to fill out
 **	DMT_SHW_CB *dmtshow;  -- "Show" info for master
 **
 ** History:
 **	30-Dec-2005 (kschendel)
 **	    Statement-level-unique was checked twice, remove one.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
 */
 
 static void
@@ -4834,61 +4753,46 @@ setupDmuChar(DMU_CB *dmucb, DMT_SHW_CB *dmtshow)
 {
 
     DMT_TBL_ENTRY *tbl;			/* Master table info */
-    DMU_CHAR_ENTRY *chr;		/* Next characteristics array entry */
-
-    chr = (DMU_CHAR_ENTRY *) dmucb->dmu_char_array.data_address;
 
     tbl = (DMT_TBL_ENTRY *) dmtshow->dmt_table.data_address;
+    MEfill(sizeof(DMU_CHARACTERISTICS), 0, &dmucb->dmu_chars);
 
     /* Journaling? */
     if (tbl->tbl_status_mask & (DMT_JON | DMT_JNL))
     {
-	chr->char_id = DMU_JOURNALED;
- 	chr->char_value = DMU_C_ON;
-	++ chr;
-	dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	BTset(DMU_JOURNALED, dmucb->dmu_chars.dmu_indicators);
+	dmucb->dmu_chars.dmu_journaled = DMU_JOURNAL_ON;
     }
 
     /* Page size */
-    chr->char_id = DMU_PAGE_SIZE;
-    chr->char_value = tbl->tbl_pgsize;
-    ++chr;
-    dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+    BTset(DMU_PAGE_SIZE, dmucb->dmu_chars.dmu_indicators);
+    dmucb->dmu_chars.dmu_page_size = tbl->tbl_pgsize;
 
     /* Unique? */
     if (tbl->tbl_status_mask & DMT_UNIQUEKEYS)
     {
-	chr->char_id = DMU_UNIQUE;
- 	chr->char_value = DMU_C_ON;
-	++ chr;
-	dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	BTset(DMU_UNIQUE, dmucb->dmu_chars.dmu_indicators);
     }
 
     /* Duplicates allowed? */
     if (tbl->tbl_status_mask & DMT_DUPLICATES)
     {
-	chr->char_id = DMU_DUPLICATES;
- 	chr->char_value = DMU_C_ON;
-	++ chr;
-	dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	BTset(DMU_DUPLICATES, dmucb->dmu_chars.dmu_indicators);
+	dmucb->dmu_chars.dmu_flags |= DMU_FLAG_DUPS;
     }
 
     /* Statement level unique? */
     if (tbl->tbl_2_status_mask & DMT_STATEMENT_LEVEL_UNIQUE)
     {
-	chr->char_id = DMU_STATEMENT_LEVEL_UNIQUE;
- 	chr->char_value = DMU_C_ON;
-	++ chr;
-	dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	BTset(DMU_STATEMENT_LEVEL_UNIQUE, dmucb->dmu_chars.dmu_indicators);
+	dmucb->dmu_chars.dmu_flags |= DMU_FLAG_UNIQUE_STMT;
     }
 
     /* Cache priority */
     if (tbl->tbl_cachepri != 0)
     {
-	chr->char_id = DMU_TABLE_PRIORITY;
- 	chr->char_value = tbl->tbl_cachepri;
-	++ chr;
-	dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	BTset(DMU_TABLE_PRIORITY, dmucb->dmu_chars.dmu_indicators);
+	dmucb->dmu_chars.dmu_cache_priority = tbl->tbl_cachepri;
     }
 
     /* Extend */
@@ -4897,18 +4801,13 @@ setupDmuChar(DMU_CB *dmucb, DMT_SHW_CB *dmtshow)
     */
     if (tbl->tbl_extend != 0)
     {
-	chr->char_id = DMU_EXTEND;
-	chr->char_value = tbl->tbl_extend;
-	++ chr;
-	dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	BTset(DMU_EXTEND, dmucb->dmu_chars.dmu_indicators);
+	dmucb->dmu_chars.dmu_extend = tbl->tbl_extend;
     }
 
     if (tbl->tbl_status_mask & DMT_SYS_MAINTAINED)
     {
-	chr->char_id = DMU_SYS_MAINTAINED;
-	chr->char_value = DMU_C_ON;
-	++ chr;
-	dmucb->dmu_char_array.data_in_size += sizeof(DMU_CHAR_ENTRY);
+	BTset(DMU_SYS_MAINTAINED, dmucb->dmu_chars.dmu_indicators);
     }
 
 } /* setupDmuChar */
@@ -4996,7 +4895,7 @@ createTblErrXlate(DMU_CB *dmucb, char *tbl_name,
     }
 
     return (errcode);
-} /* createTblErrXlate
+} /* createTblErrXlate */
 
 /*
 ** Name: qeu_modify_finish -- Finish up after repartitioning modify
@@ -5052,8 +4951,6 @@ qeu_modify_finish(QEF_CB *qef_cb, DMU_CB *dmucb, DM_DATA *pp_array)
 	/* (this is probably paranoia */
 	STRUCT_ASSIGN_MACRO(*dmucb, drop_dmucb);
 	drop_dmucb.dmu_flags_mask = DMU_PARTITION | DMU_DROP_NOFILE;
-	drop_dmucb.dmu_char_array.data_address = NULL;
-	drop_dmucb.dmu_char_array.data_in_size = 0;
 	for (partno = new_nparts; partno < old_nparts; ++partno)
 	{
 	    STRUCT_ASSIGN_MACRO(pp_base[partno].pp_tabid, drop_dmucb.dmu_tbl_id);
@@ -5617,7 +5514,6 @@ lookupTableInfo(
     DMT_SHW_CB		**tableCB
 )
 {
-    QEF_CB		*qef_cb = qef_rcb->qef_cb; /* session control block */
     i4		error;
     DB_STATUS		status = E_DB_OK;
     DMT_SHW_CB		*dmt_shw_cb;
@@ -5821,6 +5717,9 @@ lookupTableEntry(
 **	10-Mar-2005 (schka24)
 **	    Also, if base table is becoming partitioned, its indexes need
 **	    to become global (the default); and vice versa.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
+**	    Redo characteristics stuff to operate single pass.
 */
 
 static DB_STATUS
@@ -5856,8 +5755,11 @@ buildPersistentIndexDMU_CB(
     DMU_KEY_ENTRY	**keyPointers;
     DMU_KEY_ENTRY	*keyEntry;
     i4		structureType;
-    i4			toggle;
-    i4			pass;
+
+    /* Start everything zero so we don't have to worry about fields
+    ** we aren't interested in.
+    */
+    MEfill(sizeof(DMU_CB), 0, dmu_cb);
 
     /* Fill in the DMU control block header */
     dmu_cb->type = DMU_UTILITY_CB;
@@ -5877,10 +5779,6 @@ buildPersistentIndexDMU_CB(
     /* for error handling */
     MEcopy( ( PTR ) &baseTableDMT_SHW_CB->dmt_name,
 	    sizeof( DB_TAB_NAME ), ( PTR ) &dmu_cb->dmu_table_name );
-
-    /* Clear RTree fields */
-    dmu_cb->dmu_range_cnt = 0;
-    dmu_cb->dmu_range = NULL;
 
     /* find the location array for the old index */
 
@@ -5990,269 +5888,134 @@ buildPersistentIndexDMU_CB(
       dmu_cb->dmu_attr_array.ptr_in_count = indexDMT_IDX_ENTRY->idx_key_count;
 
     /*
-    ** build the characteristics array for this index.  the following
+    ** build the characteristics structure for this index.  the following
     ** characteristics entries are never built:
     **
     **	CHARACTERISTIC			EXCUSE
     **
-    **	DMU_MERGE	  	MODIFY option:  BTREE garbage collection
-    **	DMU_TRUNCATE      	MODIFY option:  empties table, makes it a heap
     **	DMU_DUPLICATES    	only valid for CREATE TABLE
-    **	DMU_REORG         	for specifying locations
     **	DMU_SYS_MAINTAINED	only valid for CREATE TABLE
     **	DMU_TEMP_TABLE     	flags a temporary table
     **	DMU_VIEW_CREATE    	flags a view
     **	DMU_JOURNALED      	only valid for CREATE TABLE
     **	DMU_GATEWAY	  	only for gateway
     **	DMU_GW_UPDT	  	only for gateway
-    **	DMU_GW_RCVR	  	only for gateway
     **	DMU_VERIFY	  	VERIFYDB option
-    **		DMU_V_VERIFY	VERIFYDB option
-    **		DMU_V_REPAIR	VERIFYDB option
-    **		DMU_V_PATCH	VERIFYDB option
-    **		DMU_V_FPATCH	VERIFYDB option
-    **		DMU_V_DEBUG	VERIFYDB option
-    **		DMU_V_VERBOSE	VERIFYDB option
     **	DMU_VOPTION	  	VERIFYDB option
-    **		DMU_T_BITMAP	VERIFYDB option
-    **		DMU_T_LINK	VERIFYDB option
-    **		DMU_T_RECORD	VERIFYDB option
-    **		DMU_T_ATTRIBUTE	VERIFYDB option
     **	DMU_RECOVERY	  	TEMPORARY TABLES:  what to do on failures
     **	DMU_EXT_CREATE	  	blob support.  not an index issue
     */
 
-    /* First pass just counts.  Second pass actually does "stuff". */
+    /* index structure */
 
-    for ( pass = 0; pass < NUMBER_OF_PASSES; pass++ )
+    switch ( indexDMT_TBL_ENTRY->tbl_storage_type )
     {
-	status = initCharacteristics( qef_rcb, ulm, pass,
-				      &dmu_cb->dmu_char_array );
-	if ( status != E_DB_OK )	return( status );
-
-	/* index structure */
-
-	switch ( indexDMT_TBL_ENTRY->tbl_storage_type )
-	{
-	    case DMT_HEAP_TYPE:
-		structureType = DB_HEAP_STORE;
-		break;
-
-	    case DMT_ISAM_TYPE:
-		structureType = DB_ISAM_STORE;
-		break;
-
-	    case DMT_HASH_TYPE:
-		structureType = DB_HASH_STORE;
-		break;
-
-	    case DMT_BTREE_TYPE:
-		structureType = DB_BTRE_STORE;
-		break;
-
-	    case DMT_RTREE_TYPE:
-		structureType = DB_RTRE_STORE;
-		break;
-
-	    default:
-		status = E_DB_ERROR;
-		QEF_ERROR( E_QE0062_BAD_INDEX );
-		return( status );
-	}
-	ADD_CHARACTERISTIC( DMU_STRUCTURE, structureType );
-
-	ADD_CHARACTERISTIC( DMU_DATAFILL, indexDMT_TBL_ENTRY->tbl_d_fill_factor);
-	ADD_CHARACTERISTIC( DMU_MINPAGES, indexDMT_TBL_ENTRY->tbl_min_page );
-	ADD_CHARACTERISTIC( DMU_MAXPAGES, indexDMT_TBL_ENTRY->tbl_max_page );
-	ADD_CHARACTERISTIC( DMU_PAGE_SIZE, indexDMT_TBL_ENTRY->tbl_pgsize ); 
-
-	toggle = ( indexDMT_TBL_ENTRY->tbl_status_mask & DMT_UNIQUEKEYS ) ?
-		DMU_C_ON : DMU_C_OFF;
-	ADD_CHARACTERISTIC( DMU_UNIQUE, toggle );
-		
-	ADD_CHARACTERISTIC( DMU_IFILL, indexDMT_TBL_ENTRY->tbl_i_fill_factor );
-
-	toggle = ( indexDMT_TBL_ENTRY->tbl_status_mask & DMT_COMPRESSED ) ?
-		   DMU_C_ON : DMU_C_OFF;
-	ADD_CHARACTERISTIC( DMU_COMPRESSED, toggle );
-
-	if ( indexDMT_TBL_ENTRY->tbl_storage_type == DMT_BTREE_TYPE ||
-	     indexDMT_TBL_ENTRY->tbl_storage_type == DMT_RTREE_TYPE)
-	{ ADD_CHARACTERISTIC( DMU_LEAFFILL, indexDMT_TBL_ENTRY->tbl_l_fill_factor );}
-
-	ADD_CHARACTERISTIC( DMU_ALLOCATION, indexDMT_TBL_ENTRY->tbl_allocation );
-	ADD_CHARACTERISTIC( DMU_EXTEND, indexDMT_TBL_ENTRY->tbl_extend );
-
-	toggle = ( indexDMT_TBL_ENTRY->tbl_status_mask & DMT_INDEX_COMP ) ?
-		   DMU_C_ON : DMU_C_OFF;
-	ADD_CHARACTERISTIC( DMU_INDEX_COMP, toggle );
-
-	if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_STATEMENT_LEVEL_UNIQUE )
-	{ ADD_CHARACTERISTIC( DMU_STATEMENT_LEVEL_UNIQUE, DMU_C_ON ); }
-
-	if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_PERSISTS_OVER_MODIFIES )
-	{ ADD_CHARACTERISTIC( DMU_PERSISTS_OVER_MODIFIES, DMU_C_ON ); }
-
-	if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_SYSTEM_GENERATED )
-	{ ADD_CHARACTERISTIC( DMU_SYSTEM_GENERATED, DMU_C_ON ); }
-
-	if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_SUPPORTS_CONSTRAINT )
-	{ ADD_CHARACTERISTIC( DMU_SUPPORTS_CONSTRAINT, DMU_C_ON ); }
-
-	if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_NOT_UNIQUE )
-	{ ADD_CHARACTERISTIC( DMU_NOT_UNIQUE, DMU_C_ON ); }
-
-	if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_NOT_DROPPABLE )
-	{ ADD_CHARACTERISTIC( DMU_NOT_DROPPABLE, DMU_C_ON ); }
-
-	if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_ROW_SEC_AUDIT )
-	{ ADD_CHARACTERISTIC( DMU_ROW_SEC_AUDIT, DMU_C_ON ); }
-
-	/* No global index if base table is being unpartitioned.
-	** Keep global index if it was one already;  make it a global index
-	** if base table is becoming partitioned.
-	*/
-	if ( (indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_GLOBAL_INDEX
-		|| changing_part == BECOMING_PARTITIONED)
-	  && changing_part != BECOMING_NONPARTITIONED)
-	{ ADD_CHARACTERISTIC( DMU_GLOBAL_INDEX, DMU_C_ON ); }
-
-    }	/* end two pass characteristics compiler */
-
-    return( status );
-}
-
-
-
-/*{
-** Name: initCharacteristics - initialize characteristics descriptors
-**
-** Description:
-**	This is the initialization routine for a two pass compiler that
-**	builds characteristics descriptors suitable for stringing into
-**	a DMU_CB.  During the first pass, all we do is count the number
-**	of descriptors we'll need.  During the second pass, we allocate
-**	that number of descriptors and actually fill them in.
-**
-** Inputs:
-**	qef_rcb		request control block
-**	ulm		memory stream to allocate descriptors out of
-**	pass		which pass of the compiler we're executing
-**	dm_data		DM_DATA describing the characteristics array
-**
-** Outputs:
-**	dm_data		DM_DATA describing the characteristics array
-**
-**	Returns:
-**	    DB_STATUS
-**	Exceptions:
-**	    None
-**
-** History:
-**	16-feb-93 (rickh)
-**	    Written for FIPS CONSTRAINTS project (release 6.5).
-**
-*/
-
-static DB_STATUS
-initCharacteristics(
-    QEF_RCB		*qef_rcb,
-    ULM_RCB		*ulm,
-    i4			pass,
-    DM_DATA		*dm_data
-)
-{
-    DB_STATUS		status = E_DB_OK;
-
-    switch ( pass )
-    {
-	case 0:
-	    dm_data->data_address = ( char * ) NULL;
-	    dm_data->data_in_size = 0;	
-	    dm_data->data_out_size = 0;
+	case DMT_HEAP_TYPE:
+	    structureType = DB_HEAP_STORE;
 	    break;
 
-	case ( NUMBER_OF_PASSES - 1 ):
+	case DMT_ISAM_TYPE:
+	    structureType = DB_ISAM_STORE;
+	    break;
 
-	    GET_MEMORY( dm_data->data_in_size, &dm_data->data_address );
+	case DMT_HASH_TYPE:
+	    structureType = DB_HASH_STORE;
+	    break;
+
+	case DMT_BTREE_TYPE:
+	    structureType = DB_BTRE_STORE;
+	    break;
+
+	case DMT_RTREE_TYPE:
+	    structureType = DB_RTRE_STORE;
 	    break;
 
 	default:
-	    break;
-    }			/* end switch */
+	    status = E_DB_ERROR;
+	    QEF_ERROR( E_QE0062_BAD_INDEX );
+	    return( status );
+    }
+    BTset(DMU_STRUCTURE, dmu_cb->dmu_chars.dmu_indicators);
+    dmu_cb->dmu_chars.dmu_struct = structureType;
 
-    dm_data->data_in_size = 0;
+    BTset(DMU_DATAFILL, dmu_cb->dmu_chars.dmu_indicators);
+    dmu_cb->dmu_chars.dmu_fillfac = indexDMT_TBL_ENTRY->tbl_d_fill_factor;
+    BTset(DMU_IFILL, dmu_cb->dmu_chars.dmu_indicators);
+    dmu_cb->dmu_chars.dmu_nonleaff = indexDMT_TBL_ENTRY->tbl_i_fill_factor;
+    BTset(DMU_MINPAGES, dmu_cb->dmu_chars.dmu_indicators);
+    dmu_cb->dmu_chars.dmu_minpgs = indexDMT_TBL_ENTRY->tbl_min_page;
+    BTset(DMU_MAXPAGES, dmu_cb->dmu_chars.dmu_indicators);
+    dmu_cb->dmu_chars.dmu_maxpgs = indexDMT_TBL_ENTRY->tbl_max_page;
+    BTset(DMU_PAGE_SIZE, dmu_cb->dmu_chars.dmu_indicators);
+    dmu_cb->dmu_chars.dmu_page_size = indexDMT_TBL_ENTRY->tbl_pgsize;
+
+    if (indexDMT_TBL_ENTRY->tbl_status_mask & DMT_UNIQUEKEYS)
+	BTset(DMU_UNIQUE, dmu_cb->dmu_chars.dmu_indicators);
+
+    if (indexDMT_TBL_ENTRY->tbl_status_mask & DMT_COMPRESSED)
+    {
+	BTset(DMU_DCOMPRESSION, dmu_cb->dmu_chars.dmu_indicators);
+	if (indexDMT_TBL_ENTRY->tbl_comp_type == DMT_C_HICOMPRESS)
+	    dmu_cb->dmu_chars.dmu_dcompress = DMU_COMP_HI;
+	else if (indexDMT_TBL_ENTRY->tbl_comp_type != DMT_C_NONE)
+	    dmu_cb->dmu_chars.dmu_dcompress = DMU_COMP_ON;
+    }
+
+    if ( indexDMT_TBL_ENTRY->tbl_storage_type == DMT_BTREE_TYPE ||
+	 indexDMT_TBL_ENTRY->tbl_storage_type == DMT_RTREE_TYPE)
+    {
+	BTset(DMU_IFILL, dmu_cb->dmu_chars.dmu_indicators);
+	dmu_cb->dmu_chars.dmu_nonleaff = indexDMT_TBL_ENTRY->tbl_i_fill_factor;
+    }
+
+    BTset(DMU_ALLOCATION, dmu_cb->dmu_chars.dmu_indicators);
+    dmu_cb->dmu_chars.dmu_alloc = indexDMT_TBL_ENTRY->tbl_allocation;
+    BTset(DMU_EXTEND, dmu_cb->dmu_chars.dmu_indicators);
+    dmu_cb->dmu_chars.dmu_extend = indexDMT_TBL_ENTRY->tbl_extend;
+
+    if (indexDMT_TBL_ENTRY->tbl_status_mask & DMT_INDEX_COMP)
+    {
+	BTset(DMU_KCOMPRESSION, dmu_cb->dmu_chars.dmu_indicators);
+	dmu_cb->dmu_chars.dmu_kcompress = DMU_COMP_ON;
+    }
+
+    if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_STATEMENT_LEVEL_UNIQUE )
+    {
+	BTset(DMU_STATEMENT_LEVEL_UNIQUE, dmu_cb->dmu_chars.dmu_indicators);
+	dmu_cb->dmu_chars.dmu_flags |= DMU_FLAG_UNIQUE_STMT;
+    }
+    if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_PERSISTS_OVER_MODIFIES )
+    {
+	BTset(DMU_PERSISTS_OVER_MODIFIES, dmu_cb->dmu_chars.dmu_indicators);
+	dmu_cb->dmu_chars.dmu_flags |= DMU_FLAG_PERSISTENCE;
+    }
+
+    if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_SYSTEM_GENERATED )
+	BTset(DMU_SYSTEM_GENERATED, dmu_cb->dmu_chars.dmu_indicators);
+
+    if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_SUPPORTS_CONSTRAINT )
+	BTset(DMU_SUPPORTS_CONSTRAINT, dmu_cb->dmu_chars.dmu_indicators);
+
+    if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_NOT_UNIQUE )
+	BTset(DMU_NOT_UNIQUE, dmu_cb->dmu_chars.dmu_indicators);
+
+    if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_NOT_DROPPABLE )
+	BTset(DMU_NOT_DROPPABLE, dmu_cb->dmu_chars.dmu_indicators);
+
+    if ( indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_ROW_SEC_AUDIT )
+	BTset(DMU_ROW_SEC_AUDIT, dmu_cb->dmu_chars.dmu_indicators);
+
+    /* No global index if base table is being unpartitioned.
+    ** Keep global index if it was one already;  make it a global index
+    ** if base table is becoming partitioned.
+    */
+    if ( (indexDMT_TBL_ENTRY->tbl_2_status_mask & DMT_GLOBAL_INDEX
+	    || changing_part == BECOMING_PARTITIONED)
+      && changing_part != BECOMING_NONPARTITIONED)
+	BTset(DMU_GLOBAL_INDEX, dmu_cb->dmu_chars.dmu_indicators);
+
     return( status );
 }
-
-
-/*{
-** Name: addCharacteristic - add another characteristic to a growing list
-**
-** Description:
-**	This routine adds another table characteristic to a growing list
-**	of table properties.  This is a two pass compiler.  During the first
-**	pass, all we do is count the number of characteristics.  During the
-**	second pass, we actually fill in the properties.
-**
-**
-** Inputs:
-**	pass		pass 0 or 1
-**	dm_data		root of the characteristics list
-**	characteristic	suitable for a DMU_CHAR_ENTRY
-**	value		usually DMU_C_ON or DMU_C_OFF, though depending on
-**			the characteristic, this could be something more
-**			interesting
-**
-** Outputs:
-**	dm_data		the next characteristic in the list is filled in
-**
-**	Returns:
-**	    DB_STATUS
-**	Exceptions:
-**	    None
-**
-** History:
-**	16-feb-93 (rickh)
-**	    Written for FIPS CONSTRAINTS project (release 6.5).
-**
-*/
-
-static VOID
-addCharacteristic(
-    i4			pass,
-    DM_DATA		*dm_data,
-    i4			characteristic,
-    i4			value
-)
-{
-    DB_STATUS		status = E_DB_OK;
-    DMU_CHAR_ENTRY	*dmu_char_entryArray;
-    DMU_CHAR_ENTRY	*dmu_char_entry;
-    i4		index;
-
-    switch ( pass )
-    {
-	case 0:
-	    break;
-
-	case ( NUMBER_OF_PASSES - 1 ):
-
-	    index = dm_data->data_in_size / ( sizeof( DMU_CHAR_ENTRY ) );
-	    dmu_char_entryArray = ( DMU_CHAR_ENTRY * ) dm_data->data_address;
-	    dmu_char_entry = &dmu_char_entryArray[ index ];
-
-	    dmu_char_entry->char_id = characteristic;
-	    dmu_char_entry->char_value = value;
-	    break;
-
-	default:
-	    break;
-    }			/* end switch */
-
-    dm_data->data_in_size += sizeof( DMU_CHAR_ENTRY );
-}
-
 
 /*{
 ** Name: buildDM_PTR - build a DM_PTR structure
@@ -6290,7 +6053,6 @@ buildDM_PTR(
     DM_PTR		*dm_ptr
 )
 {
-    QEF_CB		*qef_cb = qef_rcb->qef_cb; /* session control block */
     DB_STATUS		status = E_DB_OK;
     PTR			*objectPointers;
     i4			i;
@@ -6346,7 +6108,6 @@ getMemory(
 )
 {
     DB_STATUS		status = E_DB_OK;
-    QEF_CB		*qef_cb = qef_rcb->qef_cb; /* session control block */
     i4		error;
 
     ulm->ulm_psize = pieceSize;
@@ -7347,10 +7108,7 @@ qeu_findOrMakeDefaultID(
 ** Description:
 **	This routine determines whether this DBU action should print
 **	out a rowcount.  For system generated INDEX creations, we don't
-**	print a rowcount.  This routine cycles through the characteristics
-**	array of the DBU action, looking for the SYSTEM_GENERATED flag.
-**
-**
+**	print a rowcount.
 **
 ** Inputs:
 **	opcode			DBU operation
@@ -7366,6 +7124,8 @@ qeu_findOrMakeDefaultID(
 ** History:
 **	22-mar-93 (rickh)
 **	    Written for FIPS CONSTRAINTS project (release 6.5).
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
 **
 */
 
@@ -7376,31 +7136,12 @@ suppress_rowcount(
 )
 {
     bool		result = FALSE;
-    DMU_CHAR_ENTRY	*chr;
-    i4		chr_count;
-    i4		i;
 
     /* report rowcount for operations other than CREATE INDEX */
 
     if ( opcode != DMU_INDEX_TABLE )	{ return( result ); }
 
-    chr = (DMU_CHAR_ENTRY*) dmu->dmu_char_array.data_address;
-    chr_count = dmu->dmu_char_array.data_in_size / sizeof(DMU_CHAR_ENTRY);
-    if ( ( chr_count <= 0 ) || ( chr == ( DMU_CHAR_ENTRY * ) NULL ) )
-    { return( result ); }
-
-    for ( i = 0; i < chr_count; i++ )
-    {
-	if ( chr[ i ].char_id == DMU_SYSTEM_GENERATED )
-	{
-	    if ( chr[ i ].char_value == DMU_C_ON )
-	    { result = TRUE; }
-	    else
-	    { result = FALSE; }
-	}
-    }
-
-    return( result );
+    return (BTtest(DMU_SYSTEM_GENERATED, dmu->dmu_chars.dmu_indicators));
 }
 
 

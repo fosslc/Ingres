@@ -27,12 +27,14 @@
 **	    Created.   
 **	31-may-2005 (devjo01)
 **	    Fix compiler warnings missed in VMS build.
+**      03-nov-2010 (joea)
+**          Declare local functions static.
 */
 
 # define INCLUDED_FROM_CXPPPTEST
 # include <cxppp.c>
 
-void
+static void
 usage( char *text )
 {
     if ( text )

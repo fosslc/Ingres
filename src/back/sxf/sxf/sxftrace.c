@@ -48,10 +48,16 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes
 **/
-FUNC_EXTERN	DB_STATUS	scf_call();
 #define	SXF_MAX_MSGLEN		1024
 static    	bool          	sxf_tracing_on=FALSE;
+
+static i4 sxf_scctalk(
+			PTR	    arg1,
+			i4	    msg_length,
+			char        *msg_buffer );
 
 /*{
 ** Name: sxf_trace	- SXF trace entry point.
@@ -231,7 +237,7 @@ sxf_scc_trace( char *msg_buffer)
 **	16-jun-93 (robf)
 **		Created
 */
-i4
+static i4
 sxf_scctalk(
 	PTR	    arg1,
 	i4	    msg_length,

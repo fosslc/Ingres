@@ -1383,13 +1383,12 @@ ADI_FI_ID	    *instr)
 
 
 /*{
-** Name: adu_valuetomystr - Does same as adu_2prvalue() but to a string
+** Name: adu_sc930prtdataval - similar to adu_2prvalue() but writes the output
+**                             to a file. 
 **
 ** Description:
 **        This routine formats and prints just the data value of a 
-**	DB_DATA_VALUE for debugging. No extra blanks, tabs, new lines, etc.
-**	will be added, except for a leading and trailing ' as a delimiter as
-**	needed.
+**	DB_DATA_VALUE for SC930 tracing.
 **
 ** Inputs:
 **	str				string to print to
@@ -1429,13 +1428,41 @@ ADI_FI_ID	    *instr)
 **          Output BYTE/VBYTE as hex digits
 **      09-Aug-2010 (maspa05) b124161
 **          change u_i1 to u_tmp_i1 - u_i1 is a #define on VMS
+**      19-Oct-2010 (maspa05) b124551
+**          Created from adu_valuetomystr
+**          This function is used to output a PARM or PARMEXEC line to the
+**          SC930 trace file. It now takes the message type, parameter name
+**          parameter number and a file pointer as parameters. It writes
+**          directly to the file. This allows us to write some of the very
+**          long lines that can occur without creating large char buffers
+**          except where really needed.
+**      19-Oct-2010 (maspa05) b124551
+**          Corrected a couple of accidental format changes associated with
+**          the above change - i8s weren't getting printed and empty strings
+**          were output as '<empty>' instead of ''
+**      20-Oct-2010 (maspa05) b124617
+**          Timezone offset for ingresdates was being output as minutes 
+**          instead of seconds.
+**      20-Oct-2010 (maspa05)
+**          Removed un-used tmp_buf buffer
+**      22-Oct-2010 (maspa05)
+**          Removed call to ult_print_tracefile
+**      26-Oct-2010 (maspa05) b124641, b124551
+**          Not all of the BYTE/NCHAR/NVARCHAR value was being output where the
+**          formatted string was < SC930_DATAVAL_BUFSIZE-10
+**          Need to use stbuf not c_tmp to write out 'remainder' of formatted
+**          output. Also reset stbuf to empty string for case where the string
+**          is an exact multiple of the segment size.
 */
 
-char *
-adu_valuetomystr(
-char *str,
+STATUS
+adu_sc930prtdataval(
+i4 msg_type,
+char *parameter_name,
+i4 parameter_no,
 DB_DATA_VALUE      *db_dv,
-ADF_CB *tzcb)
+ADF_CB *tzcb,
+PTR file)
 {
     char			num_buf[64];
     i2				flt_wid;
@@ -1459,16 +1486,42 @@ ADF_CB *tzcb)
     i2				i2_tmp, i2_tmp2;
     i1				i1_tmp;
     u_char 			u_tmp_i1;
-    char			stbuf[2048];
+    char			stbuf[SC930_DATAVAL_BUFSIZE];
     AD_DTUNION			*dp;
     i8				i8_tmp;
-    char			*c_tmp;
+    char			*c_tmp,*c_buf_end;
 
 
     if (db_dv == NULL)
     {
-	STcopy("< Pointer to DB_DATA_VALUE is NULL >",str);
-	return str;
+	SIfprintf(file, "< Pointer to DB_DATA_VALUE is NULL >\n");
+	return E_DB_ERROR;
+    }
+
+    if (parameter_name)
+    {
+	    STprintf(stbuf,"%d:%d(%s)=",
+		db_dv->db_datatype,
+		parameter_no,
+	        parameter_name);
+    } else
+    {
+	    STprintf(stbuf,"%d:%d=",
+		db_dv->db_datatype,
+	        parameter_no);
+    }
+
+    /* output the PARM/PARMEXEC 'header' to the trace file */
+    switch (msg_type)
+    {
+	    case SC930_LTYPE_PARM:
+		    SIfprintf(file,"PARM:%s",stbuf);
+		    break;
+	    case SC930_LTYPE_PARMEXEC:
+		    SIfprintf(file,"PARMEXEC:%s",stbuf);
+		    break;
+	    default:
+		    SIfprintf(file,"UNKNOWN:%s",stbuf);
     }
 
     bdt  = abs(db_dv->db_datatype);
@@ -1478,11 +1531,13 @@ ADF_CB *tzcb)
 
     if (data == NULL)
     {
-	STcopy("< pointer to data is NULL >",str);
+	SIfprintf(file, "< pointer to data is NULL >\n");
+	return E_DB_ERROR;
     }
     else if (ADI_ISNULL_MACRO(db_dv))
     {
-	STcopy("< NULL >",str);
+	SIfprintf(file, "< NULL >\n");
+	return OK;
     }
     else
     {
@@ -1492,6 +1547,10 @@ ADF_CB *tzcb)
 
 	    obj_logkey = (DB_OBJ_LOGKEY_INTERNAL *) data;
 
+	    SIfprintf(file, "olk_high_id = %x\tolk_low_id = %x\t"
+				   "olk_rel_id = %d\tolk_db_id = %d\n" ,
+		    obj_logkey->olk_high_id, obj_logkey->olk_low_id,
+		    obj_logkey->olk_rel_id, obj_logkey->olk_db_id);
 	    
 	    break;
 
@@ -1499,19 +1558,18 @@ ADF_CB *tzcb)
 
 	    tab_logkey = (DB_TAB_LOGKEY_INTERNAL *) data;
 
-	    STcopy(STprintf(stbuf, "tlk_high_id = %x\ttlk_low_id = %x\n",
-		    tab_logkey->tlk_high_id, tab_logkey->tlk_low_id),str);
+	    SIfprintf(file, "tlk_high_id = %x\ttlk_low_id = %x\n",
+		    tab_logkey->tlk_high_id, tab_logkey->tlk_low_id);
 
 	    break;
 
 	  case DB_CHA_TYPE:
 	  case DB_CHR_TYPE:
 	    if (blen == 0)
-	    {
-		STprintf(str, "''");
-		break;
-	    }
-	    STprintf(str, "'%*s'", blen, (u_char *) data);
+		SIfprintf(file, "''\n");
+	    else
+	        SIfprintf(file, "'%*s'\n", blen, (u_char *) data);
+
 	    break;
 
 	  case DB_DTE_TYPE:
@@ -1519,12 +1577,12 @@ ADF_CB *tzcb)
 
 	    if (datep->dn_status == 0)
 	    {
-		STprintf(str, "''");
+		SIfprintf(file, "''\n");
 		break;
 	    }
 
-	    STcopy(STprintf(stbuf,
-		"(%s) %d/%d/%d %d:%d:%d.%.3d (%d)",
+	    SIfprintf(file,
+		"(%s) %d/%d/%d %d:%d:%d.%.3d (%d)\n",
 		(datep->dn_status & AD_DN_ABSOLUTE)?
 		    ((datep->dn_status & AD_DN_TIMESPEC)?"DATETIME":"DATE")
 		    :"INTERVAL",
@@ -1532,12 +1590,12 @@ ADF_CB *tzcb)
 		datep->dn_seconds / AD_39DTE_ISECPERHOUR,
 		(datep->dn_seconds / AD_10DTE_ISECPERMIN) % 60,
 		datep->dn_seconds % 60,
-		(datep->dn_nsecond % AD_29DTE_NSPERMS), datep->dn_tzoffset),str);
+		(datep->dn_nsecond % AD_29DTE_NSPERMS), AD_TZ_OFFSETNEW(datep));
 	    break;
 
 	  case DB_ADTE_TYPE:
 	    dp = (AD_DTUNION*)data;
-	    STprintf(str,"%d/%d/%d",
+	    SIfprintf(file,"%d/%d/%d\n",
 		dp->adate.dn_year, dp->adate.dn_month, dp->adate.dn_day);
 	    break;
 
@@ -1545,19 +1603,19 @@ ADF_CB *tzcb)
 	  case DB_TMW_TYPE:
 	  case DB_TME_TYPE:
 	    dp = (AD_DTUNION*)data;
-	    STprintf(str,"%d,%d +/- %d",
+	    SIfprintf(file,"%d,%d +/- %d\n",
 		dp->atime.dn_seconds, dp->atime.dn_nsecond,
 		AD_TZ_OFFSET(&dp->atime));
 	    break;
 
 	  case DB_INYM_TYPE:
 	    dp = (AD_DTUNION*)data;
-	    STprintf(str,"%d %d",dp->aintym.dn_years, dp->aintym.dn_months);
+	    SIfprintf(file,"%d %d\n",dp->aintym.dn_years, dp->aintym.dn_months);
 	    break;
 
 	  case DB_INDS_TYPE:
 	    dp = (AD_DTUNION*)data;
-	    STprintf(str,"%d %d %d", dp->aintds.dn_days,
+	    SIfprintf(file,"%d %d %d\n", dp->aintds.dn_days,
 		dp->aintds.dn_seconds, dp->aintds.dn_nseconds);
 	    break;
 
@@ -1565,7 +1623,7 @@ ADF_CB *tzcb)
 	  case DB_TSW_TYPE:
 	  case DB_TSTMP_TYPE:
 	    dp = (AD_DTUNION*)data;
-	    STprintf(str,"%d/%d/%d %d %d (%d)",
+	    SIfprintf(file,"%d/%d/%d %d %d (%d)\n",
 		dp->atimestamp.dn_year, dp->atimestamp.dn_month,
 		dp->atimestamp.dn_day,
 		dp->atimestamp.dn_seconds, dp->atimestamp.dn_nsecond,
@@ -1593,8 +1651,9 @@ ADF_CB *tzcb)
 	    }
 	    fmt[i++] = tmp + '0';
 	    fmt[i++] = 's';
+	    fmt[i++] = '\n';
 	    fmt[i] = EOS;
-	    STcopy(STprintf(stbuf, fmt, num_buf),str);
+	    SIfprintf(file, fmt, num_buf);
 	    break;
 	    
 	  case DB_FLT_TYPE:
@@ -1607,7 +1666,7 @@ ADF_CB *tzcb)
 		F8ASSIGN_MACRO(*data, f8_tmp);
 
 	    CVfa(f8_tmp, (i4) sizeof(num_buf), (i4) 4, 'f', '.', num_buf, &flt_wid);
-	    STprintf(str, "%*s", flt_wid, (u_char *) num_buf);
+	    SIfprintf(file, "%*s\n", flt_wid, (u_char *) num_buf);
 	    break;
 
 	  case DB_INT_TYPE:
@@ -1627,10 +1686,10 @@ ADF_CB *tzcb)
 	    {
 		I8ASSIGN_MACRO(*data,i8_tmp);
 		CVla8(i8_tmp,num_buf);
-		STcopy(num_buf,str);
+	        SIfprintf(file, "%s\n", num_buf);
 		break;
 	    }
-	    STcopy(STprintf(stbuf, "%d", i4_tmp),str);
+	    SIfprintf(file, "%d\n", i4_tmp);
 	    break;
 
 	  case DB_MNY_TYPE:
@@ -1651,8 +1710,9 @@ ADF_CB *tzcb)
 	    }
 	    fmt[i++] = tmp + '0';
 	    fmt[i++] = 's';
+	    fmt[i++] = '\n';
 	    fmt[i] = EOS;
-	    STcopy(STprintf(stbuf, fmt, num_buf),str);
+	    SIfprintf(file, fmt, num_buf);
 	    break;
 
 	  case DB_VCH_TYPE:
@@ -1661,17 +1721,20 @@ ADF_CB *tzcb)
 	    I2ASSIGN_MACRO(((DB_TEXT_STRING *)data)->db_t_count, i2_tmp);
 	    if (i2_tmp == 0)
 	    {
-		STprintf(str, "''");
-		break;
+		SIfprintf(file, "''\n");
 	    }
-	    STprintf(str, "'%*s'", i2_tmp, ((DB_TEXT_STRING *) data)->db_t_text);
+	    else
+	    {
+	        SIfprintf(file, "'%*s'\n", i2_tmp, ((DB_TEXT_STRING *) data)->db_t_text);
+	    }
+
 	    break;
 
 	  case DB_BOO_TYPE:
 	    if (*((bool *) data))
-		STcopy("TRUE",str);
+		SIfprintf(file,"TRUE\n");
 	    else
-		STcopy("FALSE",str);
+		SIfprintf(file,"FALSE\n");
 	    break;
 
 	  case DB_VBYTE_TYPE:
@@ -1680,40 +1743,65 @@ ADF_CB *tzcb)
 	    data = ((DB_TEXT_STRING *)data)->db_t_text;
 
 	  case DB_BYTE_TYPE:
-	    c_tmp=str;
+	    c_tmp=stbuf;
+	    c_buf_end=c_tmp + SC930_DATAVAL_BUFSIZE - 10;
 	    STprintf(c_tmp,"%d:",blen);
 	    c_tmp += STlength(c_tmp);
 	    for(i=0; i< blen; i++)
 	    {
                 u_tmp_i1=(u_char) data[i];
                 STprintf(c_tmp,"%02x ", u_tmp_i1);
-		c_tmp += STlength(c_tmp);
+		c_tmp += 3;
+		if (c_tmp > c_buf_end )
+		{
+		  SIfprintf(file,stbuf);
+		  c_tmp=stbuf;
+		  stbuf[0]=EOS;
+		}
+
 	    }
+            SIfprintf(file,"%s\n",stbuf);
             break;
 
 	  case DB_NCHR_TYPE:
-	    str[0] = EOS;
-	    c_tmp = str;
+	    stbuf[0] = EOS;
+	    c_tmp = stbuf;
+	    c_buf_end=c_tmp + SC930_DATAVAL_BUFSIZE - 10;
 	    for(i=0; i< blen/2; i++)
 	    {
                 I2ASSIGN_MACRO(data[2*i], i2_tmp);
                 i4_tmp = i2_tmp;
                 STprintf(c_tmp,"%x ", i4_tmp);
 		c_tmp += STlength(c_tmp);
+		if (c_tmp > c_buf_end )
+		{
+		  SIfprintf(file,stbuf);
+		  c_tmp=stbuf;
+		  stbuf[0]=EOS;
+		}
 	     }
+             SIfprintf(file,"%s\n",stbuf);
              break;
 
           case DB_NVCHR_TYPE:
             I2ASSIGN_MACRO(((DB_NVCHR_STRING *)data)->count, i2_tmp);
-	    str[0] = EOS;
-	    c_tmp = str;
+	    stbuf[0] = EOS;
+	    c_tmp = stbuf;
+	    c_buf_end=c_tmp + SC930_DATAVAL_BUFSIZE - 10;
 	    for(i=0; i< i2_tmp; i++)
             {
                 I2ASSIGN_MACRO(((DB_NVCHR_STRING *)data)->element_array[i], i2_tmp2);
                 i4_tmp = i2_tmp2;
                 STprintf(c_tmp,"%x ", i4_tmp);
 		c_tmp += STlength(c_tmp);
+		if (c_tmp > c_buf_end )
+		{
+		  SIfprintf(file,stbuf);
+		  c_tmp=stbuf;
+		  stbuf[0]=EOS;
+		}
              }
+             SIfprintf(file,"%s\n",stbuf);
              break;
 
 	  case DB_LVCH_TYPE:
@@ -1744,16 +1832,17 @@ ADF_CB *tzcb)
 		while (dv_work.db_data[i] == ' ')
 			dv_work.db_data[i--] = EOS;
 
-		STprintf(str, "(%d/%d):'%s'",p->per_length0,p->per_length1,
+		SIfprintf(file, "(%d/%d):'%s'\n",p->per_length0,p->per_length1,
 			dv_work.db_data);
 	    }
 	    break;
 
 	  default:
-	    STcopy("< unknown type: don't know how to interpret data >",str);
-	    break;
+            SIfprintf(file,
+	        "< unknown type: don't know how to interpret data >\n");
+            return E_DB_ERROR;
 	}
     }
 
-    return str;
+    return OK;
 }

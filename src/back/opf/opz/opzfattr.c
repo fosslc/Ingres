@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -74,8 +74,65 @@
 **	    Don't allow function attr when subquery has a union view.
 **	20-may-2001 (somsa01)
 **	    Changed 'nat' to 'i4' from cross-integration.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opz_rdatatype(
+	OPS_SUBQUERY *subquery,
+	DB_DATA_VALUE *indatatype,
+	DB_DT_ID outdtid,
+	DB_DATA_VALUE *resultdatatype);
+static bool opz_findop(
+	PST_QNODE *function,
+	ADI_OP_ID opno);
+OPZ_IATTS opz_ftoa(
+	OPS_SUBQUERY *subquery,
+	OPZ_FATTS *fatt,
+	OPV_IVARS fvarno,
+	PST_QNODE *function,
+	DB_DATA_VALUE *datatype,
+	OPZ_FACLASS class);
+static OPV_IVARS opz_fatest(
+	OPS_SUBQUERY *subquery,
+	OPZ_IATTS attno,
+	OPV_GBMVARS *varmap);
+static bool opl_nestedoj(
+	OPS_SUBQUERY *subquery,
+	OPL_IOUTER ojid,
+	OPV_IVARS varno);
+static bool opl_faiftrue(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **rootpp,
+	OPL_IOUTER ojid);
+static void opz_iftrue(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **functionpp,
+	OPL_IOUTER ojid,
+	OPZ_FATTS *fattrp,
+	OPZ_FACLASS *fclassp);
+static void opz_copyqual(
+	OPS_SUBQUERY *subquery,
+	OPZ_FATTS *fatt);
+static void opz_fvar(
+	OPS_SUBQUERY *subquery,
+	OPZ_FATTS *fatt,
+	OPZ_IATTS varattrno,
+	PST_QNODE *function,
+	OPZ_FOPERAND *operandp);
+static void opz_fboth(
+	OPS_SUBQUERY *subquery,
+	OPZ_FATTS *fatt);
+static bool opz_fclass(
+	OPS_SUBQUERY *subquery,
+	OPZ_FACLASS class);
+void opz_fattr(
+	OPS_SUBQUERY *subquery);
+void opz_faeqcmap(
+	OPS_SUBQUERY *subquery,
+	OPE_BMEQCLS *targetp,
+	OPV_BMVARS *varmap);
 
 /*{
 ** Name: opz_rdatatype	- calculate result type and length of a conversion
@@ -681,7 +738,6 @@ opz_iftrue(
     /* convert varnode to iftrue */
     if (opl_faiftrue(subquery, functionpp, ojid))
     {	/* re-resolve since non-nullable changes possible */
-	PST_QNODE	*faqnodep;
 	if ((*fclassp == OPZ_SVAR) || (*fclassp == OPZ_TCONV))
 	    *fclassp = OPZ_MVAR; /* since at least one iftrue was
 			    ** inserted, this function attribute must
@@ -748,7 +804,7 @@ opz_copyqual(
     ** the ON clause ADF code of outer joins - the only place they can
     ** be properly executed for key joins. */
     /* qnodep->pst_left->pst_sym.pst_value.pst_s_op.pst_flags
-	|= PST_OJJOIN;	/* mark boolean factor as being
+	|= PST_OJJOIN;	*/ /* mark boolean factor as being
 			** an equi join so as to
 			** not participate in histogramming */
     if (fatt->opz_left.opz_nulljoin)

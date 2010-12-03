@@ -783,6 +783,8 @@ typedef struct _QEF_DDB_REQ
 **	    Delete the open-count, not used for anything and at least one
 **	    place in qeq.c was zeroing the open count here, thinking that
 **	    it was zeroing the qef-cb open count (!).
+**	20-Aug-2010 (thaju02) B123876
+**	    Add qef_retcurspos. 
 */
 struct _QEF_RCB
 {
@@ -824,6 +826,7 @@ struct _QEF_RCB
     QEF_DATA   *qef_output;     /* where to put result information */
     QEF_DATA   *qef_nextout;	/* next available output buffer */
     i4		qef_curspos;	/* position of cursor after this query */
+    i4		qef_retcurspos;	/* position of cursor to return to fe */
     i4		qef_rowstat;	/* flags to control setting of gca_errd0 for
 				** scrollable cursors (see GCA_ROW_xxx vals) */
     DB_CURSOR_ID qef_qp;        /* name of query plan */

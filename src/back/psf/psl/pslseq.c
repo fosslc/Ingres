@@ -1,10 +1,11 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
 #include    <gl.h>
 #include    <cs.h>
+#include    <cv.h>
 #include    <bt.h>
 #include    <cm.h>
 #include    <me.h>
@@ -56,8 +57,26 @@
 **	27-Jun-2010 (kschendel) b123986
 **	    Make csequence and parmcheck aware of the fact that pss_object
 **	    is not a PSY_CB during create table with identity columns.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psl_csequence(
+	PSS_SESBLK *cb,
+	DB_IISEQUENCE *seqp,
+	DB_ERROR *err_blk);
+i4 psl_asequence(
+	PSS_SESBLK *cb,
+	DB_IISEQUENCE *oldseqp,
+	DB_ERROR *err_blk);
+i4 psl_seq_parmcheck(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	DB_DATA_VALUE *pdv,
+	DB_IISEQUENCE *seqp,
+	i4 flag,
+	bool minus);
 static u_char dec_mini8[] = {0, 0, 0, 0, 0, 0, 0x92, 0x23, 0x37, 0x20, 0x36,
 	0x85, 0x47, 0x75, 0x80, 0x8c};
 
@@ -138,8 +157,6 @@ psl_csequence(
     bool		bigerr = FALSE;
     bool		ascseq;
     bool		parmerr;
-    char		dec0 = MH_PK_PLUS;
-					/* dec(1) constant 0 */
 
     /* Make sure that the actual tuple won't end up with the temp
     ** parser flag in it!
@@ -1345,13 +1362,11 @@ psl_seq_parmcheck(
 	bool	    minus)
 {
     i4                err_code;
-    DB_STATUS	       status;
     i8			intval;
     i8			*iparmp;
     PTR			dparmp;
     PTR			etokptr;
     i4			etoklen;
-    char		workbig[22];	/* to convert bigint back to dec */
 	
     if ((flag & DBS_START) && psq_cb->psq_mode != PSQ_CSEQUENCE &&
 		psq_cb->psq_mode != PSQ_CREATE

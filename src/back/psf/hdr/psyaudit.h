@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 /*
 ** Name: PSYAUDIT.H
@@ -21,15 +21,21 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
-FUNC_EXTERN DB_STATUS
-psy_secaudit( 
-    int		force,
-    PSS_SESBLK	*sess_cb,
-    char	*objname,
-    DB_OWN_NAME *objowner,
-    i4	objlength,
-    SXF_EVENT	auditevent,
-    i4	msg_id,
-    SXF_ACCESS	accessmask,
-    DB_ERROR    *err);
+
+/* psyaudit.c */
+FUNC_EXTERN i4 psy_audit(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_secaudit(
+	int force,
+	PSS_SESBLK *sess_cb,
+	char *objname,
+	DB_OWN_NAME *objowner,
+	i4 objlength,
+	SXF_EVENT auditevent,
+	i4 msg_id,
+	SXF_ACCESS accessmask,
+	DB_ERROR *err);

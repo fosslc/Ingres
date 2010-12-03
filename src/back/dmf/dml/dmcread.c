@@ -36,6 +36,7 @@
 #include    <dmftrace.h>
 #include    <lgdstat.h>
 #include    <dm0llctx.h>
+#include    <dml.h>
 
 /* 
 ** structure used for passing contect of this thread instance to the 
@@ -318,6 +319,8 @@ static DB_STATUS prefet_page(
 **	    Need dm1h.h to satisfy gcc 4.3.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Replace DMPP_PAGE* with DMP_PINFO* where needed.
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dml.h to get prototype.
 */
 DB_STATUS
 dmc_read_ahead(

@@ -148,6 +148,8 @@
 **	    Add gcd_gca_activate().
 **	13-May-10 (gordy)
 **	    Added free RCB queues.
+**       15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 #ifndef _GCD_INCLUDED_
@@ -1163,12 +1165,13 @@ GLOBALREF MSG_SRVC	gcd_jdbc_service;
 ** Global functions.
 */
 
-FUNC_EXTERN void	gcd_init_mib();
+FUNC_EXTERN void	gcd_init_mib( void );
 FUNC_EXTERN STATUS	gcd_adm_init( void );
 FUNC_EXTERN STATUS	gcd_adm_term( void );
+FUNC_EXTERN STATUS	gcd_adm_session( i4, PTR, char * );
 
 FUNC_EXTERN bool        gcd_gca_activate( void );
-FUNC_EXTERN STATUS	gcd_gca_init();
+FUNC_EXTERN STATUS	gcd_gca_init( void );
 FUNC_EXTERN void	gcd_gca_term( void );
 FUNC_EXTERN STATUS	gcd_get_env( u_i2, PTR * );
 FUNC_EXTERN void	gcd_rel_env( u_i2 );

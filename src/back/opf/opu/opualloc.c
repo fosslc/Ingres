@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -67,8 +67,13 @@
 **	15-Aug-1997 (jenjo02)
 ** 	    New field, ulm_flags, added to ULM_RCB in which to specify the
 **	    type of stream to be opened, shared or private.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+PTR opu_allocate(
+	OPS_STATE *global);
 
 /*{
 ** Name: opu_allocate	- allocate a new private memory stream
@@ -107,7 +112,7 @@ opu_allocate(
     ulmstatus = ulm_openstream(&global->ops_mstate.ops_ulmrcb);
     if (DB_FAILURE_MACRO(ulmstatus))
     {
-	opx_lerror(E_OP0002_NOMEMORY, 0);
+	opx_lerror(E_OP0002_NOMEMORY, 0, 0, 0, 0, 0);
 	opx_verror(ulmstatus, E_OP0002_NOMEMORY, 
 	    global->ops_mstate.ops_ulmrcb.ulm_error.err_code);
     }

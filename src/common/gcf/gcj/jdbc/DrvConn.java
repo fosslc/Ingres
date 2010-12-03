@@ -125,6 +125,8 @@ package	com.ingres.gcf.jdbc;
 **	    Add config setting to enable/disable batch processing.
 **	30-Jul-10 (gordy)
 **	    Add config setting to force booleans parameters to integer.
+**	16-Nov-10 (gordy)
+**	    Add config setting to enable LOB locator stream access.
 */
 
 import	java.util.Hashtable;
@@ -161,6 +163,7 @@ import	com.ingres.gcf.dam.MsgConst;
 **	CNF_LOCATORS	    	LOB Locators enabled.
 **	CNF_LOC_AUTO		LOB Locators enabled during autocommit.
 **	CNF_LOC_LOOP		LOB Locators enabled during select loops.
+**	CNF_LOC_STRM		LOB Locators stream access enabled.
 **	CNF_LOB_CACHE		LOB buffering enabled.
 **	CNF_CURS_SCROLL		Scrollable cursors enabled.
 **	CNF_BATCH		Batch processing enabled.
@@ -322,6 +325,9 @@ import	com.ingres.gcf.dam.MsgConst;
 **	30-Jul-10 (gordy)
 **	    Added config flag to force booleans to be sent as integers.
 **	    Converted similar snd_ing_dte config item to config flag.
+**	16-Nov-10 (gordy)
+**	    Added CNF_LOC_STRM as default to enable LOB locator stream
+**	    access.
 */
 
 class
@@ -352,13 +358,14 @@ DrvConn
     public static final int	CNF_LOCATORS	= 0x0001;
     public static final int	CNF_LOC_AUTO	= 0x0002;
     public static final int	CNF_LOC_LOOP	= 0x0004;
-    public static final int	CNF_LOB_CACHE	= 0x0008;
-    public static final int	CNF_CURS_SCROLL	= 0x0010;
-    public static final int	CNF_BATCH	= 0x0020;
-    public static final int	CNF_INGDATE	= 0x0040;
-    public static final int	CNF_INTBOOL	= 0x0080;
+    public static final int	CNF_LOC_STRM	= 0x0008;
+    public static final int	CNF_LOB_CACHE	= 0x0010;
+    public static final int	CNF_CURS_SCROLL	= 0x0100;
+    public static final int	CNF_BATCH	= 0x0200;
+    public static final int	CNF_INGDATE	= 0x0400;
+    public static final int	CNF_INTBOOL	= 0x0800;
 
-    public int		cnf_flags		= CNF_LOCATORS |
+    public int		cnf_flags		= CNF_LOCATORS | CNF_LOC_STRM |
 						  CNF_CURS_SCROLL | CNF_BATCH;
     public int		cnf_lob_segSize		= DRV_DFLT_SEGSIZE;
     public String	cnf_empty_date		= DRV_DFLT_EMPTY_DATE;
@@ -488,6 +495,9 @@ DrvConn( String host, Config config, DrvTrace trace, boolean dtmc )
 **	    Check scrollable cursor configuration.
 **	25-Mar-10 (gordy)
 **	    Check batch processing configuration.
+**	16-Nov-10 (gordy)
+**	    Added CNF_LOC_STRM and config setting for LOB locator
+**	    streaming access.
 */
 
 private void
@@ -555,7 +565,7 @@ init()
     }
 
     if ( (cnf_flags & CNF_LOCATORS) == 0 )
-	cnf_flags &= ~(CNF_LOC_AUTO | CNF_LOC_LOOP);
+	cnf_flags &= ~(CNF_LOC_AUTO | CNF_LOC_LOOP | CNF_LOC_STRM);
     else
     {
 	if ( (val = config.get( DRV_CNF_LOB_LOC_AUTO )) != null )
@@ -584,6 +594,21 @@ init()
 		cnf_flags |= CNF_LOC_LOOP;
 	    else  if ( val.equalsIgnoreCase( "false" ) )
 		cnf_flags &= ~CNF_LOC_LOOP;
+	    else
+		throw SqlExFactory.get( ERR_GC4010_PARAM_VALUE );
+	}
+
+	if ( (val = config.get( DRV_CNF_LOB_LOC_STREAM )) != null )
+	{
+	    val = val.trim();
+
+	    if ( trace.enabled( 3 ) )  
+		trace.write(tr_id + ": " + DRV_CNF_LOB_LOC_STREAM + "=" + val);
+
+	    if ( val.equalsIgnoreCase( "true" ) )
+		cnf_flags |= CNF_LOC_STRM;
+	    else  if ( val.equalsIgnoreCase( "false" ) )
+		cnf_flags &= ~CNF_LOC_STRM;
 	    else
 		throw SqlExFactory.get( ERR_GC4010_PARAM_VALUE );
 	}
@@ -673,6 +698,8 @@ init()
 **	    Dropped character encoding.
 **	26-Feb-07 (gordy)
 **	    Check protocol level configuration items.
+**	16-Nov-10 (gordy)
+**	    Added CNF_LOC_STRM.
 */
 
 private void
@@ -840,7 +867,8 @@ connect( boolean dtmc )
     ** Check protocol dependent configuration
     */
     if ( msg_protocol_level < MSG_PROTO_6 )
-	cnf_flags &= ~(CNF_LOCATORS | CNF_LOC_AUTO | CNF_LOC_LOOP);
+	cnf_flags &= ~(CNF_LOCATORS | CNF_LOC_AUTO | 
+				      CNF_LOC_LOOP | CNF_LOC_STRM);
 
     if ( trace.enabled( 2 ) )  
     {
@@ -1456,6 +1484,8 @@ clearPrepStmts()
 **	    Disable LOB Locators when unsupported in DBMS.
 **	 9-Sep-08 (gordy)
 **	    Check for max decimal precision.
+**	16-Nov-10 (gordy)
+**	    Added CNF_LOC_STRM.
 */
 
 public void
@@ -1482,7 +1512,8 @@ loadDbCaps()
 	catch( Exception ignore ) {}
 
     if ( db_protocol_level < DBMS_API_PROTO_5 )
-	cnf_flags &= ~(CNF_LOCATORS | CNF_LOC_AUTO | CNF_LOC_LOOP);
+	cnf_flags &= ~(CNF_LOCATORS | CNF_LOC_AUTO | 
+				      CNF_LOC_LOOP | CNF_LOC_STRM);
 
     if ( (value = dbCaps.getDbCap( DBMS_DBCAP_DBMS_TYPE )) != null )
 	is_ingres = value.equalsIgnoreCase( DBMS_TYPE_INGRES );

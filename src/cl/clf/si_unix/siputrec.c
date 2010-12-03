@@ -5,6 +5,10 @@
 #ifdef SIputrec
 #undef SIputrec
 #endif
+/*
+** Forward references
+*/
+STATUS	SIputrec(char *, FILE *);
 
 /* SIputrec
 **
@@ -29,6 +33,8 @@
 **      12-Jun-2001 (hanje04)
 **          Reintroduced MEfill, SIftell etc. as they are required by
 **          OpenRoad 4.0
+**      15-nov-2010 (stephenb)
+**          Proto SIputrec for local undef.
 */
 
 STATUS

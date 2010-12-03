@@ -67,6 +67,8 @@
 **	    Double the max merge per pass.
 **	23-Mar-2010 (kschendel) SIR 123448
 **	    Add no-parallel-sort request flag, for partitioned bulk-loads.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    dmse_compare() is obsolete, remove prototype.
 **/
 
 /*
@@ -114,12 +116,6 @@ FUNC_EXTERN DB_STATUS dmse_input_end(DMS_SRT_CB *sort_cb, DB_ERROR *dberr);
 
 FUNC_EXTERN DB_STATUS dmse_put_record(DMS_SRT_CB *sort_cb,
 			    char *record, DB_ERROR *dberr);
-
-FUNC_EXTERN i4	    dmse_compare(
-		DB_CMP_LIST         *att,
-		i4                 count,
-		PTR                 record1,
-		PTR		    record2);
 
 /*
 **  Defines of other constants.

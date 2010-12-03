@@ -46,6 +46,8 @@
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**      03-nov-2010 (joea)
+**          Declare MO_dumpinstance and MO_showclass as static.
 **/
 
 /* # define xDEBUG */
@@ -116,7 +118,7 @@ MO_showclasses(void)
 **	    Changed %x's to %p's.
 */
 
-VOID
+static void
 MO_dumpinstance( MO_INSTANCE *ip )
 {
     TRdisplay("ip %p cp %p   %s:%s   idata %p\n",
@@ -243,7 +245,7 @@ MO_dumpmem( char *mem, i4  len )
 **	    documented
 */
 
-void
+static void
 MO_tr_set( char *dev )
 {
     CL_SYS_ERR sys_err;
@@ -281,7 +283,7 @@ MO_tr_set( char *dev )
 */
 
 
-STATUS
+static STATUS
 MO_showclass( MO_CLASS *cp )
 {
     SIprintf("class cp %p classid %s\n", cp, cp->node.key );

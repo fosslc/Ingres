@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -52,6 +52,69 @@
 #include    <tr.h>
 #include    <opxlint.h>
 
+/*
+** Name: opttretx.c -
+**
+** Description:
+**
+** History:
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
+*/
+
+/*
+** Forward Structure Definitions:
+*/
+typedef struct _OPT_TTCB OPT_TTCB;
+
+/* TABLE OF CONTENTS */
+static void opt_etoa(
+	OPT_TTCB *textcb,
+	OPE_IEQCLS eqcls);
+static void opt_dstring(
+	OPS_SUBQUERY *subquery,
+	char *header_string,
+	ULD_TSTRING *tstring,
+	i4 maxline);
+static bool opt_mapfunc(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	OPE_IEQCLS eqcls,
+	OPE_BMEQCLS *func_eqcmap,
+	OPE_BMEQCLS *temp_eqcmap);
+static void opt_init(
+	OPT_TTCB *handle,
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	ULM_RCB *ulmrcb);
+static ULD_TSTRING *opt_funcattr(
+	OPT_TTCB *textcbp,
+	OPZ_IATTS attno,
+	OPO_CO *cop,
+	ULM_SMARK *markp);
+static void opt_varnode(
+	OPT_TTCB *textcb,
+	i4 varno,
+	i4 atno,
+	char **namepp);
+static bool opt_conjunct(
+	OPT_TTCB *handle,
+	PST_QNODE **qtreepp);
+static bool opt_jconjunct(
+	OPT_TTCB *handle,
+	PST_QNODE **qtreepp);
+static bool opt_tablename(
+	OPT_TTCB *global,
+	ULD_TSTRING **namepp,
+	char **aliaspp);
+static PST_QNODE *opt_resdom(
+	OPT_TTCB *handle,
+	PST_QNODE *resdomp,
+	char **namep);
+void opt_treetext(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop);
+
 #define             OPT_MAXTEXT         72
 /* max number of characters for a single line of text, in the query tree to
 ** text conversion */
@@ -84,10 +147,8 @@
 **	11-Aug-1997 (jenjo02)
 **	    Changed ulm_streamid from (PTR) to (PTR*) so that ulm
 **	    can destroy those handles when the memory is freed.
-[@history_line@]...
-[@history_template@]...
 */
-typedef struct _OPT_TTCB
+struct _OPT_TTCB
 {
     OPS_SUBQUERY    *subquery;		/* ptr to subquery state variable */
     ULM_RCB	    *opt_ulmrcb;
@@ -133,14 +194,8 @@ typedef struct _OPT_TTCB
 	PST_QNODE	    resnode;	/*node used to create temporary resdom*/
 	PST_QNODE           resexpr;    /* var node used for expression */
     }   qnodes;
-} OPT_TTCB;
+};
 
-static VOID
-opt_varnode(
-	OPT_TTCB            *textcb,
-	i4		    varno,
-	i4		    atno,
-	char		    **namepp);	/* get attribute text for a var node */
 
 /*{
 ** Name: opt_etoa	- convert equivalence class to attributes

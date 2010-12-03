@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -67,8 +67,52 @@
 **	    definition of CS_SID.
 **	27-Oct-2009 (kiria01) SIR 121883
 **	    Scalar sub-selects - reduced recursion copy.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opv_copynode(
+	OPS_STATE *global,
+	PST_QNODE **nodepp);
+void opv_copytree(
+	OPS_STATE *global,
+	PST_QNODE **nodepp);
+void opv_push_ptr(
+	OPV_STK *base,
+	PTR nodep);
+PTR opv_pop_ptr(
+	OPV_STK *base);
+void opv_pop_all(
+	OPV_STK *base);
+PST_QNODE *opv_parent_node(
+	OPV_STK *base,
+	PST_QNODE *child);
+PST_QNODE *opv_antecedant_by_1type(
+	OPV_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1);
+PST_QNODE *opv_antecedant_by_2types(
+	OPV_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2);
+PST_QNODE *opv_antecedant_by_3types(
+	OPV_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2,
+	PST_TYPE t3);
+PST_QNODE *opv_antecedant_by_4types(
+	OPV_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2,
+	PST_TYPE t3,
+	PST_TYPE t4);
+
+OPV_DEFINE_STK_FNS(node, PST_QNODE**);
+
 
 /*{
 ** Name: opv_copynode	- copy one parse tree node
@@ -215,10 +259,10 @@ opv_copytree(
 	OPS_STATE          *global,
 	PST_QNODE          **nodepp)
 {
-    OPV_STKDECL
+    OPV_STK		stk;
     PST_QNODE           *nodep;
 
-    OPV_STKINIT
+    OPV_STK_INIT(stk, global);
     nodep = *nodepp;			/* get ptr to node to copy */
     while (nodep && nodep != (PST_QNODE *) -1)	/* skip opa_suckrestrict markers */
     {	
@@ -230,12 +274,12 @@ opv_copytree(
 	    &&
 	    nodep->pst_sym.pst_value.pst_s_root.pst_union.pst_next)
 	{
-	    OPV_STKPUSH(&(*nodepp)->pst_sym.pst_value.pst_s_root.pst_union.pst_next);
+	    opv_push_node(&stk, &(*nodepp)->pst_sym.pst_value.pst_s_root.pst_union.pst_next);
 	}
 	/* VAR nodes can be tricked out, don't fall for it */
 	if (nodep->pst_sym.pst_type == PST_VAR)
 	{
-	    if (!(nodepp = (PST_QNODE**)OPV_STKPOP()))
+	    if (!(nodepp = opv_pop_node(&stk)))
 		break;
 	}
 	else if (nodep->pst_left &&
@@ -243,7 +287,7 @@ opv_copytree(
 	{
 	    if (nodep->pst_right &&
 		nodep->pst_right != (PST_QNODE *) -1)
-		OPV_STKPUSH(&(*nodepp)->pst_right);
+		opv_push_node(&stk, &(*nodepp)->pst_right);
 	    nodepp = &(*nodepp)->pst_left;
 	}
 	else if (nodep->pst_right &&
@@ -251,7 +295,7 @@ opv_copytree(
 	{
 	    nodepp = &(*nodepp)->pst_right;
 	}
-	else if (!(nodepp = (PST_QNODE**)OPV_STKPOP()))
+	else if (!(nodepp = opv_pop_node(&stk)))
 	    break;
 	nodep = *nodepp;
     }
@@ -264,7 +308,7 @@ opv_copytree(
 **
 ** Inputs:
 **	base		Stack base block
-**	item		Item to be stored
+**	node		Address of pointer to node
 **
 ** Outputs:
 **	*base		Structure updated
@@ -283,11 +327,11 @@ opv_copytree(
 */
 
 VOID
-opv_push_item(OPS_STATE *global, OPV_STK *base, PTR item)
+opv_push_ptr(OPV_STK *base, PTR nodep)
 {
     /* Point to true list head block */
     struct OPV_STK1 *stk = base->stk.link;
-    if (!item)
+    if (!nodep)
 	return;
     if (!stk)
 	stk = &base->stk;
@@ -301,7 +345,7 @@ opv_push_item(OPS_STATE *global, OPV_STK *base, PTR item)
 	/* .. one from heap */
 	else
 	{
-	    base->stk.link = (struct OPV_STK1*)opu_memory(global, (i4)sizeof(struct OPV_STK1));
+	    base->stk.link = (struct OPV_STK1*)opu_memory(base->cb, (i4)sizeof(struct OPV_STK1));
 	    if (!base->stk.link)
 		return;
 	}
@@ -312,11 +356,11 @@ opv_push_item(OPS_STATE *global, OPV_STK *base, PTR item)
         stk->sp = 0;
     }
     /* push block */
-    stk->list[stk->sp++] = item;
+    stk->list[stk->sp++] = nodep;
 }
 
 /*{
-** Name: opv_pop_item	- Retrieve top item off recursion stack
+** Name: opv_pop_ptr	- Retrieve top item off recursion stack
 **
 ** Description:
 **
@@ -326,7 +370,7 @@ opv_push_item(OPS_STATE *global, OPV_STK *base, PTR item)
 ** Outputs:
 **
 **	Returns:
-**	    item from stack or NULL if end-of-stack.
+**	    address of pointer to node from stack or NULL if end-of-stack.
 **
 **	Exceptions:
 **	    None
@@ -340,7 +384,7 @@ opv_push_item(OPS_STATE *global, OPV_STK *base, PTR item)
 */
 
 PTR
-opv_pop_item(OPV_STK *base)
+opv_pop_ptr(OPV_STK *base)
 {
     /* Point to true list head block */
     struct OPV_STK1 *stk = base->stk.link;
@@ -404,3 +448,253 @@ opv_pop_all(OPV_STK *base)
     }
     base->stk.sp = 0;
 }
+
+/*{
+** Name: opv_parent_node	- Find parent off recursion stack
+**
+** Description:
+**	Nondestructive traverse of Hybrid recursion stack looking for
+**	parent node.
+**	The tree walking algorithms using this mechanism touch each
+**	leaf node once and everything else twice - allowing scope to be
+**	statically modelled and ancestors identified easily without needing
+**	to carry data in stack parameters in recursion.
+**	Given:			(ignoring TREE) traversal will be: 
+**                      ROOT                      ROOT    AGH 2   AND 2
+**                     /    \                     RSDa    RSDb2   ROOT 2
+**                  RSDa      \                   RSDb    VAR
+**                 /    \       \                 AGH     RSDa2
+**              RSDb     VAR     AND              BYH     AND
+**             /   \            /   \             RSDc    BOP
+**          TREE    AGH       BOP    \            VAR     VAR
+**                 /   \     /   \    BOP         RSDc2   VAR
+**              BYH   qual  VAR VAR  /   \        AOP     BOP 2
+**             /   \                VAR const     VAR     BOP
+**          RSDc    AOP                           AOP 2   VAR
+**         /   \    /                             BYH 2   const
+**       TREE VAR  VAR                            qual -> BOP 2 ->
+**
+**	As can be seen, a non-terminal node is seen at beginning of scope
+**	when we also push it onto the stack (a true parent). However, we also
+**	have to push on the stack an entry for any descendant sub-tree of
+**	this non-terminal that we are not immediately descending - so we can
+**	come back to it. Clearly, pushing this entry on the stack, it must
+**	be distinguished from a parent node with children are being processed.
+**	To do this we add a marker on the stack that tells us that the next
+**	node popped from the stack must be decended (properly processed). Such
+**	a node will be pushed back on the stack, this time unmarked - a true
+**	parent. Thus for example, if we are processing the AOP having come to
+**	it on its second pass (closing scope), the stack will look like:
+**
+**      ROOT AND * RSDa VAR RSDb AGH qual * BYH (AOP just popped off)
+**
+**	From this, following back up the list skipping descend marked entries
+**	gives us:
+**
+**	ROOT RSDa RSDb AGH BYH
+**
+**	and these are the true antecedants.
+**	NOTE that there is a special case when dealing with terminal nodes
+**	such as VAR. With these no descend mark is placed and instead the
+**	leafness aspect is noted by inspection. If this were not the case,
+**	it would be necessary to place a NULL address on the stack an in this
+**	implemetation, that is not possible as such a NULL would be
+**	indistinquishable from the end of stack condition. For tree walking
+**	this is not a limitation as these routines are designed for working
+**	with the extra level of indirection to trivially suppport modification
+**	of the tree.
+**
+**
+** Inputs:
+**	base		Stack base block
+**	child		child whose parent to find. If passed as NULL
+**			the top 'node' of stack is returned. This is not
+**			necessarily the same as what pst_pop_item would
+**			destructivly return.
+**
+** Outputs:
+**
+**	Returns:
+**	    parent or NULL if not present
+**
+**	Exceptions:
+**	    None
+**
+** Side Effects:
+**	None - stack left intact.
+**
+** History:
+**	27-Oct-2009 (kiria01) SIR 121883
+**	    Created for flattened out stack recursion
+**	25-Mar-2010 (kiria01) b123535
+**	    Cater for the potential that a nodes parent
+**	    may not be in the stack due to tree additions and
+**	    also arrange to skip items that were marked for
+**	    'descend' as these will not be on the ancestry line
+**	    but will be merely siblings or aunts/uncles.
+**	07-Apr-2010 (kiria01) b123535
+**	    Also skip termninals - as these cannot be descended
+**	    they carry no PST_DESCEND_MARK.
+*/
+
+PST_QNODE *
+opv_parent_node(OPV_STK *base, PST_QNODE *child)
+{
+    i4 i;
+    bool skip = FALSE;
+    /* Point to true list head block */
+    struct OPV_STK1 *stk = base->stk.link;
+    if (!child)
+    {
+	for(;;)
+	{
+	    if (!stk)
+		stk = &base->stk;
+	    for (i = stk->sp; i > 0;)
+	    {
+		PST_QNODE **p = (PST_QNODE **)(stk->list[--i]);
+		if (skip)
+		    skip = FALSE;
+		else if (p == OPV_DESCEND_MARK)
+		    skip = TRUE;
+		else if (p && (!*p ||	/* Also skip terminals */
+			(*p)->pst_left ||(*p)->pst_right))
+		    return *p;
+	    }
+	    if (stk == &base->stk)
+		return NULL;
+	    /* Point to next block*/
+	    stk = stk->link;
+	}
+    }
+    else
+    {
+	PST_QNODE *prev = NULL;
+	for(;;)
+	{
+	    if (!stk)
+		stk = &base->stk;
+	    i = stk->sp;
+	    while (i > 0)
+	    {
+		PST_QNODE **p = (PST_QNODE **)(stk->list[--i]);
+		if (skip)
+		    skip = FALSE;
+		else if (p == OPV_DESCEND_MARK)
+		    skip = TRUE;
+		else if (p && (!*p ||	/* Also skip terminals */
+			(*p)->pst_left ||(*p)->pst_right))
+		{
+		    PST_QNODE *parent = *p;
+		    if (prev == child ||
+			parent->pst_left == child ||
+			parent->pst_right == child)
+			return parent;
+		    prev = parent;
+		}
+	    }
+	    if (stk == &base->stk)
+		return NULL;
+
+	    /* Point to next block*/
+	    stk = stk->link;
+	}
+    }
+}
+
+/*{
+** Name: opv_antecedant_by_1type - Find antecedant off recursion stack
+**
+** Description:
+**	Nondestructive traverse of Hybrid recursion stack looking for
+**	parent node.
+**
+** Inputs:
+**	base		Stack base block
+**	child		child whose antecedant to find. 
+**	t1...		Types to look for
+**
+** Outputs:
+**
+**	Returns:
+**	    node or NULL if not present
+**
+**	Exceptions:
+**	    None
+**
+** Side Effects:
+**	None - stack left intact.
+**
+** History:
+**	27-Oct-2009 (kiria01) SIR 121883
+**	    Created for flattened out stack recursion
+*/
+
+PST_QNODE *
+opv_antecedant_by_1type(
+	OPV_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1)
+{
+    while (child = opv_parent_node(base, child))
+    {
+	if (child->pst_sym.pst_type == t1)
+	    return child;
+    }
+    return child;
+}
+
+PST_QNODE *
+opv_antecedant_by_2types(
+	OPV_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2)
+{
+    while (child = opv_parent_node(base, child))
+    {
+	if (child->pst_sym.pst_type == t1 ||
+	    child->pst_sym.pst_type == t2)
+	    return child;
+    }
+    return child;
+}
+
+PST_QNODE *
+opv_antecedant_by_3types(
+	OPV_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2,
+	PST_TYPE t3)
+{
+    while (child = opv_parent_node(base, child))
+    {
+	if (child->pst_sym.pst_type == t1 ||
+	    child->pst_sym.pst_type == t2 ||
+	    child->pst_sym.pst_type == t3)
+	    return child;
+    }
+    return child;
+}
+
+PST_QNODE *
+opv_antecedant_by_4types(
+	OPV_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2,
+	PST_TYPE t3,
+	PST_TYPE t4)
+{
+    while (child = opv_parent_node(base, child))
+    {
+	if (child->pst_sym.pst_type == t1 ||
+	    child->pst_sym.pst_type == t2 ||
+	    child->pst_sym.pst_type == t3 ||
+	    child->pst_sym.pst_type == t4)
+	    return child;
+    }
+    return child;
+}
+

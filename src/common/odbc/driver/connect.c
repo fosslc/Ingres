@@ -355,6 +355,8 @@
 **         Set bcConnectCalled to FALSE upon SQLDisconnect(), in case
 **         SQLBrowseConnect() is called after a disconnecton the same
 **         connection handle.
+**     15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**         Changes to eliminate compiler prototype warnings.
 ** 
 */
 
@@ -410,7 +412,7 @@ static BOOL hasVnode( II_PTR connHandle, II_PTR tranHandle, char *queryText );
 #endif
 #ifndef NT_GENERIC
 static BOOL          FileDoesExist(char *, BOOL);
-char *getAltPath();
+char *getAltPath(void);
 char * getFileEntry(char *p, char * szToken, bool ignoreBracket);
 #endif
 static void         TranslatePWD(char * name, char * pwd);

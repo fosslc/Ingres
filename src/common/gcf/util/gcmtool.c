@@ -80,6 +80,8 @@ FUNC_EXTERN	i4	gcm_get_long();
 **	    Removed MALLOCLIB from NEEDLIBS
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 **/
 
 /*
@@ -91,11 +93,13 @@ OWNER =         INGUSER
 PROGRAM =       gcmtool
 */
 
-static		STATUS	gcm_request();
-static		STATUS	gcm_disassoc();
-static		STATUS	gcm_release();
-static		i4	gcm_message();
-static		VOID	gcm_complete();
+static		STATUS	gcm_request( i4	id);
+static		STATUS	gcm_disassoc( i4 id, i4	assoc_id);
+static		STATUS	gcm_release( i4	id, i4	assoc_id);
+static		i4	gcm_message( PTR start);
+static		VOID	gcm_complete( i4 async_id);
+static		i4	get_async( i4 id);
+static		STATUS	gcm_fastselect( i4 id);
 
 static		char	target[255];
 static		char	response[400];
@@ -120,9 +124,6 @@ static		i4	mon_handle;
 static		char	trap_address[256];
 
 static		i4	err_fatal = 0;
-
-static STATUS gcm_fastselect();
-static i4 get_async();
 
 main(argc,argv)
 int argc;
@@ -265,8 +266,7 @@ static	i4		parm_req[16];
 static	GCA_PARMLIST	parms[16];
 
 static i4
-gcm_message( start )
-PTR	start;
+gcm_message( PTR start)
 {
     i4		i;
     char	*q = start;
@@ -449,8 +449,7 @@ PTR	start;
 }
 
 static STATUS
-gcm_fastselect(id)
-i4	id;
+gcm_fastselect( i4 id)
 {
 	GCA_FS_PARMS	*fs_parms;
 	STATUS		status;
@@ -492,8 +491,7 @@ i4	id;
 }
 
 static STATUS
-gcm_request(id)
-i4	id;
+gcm_request( i4	id)
 {
 	GCA_RQ_PARMS	*rq_parms;
 	STATUS		status;
@@ -667,9 +665,9 @@ i4	assoc_id;
 }
 
 static STATUS
-gcm_release(id, assoc_id)
-i4	id;
-i4	assoc_id;
+gcm_release(
+i4	id,
+i4	assoc_id)
 {
 	GCA_SD_PARMS	*sd_parms;
 	STATUS		status;
@@ -706,9 +704,9 @@ i4	assoc_id;
 }
 
 static STATUS
-gcm_disassoc(id, assoc_id)
-i4	id;
-i4	assoc_id;
+gcm_disassoc(
+i4	id,
+i4	assoc_id)
 {
 	GCA_DA_PARMS	*da_parms;
 	STATUS		status;
@@ -741,8 +739,7 @@ i4	assoc_id;
 
 
 static VOID
-gcm_complete(async_id)
-i4		async_id;
+gcm_complete( i4 async_id)
 {
 	GCA_FS_PARMS	*fs_parms;
 	GCA_RQ_PARMS	*rq_parms;
@@ -878,8 +875,7 @@ i4		async_id;
 
 
 static i4
-get_async(id)
-i4 id;
+get_async( i4 id)
 {
         if (id)
             return id;

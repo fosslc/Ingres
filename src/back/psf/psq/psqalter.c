@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -57,8 +57,14 @@
 **      16-sep-93 (smc)
 **          Added/moved <cs.h> for CS_SID. Added history_template so we
 **          can automate this next time.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psq_alter(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psq_alter	- Alter the characteristics of a parser session.

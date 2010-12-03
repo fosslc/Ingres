@@ -16,6 +16,8 @@
 #	30-Oct-2008 (jonj)
 #	    SIR 120874: Removed rdu_ierror, rdu_warn,
 #	    added rduIerrorFcn, rduWarnFcn
+#	09-Nov-2010 (jonj) SIR 124685
+#	    Delete rdd_lcltab_exists, no longer global
 
 EXPORTS
 rdd_defsearch		@1				
@@ -73,7 +75,7 @@ rdd_gobjbase		@75
 rdd_gobjinfo		@76				
 rdd_gstats		@77				
 rdd_idxcount		@78				
-rdd_lcltab_exists	@79				
+;rdd_lcltab_exists	@79				
 rdd_ldbsearch		@80				
 rdd_ldbtab		@81				
 rdd_localstats		@82				

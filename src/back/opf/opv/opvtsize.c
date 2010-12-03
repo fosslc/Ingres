@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -65,9 +65,14 @@
 **      06-mar-96 (nanpr01)
 **          Changed the type to i4 from i4  to make it consistent
 **          with function definition.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 opv_tuplesize(
+	OPS_STATE *global,
+	PST_QNODE *qnode);
 
 /*{
 ** Name: opv_tuplesize	- find width in bytes of tuple represented by query tree

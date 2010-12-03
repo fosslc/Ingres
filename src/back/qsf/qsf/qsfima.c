@@ -58,6 +58,8 @@
 **	    Alias ID now lives in the master header.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	29-Oct-2010 (jonj) SIR 120874
+**	    Conform to use new uleFormat, DB_ERROR constructs.
 */
 
 
@@ -358,22 +360,22 @@ qsf_mo_attach( void )
     status = MOclassdef( MAXI2, QSF_Qsr_classes);
     if (status != OK)
     {
-	ule_format(status, (CL_ERR_DESC *)0, ULE_LOG,
-			NULL, (char *)0, 0L, (i4 *)0, &err_code, 0);
+	uleFormat(NULL, status, (CL_ERR_DESC *)NULL, ULE_LOG,
+		    NULL, (char *)NULL, 0L, (i4 *)NULL, &err_code, 0);
     }
 
     status = MOclassdef( MAXI2, QSF_qso_rqp_classes);
     if (status != OK)
     {
-	ule_format(status, (CL_ERR_DESC *)0, ULE_LOG,
-			NULL, (char *)0, 0L, (i4 *)0, &err_code, 0);
+	uleFormat(NULL, status, (CL_ERR_DESC *)NULL, ULE_LOG,
+		    NULL, (char *)NULL, 0L, (i4 *)NULL, &err_code, 0);
     }
 
     status = MOclassdef( MAXI2, QSF_qso_dbp_classes);
     if (status != OK)
     {
-	ule_format(status, (CL_ERR_DESC *)0, ULE_LOG,
-			NULL, (char *)0, 0L, (i4 *)0, &err_code, 0);
+	uleFormat(NULL, status, (CL_ERR_DESC *)NULL, ULE_LOG,
+		    NULL, (char *)NULL, 0L, (i4 *)NULL, &err_code, 0);
     }
 
     return (status);

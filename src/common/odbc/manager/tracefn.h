@@ -12,10 +12,12 @@
 **        Created.
 **    19-June-2006 (Ralph Loen) Added setCLI() and bind_sym() to silence
 **        compiler warnings on Windows.
+**   15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**        Changes to eliminate compiler prototype warnings.
 ** 
 */
 
-GLOBALREF void setCLI();
+GLOBALREF void setCLI(void);
 GLOBALREF void bind_sym(PTR *dlHandle, char *driverSym, IIODBC_DRIVER_FN *fcn);
 
 /*

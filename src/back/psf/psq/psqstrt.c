@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 **
 */
 
@@ -17,6 +17,7 @@
 #include    <ddb.h>
 #include    <dmf.h>
 #include    <dmtcb.h>
+#include    <dmucb.h>
 #include    <ulf.h>
 #include    <ulm.h>
 #include    <qsf.h>
@@ -75,12 +76,13 @@
 **	    Added MO hooks for PSF.
 **	11-Jun-2010 (kiria01) b123908
 **	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-GLOBALREF i4		      Psf_init;
-GLOBALREF	PSF_SERVBLK	*Psf_srvblk;
-
+/* TABLE OF CONTENTS */
+i4 psq_startup(
+	PSQ_CB *psq_cb);
 
 /*{
 ** Name: psq_startup	- Start up the parser for a server.
@@ -195,6 +197,8 @@ GLOBALREF	PSF_SERVBLK	*Psf_srvblk;
 **	    Set cardinality check flag into server block
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Pass create-compression to server block
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Pass result_structure to server block
 */
 DB_STATUS
 psq_startup(
@@ -205,6 +209,20 @@ psq_startup(
     RDF_CCB		rdf_cb;
     DB_STATUS		status;
     SIZE_TYPE		memleft;
+
+    /* Quick check that the DMU_CHARACTERISTICS indicator map is large
+    ** enough for all of the extra PSS_WC_xxx bits.  I don't think this
+    ** can be tested at compile time without making these #define's,
+    ** and then you have to keep track of all the darn bit numbers.
+    */
+    if (DMU_ALLIND_LAST < PSS_WC_LAST)
+    {
+	TRdisplay("DMU_CHARACTERISTICS indicators too small!  Add more to DMU_ALLIND_LAST in dmucb.h!\n");
+	/* This is a build time / developer error, crash hard to get
+	** the culprit's attention.
+	*/
+	*(i4 *)0 = 1;
+    }
 
     /* Start out with no error */
     psq_cb->psq_error.err_code = E_PS0000_OK;
@@ -236,7 +254,7 @@ psq_startup(
 	** Value specified by the user should not result in sessions getting
 	** less than PSF_SESMEM_MIN bytes each
 	*/
-	if (psq_cb->psq_mserver < PSF_SESMEM_MIN * (i4) psq_cb->psq_mxsess)
+	if ((i4)psq_cb->psq_mserver < PSF_SESMEM_MIN * psq_cb->psq_mxsess)
 	{
 	    (VOID) psf_error(E_PS0704_INSF_MEM, 0L, PSF_INTERR, &err_code,
 		&psq_cb->psq_error, 0);
@@ -354,6 +372,8 @@ psq_startup(
 
     Psf_srvblk->psf_vch_prec = psq_cb->psq_vch_prec;
     Psf_srvblk->psf_create_compression = psq_cb->psq_create_compression;
+    Psf_srvblk->psf_result_struct = psq_cb->psq_result_struct;
+    Psf_srvblk->psf_result_compression = psq_cb->psq_result_compression;
     /*
     ** Return the size needed for the session control block.
     */

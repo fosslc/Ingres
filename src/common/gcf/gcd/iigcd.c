@@ -131,6 +131,8 @@ NEEDLIBS= APILIB GCFLIB ADFLIB CUFLIB COMPATLIB
 **          the format of the GCC.
 **	13-May-10 (gordy)
 **	    Added queue for free RCB.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 
@@ -150,7 +152,7 @@ GLOBALREF MO_CLASS_DEF	gcd_classes[];
 FUNC_EXTERN	i4	GCX_exit_handler();
 static		STATUS	initialize( i4, char ** );
 static		bool	gcd_cset_id( char *, u_i4 );
-static		VOID	gcd_exit();
+static		VOID	gcd_exit(void);
 
 
 /*

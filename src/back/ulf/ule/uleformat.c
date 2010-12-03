@@ -150,6 +150,12 @@
 **	    executable statements.
 **	07-jan-2008 (joea)
 **	    Undo 28-jun-2001 and 21-mar-2005 cluster nickname changes.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Add uleFormatFcnV to enable calling of uleFormatFcn with
+**	    direct parameter vector.
+**	10-Nov-2010 (kiria01) SIR 124685
+**	    Always generate the non-variadic macro support routines as
+**	    Windows .def files will unconditionally reference them.
 **/
 
 /*
@@ -238,7 +244,7 @@ ule_initiate( char *node_name, i4  l_node_name, char *server_name,
 }
 
 /*{
-** Name: uleFormatFcn	- Format and write error message.
+** Name: uleFormatFcn*	- Format and write error message.
 **
 ** Description:
 **      This routine manages formatting and logging error messages.
@@ -303,7 +309,7 @@ ule_initiate( char *node_name, i4  l_node_name, char *server_name,
 **					contains formatting specifications,
 **					that is associated with the error code
 **					that was passed in.
-**					
+**	ap				Preferred arg vector.
 **
 ** Outputs:
 **	dberror				If input error_code is not zero, 
@@ -417,25 +423,22 @@ ule_initiate( char *node_name, i4  l_node_name, char *server_name,
 **          been explicitly requested we will call CS_dump_stack().
 **	    
 */
-/* VARARGS31 */
-
 DB_STATUS
-uleFormatFcn(
-DB_ERROR    *dberror,
-i4	    err_code,
-CL_ERR_DESC *clerror,
-i4	    flag,
-DB_SQLSTATE *sqlstate,
-char	    *msg_buffer,  
-i4	    msg_buf_length,
-i4	    *msg_length,
-i4          *uleError,
-PTR	    uleFileName,
-i4	    uleLineNumber,
-i4	    num_parms,
-	    ... )
+uleFormatFcnV(
+	DB_ERROR	*dberror,
+	i4		err_code,
+	CL_ERR_DESC	*clerror,
+	i4		flag,
+	DB_SQLSTATE	*sqlstate,
+	char		*msg_buffer,  
+	i4		msg_buf_length,
+	i4		*msg_length,
+	i4      	*uleError,
+	PTR		uleFileName,
+	i4		uleLineNumber,
+	i4		num_parms,
+	va_list 	ap)
 {
-
 #define  NUM_ER_ARGS 12
 
     struct  {
@@ -453,7 +456,7 @@ i4	    num_parms,
     SCF_SCI	    info[10];
     SCF_CB	    scf_cb;
     ER_ARGUMENT     er_args[NUM_ER_ARGS];
-    char	    hex_chars[16] = {'0','1','2','3','4','5','6','7',
+    static const char hex_chars[16] = {'0','1','2','3','4','5','6','7',
                                      '8','9','a','b','c','d','e','f'};
     i4		    error_code;
     i4	    	    local_error_code;
@@ -472,7 +475,6 @@ i4	    num_parms,
     char	    *prbuf;
     i2		    hdr_size;
     i4		    NumParms;
-    va_list	    ap;
 
     LOCATION	    loc;
     char	    dev[LO_NM_LEN];
@@ -581,8 +583,6 @@ i4	    num_parms,
 
     /* package up the stack parameters into an ER_ARGUMENT array */
 
-    va_start( ap, num_parms );
-
     for( NumParms = 0; NumParms < num_parms && NumParms < NUM_ER_ARGS; NumParms++ )
     {
        er_args[NumParms].er_size = (i4) va_arg( ap, i4 );
@@ -632,7 +632,7 @@ i4	    num_parms,
 		if ( LOfroms(PATH & FILENAME, filebuf, &loc) ||
 		     LOdetail(&loc, dev, path, fprefix, fsuffix, version) )
 		{
-		    STpolycat(2, FileName,
+		    STpolycat(2, path,
 		    		 LineNo,
 				 &MessageArea[length]);
 		}
@@ -953,96 +953,78 @@ i4	    num_parms,
 	return (E_DB_WARN);
 }
 
+DB_STATUS
+uleFormatFcn(
+	DB_ERROR    *dberror,
+	i4	    err_code,
+	CL_ERR_DESC *clerror,
+	i4	    flag,
+	DB_SQLSTATE *sqlstate,
+	char	    *msg_buffer,  
+	i4	    msg_buf_length,
+	i4	    *msg_length,
+	i4          *uleError,
+	PTR	    uleFileName,
+	i4	    uleLineNumber,
+	i4	    num_parms,
+	... )
+{
+    DB_STATUS status;
+    va_list ap;
+    va_start(ap, num_parms);
+    status = uleFormatFcnV(dberror, err_code, clerror, flag, sqlstate,
+		msg_buffer, msg_buf_length, msg_length, uleError,
+		uleFileName, uleLineNumber, num_parms, ap);
+    va_end(ap);
+    return status;
+}
+
 /* Non-variadic function forms, insert __FILE__, __LINE__ manually */
 DB_STATUS
 uleFormatNV(
-DB_ERROR       *dberror,
-i4	       error_code,
-CL_ERR_DESC    *clerror,
-i4             flag,
-DB_SQLSTATE    *sqlstate,
-char           *msg_buffer,
-i4             msg_buf_length,
-i4             *msg_length,
-i4	       *uleError,
-i4	       num_parms,
-...)
+	DB_ERROR       *dberror,
+	i4	       error_code,
+	CL_ERR_DESC    *clerror,
+	i4             flag,
+	DB_SQLSTATE    *sqlstate,
+	char           *msg_buffer,
+	i4             msg_buf_length,
+	i4             *msg_length,
+	i4	       *uleError,
+	i4	       num_parms,
+	...)
 {
-    i4      ps[NUM_ER_ARGS];	
-    PTR     pv[NUM_ER_ARGS];	
-    i4	    i;
+    DB_STATUS status;
     va_list ap;
 
     va_start( ap, num_parms );
-
-    for ( i = 0; i < num_parms && i < NUM_ER_ARGS; i++ )
-    {
-        ps[i] = (i4) va_arg( ap, i4 );
-	pv[i] = (PTR) va_arg( ap, PTR );
-    }
-    va_end( ap );
-
-    return( uleFormatFcn(dberror, error_code, clerror, flag, sqlstate,
+    status = uleFormatFcnV(dberror, error_code, clerror, flag, sqlstate,
     		 msg_buffer, msg_buf_length, msg_length, uleError,
-		 __FILE__,
-		 __LINE__,
-		 i,
-		 ps[0], pv[0],
-		 ps[1], pv[1],
-		 ps[2], pv[2],
-		 ps[3], pv[3],
-		 ps[4], pv[4],
-		 ps[5], pv[5],
-		 ps[6], pv[6],
-		 ps[7], pv[7],
-		 ps[8], pv[8],
-		 ps[9], pv[9],
-		 ps[10], pv[10],
-		 ps[11], pv[11]) );
+		 __FILE__, __LINE__, num_parms, ap);
+    va_end( ap );
+    return status;
 }
 
 DB_STATUS
 ule_formatNV(
-i4	       error_code,
-CL_ERR_DESC    *clerror,
-i4             flag,
-DB_SQLSTATE    *sqlstate,
-char           *msg_buffer,
-i4             msg_buf_length,
-i4             *msg_length,
-i4	       *uleError,
-i4	       num_parms,
-...)
+	i4	       error_code,
+	CL_ERR_DESC    *clerror,
+	i4             flag,
+	DB_SQLSTATE    *sqlstate,
+	char           *msg_buffer,
+	i4             msg_buf_length,
+	i4             *msg_length,
+	i4	       *uleError,
+	i4	       num_parms,
+	...)
 {
-    i4      ps[NUM_ER_ARGS];	
-    PTR     pv[NUM_ER_ARGS];	
-    i4	    i;
+    DB_STATUS status;
     va_list ap;
 
-    va_start( ap, num_parms );
-
-    for ( i = 0; i < num_parms && i < NUM_ER_ARGS; i++ )
-    {
-        ps[i] = (i4) va_arg( ap, i4 );
-	pv[i] = (PTR) va_arg( ap, PTR );
-    }
-    va_end( ap );
-
-    return( uleFormatFcn(NULL, error_code, clerror, flag, sqlstate,
+    va_start(ap, num_parms);
+    status = uleFormatFcnV(NULL, error_code, clerror, flag, sqlstate,
     		 msg_buffer, msg_buf_length, msg_length, uleError,
-		 __FILE__,
-		 __LINE__,
-		 i,
-		 ps[0], pv[0],
-		 ps[1], pv[1],
-		 ps[2], pv[2],
-		 ps[3], pv[3],
-		 ps[4], pv[4],
-		 ps[5], pv[5],
-		 ps[6], pv[6],
-		 ps[7], pv[7],
-		 ps[8], pv[8],
-		 ps[9], pv[9],
-		 ps[10], pv[10],
-		 ps[11], pv[11]) );
+		 __FILE__, __LINE__, num_parms, ap);
+    va_end(ap);
+    return status;
 }

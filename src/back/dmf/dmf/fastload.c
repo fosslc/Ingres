@@ -315,6 +315,8 @@ handle_peripheral(
 **	19-Apr-2010 (kschendel) SIR 123485
 **	    Various changes for new blob handling, which among other things
 **	    requires the use of DML level table open here.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    dmf_tbl_info(), dmf_last_id() prototyped in dml.h
 */
 DB_STATUS
 dmffload( DMF_JSX	*jsx,

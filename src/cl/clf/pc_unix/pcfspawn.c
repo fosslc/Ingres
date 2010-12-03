@@ -52,6 +52,8 @@
  *
 **	15-jul-93 (ed)
 **	    adding <gl.h> after <compat.h>
+**	15-nov-2010 (stephenb)
+**	    include ex.h for prototyping.
  */
 
 
@@ -62,6 +64,7 @@
 # include	<gl.h>
 # include	<clconfig.h>
 # include	<pc.h>
+# include	<ex.h>
 # include	"pclocal.h"
 # include	<PCerr.h>
 # include	<si.h>
@@ -77,7 +80,6 @@ FILE	**c_stdout;		/* descriptor for slave's stdout */
 PID	*pid;			/* process id of slave, returned to caller */
 {
 	FILE		*fdopen();
-	STATUS		PCsspawn();
 
 	PIPE		t_stdin;
 	PIPE		t_stdout;

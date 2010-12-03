@@ -57,6 +57,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes
 [@history_template@]...
 */
 
@@ -64,6 +66,8 @@
 ** Global variables owned by this module
 */
 GLOBALREF SXAPO_CB *Sxapo_cb;
+
+static DB_STATUS sxapo_init_cnf( i4 *err_code );
 
 /*
 ** Name: sxapo_bgn_ses - register a session with the auditing system
@@ -415,7 +419,7 @@ sxapo_show(
 **	6-jan-94 (stephenb)
 **	    Initial creation.
 */
-DB_STATUS
+static DB_STATUS
 sxapo_init_cnf(
 	i4		*err_code)
 {

@@ -171,6 +171,8 @@
 **	    instead of i4 *err_code, use new form uleFormat.
 **      16-nov-2008 (stial01)
 **          Redefined name constants without trailing blanks.
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Return int instead of VOID to agree with function prototype.
 */
 
 /*
@@ -320,9 +322,9 @@ static STATUS cache_meshow_func(
 **	    Support -help as command line option.
 */
 # ifdef	II_DMF_MERGE
-VOID MAIN(argc, argv)
+int MAIN(argc, argv)
 # else
-VOID 
+int 
 main(argc, argv)
 # endif
 i4	argc;
@@ -387,6 +389,9 @@ char	*argv[];
     }
 
     PCexit(status);
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 /*

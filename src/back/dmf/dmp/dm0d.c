@@ -134,6 +134,8 @@
 **          Replace READONLY/WSCREADONLY by const.
 **	19-Aug-2009 (kschendel) 121804
 **	    Need cx.h for proper CX declarations (gcc 4.3).
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype static dm0d_backread().
 **/
 
 /*
@@ -173,6 +175,12 @@ static i4  	count_recs(
 static char *   	get_recptr(
     				char           *page,
     				i4        recnum);
+
+static DB_STATUS dm0d_backread(
+			DM0D_CTX            *jctx,
+			PTR		    *record,
+			i4		    *l_record,
+			DB_ERROR	    *dberr);
 
 /*{
 ** Name: dm0d_close	- Close a dump file.

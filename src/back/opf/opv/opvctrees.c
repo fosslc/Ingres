@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -66,8 +66,19 @@
 **      24-Jun-99 (hanal04)
 **          b97219. Adjust the logic in opv_ctress() to address the
 **          nullability introduced by outer-joins.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opv_cvar(
+	OPS_STATE *global,
+	PST_QNODE *node1,
+	PST_QNODE *node2);
+bool opv_ctrees(
+	OPS_STATE *global,
+	PST_QNODE *node1,
+	PST_QNODE *node2);
 
 /*{
 ** Name: opv_cvar	- compare 2 variables with same table ID

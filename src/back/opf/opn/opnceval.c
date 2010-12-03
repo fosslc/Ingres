@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -67,8 +67,19 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opn_recover(
+	OPS_SUBQUERY *subquery);
+static i4 opn_mhandler(
+	EX_ARGS *args);
+bool opn_timeout(
+	OPS_SUBQUERY *subquery);
+OPN_STATUS opn_ceval(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opn_recover	- recover from an out-of-memory error
@@ -665,7 +676,7 @@ opn_ceval(
 					    ** warning message to caller */
 	    else
 	    {
-		opx_lerror(E_OP0400_MEMORY, 0); /* Output to errlog.log as well kiria01-b116309 */
+		opx_lerror(E_OP0400_MEMORY, 0,0,0,0,0); /* Output to errlog.log as well kiria01-b116309 */
 		opx_error(E_OP0400_MEMORY); /* exit with a user error if the query
 					    ** cannot find at least one acceptable
 					    ** query plan */

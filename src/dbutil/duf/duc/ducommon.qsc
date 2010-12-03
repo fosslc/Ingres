@@ -399,6 +399,8 @@ EXEC SQL include SQLCA;
 **	    Update duc_iilgmo to recreate lgmo_xa_reduced_reg.
 **	9-Jul-2010 (kschendel) SIR 123450
 **	    Add comment re is_compressed and iitables, no code change.
+**	23-Nov-2010 (troal01)
+**	    Rename srid.dat to sridmap.dat.
 */
 
 
@@ -2171,7 +2173,7 @@ duc_init_srs()
     
     NMloc(FILES, FILENAME & PATH, (char *) NULL, &srs_loc);
     LOfaddpath(&srs_loc, "geo", &srs_loc);
-    LOfstfile("srs.dat", &srs_loc);
+    LOfstfile("sridmap.dat", &srs_loc);
     srs_file = srs_loc.path;
     exec sql copy table spatial_ref_sys(
         srid= c0tab,

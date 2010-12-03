@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -66,8 +66,31 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opo_cco(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	OPO_CO *marker,
+	OPO_CO **base);
+static void opo_subtree(
+	OPS_SUBQUERY *subquery,
+	OPO_CO **copp,
+	OPO_PERM **saveptr,
+	bool remove);
+static void opo_error(
+	OPS_SUBQUERY *subquery);
+void opo_copyfragco(
+	OPS_SUBQUERY *subquery,
+	OPO_CO **copp,
+	bool top);
+i4 opo_copyco(
+	OPS_SUBQUERY *subquery,
+	OPO_CO **copp,
+	bool remove);
 
 /*{
 ** Name: opo_cco	- mark CO nodes of best CO tree
@@ -504,7 +527,7 @@ opo_copyco(
 		    opo_error(subquery);    /* report query plan error
 					** & die */
 		}
-		return;
+		return E_DB_OK;
 #endif
 		
 	    }

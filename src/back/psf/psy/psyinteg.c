@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -82,9 +82,20 @@
 **	    Save changed infoblk after UNFIX
 **	10-Jan-2001 (jenjo02)
 **	    Added *PSS_SELBLK parm to pst_treedup().
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psy_integ(
+	PSF_MSTREAM *mstream,
+	PST_QNODE *root,
+	PSS_USRRANGE *rngtab,
+	PSS_RNGTAB *resvar,
+	i4 qmode,
+	PSS_SESBLK *sess_cb,
+	PST_QNODE **result,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: psy_integ	- Apply integrity constraints
@@ -185,8 +196,6 @@ psy_integ(
 {
     register PST_QNODE	*r;
     PSC_CURBLK		*curblk = sess_cb->pss_crsr;
-    CS_SID		sessid  = sess_cb->pss_sessid;
-    PTR			db_id   = sess_cb->pss_dbid;
     i2			dset[DB_COL_WORDS*2];
     i2			doms;
     i2			*domset;
@@ -240,6 +249,7 @@ psy_integ(
     }
     else
     {
+	register u_i4 u;
 	/*
 	**  Check to see if we should apply the integrity
 	**  algorithm.
@@ -260,8 +270,8 @@ psy_integ(
 	**  Create a set of the domains updated in this query.
 	*/
 
-	for (i = 0; i < DB_COL_WORDS*2; i++)
-	    dset[i] = 0;
+	for (u = 0; u < DB_COL_WORDS*2; u++)
+	    dset[u] = 0;
 
 	for (p = r->pst_left, doms = 0;
 	    p != (PST_QNODE *) NULL && p->pst_sym.pst_type != PST_TREE;
@@ -426,9 +436,9 @@ psy_integ(
 
 	    domset = (i2*) inttup->dbi_columns.db_domset;
 
-	    for (i = 0; i < DB_COL_WORDS*2; i++)
+	    for (u = 0; u < DB_COL_WORDS*2; u++)
 	    {
-		if ((dset[i] & domset[i]) != 0)
+		if ((dset[u] & domset[u]) != 0)
 		    break;
 	    }
 
@@ -436,7 +446,7 @@ psy_integ(
 	    ** Check for appends where defaults don't satisfy integrity.
 	    */
 
-	    if ((i >= DB_COL_WORDS*2) && !subset)
+	    if ((u >= DB_COL_WORDS*2) && !subset)
 	    {
 		continue;
 	    }

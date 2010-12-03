@@ -65,12 +65,23 @@
 **          Removed gwxit.h inclusion which is not required.
 **	24-Aug-10 (gordy)
 **	    Fixed display of MIB registration bits.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes.
 **/
 
 /* forwards */
 
 static STATUS GM_subpindex(i4 msg, PTR cdata, i4  linstance,
 			   char *instance,PTR *instdata );
+static void GM_dc_conn_instance( char *instance, PTR *conn_key );
+static STATUS GM_gt_conn( char *instance,
+			PTR conn_key,
+	   		GM_PLACE_BLK **ppb,
+	   		GM_CONN_BLK **pcb );
+static STATUS GM_mk_conn_instance( PTR srvr_key,
+		    PTR conn_key,
+		    i4  linstance,
+		    char *instance );
 
 /* the mib for PLACES */
 
@@ -302,7 +313,7 @@ GM_subpindex(i4 msg,
 **	    i4/pointer truncation error.
 */
 
-void
+static void
 GM_dc_conn_instance( char *instance, PTR *conn_key )
 {
     char *p;
@@ -352,7 +363,7 @@ GM_dc_conn_instance( char *instance, PTR *conn_key )
 **	    
 */
 
-STATUS
+static STATUS
 GM_mk_conn_instance( PTR srvr_key,
 		    PTR conn_key,
 		    i4  linstance,
@@ -408,7 +419,7 @@ GM_mk_conn_instance( PTR srvr_key,
 **	6-oct-92 (daveb)
 **	    created.
 */
-STATUS
+static STATUS
 GM_gt_conn( char *instance,
 	   PTR conn_key,
 	   GM_PLACE_BLK **ppb,

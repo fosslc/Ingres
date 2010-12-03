@@ -349,6 +349,9 @@ PTR                ws)
 **	 otherwise flush buffer. Upon re-entering adu_redeem do not 
 **	 output another "more segment/end-of-data" indicator. Extend 
 **	 fix for bug 104122 to long nvarchar. (B119016)
+**    01-Nov-2010 (thaju02) B124683
+**	 For UTF8 and lvch, use MEcopy to move segment to result 
+**	 buffer(chp).
 */
 DB_STATUS
 adc_lvch_xform(
@@ -624,7 +627,8 @@ PTR           ws)
 	    {
 		moved = min(moved, space_left);
 		
-		if (workspace->adw_shared.shd_type == DB_LVCH_TYPE)
+		if ((workspace->adw_shared.shd_type == DB_LVCH_TYPE) &&
+		     ((scb->adf_utf8_flag & AD_UTF8_ENABLED) == 0))
 		{
 		    really_moved = CMcopy(p, moved, chp);
 		}

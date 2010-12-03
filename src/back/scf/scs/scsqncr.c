@@ -1220,6 +1220,10 @@
 **	    make it into DMF (who is the guy who needs the workspace info).
 **	    Delete rd_lo_next/prev list, has been nothing but a very
 **	    expensive no-op for a long time it seems.
+**      04-nov-2010 (maspa05) bug 124654
+**           Added sc930_xatrace to trace XA operations in SC930. 
+**           Re-surrected scs_format_xa_xid to do the formatting of an XA xid
+**           for both sc930_xatrace and scs_xatrace
 **/
 
 /*
@@ -1316,6 +1320,22 @@ i4		     qflags,
 char		     *qstr,
 DB_DIS_TRAN_ID	     *dis_tran_id,
 i4    xa_stat);
+
+static void print_sc930_param(SCD_SCB *scb,
+		DB_DATA_VALUE *dbdv,
+		char *parm_name,
+		i4 pcount,
+		i2 msg_name);
+
+static VOID sc930_xatrace(SCD_SCB *scb,
+i4		     qmode,
+i4		     qflags,
+DB_DIS_TRAN_ID	     *dis_tran_id,
+i4    xa_stat);
+
+static void scs_format_xa_xid(char * xid_str,
+SCD_SCB *scb,
+DB_DIS_TRAN_ID	     *dis_tran_id);
 
 GLOBALREF SC_MAIN_CB *Sc_main_cb; /* server control block */
 
@@ -1515,6 +1535,9 @@ GLOBALREF SC_MAIN_CB *Sc_main_cb; /* server control block */
 **	    Added support for rename table/column.
 **	21-Jul-2010 (kschendel) SIR 124104
 **	    Add (stub) set create_compression.
+**	27-Oct-2010 (kschendel)
+**	    Noticed that set-batch-copy-optim was missing.  No observed
+**	    symptoms, but fix it.
 */
 typedef struct _SQNCR_TBL
 {
@@ -1724,8 +1747,9 @@ static  const SQNCR_TBL   sqncr_tbl[] = {
 /* PSQ_GCA_XA_COMMIT */		{0,0},
 /* PSQ_GCA_XA_ROLLBACK */	{0,0},
 /* PSQ_FREELOCATOR */		{SQ_PSF_MASK, 0},
-/* PSQ_ATBL_RENAME_COLUMN */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
+/* 190 PSQ_ATBL_RENAME_COLUMN */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
 /* PSQ_ATBL_RENAME_TABLE */	{SQ_PSF_MASK | SQ_OPF_MASK, 0},
+/* PSQ_SETBATCHCOPYOPTIM */	{SQ_PSF_MASK, 0},
 /* PSQ_CREATECOMP */		{SQ_PSF_MASK, 0},
 	{0,0}
 };
@@ -2669,6 +2693,11 @@ static char execproc_syntax2[] = " = session.";
 **      04-oct-2010 (maspa05) Bug 124534
 **          Rowcounts for batched queries were incorrect. Need to check the
 **          list of GCA response messages to find the latest.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Change "set result-structure" to a do-nothing.  PSF handles
+**	    result-structure now, not OPF.
+**	04-Nov-2010 (maspa05) bug 124654
+**	    Added SC930 tracing for XA operations
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
@@ -6688,7 +6717,6 @@ scs_sequencer(i4 op_code,
 			&& sscb->sscb_thandle)
 		{
 		    PSQ_QDESC	*qdesc = (PSQ_QDESC *)sscb->sscb_troot;
-		    DB_DATA_VALUE *dbvp;
 		    PTR		*parmp;
 
 		    if (qdesc && qdesc->psq_dnum > 3)
@@ -7359,6 +7387,7 @@ scs_sequencer(i4 op_code,
 		    scs_xatrace(scb, qmode, GCAdata->gca_xa_flags, (char *)0,
 			&DisTranId, *err_code);
 
+
 		/* Transform originating QEF error code into XA return code */
 		if ( DB_FAILURE_MACRO(status) )
 		{
@@ -7461,6 +7490,12 @@ scs_sequencer(i4 op_code,
 		    if (qe_ccb->qef_illegal_xact_stmt)
 			qry_status |= GCA_ILLEGAL_XACT_STMT;
 		}
+
+		/* SC930 trace of XA call */
+                if (ult_always_trace() & SC930_TRACE)
+		    sc930_xatrace(scb, qmode, GCAdata->gca_xa_flags, 
+			&DisTranId, *XAerr_code);
+
 		sscb->sscb_state = SCS_INPUT;
 		*next_op = CS_EXCHANGE;
 		break;
@@ -7526,11 +7561,20 @@ scs_sequencer(i4 op_code,
                     if (f)
                     {
 	   		i2 x;
+			char tmp[100];
+			STcopy("",tmp);
+
 	   		switch (qmode)
 	   		{
            		case PSQ_ENDTRANS:	x=SC930_LTYPE_ENDTRANS;break;
            		case PSQ_COMMIT:	x=SC930_LTYPE_COMMIT;break;
-           		case PSQ_SECURE:	x=SC930_LTYPE_SECURE;break;
+           		case PSQ_SECURE:	
+				x=SC930_LTYPE_SECURE;
+				STprintf(tmp,"%08x:%08x",
+			    sscb->sscb_dis_tran_id.db_dis_tran_id.db_ingres_dis_tran_id.db_tran_id.db_high_tran,
+			    sscb->sscb_dis_tran_id.db_dis_tran_id.db_ingres_dis_tran_id.db_tran_id.db_low_tran);
+
+				break;
            		case PSQ_ABORT:		x=SC930_LTYPE_ABORT;break;
            		case PSQ_ROLLBACK:	x=SC930_LTYPE_ROLLBACK;break;
            		case PSQ_ABSAVE:	x=SC930_LTYPE_ABSAVE;break;
@@ -7543,7 +7587,7 @@ scs_sequencer(i4 op_code,
            		case PSQ_DDLCONCUR:	x=SC930_LTYPE_DDLCONCUR;break;
 	   		default:		x=SC930_LTYPE_UNKNOWN;break;
 	   		}
-                        ult_print_tracefile(f,x,"");
+                        ult_print_tracefile(f,x,tmp);
                         ult_close_tracefile(f);
                     }
                 }
@@ -8525,7 +8569,6 @@ scs_sequencer(i4 op_code,
 	      }
 
 	    case PSQ_SCPUFACT:
-	    case PSQ_SRINTO:
 	    case PSQ_SQEP:
 	    case PSQ_JTIMEOUT:
 		if ((sscb->sscb_flags & SCS_STAR) &&
@@ -8859,6 +8902,7 @@ scs_sequencer(i4 op_code,
 	    case PSQ_SCARDCHK:
 	    case PSQ_SNOCARDCHK:
 	    case PSQ_CREATECOMP:
+	    case PSQ_SRINTO:
 
 	    /* the following qmodes are obsolete */
 	    case PSQ_OBSOLETE:
@@ -10179,6 +10223,7 @@ massive_for_exit:
 		if (Sc_main_cb->sc_trace_errno == E_SC0206_CANNOT_PROCESS)
 		    scs_xatrace(scb, qmode, 0, "QEFABORT",
 		    (DB_DIS_TRAN_ID *)NULL, qry_status);
+		
 	    }
 
 	    /* When aborting xacts, make sure that all psf cursors are closed */
@@ -10883,10 +10928,10 @@ massive_for_exit:
 
 /*
 ** {
-** Name: print_sc930_info	- Output sc930 tracing
+** Name: print_sc930_param	- Output parameter value for sc930 tracing
 **
 ** Description:
-**	Separate this segment so the large strings don't end up on the stack.
+**	outputs parameter values - either for DBprocs or prepared queries
 **
 ** History:
 **	23-Jul-2009 (kibro01)
@@ -10904,51 +10949,28 @@ massive_for_exit:
 **          caller
 **          b123056 - moved call to adu_valuetomystr out of STprintf as this
 **          causes SIGSEGV on some platforms
+**      19-Oct-2010 (maspa05) b124551
+**          Use adu_sc930prtdataval to output parameter values to SC930 trace
+**      02-Nov-2010 (maspa05) b124671
+**          Replace GCA_P_PARM *gpm with char *parm_name for the parameter 
+**          name. Also re-name to print_sc930_param.
 **
 */
 static void
-print_sc930_info(SCD_SCB *scb,
+print_sc930_param(SCD_SCB *scb,
 		DB_DATA_VALUE *dbdv,
-		GCA_P_PARAM *gpm,
+		char *parm_name,
 		i4 pcount,
 		i2 msg_name)
 {
     void *f = ult_open_tracefile((PTR)scb->cs_scb.cs_self);
     if (f)
     {
-	i4 namelen;
-	char tmp[DB_MAXSTRING + 80];
-	char val[DB_MAXSTRING + 1];
-
-	adu_valuetomystr(val,dbdv, scb->scb_sscb.sscb_adscb);
-
-	if (gpm)
-	{
-	    MEcopy((PTR)&gpm->gca_parname.
-	        gca_l_name, sizeof(namelen),(PTR)&namelen);
-	    STprintf(tmp,"%d:%d(%*s)=%s",
-		dbdv->db_datatype,
-		pcount,namelen,
-	        gpm->gca_parname.gca_name,
-		val);
-	} else
-	{
-	    STprintf(tmp,"%d:%d=%s",
-		dbdv->db_datatype,
-		pcount,
-		val);
-	}
-	ult_print_tracefile(f,msg_name,tmp);
+	adu_sc930prtdataval(msg_name,parm_name,pcount,dbdv, 
+			    scb->scb_sscb.sscb_adscb,f);
 	ult_close_tracefile(f);
     }
 }
-
-/*
-** Use a global function pointer and indirect through it to make absolutely sure
-** that no compiler can inline this function.
-*/
-void (*print_sc930_ptr)(SCD_SCB*,DB_DATA_VALUE*,GCA_P_PARAM*,i4,i2) =
-	print_sc930_info;
 
 /*
 ** {
@@ -11242,6 +11264,10 @@ void (*print_sc930_ptr)(SCD_SCB*,DB_DATA_VALUE*,GCA_P_PARAM*,i4,i2) =
 **	25-Mar-2010 (kschendel) SIR 123485
 **	    Readability: replace scb->scb_sscb. with sscb->, likewise
 **	    with scb_cscb.  Fix up some bad indents. Add comments.
+**      02-Nov-2010 (maspa05) b124671
+**          print_sc930_param now takes a char* for the parameter name. Also
+**          call it directly, as the reason for using a function pointer (to
+**          avoid inlining) no longer applies.
 */
 DB_STATUS
 scs_input(SCD_SCB *scb,
@@ -12664,8 +12690,18 @@ scs_input(SCD_SCB *scb,
 			      adu_2prvalue(sc0e_trace, &sc930_dbdv);
 
 			    if (ult_always_trace())
-			      (*print_sc930_ptr)(scb,&sc930_dbdv,sc930_gpm,pcount,
-						 SC930_LTYPE_PARMEXEC);
+			    {
+                                char parm_name[DB_PARM_MAXNAME + 1];
+				i4 namelen;
+
+				MEcopy((PTR)&sc930_gpm->gca_parname.gca_l_name, 
+						sizeof(namelen),(PTR)&namelen);
+				STprintf(parm_name,"%*s",
+				namelen, sc930_gpm->gca_parname.gca_name);
+
+			      print_sc930_param(scb,&sc930_dbdv,parm_name,
+						 pcount, SC930_LTYPE_PARMEXEC);
+			    }
 
 			}
 # ifdef BYTE_ALIGN
@@ -13032,7 +13068,7 @@ scs_input(SCD_SCB *scb,
 
 			if (ult_always_trace())
 			{
-			    (*print_sc930_ptr)(scb,&dbdv,NULL,pcount,SC930_LTYPE_PARM);
+			    print_sc930_param(scb,&dbdv,NULL,pcount,SC930_LTYPE_PARM);
 			}
 			/* Move NULL byte to EOS */
 			(VOID)adg_vlup_setnull(&dbdv);
@@ -15182,6 +15218,8 @@ scs_fetch_data(SCD_SCB	  *scb,
 **	    We need to align qup->parm_dbv.db_data and add space to the name
 **	    to account for this alignment.  (Related to the change in 
 **	    scs_fetch_data() above for bug 55993.)
+**	02-Nov-2010 (maspa05) b124671
+**	    Output parameter values to SC930 tracing 
 [@history_template@]...
 */
 DB_STATUS
@@ -15825,6 +15863,17 @@ scs_fdbp_data(SCD_SCB	  *scb,
 
 		    adu_2prvalue(sc0e_trace, &dbdv);
 		}
+
+		if (ult_always_trace() & SC930_TRACE)
+		{
+		    STprintf(stbuf, "%*s",
+			    scb->scb_sscb.sscb_gclname,
+			    scb->scb_sscb.sscb_gcname);
+
+		    print_sc930_param(scb,&dbdv,stbuf,
+			               scb->scb_sscb.sscb_cquery.cur_qprmcount,
+				    SC930_LTYPE_PARMEXEC);
+		}
 		/*
 		** Query text trace the parameter
 		*/
@@ -15877,13 +15926,10 @@ scs_fdbp_data(SCD_SCB	  *scb,
 		scb->scb_sscb.sscb_dmm = 0;
 		scb->scb_sscb.sscb_cquery.cur_qprmcount++;
 
-		if (print_qry)
+		if (print_qry || ult_always_trace() & SC930_TRACE)
 		{
 		    DB_DATA_VALUE	dbdv;
 
-		    sc0e_trace(STprintf(stbuf, "Parameter Name %*s, Value:\n",
-			    scb->scb_sscb.sscb_gclname,
-			    scb->scb_sscb.sscb_gcname));
 
 		    dbdv.db_datatype =
 			    (DB_DT_ID) scb->scb_sscb.sscb_gcadv.gca_type;
@@ -15891,7 +15937,25 @@ scs_fdbp_data(SCD_SCB	  *scb,
 		    dbdv.db_length = (i4) scb->scb_sscb.sscb_gcadv.gca_l_value;
 		    dbdv.db_data = (PTR) qup->parm_dbv.db_data;
 
-		    adu_2prvalue(sc0e_trace, &dbdv);
+		    if (print_qry)
+		    {
+		        sc0e_trace(STprintf(stbuf, "Parameter Name %*s, Value:\n",
+			    scb->scb_sscb.sscb_gclname,
+			    scb->scb_sscb.sscb_gcname));
+
+		        adu_2prvalue(sc0e_trace, &dbdv);
+		    }
+
+		    if (ult_always_trace() & SC930_TRACE)
+		    {
+		        STprintf(stbuf, "%*s",
+			    scb->scb_sscb.sscb_gclname,
+			    scb->scb_sscb.sscb_gcname);
+
+		        print_sc930_param(scb,&dbdv,stbuf,
+			             scb->scb_sscb.sscb_cquery.cur_qprmcount-1,
+		      	             SC930_LTYPE_PARMEXEC);
+		    }
 		}
 		/*
 		** Query text trace the parameter
@@ -16175,16 +16239,13 @@ scs_desc_send(SCD_SCB	  *scb,
 # endif
     i4			size = (sizeof (GCA_TD_DATA) - sizeof (GCA_COL_ATT));
     DB_STATUS		status;
-    DB_ERROR		error;
     GCA_COL_ATT		*cur_att;
     SCC_GCMSG		*message;
     PTR			darea;
     GCA_TD_DATA		*tdesc;
     PTR			block;
     bool                check_comp;
-    i4			total_dif=0;
     DB_DT_ID 		datatype;
-    bool		badtype = FALSE;
 
 
     status = E_DB_OK;
@@ -16947,7 +17008,6 @@ scs_allocate_byref_tdesc(
     QEF_RCB		*qef_rcb = scb->scb_sscb.sscb_qeccb;
     GCA_TD_DATA		*desc_area;
     DB_STATUS		status;
-    DB_ERROR		error;
     SCC_GCMSG		*desc_message;
     GCA_COL_ATT		*next_descriptor;
     PTR			block;
@@ -17085,7 +17145,6 @@ scs_allocate_tdata(
 {
     i4			tuple_size = desc_area->gca_tsize;
     DB_STATUS		status;
-    DB_ERROR		error;
     SCC_GCMSG		*data_message;
     PTR			block;
 
@@ -17771,7 +17830,6 @@ scs_def_curs(
 
 	{
 	    GCA_ID	    *gca_id = (GCA_ID *) scb->scb_cscb.cscb_tuples;
-	    i4		    i;
 
 	    *message = scb->scb_cscb.cscb_outbuffer;
 
@@ -19472,7 +19530,6 @@ SCD_SCB		*scb)
     SCC_GCMSG		*save_msg_ptr;
     SIZE_TYPE		size;
     DB_STATUS		status;
-    DB_ERROR		error;
 
     save_msg_ptr = scb->scb_cscb.cscb_outbuffer;
     STRUCT_ASSIGN_MACRO(*scb->scb_cscb.cscb_outbuffer, save_msg);
@@ -19638,7 +19695,6 @@ scs_emit_rows(i4 qmode, bool rowproc, SCD_SCB *scb, QEF_RCB *qe_ccb, SCC_GCMSG *
     if (cquery->cur_rdesc.rd_modifier & GCA_COMP_MASK)
     {
 	GCA_TD_DATA	*tdesc;
-	GCA_COL_ATT	*errcol = NULL;
 	tdesc = (GCA_TD_DATA *) cquery->cur_rdesc.rd_tdesc;
 	if (tdesc)
 	{
@@ -19785,7 +19841,6 @@ LK_LKID		*lkid)
     CL_SYS_ERR		sys_err;
     i4			local_error;
     DMC_CB		*dm_ccb;
-    LK_LOCK_KEY		lockkey;
     LK_LLID		lock_list_id;
 
     dm_ccb = scb->scb_sscb.sscb_dmccb;
@@ -19821,6 +19876,9 @@ LK_LKID		*lkid)
 **      12-Mar-2004 (hanal04) Bug 111923 INGSRV2751
 **          Modify all XA xid fields to i4 (int for supplied files)
 **          to ensure consistent use across platforms.
+**      28-Oct-2010 (maspa05) Bug 124654
+**          Separated out the formatting of the XID into a new function so
+**          we can use it from here and sc930_xatrace
 */
 static VOID
 scs_xatrace(SCD_SCB *scb,
@@ -19832,32 +19890,8 @@ i4    xa_stat)
 {
   CS_SID		sid;
   char			xid_str[IIXA_XID_STRING_LENGTH];
-  char     *cp = xid_str;
-  i4       data_lword_count = 0;
-  i4       data_byte_count  = 0;
-  u_char   *tp;                  /* pointer to xid data */
-  u_i4 unum;                /* unsigned i4 work field */
-  i4       i;
-  DB_XA_EXTD_DIS_TRAN_ID *extId;
-  DB_XA_DIS_TRAN_ID      *xa_xid_p;
   char			 qmtemp[20];
   char			 *qm;
-  i4			 db_dis_tran_id_type;
-
-  if (dis_tran_id)
-  {
-     extId = &(dis_tran_id->db_dis_tran_id.db_xa_extd_dis_tran_id);
-     xa_xid_p = &extId->db_xa_dis_tran_id;
-     db_dis_tran_id_type = dis_tran_id->db_dis_tran_id_type;
-  }
-  else
-  {
-     /* use the xa tran id in the scb */
-     extId = 
-	&(scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id.db_xa_extd_dis_tran_id);
-     xa_xid_p = &extId->db_xa_dis_tran_id;
-     db_dis_tran_id_type = scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id_type;
-  }
 
  switch (qmode)
  {
@@ -19875,6 +19909,123 @@ i4    xa_stat)
 	STprintf(qm, "QM-%d", qmode);
 	break;
  }
+
+
+  CSget_sid(&sid);
+
+  if (!qstr)
+    qstr = "";
+  
+  scs_format_xa_xid(xid_str,scb,dis_tran_id);
+
+  TRdisplay("Sid %x %8s %8s %8x %8x XID: %s \n", 
+      sid, qm, qstr, qflags, xa_stat, xid_str);
+
+} 
+
+/*
+**   Name: sc930_xatrace()
+**
+**   Description: 
+**       SC930 trace of GCA_XA messages
+**
+**   History:
+**      28-Oct-2010 (maspa05) Bug 124654
+**          Created from scs_xatrace
+*/
+static VOID
+sc930_xatrace(SCD_SCB *scb,
+i4		     qmode,
+i4		     qflags,
+DB_DIS_TRAN_ID	     *dis_tran_id,
+i4    xa_stat)
+{
+  char			xid_str[IIXA_XID_STRING_LENGTH];
+  char			 qmtemp[20];
+  char			 *qm;
+  void			*file;
+  char			sc930_txt[100];
+  i4                    sc930_msg;
+
+
+
+  file = ult_open_tracefile((PTR)scb->cs_scb.cs_self);
+  if (file)
+  {
+
+      qm="";
+    
+      switch (qmode)
+      {
+          case PSQ_GCA_XA_START: sc930_msg=SC930_LTYPE_XA_START; break;
+          case PSQ_GCA_XA_END: sc930_msg=SC930_LTYPE_XA_END; break;
+          case PSQ_GCA_XA_PREPARE: sc930_msg=SC930_LTYPE_XA_PREPARE; break;
+          case PSQ_GCA_XA_COMMIT: sc930_msg=SC930_LTYPE_XA_COMMIT; break;
+          case PSQ_GCA_XA_ROLLBACK: sc930_msg=SC930_LTYPE_XA_ROLLBACK; break;
+          default: 
+      	      qm = &qmtemp[0];
+      	      STprintf(qm, "QM-%d", qmode);
+      	      sc930_msg=SC930_LTYPE_XA_UNKNOWN;
+      	      break;
+      }
+      scs_format_xa_xid(xid_str,scb,dis_tran_id);
+
+      if (sc930_msg==SC930_LTYPE_XA_UNKNOWN)
+      {
+	  STprintf(sc930_txt,"%s:XID(%s):%08x:%d", qm, xid_str, qflags, 
+			  xa_stat);
+      }
+      else
+      {
+          STprintf(sc930_txt,"XID(%s):%08x:%d", xid_str, qflags, xa_stat);
+      }
+
+      ult_print_tracefile(file,sc930_msg,sc930_txt);
+      ult_close_tracefile(file);
+  }
+
+
+} 
+
+/*
+**   Name: scs_format_xa_xid()
+**
+**   Description: 
+**       Format an XA XID for tracing
+**
+**   History:
+**       28-Oct-2010 (maspa05) b124654
+**          (re-)Created from scs_xatrace 
+*/
+static void
+scs_format_xa_xid(char *xid_str,
+SCD_SCB *scb,
+DB_DIS_TRAN_ID  *dis_tran_id)
+{
+  char     *cp = xid_str;
+  i4       data_lword_count = 0;
+  i4       data_byte_count  = 0;
+  u_char   *tp;                  /* pointer to xid data */
+  u_i4 unum;                /* unsigned i4 work field */
+  i4       i;
+  DB_XA_EXTD_DIS_TRAN_ID *extId;
+  DB_XA_DIS_TRAN_ID      *xa_xid_p;
+  i4			 db_dis_tran_id_type;
+
+  if (dis_tran_id)
+  {
+     extId = &(dis_tran_id->db_dis_tran_id.db_xa_extd_dis_tran_id);
+     xa_xid_p = &extId->db_xa_dis_tran_id;
+     db_dis_tran_id_type = dis_tran_id->db_dis_tran_id_type;
+  }
+  else
+  {
+     /* use the xa tran id in the scb */
+     extId = 
+	&(scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id.db_xa_extd_dis_tran_id);
+     xa_xid_p = &extId->db_xa_dis_tran_id;
+     db_dis_tran_id_type = scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id_type;
+  }
 
   CVlx(xa_xid_p->formatID,cp);
   STcat(cp, ERx(":"));
@@ -19915,13 +20066,5 @@ i4    xa_stat)
   {
       STcat(cp, ERx(":OTHER"));
   }
-
-  CSget_sid(&sid);
-
-  if (!qstr)
-    qstr = "";
-
-  TRdisplay("Sid %x %8s %8s %8x %8x XID: %s \n", 
-      sid, qm, qstr, qflags, xa_stat, xid_str);
 
 } /* scs_format_xa_xid */

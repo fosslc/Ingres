@@ -347,6 +347,9 @@ QEE_DSH		*dsh);
 **	1-Jul-2010 (kschendel) b124004
 **	    Remember fake row-buffer used for positioning, so that we
 **	    don't allocate memory over and over.
+**	03-Aug-2010 (thaju02) Bug 123876
+**	    For nonscrollable cursors, increment qef_retcurspos for top-most
+**	    action only and as long as we are not in a dbproc.
 */
 DB_STATUS
 qea_fetch(
@@ -714,6 +717,12 @@ err_exit:
 	{
 	    rowstat |= GCA_ROW_AFTER;
 	    qef_rcb->qef_curspos++;		/* indicate AFTER */
+	    if ((action->qhd_obj.qhd_qep.ahd_qepflag & AHD_MAIN) &&
+		(qef_rcb->qef_context_cnt == 0))
+	    {
+		qef_rcb->qef_retcurspos++;
+		qef_rcb->qef_curspos = qef_rcb->qef_retcurspos;
+	    }
 	}
     }
     dsh->dsh_qef_rowcount = dsh->dsh_qef_targcount = rowcount;
@@ -1322,6 +1331,9 @@ i4		*result)
 **	1-Jul-2010 (kschendel) b124004
 **	    Make sure we set up all the tid stuff needed by RUP/RDEL.
 **	    Drop function param, not used and was confusing.
+**	03-Aug-2010 (thaju02) Bug 123876
+**	    For nonscrollable cursors, increment qef_retcurspos for top-most
+**	    action only and as long as we are not in a dbproc.
 */
 
 static DB_STATUS
@@ -1503,7 +1515,12 @@ bool		*gotarow)
 
 	*gotarow = TRUE;
 	if (!scroll)
+	{
 	    qef_rcb->qef_curspos++;	/* increment non-scroll curs */
+	    if ((action->qhd_obj.qhd_qep.ahd_qepflag & AHD_MAIN) && 
+		(qef_rcb->qef_context_cnt == 0))
+		qef_rcb->qef_retcurspos++;
+	}
 
 	if (qen_adf->qen_uoutput >= 0)
 	{

@@ -283,6 +283,9 @@
 **	    Add sequencer action enum, COPY sequencer prototypes.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes for scs_raat_(), 
+**	    scs_check_external_password()
 */
 
 
@@ -1961,3 +1964,25 @@ FUNC_EXTERN DB_STATUS scs_dbadduser(SCF_CB    *scf_cb,
 FUNC_EXTERN DB_STATUS scs_dbdeluser(SCF_CB    *scf_cb,
 				    SCD_SCB *scb );
 FUNC_EXTERN STATUS scs_sampler( SCD_SCB* scb );
+
+FUNC_EXTERN DB_STATUS scs_raat_call(
+				i4	op_code,
+				SCD_SCB	*scb,
+				i4	*next_op );
+
+FUNC_EXTERN DB_STATUS scs_raat_load(
+				SCD_SCB	*scb );
+
+FUNC_EXTERN DB_STATUS scs_raat_parse(
+				SCD_SCB	*scb );
+
+FUNC_EXTERN DB_STATUS scs_raat_term_msg(
+				SCD_SCB	*scb,
+				i4	err_code );
+
+FUNC_EXTERN DB_STATUS scs_check_external_password(
+				SCD_SCB *scb, 
+				DB_OWN_NAME *authname, 
+				DB_OWN_NAME *e_authname,
+				DB_PASSWORD *password,
+				bool	    auth_role );

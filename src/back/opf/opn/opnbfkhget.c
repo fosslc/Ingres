@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -63,8 +63,18 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+OPB_BFKEYINFO *opn_bfkhget(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bp,
+	OPE_IEQCLS eqc,
+	OPH_HISTOGRAM *hp,
+	bool mustfind,
+	OPH_HISTOGRAM **hpp);
 
 /*{
 ** Name: opn_bfkhget	- get keyinfo structure given histogram and eqcls

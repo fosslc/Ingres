@@ -518,6 +518,13 @@ ult_open_tracefile(void *code)
 **
 **      02-sep-2010 (maspa05) SIR 124345, 124346
 **          Add SC930_LTYPE_ENDQRY, EQY end-query record.
+**      19-oct-2010 (maspa05) b124551
+**          PARM and PARMEXEC now don't write a new line at the end of their
+**          string. This is because adu_sc930prtdataval is now responsible
+**          for outputting parameters and it calls ult_print_tracefile to
+**          do the PARM part and then outputs the actual value.
+**      22-oct-2010 (maspa05)
+**          Removed PARM/PARMEXEC as they are now handled by adu_sc930prtdataval
 */
 
 void
@@ -548,7 +555,7 @@ ult_print_tracefile(void *file, i2 type, char *string)
 				type_str="COMMIT";
 				break;
 		case SC930_LTYPE_SECURE:
-				type_str="SECURE";
+				type_str="PREPCOMMIT";
 				break;
 		case SC930_LTYPE_ABORT:
 				type_str="ABORT";
@@ -597,14 +604,6 @@ ult_print_tracefile(void *file, i2 type, char *string)
 				type_str="COL";
 				prt_timestamp=FALSE;
 				break;
-		case SC930_LTYPE_PARMEXEC:
-				type_str="PARMEXEC";
-				prt_timestamp=FALSE;
-				break;
-		case SC930_LTYPE_PARM:
-				type_str="PARM";
-				prt_timestamp=FALSE;
-				break;
 		case SC930_LTYPE_QEP:      
 				type_str="QEP";
 				prt_timestamp=FALSE;
@@ -612,6 +611,7 @@ ult_print_tracefile(void *file, i2 type, char *string)
 		case SC930_LTYPE_BEGINTRACE:
 				STprintf(type_str2,"SESSION BEGINS(%d)",SC930_VERSION);
 				type_str=&type_str2[0];
+
 				break;
 		case SC930_LTYPE_QUEL:      
 				type_str="QUEL";
@@ -632,6 +632,24 @@ ult_print_tracefile(void *file, i2 type, char *string)
  		case SC930_LTYPE_ENDQRY:
  				type_str="EQY";
  				break;
+ 		case SC930_LTYPE_XA_START:
+ 				type_str="XA_STRT";
+ 				break;
+ 		case SC930_LTYPE_XA_END:
+ 				type_str="XA_END";
+ 				break;
+ 		case SC930_LTYPE_XA_PREPARE:
+ 				type_str="XA_PREP";
+ 				break;
+ 		case SC930_LTYPE_XA_COMMIT:
+ 				type_str="XA_COMM";
+ 				break;
+ 		case SC930_LTYPE_XA_ROLLBACK:
+ 				type_str="XA_RBCK";
+ 				break;
+ 		case SC930_LTYPE_XA_UNKNOWN:
+ 				type_str="XA_UNKNOWN";
+ 				break;
 		case SC930_LTYPE_UNKNOWN:
 		default:
 				type_str="UNKNOWN";
@@ -648,6 +666,7 @@ ult_print_tracefile(void *file, i2 type, char *string)
 	{
           SIfprintf(f,"%s%c%s\n",type_str,last_sep,string);
         }
+
 
 }
 

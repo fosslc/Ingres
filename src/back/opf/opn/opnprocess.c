@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -77,8 +77,17 @@
 **    09-Oct-2003 (hanje04)
 **	  Backed out X-integ of devjo01 'firstcomb' change from 2.6 as its
 **	  not relavent to main.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opn_cjtree(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *jtree);
+OPN_STATUS opn_process(
+	OPS_SUBQUERY *subquery,
+	i4 numleaves);
 
 /*{
 ** Name: opn_cjtree	- clear mask field in join tree
@@ -252,7 +261,6 @@ opn_process(
     OPV_IVARS		maxprimary = subquery->ops_vars.opv_prv;
     OPN_STATUS		sigstat = OPN_SIGOK;
     bool		firstcomb = TRUE;
-    bool		primonly = (maxprimary == numleaves);
 
     global = subquery->ops_global;
     if ((global->ops_gmask & OPS_SKBALANCED) && (global->ops_gmask & OPS_BALANCED))
@@ -314,9 +322,11 @@ opn_process(
 	OPV_IVARS              *firsttime;  /* NULL if not the first time
                                             ** that opn_arl is called for this
                                             ** particular permutation */
-	/* if (!firstcomb && primonly)
+#if 0
+	if (!firstcomb && primonly)
 	    break;			    /* once through the combination loop
 					    ** for primary only */
+#endif
 	firstcomb = FALSE;		    /* next gnperm call will produce 
 					    ** real combination */
 
@@ -487,10 +497,12 @@ opn_process(
     if (!(global->ops_gmask & OPS_BALANCED) && (global->ops_gmask & OPS_PLANFOUND))
 	return(OPN_SIGSEARCHSPACE);	    /* New mechanism for "signalling"
 					    ** searchspace condition. */
-	/* EXsignal( (EX)EX_JNP_LJMP, (i4)1, (long)E_OP0401_SEARCHSPACE);/* signal an 
+#if 0
+	EXsignal( (EX)EX_JNP_LJMP, (i4)1, (long)E_OP0401_SEARCHSPACE);/* signal an 
                                             ** optimizer long jump so that the
                                             ** exception handler can look at the
 					    ** next unbalanced tree with an extra
 					    ** leaf */
+#endif
     return(OPN_SIGOK);			    /* otherwise, normal return */
 }

@@ -30,7 +30,13 @@ Prerequisites:
 This version of Ingres includes geospatial types and functions built-in.
 As a result, it requires two additional libraries. They are:
 1) GEOS which is acquired here: http://trac.osgeo.org/geos/
+   GEOS version 3.3.0 is the target version that includes Ingres required 
+   changes.  As of Nov, 2010 an official 3.3.0 verision has not been released.
+   The HEAD revision from svn is expected to work.  The last known tested
+   revision is 3117.
 2) Proj.4 which is acquired here: http://trac.osgeo.org/proj/
+   Proj.4 has been packaged for most systems and those packages can be used
+   as is.
 
 Other dependencies will be double-checked by the runbuild script.
 It can usually tell you what you're missing and where to get it.

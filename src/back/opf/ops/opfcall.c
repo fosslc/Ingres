@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -73,7 +73,16 @@
 **	    replace nat and longnat with i4
 **	10-Sep-2008 (jonj)
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value DB_ERROR structure.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static i4 ops_handler(
+	EX_ARGS *args);
+i4 opf_call(
+	i4 opcode,
+	OPF_CB *opf_cb);
 
 /*
 ** Name  ops_handler	- last chance exception handler for optimizer

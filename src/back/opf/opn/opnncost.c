@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -66,8 +66,25 @@
 **	    added missing includes
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static i4 opn_tprocord_validate(
+	OPS_SUBQUERY *subquery,
+	OPN_SUBTREE *osbtp,
+	OPN_SUBTREE *isbtp,
+	OPN_LEAVES oleaves,
+	OPN_LEAVES ileaves);
+bool opn_nodecost(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *np,
+	OPE_BMEQCLS *eqr,
+	OPN_SUBTREE **subtp,
+	OPN_EQS **eqclp,
+	OPN_RLS **rlmp,
+	OPN_STATUS *sigstat);
 
 /*{
 ** Name: opn_tprocord_validate - validate join tree order with respect to

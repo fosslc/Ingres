@@ -6,6 +6,8 @@
 #           Added IINOOPTIM for AIX platform, avoid runtime error during
 #           the process of creating iidbdb.
 #           Compiler : C for AIX 6.006 (VisualAge). 
+#	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+#	    Delete obsolete dmsecomp.c
 
 
 SubDir ING_SRC back dmf dmse ;
@@ -14,6 +16,6 @@ IISUBSYS back dmf dmse ;
 
 IINOOPTIM dmse.c : rs4_us5 r64_us5 ;
 
-IILIBRARY DMFLIB : dmsethread.c dmsecomp.c dmse.c ;
+IILIBRARY DMFLIB : dmsethread.c dmse.c ;
 
 

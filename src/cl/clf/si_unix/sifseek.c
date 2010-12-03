@@ -8,6 +8,10 @@
 #ifdef SIfseek
 #undef SIfseek
 #endif
+/*
+** Forward references
+*/
+STATUS	SIfseek(FILE *, OFFSET_TYPE, i2);
 
 /*SIfseek
 **
@@ -24,6 +28,8 @@
 **      12-Jun-2001 (hanje04)
 **          Reintroduced MEfill, SIftell etc. as they are required by
 **          OpenRoad 4.0
+**      15-nov-2010 (stephenb)
+**          Proto SIfseek for local undef.
 */
 
 STATUS

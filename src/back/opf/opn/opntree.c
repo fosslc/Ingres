@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 /*
 NO_OPTIM sqs_ptx
@@ -87,8 +87,51 @@ NO_OPTIM sqs_ptx
 **	    continue further.  (Bug #87703)
 **	11-Mar-2008 (kschendel) b122118
 **	    thandler trap handler not used anywhere, delete it.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/*
+** Forward Structure Definitions:
+*/
+typedef struct _OPN_DEBUG OPN_DEBUG;
+typedef struct _OPN_SUNIQUE OPN_SUNIQUE;
+
+/* TABLE OF CONTENTS */
+static void opn_seqv(
+	OPN_JTREE *node);
+static void opn_mtree(
+	OPN_SUNIQUE *sut,
+	OPN_CTDSC degree,
+	OPN_JTREE *node,
+	OPN_TDSC dsc);
+static void opn_mjtree(
+	OPN_SUNIQUE *sut);
+static OPN_STATUS opn_gen(
+	OPN_SUNIQUE *sut,
+	OPN_ITDSC tdsc_offset,
+	OPN_CTDSC leaves,
+	i4 degree,
+	OPN_CTDSC maxleaves);
+static void opn_inode(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep,
+	OPV_IVARS var);
+static void opn_ijnode(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep,
+	OPV_IVARS leftvar,
+	OPV_IVARS rightvar);
+static i4 opn_ihandler(
+	EX_ARGS *args);
+static i4 opn_iarl(
+	OPS_SUBQUERY *subquery,
+	OPN_SSTLEAVES *iarlp);
+void opn_jtalloc(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE **jtreep);
+OPN_STATUS opn_tree(
+	OPS_SUBQUERY *subquery);
 
 /*}
 ** Name: OPN_DEBUG - debugging state for enumeration phase
@@ -100,9 +143,8 @@ NO_OPTIM sqs_ptx
 ** History:
 **     10-may-86 (seputis)
 **          initial creation
-[@history_line@]...
 */
-typedef struct _OPN_DEBUG
+struct _OPN_DEBUG
 {
     i4              opn_level;          /* used for controlling indentation
                                         ** during printing of trace information
@@ -118,7 +160,7 @@ typedef struct _OPN_DEBUG
                                         ** - used to debug a particular join
                                         ** structure
                                         */
-}   OPN_DEBUG;
+};
 #define             OPN_JCOCOUNT         8
 /* maximum number of CO nodes expected for join of 2 relations */
 #define             OPN_PRCOCOUNT       3
@@ -192,9 +234,8 @@ typedef struct _OPN_DEBUG
 ** History:
 **     10-may-86 (seputis)
 **          initial creation
-[@history_line@]...
 */
-typedef struct _OPN_SUNIQUE
+struct _OPN_SUNIQUE
 {
     OPS_SUBQUERY    *opn_subquery;      /* ptr to subquery being analyzed */
     OPN_TDSC	    opn_tdsc;		/* opn_gen creates a description of
@@ -240,7 +281,7 @@ typedef struct _OPN_SUNIQUE
                                         ** where the subtree description
                                         ** begins
                                         */
-}   OPN_SUNIQUE;
+};
 
 
 /*{
@@ -271,7 +312,6 @@ typedef struct _OPN_SUNIQUE
 ** History:
 **	11-may-86 (seputis)
 **          initial creation
-[@history_line@]...
 */
 static VOID
 opn_seqv(
@@ -401,7 +441,6 @@ opn_seqv(
 ** History:
 **	11-may-86 (seputis)
 **          initial creation
-[@history_line@]...
 */
 static VOID
 opn_mtree(
@@ -629,7 +668,6 @@ opn_mtree(
 ** History:
 **	11-may-86 (seputis)
 **          initial creation from mkjtree in makejtree.c
-[@history_line@]...
 */
 static VOID
 opn_mjtree(
@@ -738,7 +776,6 @@ opn_mjtree(
 **          initial creation
 **	17-nov-99 (inkdo01)
 **	    Change opn_process call to return signal status.
-[@history_line@]...
 */
 static OPN_STATUS
 opn_gen(
@@ -942,7 +979,6 @@ opn_gen(
 ** History:
 **      31-oct-91 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opn_inode(
@@ -987,7 +1023,6 @@ opn_inode(
 ** History:
 **      31-oct-91 (seputis)
 **          initial creation
-[@history_template@]...
 */
 static VOID
 opn_ijnode(
@@ -1037,7 +1072,6 @@ opn_ijnode(
 ** History:
 **	27-mar-94 (ed)
 **          initial creation b59461
-[@history_line@]...
 */
 static STATUS
 opn_ihandler(
@@ -1110,7 +1144,6 @@ opn_ihandler(
 **	    defined in the query and therefore should not be eliminated
 **	    even if it is more expensive than just using the base relation.
 **	    This change fixes bug 101959.
-[@history_template@]...
 */
 static i4
 opn_iarl(
@@ -1799,7 +1832,6 @@ opn_iarl(
 ** History:
 **	17-sep-02 (inkdo01)
 **          Written.
-[@history_line@]...
 */
 VOID
 opn_jtalloc(

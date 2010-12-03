@@ -53,7 +53,6 @@ NO_OPTIM=dr6_us5 dgi_us5 int_lnx int_rpl ibm_lnx i64_aix a64_lnx
 #include    <sc0a.h>
 #include    <sc0e.h>
 #include    <sc0m.h>
-#include    <sca.h>
 #include    <scc.h>
 #include    <scs.h>
 #include    <scd.h>
@@ -297,6 +296,9 @@ NO_OPTIM=dr6_us5 dgi_us5 int_lnx int_rpl ibm_lnx i64_aix a64_lnx
 **	    Re-type some ptr's as the proper struct pointer.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Delete sca.h include. Function prototypes moved to
+**	    scf.h for exposure to DMF.
 **/
 
 /*

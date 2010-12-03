@@ -245,6 +245,10 @@ rdf_handler(EX_ARGS *args)
 **	    Need to pass infoblk to the deulh routines
 **	    Need to mutex protect rdf_shared_sessions as the object may be 
 **	    about to be destroyed.  Added sanity check on rdf_shared_sessions
+**      11-Nov-2010 (hanal04) Bug 124718
+**          Mimic the RDF_RSEMAPHORE test when trying to acquire
+**          RDF_BLD_LDBDESC (RDD_SEMAPHORE) and RDF_DEF_DESC (RDF_DSEMAPHORE)
+**          to avoid requesting a semaphore we already own. 
 [@history_template@]...
 */
 VOID
@@ -315,18 +319,26 @@ rdf_release(	RDF_GLOBAL         *global,
 	** master copy of LDBcache object has been reserved for update by
 	** this thread so release it 
 	*/
-	op_status = rdd_setsem(global,RDF_BLD_LDBDESC); /* get semaphore
-				** prior to updating ULH object descriptor */
-	if (op_status > run_status)
-	{
-	    /* this error is more serrious than any previously 
-	    ** recorded, so save it 
-	    */
-	    run_status = op_status;
-	    STRUCT_ASSIGN_MACRO(global->rdfcb->rdf_error, error);
-	}
+        if(!(global->rdf_ddrequests.rdd_ddstatus & RDD_SEMAPHORE))
+        {
+	    op_status = rdd_setsem(global,RDF_BLD_LDBDESC); /* get semaphore
+			    ** prior to updating ULH object descriptor */
+	    if (op_status > run_status)
+	    {
+	        /* this error is more serrious than any previously 
+	        ** recorded, so save it 
+	        */
+	        run_status = op_status;
+	        STRUCT_ASSIGN_MACRO(global->rdfcb->rdf_error, error);
+	    }
+        }
 	else
 	{
+            op_status = E_DB_OK;
+        }
+
+        if(DB_SUCCESS_MACRO(op_status))
+        {
 	    /* 
 	    ** only release object if we can get the semaphore.  If we
 	    ** fall out of retry loop, then we will unconditionally release
@@ -351,19 +363,27 @@ rdf_release(	RDF_GLOBAL         *global,
 	** master copy of Defaults object has been reserved for update by
 	** this thread so release it 
 	*/
-	op_status = rdd_setsem(global, RDF_DEF_DESC); /* get semaphore
-				** prior to updating ULH object descriptor */
-	if (op_status > run_status)
-	{
-	    /* 
-	    ** this error is more serrious than any previously 
-	    ** recorded, so save it 
-	    */
-	    run_status = op_status;
-	    STRUCT_ASSIGN_MACRO(global->rdfcb->rdf_error, error);
-	}
+        if (!(global->rdf_resources & RDF_DSEMAPHORE))
+        {
+	    op_status = rdd_setsem(global, RDF_DEF_DESC); /* get semaphore
+			    ** prior to updating ULH object descriptor */
+	    if (op_status > run_status)
+	    {
+	        /* 
+	        ** this error is more serrious than any previously 
+	        ** recorded, so save it 
+	        */
+	        run_status = op_status;
+	        STRUCT_ASSIGN_MACRO(global->rdfcb->rdf_error, error);
+	    }
+        }
 	else
 	{
+            op_status = E_DB_OK;
+        }
+
+        if (DB_SUCCESS_MACRO(op_status))
+        {
 	    /* 
 	    ** only release object if we can get the semaphore.  
 	    */

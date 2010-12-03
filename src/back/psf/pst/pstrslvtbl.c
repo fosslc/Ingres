@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -72,8 +72,15 @@
 **	    of DB_STATUS.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+i4 pst_resolve_table(
+	DB_TEXT_STRING *obj_owner,
+	DB_TEXT_STRING *obj_name,
+	DB_TEXT_STRING *out);
 
 /*{
 ** Name: pst_resolve_table()	- make sure user is allowed some form of access
@@ -184,8 +191,6 @@ pst_resolve_table(
 #define		ABNORMAL_ERROR		3
 #define		BAD_PARAMETERS		4
 
-    extern PSF_SERVBLK      *Psf_srvblk;
-    
     /*
     ** if obj_owner or obj_name or out is NULL, or
     **    length of object name not in [1, DB_TAB_MAXNAME], or
@@ -540,6 +545,7 @@ wrapup:
 	}
 	case BAD_PARAMETERS:
 	case ABNORMAL_ERROR:
+	default:
 	{
 	    return(status);
 	}

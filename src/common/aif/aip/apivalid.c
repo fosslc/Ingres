@@ -12,6 +12,7 @@
 # include <apiehndl.h>
 # include <apishndl.h>
 # include <apimisc.h>
+# include <apivalid.h>
 
 /*
 ** Name: apivalid.c
@@ -76,6 +77,8 @@
 **      17-Aug-2010 (thich01)
 **          Spatial types supported at GCA_PROTOCOL_LEVEL_69.  Make changes to
 **          treat spatial types like LBYTEs or NBR type as BYTE.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 

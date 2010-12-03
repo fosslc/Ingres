@@ -84,6 +84,8 @@
 **	    Bug #56448
 **	    Added comments to guard against future use of a non-varargs
 **	    function in (*fmt) function pointers.
+**	15-nov-2010 (stephenb)
+**	    Proto forward funcs.
 */
  
 
@@ -91,9 +93,10 @@
                                         (VOID) MEerror(MEstatus)
 
 /* forward declarations */
-static STATUS MExnodedump();
-static STATUS MExheaddump();
-static STATUS MEerror();
+static STATUS MExnodedump(register ME_NODE *,i4 (*)());
+static STATUS MExheaddump(register ME_HEAD *,i4 (*)());
+static STATUS MEerror(STATUS);
+
 
 STATUS
 MExdump(

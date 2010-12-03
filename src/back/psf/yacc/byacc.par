@@ -117,14 +117,14 @@
 **          written
 */
 
-i4
+static i4
 YY_2HANDLER(exargs)
 EX_ARGS            *exargs;
 {
 	return(EXDECLARE);
 }
 
-i4
+static i4
 YY_1HANDLER(exargs)
 EX_ARGS            *exargs;
 {
@@ -321,10 +321,6 @@ $D
 			$Cyychar = (*$Cyylex)($E);
 		if ($Cyychar == -1)
 			goto yyerrlab;
-/*		REPLACED WITH ABOVE 4 LINES
-/*		if ( ( $Cyychar == -2 ) && ( ( $Cyychar = (*$Cyylex)($E) ) < 0 ) )
-/*			$Cyychar = 0;		/* reached EOF */
-/**/
 #ifdef	xDEBUG
 		if ( $Cyydebug && $Cyytmp )
 		{
@@ -369,13 +365,6 @@ $D
 				$Cyychar = (*$Cyylex)($E);
 			if ($Cyychar == -1)
 				goto yyerrlab;
-/*			REPLACED WITH ABOVE 4 LINES
-/*			if ( ( $Cyychar < 0 ) &&
-/*			    ( ( $Cyychar = (*$Cyylex)($E) ) < 0 ) )
-/*			{
-/*				$Cyychar = 0;		/* reached EOF */
-/*			}
-/**/
 #ifdef	xDEBUG
 			if ( $Cyydebug && $Cyytmp )
 			{

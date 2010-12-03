@@ -164,7 +164,6 @@ fi
 set - `cat $ING_ROOT/build/version.rel`
 release=$2
 nptlbuild=`head -1 $ING_ROOT/build/version.rel |cut -d')' -f2`
-nptlbuild=`echo $nptlbuild |cut -d'_' -f1`
 vers=`head -1 $ING_ROOT/build/version.rel | sed -e s:^.*\(:: -e s:/.*$::`
 buildno=`head -1 $ING_ROOT/build/version.rel | sed -e s:^.*/:: -e s:\).*$::`
 # ` Close for syntax highlighting. 

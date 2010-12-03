@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986-2003 Ingres Corporation
+** Copyright (c) 1986-2003, 2010 Ingres Corporation
 */
 #include    <compat.h>
 #include    <gl.h>
@@ -62,7 +62,6 @@
 **  Name: OPCQUAL.C - Routines to compile ADF code to qualify tuples
 **
 **  Description:
-{@comment_line@}...
 **
 **	External Routines:
 **          opc_cxest() - Estimate the size of a CX from a qtree
@@ -74,12 +73,10 @@
 **          opc_rdmove() - Compile code to move a resdom to it's final
 **								destination
 **	    opc_lvar_row() - Fill in an operand for a local variable.
-[@func_list@]...
 **
 **	Internal Routines:
 **	    opc_cqual1() - workhorse function for qtree compilation
 **          opc_cresdoms() - Compile a list of resdoms into a CX
-[@func_list@]...
 **
 **
 **  History:
@@ -280,84 +277,151 @@
 **	    Use stack local copy of fi descriptor and add the missing dt_family
 **	    processing to ensure that views involving ANSI datatypes were
 **	    reconstituted correctly.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opc_cxest(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *root,
+	i4 *ninstr,
+	i4 *nops,
+	i4 *nconst,
+	i4 *szconst);
+i4 opc_cqual(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *root,
+	OPC_ADF *cadf,
+	i4 segment,
+	ADE_OPERAND *resop,
+	i4 *tidatt);
+static i4 opc_cqual1(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *root,
+	OPC_ADF *cadf,
+	i4 segment,
+	ADE_OPERAND *resop,
+	ADI_FI_ID rescnvtid,
+	bool incase);
+static void opc_cescape(
+	OPS_STATE *global,
+	OPC_ADF *cadf,
+	PST_QNODE *root,
+	i4 segment);
+static void opc_cresdoms(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *root,
+	OPC_ADF *cadf,
+	i4 segment,
+	ADE_OPERAND *resop);
+void opc_target(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *root,
+	QEN_ADF **qadf);
+i1 *opc_estdefault(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	i4 *ninstr,
+	i4 *nops,
+	i4 *nconst,
+	i4 *szconst);
+void opc_cdefault(
+	OPS_STATE *global,
+	i1 *dmap,
+	i4 outbase,
+	OPC_ADF *cadf);
+void opc_rdmove(
+	OPS_STATE *global,
+	PST_QNODE *resdom,
+	ADE_OPERAND *ops,
+	OPC_ADF *cadf,
+	i4 segment,
+	RDR_INFO *rel,
+	bool leavebase);
+void opc_proc_insert_target_list(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	OPC_ADF *cadf,
+	RDR_INFO *rel,
+	i4 num_params_passed,
+	i4 num_params_declared,
+	DMF_ATTR_ENTRY *attr_list[],
+	i4 temp_table_base,
+	i4 offset_list[]);
+void opc_crupcurs(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	OPC_ADF *cadf,
+	ADE_OPERAND *resop,
+	RDR_INFO *rel,
+	OPC_NODE *cnode);
+static void opc_crupcurs1(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	OPC_ADF *cadf,
+	ADE_OPERAND *resop,
+	RDR_INFO *rel,
+	OPC_NODE *cnode);
+bool opc_cparmret(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	OPC_ADF *cadf,
+	ADE_OPERAND *resop,
+	RDR_INFO *rel);
+void opc_lvar_info(
+	OPS_STATE *global,
+	i4 lvarno,
+	i4 *rowno,
+	i4 *offset,
+	DB_DATA_VALUE **row_info);
+void opc_lvar_row(
+	OPS_STATE *global,
+	i4 lvarno,
+	OPC_ADF *cadf,
+	ADE_OPERAND *ops);
+static void opc_seq_setup(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_ADF *cadf,
+	PST_QNODE *root,
+	QEF_SEQUENCE **seqp,
+	i4 *localbuf);
+void opc_expropt(
+	OPS_SUBQUERY *subquery,
+	OPC_NODE *cnode,
+	PST_QNODE **rootp,
+	PST_QNODE **subexlistp);
+static bool opc_expranal(
+	OPS_SUBQUERY *subquery,
+	OPC_NODE *cnode,
+	PST_QNODE *rootp,
+	PST_QNODE **nodepp,
+	PST_QNODE **subexlistp,
+	i4 *subex_countp);
+static bool opc_exprsrch(
+	OPS_SUBQUERY *subquery,
+	OPC_NODE *cnode,
+	PST_QNODE **subexpp,
+	PST_QNODE **nodepp,
+	PST_QNODE **subexlistp,
+	i4 *subex_countp,
+	bool *gotone);
+static bool opc_compops(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *leftop,
+	PST_QNODE *rightop,
+	PST_QNODE *srchp);
 
 /*
-**  Definition of static variables and forward static functions.
+**  Definition of static variables.
 */
-
 static ADE_OPERAND 	labelinit = {0, 0, ADE_LABBASE, 0, 0, 0};
-
-static i4
-opc_cqual1(
-	OPS_STATE   *global,
-	OPC_NODE    *cnode,
-	PST_QNODE   *root,
-	OPC_ADF	    *cadf,
-	i4	    segment,
-	ADE_OPERAND *resop,
-	ADI_FI_ID   rescnvtid,
-	bool	    incase);
-
-static VOID
-opc_cescape(
-	OPS_STATE   *global,
-	OPC_ADF	    *cadf,
-	PST_QNODE   *root,
-	i4	    segment);
-
-static VOID
-opc_cresdoms(
-	OPS_STATE   *global,
-	OPC_NODE    *cnode,
-	PST_QNODE   *root,
-	OPC_ADF	    *cadf,
-	i4	    segment,
-	ADE_OPERAND *resop);
-
-static VOID
-opc_crupcurs1(
-	OPS_STATE	*global,
-	PST_QNODE	*root,
-	OPC_ADF		*cadf,
-	ADE_OPERAND	*resop,
-	RDR_INFO	*rel,
-	OPC_NODE	*cnode);
-
-static VOID
-opc_seq_setup(
-	OPS_STATE	*global,
-	OPC_NODE	*cnode,
-	OPC_ADF		*cadf,
-	PST_QNODE	*root,
-	QEF_SEQUENCE	**seqp,
-	i4		*localbuf);
-
-static bool
-opc_expranal(
-	OPS_SUBQUERY	*subquery,
-	OPC_NODE	*cnode,
-	PST_QNODE	*rootp,
-	PST_QNODE	**nodepp,
-	PST_QNODE	**subexlistp,
-	i4		*subex_countp);
-
-static bool
-opc_exprsrch(
-	OPS_SUBQUERY	*subquery,
-	OPC_NODE	*cnode,
-	PST_QNODE	**subexpp,
-	PST_QNODE	**nodepp,
-	PST_QNODE	**subexlistp,
-	i4		*subex_countp,
-	bool		*gotone);
-
-static bool
-opc_compops(
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE	*leftop,
-	PST_QNODE	*rightop,
-	PST_QNODE	*srchp);
 
 /*
 **  Defines of constants used in this file
@@ -784,7 +848,6 @@ opc_cqual(
 {
     ADE_OPERAND	truelab, falselab;
     i4		result;
-    bool	noncnf;
 
 
     /* Labels must be set up here (to show them to be end of chain), and
@@ -3346,7 +3409,6 @@ opc_target(
 	*/
     PST_QNODE       **rd_list;
     i4              rd_max;
-    i4              i;
     QEF_SEQUENCE    *seqp;
     i4              localbuf;
 
@@ -4179,7 +4241,6 @@ opc_rdmove(
 	OPC_PST_STATEMENT   *opc_pst;
 	QEF_CP_PARAM	    *param;
 	QEN_NODE	    *qenp = global->ops_cstate.opc_curnode;
-	bool		    is_byref;
 		
 	/* This RESDOM is actually a parameter list entry in a CALLPROC	    */
 	/* statement. The processing is somewhat more complicated since we  */
@@ -6177,6 +6238,10 @@ opc_cparmret(
 ** History:
 **      12-nov-92 (jhahn)
 **          created (from opc_lvar_row)
+**	21-Oct-2010 (kiria01) b123345
+**	    Support PST_DV_TYPE even outside DBP context so that we can support
+**	    the use of temporary variables. In this case do not assume the
+**	    presence of the .pst_parms - it might not be valid.
 [@history_template@]...
 */
 VOID
@@ -6194,7 +6259,8 @@ opc_lvar_info(
     i4			first_rowno;
 
     decvar = global->ops_procedure->pst_parms;
-    if (lvarno >= decvar->pst_first_varno &&
+    if (decvar &&
+	    decvar->pst_first_varno <= lvarno &&
 	    lvarno < decvar->pst_first_varno + decvar->pst_nvars
 	)
     {
@@ -6210,7 +6276,7 @@ opc_lvar_info(
 	    opc_pst = (OPC_PST_STATEMENT *) decvar_stmt->pst_opf;
 	    decvar = decvar_stmt->pst_specific.pst_dbpvar;
 
-	    if (lvarno >= decvar->pst_first_varno &&
+	    if (decvar->pst_first_varno <= lvarno &&
 		    lvarno < decvar->pst_first_varno + decvar->pst_nvars
 		)
 	    {
@@ -6497,10 +6563,7 @@ opc_seq_setup(
 **			  subexpressions
 **
 **	Returns:
-**	    TRUE	- if at least one subexpression was extracted (and
-**			  must therefore be compiled into the CX)
-**
-**	    FALSE	- otherwise
+**	    void
 **
 **	Exceptions:
 **	    none
@@ -6515,7 +6578,7 @@ opc_seq_setup(
 **	    Added trace point op214 calls to opu_qtprint.
 */
 
-bool
+void
 opc_expropt(
 	OPS_SUBQUERY	*subquery,
 	OPC_NODE	*cnode,
@@ -6620,7 +6683,6 @@ opc_expranal(
 
 {
     PST_QNODE	*nodep = (*nodepp);
-    PST_QNODE	*leftop, *rightop;
     bool	dummy;
 
 
@@ -6865,7 +6927,7 @@ opc_exprsrch(
 			nodep->pst_sym.pst_dataval.db_prec ||
 	    srchp->pst_sym.pst_dataval.db_collID !=
 			nodep->pst_sym.pst_dataval.db_collID)
-	    break;
+	    return(FALSE);
 
 	/* Check for functions that must be executed individually
 	** (random(), uuid()). */

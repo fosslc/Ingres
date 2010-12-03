@@ -178,6 +178,11 @@
 **	27-Aug-10 (gordy)
 **	    Added password encoding version for VNODE login passwords.
 **	    Added symbols for encoding versions.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
+**      16-Nov-2010 (Ralph Loen) Bug 122895
+**          Made gcn_encode(), gcn_decode() and gcn_decrypt() public so that
+**          iicvtgcn can use these functions.
 */
 
 #define		MAXLINE			1024
@@ -722,7 +727,8 @@ FUNC_EXTERN	VOID		gcn_error( i4,
 FUNC_EXTERN	GCN_MBUF	*gcn_add_mbuf( GCN_MBUF *, bool, STATUS * );
 
 FUNC_EXTERN	STATUS		gcn_register( char * );
-FUNC_EXTERN	void 		gcn_start_session();
+FUNC_EXTERN	STATUS		gcn_deregister(VOID);
+FUNC_EXTERN	void 		gcn_start_session(void);
 FUNC_EXTERN	char *		gcn_get_server( char * );
 
 FUNC_EXTERN	i4		gcn_oper_check( GCN_MBUF *, QUEUE * );
@@ -816,6 +822,7 @@ FUNC_EXTERN	bool		gcn_ir_update( GCN_MBUF * );
 FUNC_EXTERN	STATUS		gcn_ir_register(GCN_RESOLVE_CB *, GCN_MBUF *);
 FUNC_EXTERN	STATUS		gcn_ir_master( GCN_RESOLVE_CB *, 
 					       GCN_MBUF *, GCN_MBUF * );
+FUNC_EXTERN	STATUS		gcn_ir_save( char *, char * );
 
 /*
 ** Name Server general functions.
@@ -824,6 +831,7 @@ FUNC_EXTERN	STATUS		gcn_ir_master( GCN_RESOLVE_CB *,
 FUNC_EXTERN	i4		gcn_copy_str( char *, i4, char *, i4 );
 FUNC_EXTERN	i4		gcn_put_tup( char *, GCN_TUP * );
 FUNC_EXTERN	i4		gcn_get_tup( char *, GCN_TUP * );
+FUNC_EXTERN	STATUS		gcn_getflag( i4, i4, PTR, i4, char *); 
 
 FUNC_EXTERN	VOID		gcn_checkerr( char *, STATUS *, 
 					      STATUS, CL_ERR_DESC * );
@@ -864,5 +872,14 @@ FUNC_EXTERN	STATUS 		gcn_gcadm_term( VOID );
 FUNC_EXTERN	i4 		gcn_sess_info( PTR, i4  );
 FUNC_EXTERN 	i4 		gcn_verify_sid( PTR  );
 FUNC_EXTERN	i4              gcn_get_session_info( PTR, GCN_SESS_INFO ** );
+FUNC_EXTERN     STATUS          gcn_decrypt( char *, char *, char * );
+FUNC_EXTERN     STATUS          gcn_encode( char *, u_i1 *, char *, char * );
+FUNC_EXTERN     STATUS          gcn_decode( char *, u_i1 *, char *, char * );
 
+/*
+** GCADM interface with GCN server and iimonitor
+*/
+FUNC_EXTERN	STATUS		gcn_adm_init(VOID);
+FUNC_EXTERN	STATUS		gcn_adm_term(VOID);
+FUNC_EXTERN	STATUS		gcn_adm_session( i4, PTR, char * );
 #endif

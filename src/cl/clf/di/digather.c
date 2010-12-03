@@ -8,17 +8,23 @@
 # include   <systypes.h>
 # include   <errno.h>
 # include   <cs.h>
+#ifndef VMS
 # include   <csev.h>
 # include   <cssminfo.h>
+#endif
 # include   <di.h>
 # include   <me.h>
 # include   <tr.h>
+#ifndef VMS
 # include   <dislave.h>
 # include   "dilocal.h"
 # include   "dilru.h"
+#endif
 # include   <er.h>
 
+#ifndef VMS
 # include   "digather.h"
+#endif
 
 #ifdef usl_us5
 #define IOV_MAX 16
@@ -89,10 +95,13 @@
 **	    Compiler warning fixes.
 **	6-Nov-2009 (kschendel) SIR 122757
 **	    Make io-sem a SYNCH.
+**      01-nov-2010 (joea)
+**          Merge with VMS version.
 */
 /* Globals */
 GLOBALREF	i4	Di_gather_io;	/* GLOBALDEF in dilru.c */
 
+#ifndef VMS
 static DI_TGIO 	*GWthreads = (DI_TGIO *)NULL;
 
 static i4	 check_list();
@@ -103,6 +112,7 @@ static STATUS	 gather_list( DI_GIO *gio, i4 *uqueued, CL_ERR_DESC *err_code);
 
 static CS_SYNCH GWthreadsSem ZERO_FILL;
 static bool GWSemsInit = FALSE;
+#endif
 
 static i4	iov_max;
 
@@ -314,9 +324,11 @@ DIgather_write( i4 op, char *gio_p, DI_IO *f, i4 *n, i4 page, char *buf,
 i4
 DIgather_setting()
 {
+#if !defined(VMS)
     if ( Di_gather_io )
 	return( sizeof(DI_GIO) );
     else
+#endif
 	return(0);
 }
 

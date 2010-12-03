@@ -65,9 +65,7 @@
 **
 **  Description:
 **	    Note: put this into the opt directory.
-{@comment_line@}...
 **
-{@func_list@}...
 **
 **
 **  History:
@@ -188,7 +186,105 @@
 **	    Table procs don't have valid list entries any more, remove code.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/*
+** Forward Structure Definitions:
+*/
+typedef struct _OPT_AHDQEN OPT_AHDQEN;
+typedef struct _OPT_QP OPT_QP;
+
+/* TABLE OF CONTENTS */
+void opt_qp(
+	OPS_STATE *global,
+	QEF_QP_CB *qp);
+void opt_qp_brief(
+	OPS_STATE *global,
+	QEF_QP_CB *qp);
+static i4 opt_parent_seen(
+	OPS_STATE *global,
+	struct _OPT_AHDQEN *aq);
+static bool opt_ahd_seen(
+	struct _OPT_AHDQEN *rootaq,
+	QEF_AHD *ahd);
+static struct _OPT_AHDQEN *opt_lastaq(
+	struct _OPT_AHDQEN *rootaq);
+static PTR opt_lahdqen(
+	PTR p);
+static PTR opt_rahdqen(
+	PTR p);
+static void opt_prahdqen(
+	PTR p,
+	PTR control);
+static void opt_part_def(
+	OPS_STATE *global,
+	DB_PART_DEF *partdp);
+static void opt_part_dim(
+	OPS_STATE *global,
+	DB_PART_DIM *dimp,
+	char *title);
+static void opt_ahd(
+	OPS_STATE *global,
+	struct _OPT_AHDQEN *aq,
+	struct _OPT_AHDQEN *root_aq,
+	char *label,
+	i4 ahd_no);
+static void opt_dmucb(
+	OPS_STATE *global,
+	DMU_CB *dmucb);
+static void opt_lpchar_list(
+	OPS_STATE *global,
+	QEU_LOGPART_CHAR *qeu_lpl_ptr);
+static void opt_adf(
+	OPS_STATE *global,
+	QEN_ADF *adf,
+	char *title);
+static PTR opt_lqep(
+	PTR p);
+static PTR opt_rqep(
+	PTR p);
+static void opt_prqep(
+	PTR p,
+	PTR control);
+static void opt_qenode(
+	OPS_STATE *global,
+	QEN_NODE *qn,
+	struct _OPT_AHDQEN *paq);
+static void opt_qenpart(
+	OPS_STATE *global,
+	QEN_PART_INFO *partp,
+	char *title);
+static void opt_qenpqeval(
+	OPS_STATE *global,
+	QEN_PQ_EVAL *pqe,
+	char *title);
+static void opt_qenpqual(
+	OPS_STATE *global,
+	QEN_PART_QUAL *pqual,
+	char *title);
+static RDR_INFO *opt_rdrdesc(
+	OPS_STATE *global,
+	QEF_AHD *ahd,
+	i4 dmrcb);
+static void opt_keys(
+	OPS_STATE *global,
+	QEF_KEY *key);
+static void opt_satts(
+	OPS_STATE *global,
+	i4 acount,
+	DMF_ATTR_ENTRY **atts,
+	i4 kcount,
+	DMT_KEY_ENTRY **keys,
+	DB_CMP_LIST *cmp);
+void opt_opkeys(
+	OPS_STATE *global,
+	OPC_QUAL *cqual);
+void opt_opkor(
+	OPS_STATE *global,
+	OPC_QUAL *cqual,
+	OPC_KOR *kor);
 
 /*}
 ** Name: OPT_AHDQEN - Data struct to hold either an action or a QEN node
@@ -207,14 +303,12 @@
 [@history_template@]...
 */
 
-typedef struct _OPT_QP OPT_QP;
 struct _OPT_QP
 {
     OPT_QP	*opt_nqp;
     i4		opt_qennum;
 };
 
-typedef struct _OPT_AHDQEN OPT_AHDQEN;
 struct _OPT_AHDQEN
 {
     OPS_STATE	*opt_global;
@@ -382,7 +476,6 @@ opt_qp(
 		OPS_STATE	*global,
 		QEF_QP_CB	*qp)
 {
-    i4			i;
     i4			col1, col2, col3, col4, col5;
     i4			col2_start, col3_start, col4_start, col5_start;
     OPT_AHDQEN		*aq;
@@ -556,7 +649,7 @@ CALLS_TPROC,LOCATORS", qp->qp_status);
 	    else
 	    {
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		    OPT_PBLEN, "    [%2d] dbp_name: %24s\tdbp_mode: %d\n\n",
+		    OPT_PBLEN, "    [%2d] dbp_name: %.24s\tdbp_mode: %d\n\n",
 		    dbpno, dbpp->dbp_name, dbpp->dbp_mode);
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		    OPT_PBLEN, "\trowno: %5d, offset: %5d\n\n", 
@@ -607,7 +700,7 @@ CALLS_TPROC,LOCATORS", qp->qp_status);
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN, "\ttype: PROCEDURE\n\n");
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "\tprocname: %24s  .owner: %24s\n\n",
+		OPT_PBLEN, "\tprocname: %.24s  .owner: %.24s\n\n",
 		resource->qr_resource.qr_proc.qr_dbpalias.qso_n_id.db_cur_name,
 		resource->qr_resource.qr_proc.qr_dbpalias.qso_n_own);
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
@@ -661,7 +754,7 @@ CALLS_TPROC,LOCATORS", qp->qp_status);
 		rel = (RDR_INFO *) vl->vl_debug;
 
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		    OPT_PBLEN, "\t\t.relname: %24s  .owner: %24s\n\n",
+		    OPT_PBLEN, "\t\t.relname: %.24s  .owner: %.24s\n\n",
 		    rel->rdr_rel->tbl_name.db_tab_name,
 		    rel->rdr_rel->tbl_owner.db_own_name);
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
@@ -1292,7 +1385,7 @@ opt_part_def(
 	DB_PART_DEF	*partdp)
 {
     char dim_title[20];
-    i4	    i, j;
+    i4	    i;
 
     TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 	OPT_PBLEN, "(ahd/dmu)_part_def: 0x%p\n\n", partdp);
@@ -1449,6 +1542,8 @@ opt_part_dim(
 **          supported in star
 **	5-Aug-2009 (kschendel) SIR 122512
 **	    Update qep flag printing, print for-depth.
+**	18-Oct-2010 (kschendel) SIR 124544
+**	    Update create-integrity details, has DMU characteristics.
 */
 static VOID
 opt_ahd(
@@ -1502,7 +1597,7 @@ opt_ahd(
 	rel = (RDR_INFO *) vl->vl_debug;
 
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-	    OPT_PBLEN, "[%2d] vl_tab_id.relname: %24s  .owner: %24s\n\n",
+	    OPT_PBLEN, "[%2d] vl_tab_id.relname: %.24s  .owner: %.24s\n\n",
 	    i, rel->rdr_rel->tbl_name.db_tab_name,
 	    rel->rdr_rel->tbl_owner.db_own_name);
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
@@ -1727,7 +1822,7 @@ SCROLL,KEYSET,PARM_FIRSTN,PARM_OFFSETN,LOAD_CTAS,PART_SEPARATE,HAS-HASHOP,MAIN",
 	    {
 		seqp = linkp->qs_qsptr;
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		    OPT_PBLEN, "\t\tseqname: %24s  .owner: %24s\n\n",
+		    OPT_PBLEN, "\t\tseqname: %.24s  .owner: %.24s\n\n",
 		    seqp->qs_seqname.db_name,
 		    seqp->qs_owner.db_own_name);
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
@@ -1816,12 +1911,12 @@ SCROLL,KEYSET,PARM_FIRSTN,PARM_OFFSETN,LOAD_CTAS,PART_SEPARATE,HAS-HASHOP,MAIN",
 
 	    cint = &ahd->qhd_obj.qhd_createIntegrity;
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "cons_tabname: %24s\t cons_owner: %24s\t cons_flags: %x\n\n",
+		OPT_PBLEN, "cons_tabname: %.24s\t cons_owner: %.24s\t cons_flags: %x\n\n",
 		cint->qci_cons_tabname.db_tab_name,
 		cint->qci_cons_ownname.db_own_name,
 		cint->qci_flags);
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "ref_tabname: %24s \t ref_owner: %24s\n\n",
+		OPT_PBLEN, "ref_tabname: %.24s \t ref_owner: %.24s\n\n",
 		cint->qci_ref_tabname.db_tab_name,
 		cint->qci_ref_ownname.db_own_name);
 	    if (cint->qci_integrityQueryText &&
@@ -1842,7 +1937,7 @@ SCROLL,KEYSET,PARM_FIRSTN,PARM_OFFSETN,LOAD_CTAS,PART_SEPARATE,HAS-HASHOP,MAIN",
 		if (cint->qci_flags & (QCI_NEW_NAMED_INDEX |
 			QCI_OLD_NAMED_INDEX))
 	    	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "cons_index_name: %24s\n\n",
+		OPT_PBLEN, "cons_index_name: %.24s\n\n",
 		cint->qci_idxname.db_tab_name);
 		if (cint->qci_flags & QCI_OLD_NAMED_INDEX) break;
 	        if (cint->qci_idxloc.data_in_size)
@@ -1854,18 +1949,18 @@ SCROLL,KEYSET,PARM_FIRSTN,PARM_OFFSETN,LOAD_CTAS,PART_SEPARATE,HAS-HASHOP,MAIN",
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN,
 		"idx_fillfac: %d, idx_leaff: %d, idx_nonleaff: %d\n\n",
-		cint->qci_idx_fillfac, cint->qci_idx_leaff, 
-		cint->qci_idx_nonleaff);
+		cint->qci_dmu_chars.dmu_fillfac, cint->qci_dmu_chars.dmu_leaff,
+		cint->qci_dmu_chars.dmu_nonleaff);
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN,
 		"idx_page_size: %d, idx_minpgs: %d, idx_maxpgs: %d\n\n",
-		cint->qci_idx_page_size, cint->qci_idx_minpgs,
-		cint->qci_idx_maxpgs);
+		cint->qci_dmu_chars.dmu_page_size, cint->qci_dmu_chars.dmu_minpgs,
+		cint->qci_dmu_chars.dmu_maxpgs);
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN,
 		"idx_alloc: %d, idx_extend: %d, idx_struct: %d\n\n",
-		cint->qci_idx_alloc, cint->qci_idx_extend,
-		cint->qci_idx_struct);
+		cint->qci_dmu_chars.dmu_alloc, cint->qci_dmu_chars.dmu_extend,
+		cint->qci_dmu_chars.dmu_struct);
 	    }
 	    break;
 	}
@@ -2016,7 +2111,7 @@ SCROLL,KEYSET,PARM_FIRSTN,PARM_OFFSETN,LOAD_CTAS,PART_SEPARATE,HAS-HASHOP,MAIN",
 
 	    aparm = ahd->qhd_obj.qhd_callproc.ahd_params + i;
             TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "  ahd_params[%d]: parm_name: %16s, parm_nlen: %d, parm_index: %d, parm_flags: %d\n\n",
+		OPT_PBLEN, "  ahd_params[%d]: parm_name: %.16s, parm_nlen: %d, parm_index: %d, parm_flags: %d\n\n",
         	i, aparm->ahd_parm.parm_name, aparm->ahd_parm.parm_nlen,
 		aparm->ahd_parm.parm_index, aparm->ahd_parm.parm_flags);
             TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
@@ -2180,7 +2275,7 @@ opt_dmucb(OPS_STATE *global, DMU_CB *dmucb)
     i4 i;
 
     TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-	OPT_PBLEN, "dmu_table_name: %24s \t dmu_owner: %24s\n\n",
+	OPT_PBLEN, "dmu_table_name: %.24s \t dmu_owner: %.24s\n\n",
 	dmucb->dmu_table_name.db_tab_name,
 	dmucb->dmu_owner.db_own_name);
     TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
@@ -2194,7 +2289,7 @@ opt_dmucb(OPS_STATE *global, DMU_CB *dmucb)
 	att = atts[i];
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 	    OPT_PBLEN,
-"att#%3d name: %24s type: %3d  size: %5d  prec: %2d  flags: %5d\n\n",
+"att#%3d name: %.24s type: %3d  size: %5d  prec: %2d  flags: %5d\n\n",
 	    i+1, att->attr_name.db_att_name, att->attr_type, 
 	    att->attr_size, att->attr_precision, 
 	    att->attr_flags_mask);
@@ -2210,7 +2305,7 @@ opt_dmucb(OPS_STATE *global, DMU_CB *dmucb)
     {
 	key = keys[i];
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-	    OPT_PBLEN, "[%2d] name: %24s  order: ", i,
+	    OPT_PBLEN, "[%2d] name: %.24s  order: ", i,
 	    key->key_attr_name.db_att_name);
 	switch (key->key_order)
 	{
@@ -2240,7 +2335,7 @@ opt_dmucb(OPS_STATE *global, DMU_CB *dmucb)
     for (i = 0; i < dmucb->dmu_location.data_in_size; i = i + sizeof(DB_LOC_NAME))
     {
 	TRformat(opt_scc, NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "   [%3d] locname: %24s\n\n",
+		OPT_PBLEN, "   [%3d] locname: %.24s\n\n",
 		i, locn->db_loc_name);
 	++locn;
     }
@@ -2290,7 +2385,7 @@ opt_lpchar_list(OPS_STATE *global, QEU_LOGPART_CHAR *qeu_lpl_ptr)
 	for (i = 0; i < qeu_lpl_ptr->loc_array.data_in_size; i = i + sizeof(DB_LOC_NAME))
 	{
 	    TRformat(opt_scc, NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "   [%3d] locname: %24s\n\n",
+		OPT_PBLEN, "   [%3d] locname: %.24s\n\n",
 		i, locn->db_loc_name);
 	    ++locn;
 	}
@@ -2700,7 +2795,6 @@ opt_qenode(
     OPT_AHDQEN	*aq;
     char	*jntype = (char *)0;
     QEN_OJINFO	*oj = (QEN_OJINFO *)NULL;
-    QEN_PART_INFO *partp = (QEN_PART_INFO *) NULL;
 
     if (qn == NULL)
 	return;
@@ -2874,7 +2968,7 @@ opt_qenode(
 	if (rdrdesc == NULL)
 	{
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "[%2d] name: %24s\n\n", attno, 
+		OPT_PBLEN, "[%2d] name: %.24s\n\n", attno, 
 		qn->qen_atts[attno]->att_nmstr);
 	}
 	else
@@ -2892,7 +2986,7 @@ opt_qenode(
 		{
 		    TRformat(opt_scc, (i4*)NULL,
 			global->ops_cstate.opc_prbuf, OPT_PBLEN,
-			"[%2d] name: %24s offset: %5d\n\n", 
+			"[%2d] name: %.24s offset: %5d\n\n", 
 			attno, qn->qen_atts[attno]->att_nmstr,
 			rdrdesc->rdr_attr[rdrattno]->att_offset);
 		    break;
@@ -2901,7 +2995,7 @@ opt_qenode(
 	    if (me_ret != 0)
 	    {
 		TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		    OPT_PBLEN, "[%2d] name: %24s\n\n", attno, 
+		    OPT_PBLEN, "[%2d] name: %.24s\n\n", attno, 
 		    qn->qen_atts[attno]->att_nmstr);
 	    }
 	}
@@ -2939,7 +3033,7 @@ opt_qenode(
 	else
 	{
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "table name: %24s\n\n", 
+		OPT_PBLEN, "table name: %.24s\n\n", 
 		rdrdesc->rdr_rel->tbl_name.db_tab_name);
 	}
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
@@ -2982,7 +3076,7 @@ opt_qenode(
 
 	    aparm = tproc->tproc_params + i;
             TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "  tproc_params[%d]: parm_name: %16s, parm_nlen: %d, parm_index: %d, parm_flags: %d\n\n",
+		OPT_PBLEN, "  tproc_params[%d]: parm_name: %.16s, parm_nlen: %d, parm_index: %d, parm_flags: %d\n\n",
         	i, aparm->ahd_parm.parm_name, aparm->ahd_parm.parm_nlen,
 		aparm->ahd_parm.parm_index, aparm->ahd_parm.parm_flags);
             TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
@@ -3009,7 +3103,7 @@ opt_qenode(
 	else
 	{
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "table name: %24s\n\n", 
+		OPT_PBLEN, "table name: %.24s\n\n", 
 		rdrdesc->rdr_rel->tbl_name.db_tab_name);
 	}
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
@@ -3087,7 +3181,7 @@ opt_qenode(
 	else
 	{
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "table name: %24s\n\n", 
+		OPT_PBLEN, "table name: %.24s\n\n", 
 		rdrdesc->rdr_rel->tbl_name.db_tab_name);
 	}
 	TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
@@ -4196,7 +4290,7 @@ opt_satts(
 	    if (att == NULL)
 		continue;
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "[%2d] name: %24s\n\n", i, att->attr_name.db_att_name);
+		OPT_PBLEN, "[%2d] name: %.24s\n\n", i, att->attr_name.db_att_name);
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
 		OPT_PBLEN,	
 		"\ttype:%4d  len:%5d  prec:%5d  collID:%5d  flags: %d\n\n",
@@ -4218,7 +4312,7 @@ opt_satts(
 	    if (key->key_order == DMT_ASCENDING) orderstr = "DMT_ASCENDING";
 	    if (key->key_order == DMT_DESCENDING) orderstr = "DMT_DESCENDING";
 	    TRformat(opt_scc, (i4*)NULL, global->ops_cstate.opc_prbuf,
-		OPT_PBLEN, "[%2d] name: %24s  order: %s\n\n", i, 
+		OPT_PBLEN, "[%2d] name: %.24s  order: %s\n\n", i, 
 		key->key_attr_name.db_att_name, orderstr);
 	}
     }

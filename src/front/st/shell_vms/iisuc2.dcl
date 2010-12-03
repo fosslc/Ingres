@@ -53,6 +53,8 @@ $!!     15-Aug-2007 (Ralph Loen) SIR 118898
 $!!         Added symbol definition of iinethost.
 $!!     14-Jan-2010 (horda03)
 $!!         Upgrade all nodes in a clustered environment.
+$!!	01-nov-2010 (joea)
+$!!	    iisdall.com has been renamed as ingstop.
 $!----------------------------------------------------------------------------
 $!
 $ on control_c then goto EXIT_FAIL
@@ -75,7 +77,7 @@ $ iisetres	:== $ii_system:[ingres.utility]iisetres.exe
 $ iisulock	:== $ii_system:[ingres.utility]iisulock.exe
 $ iivalres	:== $ii_system:[ingres.utility]iivalres.exe
 $ ingstart	:== $ii_system:[ingres.utility]ingstart.exe
-$ ingstop	:== @ii_system:[ingres.utility]iisdall.com
+$ ingstop	:= @ii_system:[ingres.utility]ingstop.com
 $!
 $! Other variables, macros and temporary files
 $!

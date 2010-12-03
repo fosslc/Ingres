@@ -6,6 +6,7 @@
 
 #include    <compat.h>
 #include    <gl.h>
+#include    <bt.h>
 #include    <pc.h>
 #include    <tm.h>
 #include    <sr.h>
@@ -44,6 +45,7 @@
 #include    <dm2u.h>
 #include    <dmftrace.h>
 #include    <dm0pbmcb.h>
+#include    <dm0m.h>
 #include    <dmpp.h>
 #include    <gwf.h>
 
@@ -371,12 +373,7 @@ static	DB_STATUS   create_temporary_table(
 **                                          below for description of entry.
 **         .dmu_attr_array.ptr_in_count     The number of pointers in the array.
 **	   .dmu_attr_array.ptr_size	    The size of each element pointed at
-**         .dmu_char_array.data_address     Pointer to an area used to pass 
-**                                          an array of entries of type
-**                                          DMU_CHAR_ENTRY.
-**                                          See below for description of 
-**                                          <dmu_char_array> entries.
-**         .dmu_char_array.data_in_size     Length of char_array data in bytes.
+**	   .dmu_chars			    Various table characteristics
 **	   .dmu_gwchar_array.data_address   Pointer to an array of gateway table
 **					    characteristics.  These are used
 **					    if the table is a DMU_GATEWAY type
@@ -413,41 +410,6 @@ static	DB_STATUS   create_temporary_table(
 **	   attr_collID			    Collation ID (if string type).
 **         attr_flags_mask                       Must be zero or DMU_F_NDEFAULT.
 **
-**         <dmu_char_array> entries are of type DMU_CHAR_ENTRY and 
-**         must have following values:
-**         char_id                          Characteristic identifier.
-**                                          Must be one of the following:
-**                                          DMU_STRUCTURE - storage structure:
-**						DB_HASH_STORE, DB_ISAM_STORE,
-**						DB_BTRE_STORE, DB_HEAP_STORE
-**					    DMU_TEMP_TABLE - temporary table
-**                                          DMU_VIEW_CREATE - view
-**					    DMU_JOURNALED - journaled table
-**                                          DMU_DUPLICATES - allows duplicates
-**					    DMU_UNIQUE - table has unique keys
-**					    DMU_IDX_CREATE - secondary index
-**					    DMU_IFILL - index fill factor:
-**						   numeric value between 1-100
-**					    DMU_DATAFILL - datapage fill factor:
-**						   numeric value between 1-100
-**					    DMU_MINPAGES - min primary pages:
-**						   numeric value > 0
-**					    DMU_MAXPAGES - max primary pages:
-**						   numeric value > 0
-**					    DMU_SYS_MAINTAINED - has system
-**						maintained columns
-**					    DMU_GATEWAY - is a Gateway table
-**					    DMU_RECOVERY - does this temporary
-**						table perform recovery?
-**						(IF GIVEN, MUST BE DMU_C_OFF)
-**					    DMU_EXT_CREATE - is a table
-**						extension (used for peripheral
-**						datatype support -- blobs).
-**					    DMU_TABLE_PRIORITY - value is
-**						table's cache priority
-**         char_value                       Value of characteristic. Unless
-**					    specified above, must be an 
-**					    integer value of DMU_C_ON,DMU_C_OFF.
 **
 ** Outputs:
 **         .dmu_tbl_id                      The internal table identifier
@@ -677,6 +639,10 @@ static	DB_STATUS   create_temporary_table(
 **	    Fix up the above change so that we select the proper page size
 **	    and type based on the worst-case-expanded row width, not the
 **	    unexpanded row width.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
+**	    Fix the operation preamble here.
+**	    Delete DMU_IDX_CREATE, not set by anything.
 */
 DB_STATUS
 dmu_create(DMU_CB        *dmu_cb)
@@ -685,14 +651,12 @@ dmu_create(DMU_CB        *dmu_cb)
     DMU_CB	    *dmu = dmu_cb;
     DML_XCB	    *xcb;
     DML_ODCB	    *odcb;
-    DMU_CHAR_ENTRY  *char_entry;
     DMF_ATTR_ENTRY  **attr_entry;
-    i4	    	    char_count;
+    i4		    indicator;
     i4         	    attr_count;
     i4	    	    error, local_error;
     i4	    	    status;
     i4	    	    i,j;
-    i4         	    index = 0;
     i4	    	    extension = 0;
     i4         	    structure = DB_HEAP_STORE;
     i4         	    duplicates = 0;
@@ -805,44 +769,41 @@ dmu_create(DMU_CB        *dmu_cb)
 	    break;
 	}
 
-	/*  Check for characteristics. */
+	/* Unpack characteristics.
+	** For CREATE, ignore indicators that we don't care about.
+	** They may possibly be relate to a MODIFY operation that
+	** may happen later in a multi-step query (e.g. ctas).
+	**
+	** It would make more sense to pass the DMU_CHARACTERISTICS
+	** right through to dm2u, but one step at a time!
+	*/
 
-	if (dmu->dmu_char_array.data_address && 
-		dmu->dmu_char_array.data_in_size)
+	indicator = -1;
+	while ((indicator = BTnext(indicator, dmu->dmu_chars.dmu_indicators, DMU_CHARIND_LAST)) != -1)
 	{
-	    char_entry = (DMU_CHAR_ENTRY*) dmu->dmu_char_array.data_address;
-	    char_count = dmu->dmu_char_array.data_in_size / 
-			    sizeof(DMU_CHAR_ENTRY);
-	    for (i = 0; i < char_count; i++)
+	    switch (indicator)
 	    {
-		switch (char_entry[i].char_id)
-		{
 		case DMU_STRUCTURE:
-		    structure = char_entry[i].char_value;
-		    if (structure == DB_HEAP_STORE || 
-                        structure == DB_HASH_STORE ||
-                        structure == DB_ISAM_STORE ||
-                        structure == DB_BTRE_STORE) 
-			break;
-		    else
-		    {
-			SETDBERR(&dmu->error, i, E_DM000E_BAD_CHAR_VALUE);
-			return (E_DB_ERROR);
-		    }		    
+		    structure = dmu->dmu_chars.dmu_struct;
+		    /* Bare CREATE should only be getting HEAP, but we
+		    ** need to let anything through in case it's REGISTER.
+		    ** Probably should tighten this up ...
+		    */
+		    break;
 
 		case DMU_PAGE_SIZE:
 		    used_default_page_size = FALSE;
-		    page_size = char_entry[i].char_value;
+		    page_size = dmu->dmu_chars.dmu_page_size;
 		    if (page_size != 2048   && page_size != 4096  &&
 			page_size != 8192   && page_size != 16384 &&
 			page_size != 32768  && page_size != 65536)
 		    {
-			SETDBERR(&dmu->error, i, E_DM000E_BAD_CHAR_VALUE);
+			SETDBERR(&dmu->error, indicator, E_DM000E_BAD_CHAR_VALUE);
 			return (E_DB_ERROR);
 		    }		    
 		    else if (!dm0p_has_buffers(page_size))
 		    {
-			SETDBERR(&dmu->error, i, E_DM0157_NO_BMCACHE_BUFFERS);
+			SETDBERR(&dmu->error, 0, E_DM0157_NO_BMCACHE_BUFFERS);
 			return (E_DB_ERROR);
 		    }		    
 		    else
@@ -851,164 +812,146 @@ dmu_create(DMU_CB        *dmu_cb)
 		    }		    
 
 		case DMU_ALLOCATION:
-		    allocation = char_entry[i].char_value;
+		    allocation = dmu->dmu_chars.dmu_alloc;
 		    break;
 
 		case DMU_EXTEND:
-		    extend = char_entry[i].char_value;
+		    extend = dmu->dmu_chars.dmu_extend;
 		    break;
 
-		case DMU_COMPRESSED:
-		    if (char_entry[i].char_value == DMU_C_ON)
+		case DMU_DCOMPRESSION:
+		    if (dmu->dmu_chars.dmu_dcompress == DMU_COMP_ON)
 		    {
 			compression = TCB_C_STANDARD;
 			/* Note for 9.x cross: check byte_compression option,
 			** use std-old if not set.
 			*/
 		    }
-		    else if (char_entry[i].char_value == DMU_C_HIGH)
+		    else if (dmu->dmu_chars.dmu_dcompress == DMU_COMP_HI)
 			compression = TCB_C_HICOMPRESS;
 		    break;
 
-		case DMU_DATAFILL:
-		case DMU_IFILL:
-		case DMU_MINPAGES:
-		case DMU_MAXPAGES:
-		    break;
-
 		case DMU_UNIQUE:
-		    unique = char_entry[i].char_value == DMU_C_ON;
+		    unique = TRUE;
 		    break;
 
 		case DMU_SYS_MAINTAINED:
-		    if (char_entry[i].char_value == DMU_C_ON)
-			relstat |= TCB_SYS_MAINTAINED;
+		    relstat |= TCB_SYS_MAINTAINED;
 		    break;
 
 		case DMU_TEMP_TABLE:
 		    /* Give GTT's and temp registers a break, and assume
 		    ** "with norecovery" -- don't make the parser do it.
 		    */
-		    if (char_entry[i].char_value == DMU_C_ON)
-		    {
-			temporary = 1;
-			recovery = 0;
-		    }
+		    temporary = 1;
+		    recovery = 0;
 		    break;
 
 		case DMU_RECOVERY:
-		    recovery = char_entry[i].char_value == DMU_C_ON;
+		    recovery = (dmu->dmu_chars.dmu_flags & DMU_FLAG_RECOVERY) != 0;
 		    break;
 
 		case DMU_VIEW_CREATE:
-		    view = char_entry[i].char_value == DMU_C_ON;
+		    view = TRUE;
 		    break;
 
 		case DMU_DUPLICATES:
-		    duplicates = char_entry[i].char_value == DMU_C_ON;
+		    duplicates = (dmu->dmu_chars.dmu_flags & DMU_FLAG_DUPS) != 0;
 		    modoptions = (duplicates ? 0 : DM2U_NODUPLICATES);
 		    break;
 
 		case DMU_JOURNALED:
-		    if (char_entry[i].char_value == DMU_C_ON)
+		    /* Take both "on" and "later" as ON */
+		    if (dmu->dmu_chars.dmu_journaled != DMU_JOURNAL_OFF)
 			relstat |= TCB_JOURNAL;
 		    break;
 
-		case DMU_IDX_CREATE:
-		    index = char_entry[i].char_value == DMU_C_ON;
-		    break;
-
 		case DMU_GATEWAY:
-		    gateway = (char_entry[i].char_value == DMU_C_ON);
+		    gateway = TRUE;
 		    break;
 
 		case DMU_GW_UPDT:
-		    gwupdate = (char_entry[i].char_value == DMU_C_ON);
+		    gwupdate = (dmu->dmu_chars.dmu_flags & DMU_FLAG_UPDATE) != 0;
 		    break;
 
 		case DMU_EXT_CREATE:
-		    extension = char_entry[i].char_value == DMU_C_ON;
+		    extension = TRUE;
 		    break;
-		    
+
 		case DMU_NOT_DROPPABLE:
-		    if (char_entry[i].char_value == DMU_C_ON)
-			relstat2 |= TCB_NOT_DROPPABLE;
+		    relstat2 |= TCB_NOT_DROPPABLE;
 		    break;
 
 		case DMU_STATEMENT_LEVEL_UNIQUE:
-		    if (char_entry[i].char_value == DMU_C_ON)
+		    if (dmu->dmu_chars.dmu_flags & DMU_FLAG_UNIQUE_STMT)
 			relstat2 |= TCB_STATEMENT_LEVEL_UNIQUE;
 		    break;
 
 		case DMU_PERSISTS_OVER_MODIFIES:
-		    if (char_entry[i].char_value == DMU_C_ON)
+		    if (dmu->dmu_chars.dmu_flags & DMU_FLAG_PERSISTENCE)
 			relstat2 |= TCB_PERSISTS_OVER_MODIFIES;
 		    break;
 
 		case DMU_SYSTEM_GENERATED:
-		    if (char_entry[i].char_value == DMU_C_ON)
-			relstat2 |= TCB_SYSTEM_GENERATED;
+		    relstat2 |= TCB_SYSTEM_GENERATED;
 		    break;
 
 		case DMU_SUPPORTS_CONSTRAINT:
-		    if (char_entry[i].char_value == DMU_C_ON)
-			relstat2 |= TCB_SUPPORTS_CONSTRAINT;
+		    relstat2 |= TCB_SUPPORTS_CONSTRAINT;
 		    break;
 
 		case DMU_NOT_UNIQUE:
-		    if (char_entry[i].char_value == DMU_C_ON)
-			relstat2 |= TCB_NOT_UNIQUE;
+		    relstat2 |= TCB_NOT_UNIQUE;
 		    break;
 
 		case DMU_ROW_SEC_AUDIT:
-		    if (char_entry[i].char_value == DMU_C_ON)
-			relstat2 |= TCB_ROW_AUDIT;
+		    relstat2 |= TCB_ROW_AUDIT;
 		    break;
 
 		case DMU_TABLE_PRIORITY:
-		    tbl_pri = char_entry[i].char_value;
+		    tbl_pri = dmu->dmu_chars.dmu_cache_priority;
 
 		    if (tbl_pri < 0 || tbl_pri > DB_MAX_TABLEPRI)
 		    {
-			SETDBERR(&dmu->error, i, E_DM000E_BAD_CHAR_VALUE);
+			SETDBERR(&dmu->error, indicator, E_DM000E_BAD_CHAR_VALUE);
 			return (E_DB_ERROR);
-		    }		    
+		    }
 		    break;
 
 		case DMU_GLOBAL_INDEX:
-		    if (char_entry[i].char_value == DMU_C_ON)
-			relstat2 |= TCB2_GLOBAL_INDEX;
+		    relstat2 |= TCB2_GLOBAL_INDEX;
 		    break;
 
 		case DMU_CLUSTERED:
-		    Clustered = char_entry[i].char_value == DMU_C_ON;
+		    Clustered = (dmu->dmu_chars.dmu_flags & DMU_FLAG_CLUSTERED) != 0;
 		    break;
 
 		default:
-		    SETDBERR(&dmu->error, i, E_DM000D_BAD_CHAR_ID);
-		    return (E_DB_ERROR);
-		}
-	    }
-
-	    if (
-	      ((index || extension) && dmu->dmu_part_def != NULL)
-		||
-	      (temporary && recovery) )
-	    {
-		SETDBERR(&dmu->error, 0, E_DM002A_BAD_PARAMETER);
-		break;
-	    }
-
-	    if (xcb->xcb_x_type & XCB_RONLY && !temporary)
-	    {
-		SETDBERR(&dmu->error, 0, E_DM006A_TRAN_ACCESS_CONFLICT);
-		break;
+		    /* Ignore anything else, don't take errors, might be
+		    ** for an upcoming modify -- who knows!
+		    ** NOTE: anything to be explicitly excluded (why?)
+		    ** can be tested for in its own case.
+		    */
+		    break;
 	    }
 	}
 
-	if (index)
-	    pgtype_flags = DM1C_CREATE_INDEX;
-	else if (extension)
+	if (
+	  (extension && dmu->dmu_part_def != NULL)
+	    ||
+	  (temporary && recovery) )
+	{
+	    SETDBERR(&dmu->error, 0, E_DM002A_BAD_PARAMETER);
+	    break;
+	}
+
+	if (xcb->xcb_x_type & XCB_RONLY && !temporary)
+	{
+	    SETDBERR(&dmu->error, 0, E_DM006A_TRAN_ACCESS_CONFLICT);
+	    break;
+	}
+
+	if (extension)
 	    pgtype_flags = DM1C_CREATE_ETAB;
 	else
 	    pgtype_flags = DM1C_CREATE_DEFAULT;
@@ -1441,18 +1384,18 @@ dmu_create(DMU_CB        *dmu_cb)
 
     }
     else
-	status = dm2u_create(odcb->odcb_dcb_ptr, xcb, &dmu->dmu_table_name, 
-			&dmu->dmu_owner, location, loc_count, 
-			&dmu->dmu_tbl_id, &dmu->dmu_idx_id, index, view, 
+	status = dm2u_create(odcb->odcb_dcb_ptr, xcb, &dmu->dmu_table_name,
+			&dmu->dmu_owner, location, loc_count,
+			&dmu->dmu_tbl_id, &dmu->dmu_idx_id, 0, view,
 			relstat, relstat2, structure, compression, ntab_width,
-			ntab_data_width, attr_count, 
+			ntab_data_width, attr_count,
 			attr_entry, db_lockmode,
 			allocation, extend, page_type, page_size,
 			&dmu->dmu_qry_id, &dmu->dmu_gwattr_array,
 			&dmu->dmu_gwchar_array, dmu->dmu_gw_id,
 			dmu->dmu_gwrowcount,
 			(DMU_FROM_PATH_ENTRY *)dmu->dmu_olocation.data_address,
-			&dmu->dmu_char_array,
+			&dmu->dmu_chars,
 			0, 0, (f8 *)NULL, tbl_pri,
 			dmu->dmu_part_def, dmu->dmu_partno, dmu,
 			&dmu->error);
@@ -1583,7 +1526,7 @@ dmu_create(DMU_CB        *dmu_cb)
 	mcb->mcb_modoptions = modoptions;
 	mcb->mcb_mod_options2 = 0;
 	mcb->mcb_kcount = dmu_cb->dmu_key_array.ptr_in_count;
-	mcb->mcb_key = (DM2U_KEY_ENTRY**)dmu->dmu_key_array.ptr_address;
+	mcb->mcb_key = (DMU_KEY_ENTRY**)dmu->dmu_key_array.ptr_address;
 	mcb->mcb_db_lockmode = DM2T_X;
 	mcb->mcb_allocation = allocation;
 	mcb->mcb_extend = extend;

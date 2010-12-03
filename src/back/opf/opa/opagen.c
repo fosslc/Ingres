@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -136,8 +136,10 @@
 **
 **      23-Mar-2010 (horda03) B123416
 **          Remove check of PSF's corelation check in opa_exists.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
+
 /*}
 ** Name: OPA_RECURSION - state of processing parse tree
 **
@@ -152,7 +154,6 @@
 **          initial creation
 **      30-oct-89 (seputis)
 **          added support for union view optimization
-[@history_template@]...
 */
 typedef struct _OPA_RECURSION
 {
@@ -184,17 +185,141 @@ typedef struct _OPA_RECURSION
     OPS_SUBQUERY    *opa_uvlist; /* list of union view definitions defined within
                                 ** the scope of this query */
 } OPA_RECURSION;
-
-static VOID opa_rnode(
-        OPA_RECURSION       *gfather,   /* ptr to state of father subquery */
-        PST_QNODE          **agg_qnode  /* ptr to ptr to query tree node to be 
-                                        ** analyzed
-                                        */ );
-static VOID opa_generate(
-        OPA_RECURSION       *gstate,
-        PST_QNODE          **agg_qnode);
-                                /* recursive routine to gather info
-                                ** on query tree */
+
+/* TABLE OF CONTENTS */
+bool opa_rsmap(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	OPZ_BMATTS *attrmap);
+static void opa_ctarget(
+	OPS_STATE *global,
+	PST_QNODE *masterp,
+	PST_QNODE **resdompp,
+	OPV_IGVARS gvar,
+	bool copytarget);
+static void opa_agview(
+	OPS_STATE *global,
+	PST_QNODE **agheadp,
+	OPV_GBMVARS *from_map,
+	PST_QNODE *qnode);
+static void opa_uview(
+	OPA_RECURSION *gstate);
+static PST_J_ID opa_fojid(
+	OPA_RECURSION *gstate,
+	PST_RNGENTRY *rangep,
+	OPV_IGVARS viewid);
+static void opa_ojsub(
+	PST_J_ID joinid,
+	PST_QNODE *nodep);
+static void opa_qview(
+	OPA_RECURSION *gstate);
+static void opa_sview(
+	OPS_STATE *global,
+	PST_QNODE **viewpp);
+static bool opa_ojattr(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *root);
+static bool opa_ojconstattr(
+	OPS_SUBQUERY *subquery,
+	OPV_IGVARS viewvar,
+	OPZ_BMATTS *attrmap,
+	PST_QNODE *root);
+static bool opa_ojview(
+	OPS_SUBQUERY *subquery,
+	OPV_IGVARS viewvar,
+	PST_QNODE *root);
+static void opa_pview(
+	OPA_RECURSION *gstate,
+	OPS_SUBQUERY *subquery,
+	OPV_IGVARS gvar,
+	bool nondistinct,
+	OPA_VID viewid,
+	bool base_view,
+	PST_QNODE *root);
+OPV_IGVARS opa_cunion(
+	OPS_STATE *global,
+	PST_QNODE **rootpp,
+	bool copytarget);
+static void opa_grtable(
+	OPA_RECURSION *gstate,
+	PST_QNODE *root,
+	OPS_DUPLICATES duplicates,
+	bool newmap,
+	OPV_GBMVARS *viewmap,
+	bool orflag);
+static void opa_rnode(
+	OPA_RECURSION *gfather,
+	PST_QNODE **agg_qnode);
+void opa_resolve(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static bool opa_ifnullcagg(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *subselect,
+	PST_QNODE *nodep,
+	bool ifnfound,
+	bool aggfound,
+	PST_QNODE **ifnull_aop);
+static bool opa_ifnullaop(
+	OPS_STATE *global,
+	PST_QNODE *ifnull_aop);
+static void opa_ojflatten(
+	OPA_RECURSION *gstate,
+	PST_QNODE **non_ojpp,
+	PST_J_ID joinid);
+static bool opa_flatten(
+	OPA_RECURSION *gstate,
+	PST_QNODE *subselect,
+	PST_QNODE **insertpp,
+	PST_QNODE *conjunct);
+static void opa_cosubquery(
+	OPS_STATE *global,
+	OPV_GBMVARS *varmap,
+	PST_QNODE *qnode);
+static bool opa_exists(
+	OPA_RECURSION *gstate,
+	PST_QNODE **agg_qnode);
+void opa_not(
+	OPS_STATE *global,
+	PST_QNODE *tree);
+void opa_covar(
+	OPS_SUBQUERY *father,
+	PST_QNODE *varnodep,
+	OPV_IGVARS varno);
+static void opa_byhead(
+	OPA_RECURSION *gstate,
+	PST_QNODE **agg_qnode);
+static void opa_presdom(
+	OPA_RECURSION *gstate,
+	PST_QNODE *q);
+static void opa_var(
+	OPA_RECURSION *gstate,
+	PST_QNODE **agg_qnode);
+static void opa_or_null(
+	OPA_RECURSION *gstate,
+	PST_QNODE *qnode,
+	PST_QNODE **targetpp,
+	i4 and_or,
+	ADI_OP_ID nullop,
+	PST_J_ID ojid);
+static void opa_ornull_list(
+	OPA_RECURSION *gstate,
+	PST_QNODE *qnode,
+	PST_QNODE **ornodepp);
+static bool opa_bop(
+	OPA_RECURSION *gstate,
+	PST_QNODE **agg_qnode);
+static bool opa_uop(
+	OPA_RECURSION *gstate,
+	PST_QNODE **agg_qnode);
+static void opa_const(
+	OPA_RECURSION *gstate,
+	PST_QNODE **agg_qnode);
+static void opa_generate(
+	OPA_RECURSION *gstate,
+	PST_QNODE **agg_qnode);
+void opa_1pass(
+	OPS_STATE *global);
 
 /*{
 ** Name: opa_rsmap      - create map of available resdom numbers
@@ -249,7 +374,7 @@ opa_rsmap(
 #ifdef    E_OP0280_SCOPE
         /* scope consistency check */
         if (resdomptr->pst_sym.pst_value.pst_s_rsdm.pst_rsno >=
-            (BITS_IN(OPZ_BMATTS)))
+            (i4)(BITS_IN(OPZ_BMATTS)))
             opx_error( E_OP0280_SCOPE); /* check if resdom number is in
                                     ** range */
 #endif
@@ -964,7 +1089,7 @@ opa_fojid(
 **          initial creation
 [@history_template@]...
 */
-VOID
+static VOID
 opa_ojsub(
         PST_J_ID            joinid,
         PST_QNODE           *nodep)
@@ -2496,8 +2621,6 @@ opa_grtable(
 	    /* Table procedures need new subqueries and other details. */
 	    if (rangep->pst_rgtype == PST_TPROC)
 	    {
-		OPV_GRV	*gvarp = global->ops_rangetab.opv_base->
-							opv_grv[from_grv];
         	OPV_GBMVARS *tvarmap;   
 		bool	save_gaggregate;
 
@@ -3524,6 +3647,8 @@ opa_ifnullcagg(
         case PST_CONST:
             return(FALSE);
  
+	default:
+	    break;
         }
  
         if (nodep->pst_left
@@ -3791,7 +3916,6 @@ opa_flatten(
                                 ** in flattening  */
     PST_QNODE       *ifnull_aop = NULL;
     PST_QNODE       *qnode = NULL;
-    OPS_SUBQUERY    *subquery;
     OPV_GBMVARS     tempmap;
     OPV_IGVARS      gvarno;
 
@@ -5450,7 +5574,7 @@ opa_uop(
     {
 	/* We have a pending NOT to apply which should amount to
 	** switching the operator to its complement.
-	/* EXISTS requires special handling because ADF doesn't define
+	** EXISTS requires special handling because ADF doesn't define
         ** any functions for it - specifically there is no fdesc to
 	** hold the complement and so we apply the pending NOT now
 	** outside the more general opa_not() routine.
@@ -5835,6 +5959,8 @@ opa_generate(
                                                 ** with other nodes */
             break;
         }
+	default:
+	    break;
         }
 
 

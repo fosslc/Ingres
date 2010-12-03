@@ -72,6 +72,8 @@
 **	    qsr_psem, which allows us to update the LRU queue.
 **	11-feb-2008 (smeke01) b113972
 **	    Backed out above change.
+**	29-Oct-2010 (jonj) SIR 120874
+**	    Use DB_ERROR instead of err_code
 **/
 
 
@@ -274,7 +276,7 @@ qsf_clrsesobj( QSF_RCB *qsf_rb )
     QSO_OBJ_HDR         *obj, *prev;
     QSF_CB              *scb = qsf_rb->qsf_scb;
     QSF_RCB		qsf_rcb;
-    i4			error;
+    DB_ERROR		localDBerr;
 
     for (;;)
     {
@@ -311,7 +313,7 @@ qsf_clrsesobj( QSF_RCB *qsf_rb )
 	obj->qso_status |= QSO_LRU_DESTROY;
 	CSv_semaphore(&Qsr_scb->qsr_psem);
 	/* Ignore delete error */
-	(void) qso_rmvobj(&obj, NULL, &error);
+	(void) qso_rmvobj(&obj, NULL, &localDBerr);
 
 	/* Loop back to start over, a clrmem session might have taken
 	** other stuff off our list.
@@ -367,7 +369,7 @@ static bool
 qs0_clrobj( bool trace_008, QSF_CB *scb, QSO_OBJ_HDR *victim )
 {
     QSO_OBJ_HDR		*obj = victim;
-    i4			err_code;
+    DB_ERROR		localDBerr;
 #ifdef    xDEBUG
     QSF_RCB		qsf_rb;
 
@@ -379,7 +381,7 @@ qs0_clrobj( bool trace_008, QSF_CB *scb, QSO_OBJ_HDR *victim )
     }	    
 #endif /* xDEBUG */
 
-    if ( qso_rmvobj(&obj, (QSO_MASTER_HDR**)NULL, &err_code) )
+    if ( qso_rmvobj(&obj, (QSO_MASTER_HDR**)NULL, &localDBerr) )
     {
 	/*
 	** For some reason, qso_rmvobj() failed.  Instead of bombing
@@ -391,7 +393,7 @@ qs0_clrobj( bool trace_008, QSF_CB *scb, QSO_OBJ_HDR *victim )
 	if (trace_008)
 	{
 	    TRdisplay("*** ... qso_rmvobj() FAILED with err code 0x%8x ***\n",
-			err_code);
+			localDBerr.err_code);
 	}
 #endif /* xDEBUG */
 	return(FALSE);

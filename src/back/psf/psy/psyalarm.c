@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -81,14 +81,21 @@
 **          Added include <psyaudit.h> for prototype of psy_secaudit()
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psy_alarm(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_calarm(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_kalarm(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
 
-/*
-**  Definition of static variables and forward static functions.
-*/
-
-
 /*{
 ** Name: psy_alarm - Dispatch security alarm qrymod routines
 **
@@ -136,7 +143,6 @@ psy_alarm(
 {
     DB_STATUS		status=E_DB_OK;
     i4		err_code;
-    i4			user_status;
     char		dbname[DB_DB_MAXNAME];
     SCF_CB		scf_cb;
     SCF_SCI		sci_list[2];

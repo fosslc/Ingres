@@ -2361,6 +2361,10 @@ useAltStorage( int sqlType )
 **	02-Feb-09 (rajus01) SIR 121238
 **	    Restored the lost changes as a result of my previous
 **	    code submission for JDBC 4.0 project.
+**      27-Oct-10 (rajus01) SIR 124588, SD issue 147074
+**	    Added ability to store blank date back in the DBMS.
+**	    Use the configured empty_date replacement value for
+**	    IngresDate.
 */
 
 private SqlData
@@ -2420,14 +2424,16 @@ getStorage( int sqlType, boolean alt )
     case Types.DATE :
 	sqlData = alt ? (SqlData)(new IngresDate( conn.dt_frmt, 
 						  conn.osql_dates,
-						  conn.timeValuesInGMT() ))
+						  conn.timeValuesInGMT(),
+						  conn.cnf_empty_date ))
 		      : (SqlData)(new SqlDate( conn.dt_frmt ));
 	break;
 	
     case Types.TIME :
 	sqlData = alt ? (SqlData)(new IngresDate( conn.dt_frmt,
 						  conn.osql_dates,
-						  conn.timeValuesInGMT() ))
+						  conn.timeValuesInGMT(),
+						  conn.cnf_empty_date ))
 		      : (SqlData)(new SqlTime( conn.dt_frmt,
 			conn.osql_dates ? DBMS_TYPE_TMWO : DBMS_TYPE_TMTZ ));
 	break;
@@ -2435,7 +2441,8 @@ getStorage( int sqlType, boolean alt )
     case Types.TIMESTAMP :	
 	sqlData = alt ? (SqlData)(new IngresDate( conn.dt_frmt,
 						  conn.osql_dates,
-						  conn.timeValuesInGMT() ))
+						  conn.timeValuesInGMT(),
+						  conn.cnf_empty_date ))
 		      : (SqlData)(new SqlTimestamp( conn.dt_frmt,
 			conn.osql_dates ? DBMS_TYPE_TSWO : DBMS_TYPE_TSTZ ));
 	break;
@@ -2827,6 +2834,9 @@ coerce( Object obj, int type, boolean alt )
 **	    Null LOB values sent as more compatible variable length type.
 **	26-Oct-09 (gordy)
 **	    Boolean now fully supported.
+**       9-Nov-10 (gordy & rajus01) Bug 124712
+**          Re-worked conversion of BigDecimal precision and scale into
+**          the appropriate Ingres precision and scale. 
 */
 
 public synchronized void
@@ -2935,13 +2945,37 @@ sendDesc( boolean eog )
 		if ( ! value.isNull() )
 		{
 		    BigDecimal  dec = value.getBigDecimal();
-		    String	str = value.getString();
 
-		    prec = (byte)(str.length() - (dec.signum() < 0 ? 1 : 0) 
-					       - (dec.scale() > 0 ? 1 : 0));
+		    /*
+ 		    ** In BigDecimal, precision is the number of digits in
+ 		    ** the numeric portion of the value, excluding leading
+ 		    ** 0's (even following the decimal point).  Scale is a
+ 		    ** combination of the position of the decimal point and
+ 		    ** any exponent.
+ 		    */
+		    prec = (byte)dec.precision();
 		    scale = (byte)dec.scale();
-		    if (( scale > 0  ) && ( dec.longValue() == 0 )) 	
-			prec = (byte)( (int)prec -1 ); 
+		     
+ 		    /*
+ 		    ** In Ingres decimals, precision is the total number of
+ 		    ** possible digits or size of the value and only
+ 		    ** excludes leading 0's preceding the decimal point.
+ 		    ** Scale is simply the position of the decimal point.
+ 		    **
+ 		    ** If the BigDecimal scale is negative, then the decimal
+ 		    ** point must be moved to the right with a corresponding
+ 		    ** increase in precision.
+ 		    */
+ 		    if ( scale < 0 )
+ 		    {
+ 			prec += -scale;
+ 			scale = 0;
+ 		    }
+ 
+ 		    /*
+ 		    ** Precision must be large enough to hold scale portion.
+ 		    */
+ 		    if ( prec < scale )  prec = scale;
 		}
 	    }
 	    break;

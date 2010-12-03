@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -51,9 +51,18 @@
 **	    can destroy those handles when the memory is freed.
 **	09-Oct-1998 (jenjo02)
 **	    Removed SCF semaphore functions, inlining the CS calls instead.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psq_end_session(
+	register PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+i4 psq_killses(
+	PSS_SESBLK *sess_cb,
+	i4 force,
+	DB_ERROR *err_blk);
 /*
 ** forward declarations
 */

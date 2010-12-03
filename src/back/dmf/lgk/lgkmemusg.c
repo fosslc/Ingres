@@ -15,6 +15,7 @@
 #include    <sl.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
+#include    <dmf.h>
 #include    <dm.h>
 #include    <lg.h>
 #include    <lk.h>
@@ -64,6 +65,9 @@
 **	    lgk_get_counts (s103715).
 **	30-Oct-2002 (hanch04)
 **	    Changed size to SIZE_TYPE to handle large memory
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Added include of dmf.h, return int instead of VOID to agree
+**	    with function prototype.
 **/
 
 /*
@@ -149,7 +153,7 @@ static STATUS	_iishowres(i4 argc,char *argv[]);
 **	    Changed SIprintf format from '%ld' to '%lu'. 
 */
 
-VOID
+int
 # ifdef	II_DMF_MERGE
 MAIN(argc, argv)
 # else
@@ -158,10 +162,14 @@ main(argc, argv)
 i4                  argc;
 char		    *argv[];
 {
+    STATUS	stat;
 # ifndef	II_DMF_MERGE
     MEadvise(ME_INGRES_ALLOC);
 # endif
     PCexit(_iishowres(argc, argv));
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 static STATUS

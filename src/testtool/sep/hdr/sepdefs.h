@@ -146,6 +146,9 @@
 **	15-may-2003 (abbjo03)
 **	    Reduce the buffer size to 16384 since RACC files on VMS only
 **	    support record sizes up to 32255.
+**	15-Oct-2010 (drivi01)
+**	    Add SEP_ME_TAG_PIDS tag for the linked list to store
+**	    the tree of pid being terminated.
 */
 
 /*
@@ -395,6 +398,7 @@ typedef struct             test_case
 #define SEP_ME_TAG_FILL     ((u_i4) 75)
 #define SEP_ME_TAG_CMMDS    ((u_i4) 80)
 #define SEP_ME_TAG_MISC     ((u_i4) 85)
+#define SEP_ME_TAG_PIDS     ((u_i4) 86)
 
 /* Structure for command line args used with SEP_cmd_line. */
 

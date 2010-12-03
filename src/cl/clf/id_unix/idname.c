@@ -15,6 +15,7 @@
 # include	<stdio.h>
 # include       <er.h>
 # include	<pm.h>
+# include	<id.h>
 
 /*
 	IDname
@@ -45,6 +46,8 @@
 **	    BUG 112987 
 **	    Add IDename, which returns the effective user name of the running
 **	    process.
+**	15-nov-2010 (stephenb)
+**	    Include id.h for prototypes.
 */
 
 /*

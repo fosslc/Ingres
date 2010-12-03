@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -223,43 +223,71 @@
 **	    Compiler warning fixes.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-static DB_STATUS
-psy_newvar(
-	PSS_SESBLK	*sess_cb,
-	PSS_RNGTAB	*rngvar,
-	PSY_VIEWINFO	**cur_viewinfo,
-	bool		*check_perms,
-	PSF_MSTREAM	*mstream,
-	i4		qmode,
-	DB_ERROR	*err_blk);
-static VOID
-psy_nmv_map(
-	PST_QNODE	*t,
-	i4		rgno,
-	char		*nmv_map);
-static VOID
-psy_add_indep_obj(
-	PSS_SESBLK		*sess_cb,
-	PSS_RNGTAB		*rngvar,
-	DB_TAB_ID		*indep_id_list,
-	i4			obj_type,
-	i4			*list_size);
-static PST_QNODE *
-psy_rgvar_in_subtree(
-	register PST_QNODE	*node,
-	register i4		rgno);
-
-static DB_STATUS
-psy_build_audit_info(
-        PSS_SESBLK         *sess_cb,
-        PSS_USRRANGE       *rngtab,
-        i4                 qmode,
-        PSF_MSTREAM        *mstream,
-        DB_ERROR           *err_blk);
-
+/* TABLE OF CONTENTS */
+i4 psy_view(
+	PSF_MSTREAM *mstream,
+	PST_QNODE *root,
+	PSS_USRRANGE *rngtab,
+	i4 qmode,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	PST_J_ID *num_joins,
+	i4 *resp_mask);
+i4 psy_vrscan(
+	i4 with_check,
+	PST_QNODE *root,
+	PST_QNODE *vtree,
+	i4 qmode,
+	PSS_RNGTAB *resvar,
+	i4 *rgno,
+	DB_ERROR *err_blk);
+static i4 psy_newvar(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	PSY_VIEWINFO **cur_viewinfo,
+	bool *check_perms,
+	PSF_MSTREAM *mstream,
+	i4 qmode,
+	DB_ERROR *err_blk);
+static void psy_nmv_map(
+	PST_QNODE *t,
+	i4 rgno,
+	char *nmv_map);
+i4 psy_translate_nmv_map(
+	PSS_RNGTAB *parent,
+	char *parent_attrmap,
+	i4 rel_rgno,
+	char *rel_attrmap,
+	void (*treewalker)(PST_QNODE*, i4, char*),
+	DB_ERROR *err_blk);
+static void psy_add_indep_obj(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	DB_TAB_ID *indep_id_list,
+	i4 obj_type,
+	i4 *list_size);
+static PST_QNODE *psy_rgvar_in_subtree(
+	register PST_QNODE *node,
+	register i4 rgno);
+bool psy_view_is_updatable(
+	PST_QTREE *tree_header,
+	i4 qmode,
+	i4 *reason);
+static i4 psy_build_audit_info(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	i4 qmode,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+i4 psy_ubtid(
+	PSS_RNGTAB *rngvar,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	DB_TAB_ID *ubt_id);
 
 /*{
 ** Name: psy_view	- Driver for view processing
@@ -2661,7 +2689,6 @@ psy_view(
 	    /* the following code was added to fix bug (forgot the number) */
 	    if (build_nmv_attmap)
 	    {
-		PSY_VIEWINFO		    *v;
 		register PSS_RNGTAB	    *cur_rgvar;
 		i4			    non_mergeable_views[PST_NUMVARS];
 		i4			    nmv_count = 0;
@@ -2732,8 +2759,6 @@ psy_view(
 			    : (PSS_RNGTAB *) NULL
 		    )
 		{
-		    i4	    i;
-
 		    /* STEP 2 */
 		    status = psf_malloc(sess_cb, mstream, (i4) sizeof(PSY_ATTMAP),
 			(PTR *) &viewinfo[cur_rgvar->pss_rgno]->psy_attr_map,
@@ -3515,7 +3540,7 @@ psy_translate_nmv_map(
 	char		*parent_attrmap,
 	i4		rel_rgno,
 	char		*rel_attrmap,
-	VOID		(*treewalker)(),
+	VOID		(*treewalker)(PST_QNODE*, i4, char*),
 	DB_ERROR	*err_blk)
 {
     register PST_QNODE	    *qry_term;
@@ -4136,7 +4161,7 @@ psy_build_audit_info(
     RDF_CB		rdfcb;
     RDF_CB		*rdf_cb = &rdfcb;	/* For alarm tuples */
     register i4	vn;
-    register PSS_RNGTAB	*rngvar;
+    register PSS_RNGTAB	*rngvar = NULL;
     i4                  count = 0;
     i4                  acount = 0;
     QEF_ART             *art = 0, *cur_art;

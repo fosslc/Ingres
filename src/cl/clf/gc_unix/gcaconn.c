@@ -52,6 +52,12 @@
 #include    "gcarw.h"
 #include    "gcacli.h"
 
+/*
+** Forward and external references
+*/
+
+VOID GC_set_blocking( bool blocking_on );
+
 /**
 **
 ** Name: GCACONN.C - GCregister(), GClisten(), GCrequest(), GCrelease() 
@@ -340,6 +346,8 @@
 **	15-Jul-09 (gordy)
 **	    New peer association structure to allow for longer variable 
 **	    length names.
+**	15-nov-2010 (stephenb)
+**	    Proto GC_set_blocking().
 **/
 
 /*

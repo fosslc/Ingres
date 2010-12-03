@@ -289,6 +289,8 @@ static DB_STATUS parse_lsn(
 **	    name" call args, to conform to lgdef.h and the rest of lg.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Return int instead of VOID to agree with function prototype.
 */
 
 /*
@@ -535,9 +537,9 @@ static char *rcpconfig_usage_msg[] = {
 */
 
 # ifdef	II_DMF_MERGE
-VOID MAIN(argc, argv)
+int MAIN(argc, argv)
 # else
-VOID main(argc, argv)
+int main(argc, argv)
 # endif
 i4                  argc;
 char		    *argv[];
@@ -546,6 +548,9 @@ char		    *argv[];
     MEadvise(ME_INGRES_ALLOC);
 # endif
     PCexit(_rcpconfig(argc, argv));
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 static STATUS

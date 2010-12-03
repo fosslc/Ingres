@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -72,7 +72,13 @@
 **	    replace nat and longnat with i4
 **      12-Aug-2010 (horda03) b124109
 **          Add support for op218 (force use of EXCHANGE nodes)
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 opt_call(
+	DB_DEBUG_CB *debug_cb);
 
 /*{
 ** Name: opt_call - Call an Optimizer trace operation

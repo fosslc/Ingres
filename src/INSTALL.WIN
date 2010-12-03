@@ -242,11 +242,9 @@
   With the introduction of the new Ingres Geospatial you will now also need
   the GEOS library to compile Ingres. The source can be found here:
     http://trac.osgeo.org/geos/
-  You will need either version 3.2.0 + the patch supplied in the subversion
-  repository @ http://code.ingres.com/ingres/branches/geospatial or 
-  version 3.3.0. There are no binaries for GEOS on Windows so you will have
-  to compile them yourself. GEOSROOT will point to a directory with two 
-  expected sub-directories:
+  There are no binaries for GEOS on Windows so you will have to compile them
+  yourself. GEOSROOT will point to a directory with two expected 
+  sub-directories:
     inc
     lib
   The inc directory will contain all the headers from GEOS and the lib

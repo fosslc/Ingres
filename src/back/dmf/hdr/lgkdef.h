@@ -61,6 +61,8 @@
 **          Added id_uuid_sem and uuid_last_time. These help ensure UUIDs are
 **          genuinely unique across all servers. Added here as LGK is shared
 **          across all servers
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype lgkm_valid()
 **/
 
 #define LGK_OBJ0_LK_LLB		    0
@@ -328,6 +330,11 @@ FUNC_EXTERN VOID    lgkm_deallocate_ext(LGK_EXT *input_ext);
 FUNC_EXTERN STATUS  LGK_initialize(i4 flag, CL_ERR_DESC *sys_err, char *info);
 FUNC_EXTERN VOID    LGK_rundown(i4 status, i4  arg);
 FUNC_EXTERN VOID    LGK_deadinfo(PID dead_pid);
+FUNC_EXTERN STATUS  lgkm_valid(
+			char	*file,
+			i4	lineno,
+			PTR	addr,
+			SIZE_TYPE sz);
 
 
 

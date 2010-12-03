@@ -142,7 +142,8 @@ typedef ULT_VECTOR_MACRO(OPT_BMGLOBAL, OPT_GVALUES) OPT_GLOBAL;
 **	    Add .opf_inlist_thresh for control of eq keys on large inlists.
 **      17-Aug-2010 (horda03) b124274
 **          Add .ops_qep_flag for displaying QEPs in segments.
-[@history_line@]...
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Delete result-structure stuff, all done in PSF now.
 */
 typedef struct _OPS_ALTER
 {
@@ -204,14 +205,6 @@ typedef struct _OPS_ALTER
 #define                 OPG_QSMEMSIZE   DB_QSMEMSIZE
 /* default number of bytes in a quicksort buffer
 */
-    i4              ops_storage;        /* default storage structure to use
-                                        ** when creating temporaries
-                                        ** - SET RET_INTO
-                                        ** - default is DB_SORT_STORE (sorted
-                                        ** heap)
-                                        */
-    bool            ops_compressed;     /* TRUE - if compressed storage
-                                        ** structure is required */
     bool            ops_qep;            /* TRUE - if QEP should be printed
                                         ** i.e. if SET QEP command executed */
     i4              ops_qep_flag;       /* ULD_FLAG_SEGMENTS - if Segmented QEP should be printed

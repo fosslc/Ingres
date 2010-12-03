@@ -217,6 +217,8 @@
 ##	    by ingres_express_install.sh
 ##	14-July-2010 (bonro01)
 ##	    Add Beta LICENSE to ingbuild.
+##	20-Oct-2010 (kschendel)
+##	    Add -test flag to do buildrel -f, etc.
 ##                                         
 . readvers
 . (PROG1PRFX)sysdep
@@ -243,6 +245,7 @@ lictype=gpl
 spatflag=""
 productname=(PROD_PKGNAME)
 createdoc=false
+testing=
 
 if [ -f "$ING_BUILD/files/spatial.h" ]; then
     spatflag="-sol"
@@ -306,6 +309,10 @@ do
 		spatflag=""
 		shift
 		;;
+	    -test)
+		testing='-f'
+		shift
+		;;
 	     *)
 		tarfile="$1"
 		shift
@@ -316,7 +323,6 @@ done
 set - `cat $ING_BUILD/version.rel` 
 release=$2
 nptlbuild=`head -1 $ING_BUILD/version.rel |cut -d')' -f2`
-nptlbuild=`echo $nptlbuild |cut -d'_' -f1`
 case $vers in
     int_lnx|\
     int_rpl)
@@ -464,7 +470,7 @@ fi
 
 cd $II_RELEASE_DIR
 echo "Filling Ingres release area $II_RELEASE_DIR..."
-buildrel $unhidepkg ${spatflag} -l ${lictype}  ||
+buildrel $unhidepkg ${spatflag} -l ${lictype}  $testing ||
 {
     echo "Can't do a buildrel..."
     exit 1
@@ -538,12 +544,22 @@ rm -rf $saveset/*
 
 # Recreate saveset directory
 cd $saveset
-cp -p $ING_BUILD/bin/ingres_express_install ingres_express_install.sh || exit 1
-cp -p $II_SYSTEM/readme.html . || exit 1
-if [ "$nptlbuild" ] && [ "$nptlbuild" = "NPTL" ]; then  
-cp -p $II_SYSTEM/readme_${vers}_nptl.html . || exit 1
+if [ -z "$testing" ] ; then
+    cp -p $ING_BUILD/bin/ingres_express_install ingres_express_install.sh || exit 1
+    cp -p $II_SYSTEM/readme.html . || exit 1
+    if [ "$nptlbuild" ] && [ "$nptlbuild" = "NPTL" ]; then  
+	cp -p $II_SYSTEM/readme_${vers}_nptl.html . || exit 1
+    else
+	cp -p $II_SYSTEM/readme_${vers}.html . || exit 1
+    fi
 else
-cp -p $II_SYSTEM/readme_${vers}.html . || exit 1
+    cp -p $ING_BUILD/bin/ingres_express_install ingres_express_install.sh 2>/dev/null
+    cp -p $II_SYSTEM/readme.html . 2>/dev/null
+    if [ "$nptlbuild" ] && [ "$nptlbuild" = "NPTL" ]; then  
+	cp -p $II_SYSTEM/readme_${vers}_nptl.html . 2>/dev/null
+    else
+	cp -p $II_SYSTEM/readme_${vers}.html . 2>/dev/null
+    fi
 fi
 
 if ${rpmrelease}

@@ -193,6 +193,8 @@
 **	    Re-type some ptr's as the proper struct pointer.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype static scs_gwinfo_subget()
 **/
 
 # define USER_STRING	ERx("user=")
@@ -215,6 +217,11 @@
 */
 
 GLOBALREF SC_MAIN_CB          *Sc_main_cb;
+
+static STATUS scs_gwinfo_subget( char *substr,
+				 SCD_SCB *scb,
+				 i4  lbuf,
+				 char *buf );
 
 /*{
 ** Name: scs_declare	- declare an asynchronous event function

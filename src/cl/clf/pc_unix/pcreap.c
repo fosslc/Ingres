@@ -328,9 +328,11 @@ PCreap_withThisPid(int targetPid)
 **      29-Dec-2008 (coomi01) b121587
 **         Create stub routine to maintain traditional interface to PCreap(),
 **         calling new interface with new target pid parameter.
+**      15-nov-2010 (stephenb)
+**          Correctlty define PCreap() for prototyping.
 */
 i4
-PCreap()
+PCreap(void)
 {
     /*
     ** Call renamed PCreap() function with default parameter

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -108,8 +108,20 @@
 **	11-Aug-1997 (jenjo02)
 **	    Changed ulm_streamid from (PTR) to (PTR*) so that ulm
 **	    can destroy those handles when the memory is freed.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+PTR opn_jmemory(
+	OPS_STATE *global,
+	i4 size);
+void opn_fmemory(
+	OPS_SUBQUERY *subquery,
+	PTR *target);
+PTR opn_memory(
+	OPS_STATE *global,
+	i4 size);
 
 /*{
 ** Name: opn_jmemory	- allocate OPN_JTREE enumeration memory

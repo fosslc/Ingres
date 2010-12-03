@@ -11,6 +11,7 @@
 #include <si.h>
 #include <st.h>
 #include <odbccfg.h>
+#include <idmseini.h>
 
 /*
 ** Name: iiodbcinst.c
@@ -65,6 +66,8 @@
 **          to get the II_INSTALLATION logical to append to the file names;
 **          this is now done in getDefaultInfo(). 
 **          Remove prompt for custom driver name.  This is no longer necessary.
+**   15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 /*
@@ -80,14 +83,13 @@ DEST = utility
 /*
 ** Internal configuration routines.
 */
-bool checkArgs(char *arg, i4 argc, char **argv, char *altPath, 
+static bool checkArgs(char *arg, i4 argc, char **argv, char *altPath, 
 	char *drvMgr);
-bool writeMgrFile(char *altPath);
-char **getDefaultInfo();
-i4 line_get( char *, char *, i4, char *); 
-i4 ocfg_getrec( char *, i4);
-void display_err(char *, STATUS);
-void display_help();
+static bool writeMgrFile(char *altPath);
+static i4 line_get( char *, char *, i4, char *); 
+static i4 ocfg_getrec( char *, i4);
+static void display_err(char *, STATUS);
+static void display_help(void);
 
 i4
 main (int argc, char **argv) 
@@ -426,7 +428,8 @@ main (int argc, char **argv)
 **          Created.
 */
 
-i4 line_get( char *prompt, 
+static i4
+line_get( char *prompt, 
 	      char *def_line, i4  wild_flag, char *in_line ) 
 {
 	char    line[MAXLINE];
@@ -508,7 +511,8 @@ i4 line_get( char *prompt,
 **          Created.
 */
 
-i4 ocfg_getrec( char *buf, i4  len )
+static i4
+ocfg_getrec( char *buf, i4  len )
 {
         return SIgetrec( buf, (i4)len, stdin );
 }
@@ -536,7 +540,8 @@ i4 ocfg_getrec( char *buf, i4  len )
 **          Created.
 */
 
-bool checkArgs (char *arg, i4 argc, char **argv, char *altPath, 
+static bool
+checkArgs (char *arg, i4 argc, char **argv, char *altPath, 
     char * drvMgr)
 {
     i4 i;
@@ -610,7 +615,8 @@ bool checkArgs (char *arg, i4 argc, char **argv, char *altPath,
 **          Created.
 */
 
-bool writeMgrFile( char *altPath )
+static bool
+writeMgrFile( char *altPath )
 {
     char *dirPath;
     char fullPath[OCFG_MAX_STRLEN];
@@ -675,7 +681,8 @@ bool writeMgrFile( char *altPath )
 **          Created.
 */
 
-void display_err(char *etxt, STATUS status)
+static void
+display_err(char *etxt, STATUS status)
 {
     if (OK != ERreport(status, &etxt[STlength(etxt)]))
         STprintf(&etxt[STlength(etxt)],
@@ -702,7 +709,8 @@ void display_err(char *etxt, STATUS status)
 **      01-Mar-04 (loera01)
 **          Created.
 */
-void display_help()
+static void
+display_help()
 {
     SIprintf("%sodbcinst help\n---------------\n", 
 	SYSTEM_CFG_PREFIX);

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -88,122 +88,116 @@
 **	18-Aug-2009 (drivi01)
 **	    Cleanup warnings and precedence warnings in efforts
 **	    to port to Visual Studio 2008.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opa_mapvar(
+	OPS_STATE *global,
+	OPZ_BMATTS *joinmap,
+	OPZ_BMATTS *covarmap,
+	OPZ_BMATTS *lvarmap,
+	OPV_IGVARS localvar,
+	OPV_IGVARS covar,
+	PST_QNODE *qnodep,
+	bool and_node);
+static void opa_rename(
+	OPS_SUBQUERY *subquery,
+	OPV_IGVARS localvar,
+	OPV_IGVARS covar,
+	PST_QNODE *qnodep,
+	bool and_node);
+static void opa_varsub(
+	OPS_STATE *global);
+static void opa_ptids(
+	OPS_STATE *global);
+static void opa_push(
+	OPS_STATE *global);
+static bool opa_pushandcheck(
+	OPS_STATE *global,
+	OPS_SUBQUERY *aggsq,
+	PST_QNODE *groupp,
+	PST_QNODE **nodep,
+	OPV_IGVARS aggvar,
+	OPV_GBMVARS *varmap);
+static bool opa_pushcheck(
+	OPS_STATE *global,
+	PST_QNODE *groupp,
+	PST_QNODE **nodep,
+	OPV_IGVARS aggvar,
+	OPV_GBMVARS *varmap,
+	bool *gotvar);
+static void opa_pushchange(
+	OPS_STATE *global,
+	PST_QNODE *groupp,
+	PST_QNODE **nodep);
+static void opa_noaggs(
+	OPS_STATE *global);
+static bool opa_suckdriver(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	OPS_SUBQUERY **mainsq,
+	bool toplevel,
+	bool *isunion);
+static void opa_suck(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	OPS_SUBQUERY *msq);
+static bool opa_suckandcheck(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **nodep,
+	PST_QNODE **vararray,
+	bool *tidyvars);
+static bool opa_suckrestrict(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep,
+	PST_QNODE **vararray);
+static void opa_suckeqc(
+	OPS_STATE *global,
+	OPV_IGVARS aggvar,
+	PST_QNODE **vararray,
+	PST_QNODE *resdomp,
+	PST_QNODE **nodep,
+	bool firstcall,
+	OPS_SUBQUERY *subquery);
+static bool opa_suckcheck(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **nodep,
+	PST_QNODE **vararray,
+	bool *gotvar);
+static void opa_suckchange(
+	OPS_STATE *global,
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **nodep,
+	PST_QNODE **vararray);
+static void opa_sucktidyvars(
+	PST_QNODE *nodep);
+static void opa_predicate_check(
+	PST_QNODE **andp,
+	PST_QNODE **parent,
+	bool looking_left);
+static void opa_hashagg(
+	OPS_STATE *global);
+static bool opa_tproc_check(
+	OPS_STATE *global,
+	OPT_NAME *tp1,
+	OPT_NAME *tp2);
+static bool opa_tproc_parmanal(
+	OPS_STATE *global,
+	OPV_IGVARS *gvno,
+	OPV_IGVARS *cycle_gvno);
+static bool opa_tproc_nodeanal(
+	OPS_STATE *global,
+	OPV_IGVARS *cycle_gvno,
+	OPV_IGVARS *other_gvno,
+	PST_QNODE *nodep);
+void opa_aggregate(
+	OPS_STATE *global);
 
-static VOID 
-opa_push(
-	OPS_STATE	*global);
-
-static bool 
-opa_pushandcheck(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*aggsq,
-	PST_QNODE	*groupp,
-	PST_QNODE	**nodep,
-	OPV_IGVARS	aggvar,
-	OPV_GBMVARS	*varmap);
-
-static bool 
-opa_pushcheck(
-	OPS_STATE	*global,
-	PST_QNODE	*groupp,
-	PST_QNODE	**nodep,
-	OPV_IGVARS	aggvar,
-	OPV_GBMVARS	*varmap,
-	bool		*gotvar);
-
-static VOID 
-opa_pushchange(
-	OPS_STATE	*global,
-	PST_QNODE	*groupp,
-	PST_QNODE	**nodep);
- 
-static bool
-opa_suckdriver(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subquery,
-	OPS_SUBQUERY	**mainsq,
-	bool		toplevel,
-	bool		*isunion);
-
-static VOID
-opa_suck(
-	OPS_STATE	*global,
-	OPS_SUBQUERY	*subquery,
-	OPS_SUBQUERY	*msq);
-
-static bool
-opa_suckandcheck(
-	OPS_STATE 	*global, 
-	OPS_SUBQUERY	*subquery, 
-	PST_QNODE	**nodep,
-	PST_QNODE	**vararray,
-	bool		*tidyvars);
-
-static bool
-opa_suckcheck(
-	OPS_STATE 	*global,
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE	**nodep,
-	PST_QNODE	**vararray,
-	bool		*gotvar);
-
-static VOID
-opa_suckchange(
-	OPS_STATE 	*global,
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE	**nodep,
-	PST_QNODE	**vararray);
-
-static bool
-opa_suckrestrict(
-	OPS_STATE 	*global,
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE	*nodep,
-	PST_QNODE	**vararray);
-
-static VOID
-opa_suckeqc(OPS_STATE 	*global,
-	OPV_IGVARS	aggvar,
-	PST_QNODE	**vararray,
-	PST_QNODE	*resdomp,
-	PST_QNODE	**nodep,
-	bool		firstcall,
-	OPS_SUBQUERY	*subquery);
-
-static VOID
-opa_sucktidyvars(
-	PST_QNODE	*nodep);
-
-static void
-opa_hashagg(
-	OPS_STATE	*global);
-
-static bool
-opa_tproc_check(
-	OPS_STATE	*global,
-	OPT_NAME	*proc1,
-	OPT_NAME	*proc2);
-
-static bool
-opa_tproc_parmanal(
-	OPS_STATE	*global,
-	OPV_IGVARS	*gvno,
-	OPV_IGVARS	*cycle_gvno);
-
-static bool
-opa_tproc_nodeanal(
-	OPS_STATE	*global,
-	OPV_IGVARS	*cycle_gvno,
-	OPV_IGVARS	*other_gvno,
-	PST_QNODE	*nodep);
-
-static VOID
-opa_predicate_check(
-        PST_QNODE       **andp,
-        PST_QNODE       **parent,
-	bool		looking_left);
-
 /*{
 ** Name: opa_mapvar	- map attributes used by self join variables
 **
@@ -770,6 +764,12 @@ opa_ptids(
 **      29-jul-2009 (huazh01)
 **          remove pst_qnode in the form of 'x = x' from the qualification. 
 **          (b122361)
+**      30-jul-2010 (huazh01)
+**          Re-introduce opa_push() part of the fix to b120357, but restrict
+**          it so we apply the fix only if the concurrent query's result
+**          relation ops_gentry is the same as the current one. if they are
+**          not the same, propagating restriction will cause wrong result.
+**          This fixes b123330.
 [@history_template@]...
 */
 static VOID 
@@ -851,6 +851,11 @@ opa_push(
 		groupp->pst_right->pst_sym.pst_type == PST_VAR)
 	 break;			/* got it */
 	if (groupp == NULL) return;
+
+        if (usq->ops_agg.opa_concurrent &&
+            usq->ops_agg.opa_concurrent->ops_gentry !=
+            usq->ops_gentry)
+           return;
 
 	/* If this is a PROJECTION, build a bit map of ref'ed vars. */
 	if (psq) for (n1 = psq->ops_root->pst_left; n1 && n1->pst_sym.pst_type == 
@@ -963,6 +968,13 @@ opa_push(
 **          for concurrent subquery (non-NULL opa_concurrent), do not
 **          modify the query tree if only one of the children of a PST_AND
 **          node qualifies. (bug 121792)
+**      30-jul-2010 (huazh01)
+**          Re-introduce opa_push() part of the fix to b120357, but restrict
+**          it so we apply the fix only if the concurrent query's result
+**          relation ops_gentry is the same as the current one. if they are
+**          not the same, propagating restriction will cause wrong result.
+**          Also back out the fix to b121792 because the new fix to b120357
+**          covers b121792 as well. (b123330)
 [@history_template@]...
 */
 static bool 
@@ -1008,8 +1020,7 @@ opa_pushandcheck(
 	}
 	else return(FALSE);
 
-        if (n1->pst_sym.pst_type == PST_QLEND ||
-            aggsq->ops_agg.opa_concurrent)
+        if (n1->pst_sym.pst_type == PST_QLEND)
            return(FALSE);
 
 	/* Copy (for not in/exists heuristic) or move (for having 
@@ -3256,6 +3267,11 @@ opa_tproc_nodeanal(
 **	    opa_aggregate. This is logically the same, but makes the display
 **	    fit better with trace point op170. Added trace point op214 call
 **	    to opu_qtprint.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Remove bizarre code that looked at session default result_structure
+**	    instead of actual result table structure!  Fortunately the test
+**	    was also looking for dups set to "don't care", which the parser
+**	    never allows to happen any more.
 */
 VOID
 opa_aggregate(
@@ -3283,32 +3299,7 @@ opa_aggregate(
 	))
 	/* default for a set statement should be DEFERRED */
 	qheader->pst_updtmode = PST_DEFER;
-    if (
-	    ((qheader->pst_mode == PSQ_RETINTO)
-	    ||
-	    (qheader->pst_mode == PSQ_DGTT_AS_SELECT))
-	&&
-	    (qheader->pst_qtree->pst_sym.pst_value.pst_s_root.pst_qlang
-	    ==
-	    DB_QUEL)
-	&&
-	    (qheader->pst_qtree->pst_sym.pst_value.pst_s_root.pst_dups
-	    ==
-	    PST_DNTCAREDUPS)
-	&&
-	(
-	    global->ops_cb->ops_alter.ops_storage == DB_SORT_STORE
-	)
-       )
-	qheader->pst_qtree->pst_sym.pst_value.pst_s_root.pst_dups 
-	    = PST_NODUPS;			/* the quel semantics are that
-						** duplicates are removed on a
-						** retrieve into heapsort
-                                                ** or cheapsort
-                                                ** this is done here since
-                                                ** the parser does not know
-                                                ** the default storage structure
-                                                */
+
     global->ops_astate.opa_funcagg = FALSE;     /* this variable will be set
                                                 ** TRUE if there is at least
                                                 ** one function aggregate in

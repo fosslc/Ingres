@@ -8,6 +8,10 @@
 #ifdef SIftell
 #undef SIftell
 #endif
+/*
+** Forward references
+*/
+STATUS	SIftell(FILE *, OFFSET_TYPE *);
 
 /*SIftell
 **
@@ -17,6 +21,8 @@
 **
 **      03-jun-1999 (hanch04)
 **          Added LARGEFILE64 for files > 2gig
+**      15-nov-2010 (stephenb)
+**          Proto SIftell for local undef.
 */
 
 STATUS

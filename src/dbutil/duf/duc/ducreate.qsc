@@ -2002,7 +2002,7 @@ DU_STATUS
 	    if (!STcompare(du_dbenv->du_ddbname, DU_DBDBNAME))
 	    {
 		/* The database database has a special id. */
-		du_dbenv->du_dbid   = DU_DBIDDBDB;
+		du_dbenv->du_dbid   = IIDBDB_ID;
 	    	if (no_upd)
 		    break;
 	    }
@@ -2010,7 +2010,7 @@ DU_STATUS
 	    {
 		du_dbenv->du_dbid   = TMsecs();
 
-		if (du_dbenv->du_dbid <= DU_DBIDDBDB)
+		if (du_dbenv->du_dbid <= IIDBDB_ID)
 		    du_dbenv->du_dbid	= DU_DBIDMIN;
 	    }
 

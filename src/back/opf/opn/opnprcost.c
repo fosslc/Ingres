@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -72,8 +72,34 @@
 **          Moved <cs.h> for CS_SID.
 **      12-oct-2000 (stial01)
 **          Removed commented call to opn_sfdircost
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static i4 opn_vlcnt(
+	OPB_BFVALLIST *vp);
+static PTR oph_dmin(
+	OPS_SUBQUERY *subquery,
+	OPZ_ATTS *attrp);
+static PTR oph_dmax(
+	OPS_SUBQUERY *subquery,
+	OPZ_ATTS *attrp);
+OPO_BLOCKS opn_readahead(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop);
+void opn_prcost(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	OPB_SARG *sargtype,
+	OPO_BLOCKS *pblk,
+	OPH_HISTOGRAM **hpp,
+	bool *imtid,
+	bool order_only,
+	OPO_ISORT *ordering,
+	bool *pt_valid,
+	OPO_BLOCKS *dio,
+	OPO_CPU *cpu);
 
 /*{
 ** Name: opn_vlcnt	- count number of key values in list

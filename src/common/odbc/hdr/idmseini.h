@@ -76,6 +76,8 @@
 **       Add KEY_SENDDATETIMEASINGRESDATE.
 **   29-Apr-2010 (Ralph Loen) SIR 123641
 **       Remove obsolete KEY_DRIVERNAMES.
+**   15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**       Changes to eliminate compiler prototype warnings.
 */
 
 #ifndef _INC_IDMSEINI
@@ -236,7 +238,7 @@ void getDriverVersion( char *p);
 char * skipSpaces (char *);
 char * getFileToken (char *, char *, bool);
 
-char **getDefaultInfo();
+char **getDefaultInfo(void);
 char *getMgrInfo(bool *sysIniDefined);
 
 #endif   /* _INC_IDMSEINI */

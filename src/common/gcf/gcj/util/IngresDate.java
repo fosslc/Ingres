@@ -30,6 +30,71 @@ package	com.ingres.gcf.util;
 **          JDBC 4.0 SQLException hierarchy.
 **	24-Dec-08 (gordy)
 **	    Use date/time formatter instances.
+**      13-Oct-10 (rajus01) SIR 124588, SD issue 147074
+**	    Added ability to store blank date back in the DBMS.
+**
+**	    Background: The driver can be configured to have replacement
+**	    value for empty date/time/timestamps returned from the DBMS.
+**	    An empty date retrieved is converted into the replacement value
+**	    by the driver and this value is now sent back into the driver
+**	    by the hibernate ORM framework and hence the requirement to
+**	    convert the replacement value back into an empty date.
+**
+**	    The possible replacement values as defined by the system
+**	    property ingres.jdbc.date.empty are: "", 'default', 'empty',
+**	    'null' or a valid JDBC date/time value such as
+**	    '9999-12-31 23:59:59'.
+**
+**	    The setNull() method is implemented to handle the case when
+**	    when empty date replacement is set to null. Also the isNull()
+**	    method no longer required. All of the setNull() methods are
+**	    replaced with super.setNull(). The get() method returns a 
+**	    non-zero empty string for empty dates.
+**
+**	    When values are retrieved from the database, setNull() and
+**	    set( String ) are used to store the column value and isNull() and
+**	    getXXX() are used to return the value to the application.
+**	    When parameters are passed to the server, setNull() and setXXX()
+**	    are used to store the value and isNull() and get() are used to
+**	    pass the value to the server.
+**
+**	    While testing the ability to store the blank date back in the
+**	    database it came to light there is a basic conflict in how
+**	    setNull()/isNull() are used when the empty date is configured
+**	    as null. For consistent behavior, the requirements when empty 
+**	    date configured as null are changed
+**
+**          From:
+**
+**	    for Column values
+**
+**          setNull()   : set IngresDate NULL
+**          set("")     : set IngresDate EMPTY
+**          isNull()    : returns TRUE for both cases
+**
+**          for Parameters
+**
+**          setNull()   : set IngresDate EMPTY
+**          setXXX(null): set IngresDate EMPTY
+**          isNull()    : returns FALSE
+**          get()       : returns " "
+**
+**         To:
+**
+**         for Column values
+**
+**          set(null)   : set IngresDate NULL
+**          set("")     : set IngresDate NULL
+**
+**         for Parameters
+**          setNull()   : set IngresDate EMPTY
+**          setXXX(null): set IngresDate EMPTY
+**          get()       : returns " "
+**
+**	    IMPORTANT: DON'T choose null replacement for empty dates because
+**	    actual null values WILL NOT work through the driver and the 
+**	    actual null values will be replaced by EMPTY value. Therefore
+**	    null replacement for empty dates is NOT recommended.
 */
 
 import	java.util.TimeZone;
@@ -282,8 +347,8 @@ IngresDate
 public void
 set( String value )
 {
-    if ( value == null )
-	setNull();
+    if ( value == null ||  (value.length() == 0  &&  empty_date == null) )
+	super.setNull();
     else  
     {
 	setNotNull();
@@ -320,7 +385,7 @@ public void
 set( IngresDate data )
 {
     if ( data == null  ||  data.isNull() )
-	setNull();
+	super.setNull();
     else
     {
 	setNotNull();
@@ -357,45 +422,14 @@ set( IngresDate data )
 public String 
 get() 
 {
-    return( value );
-} // get
-
-
-/*
-** Name: isNull
-**
-** Description:
-**	Returns the NULL state of the data value.
-**
-** Input:
-**	None.
-**
-** Output:
-**	None.
-**
-** Returns:
-**	boolean		True if data value is NULL.
-**
-** History:
-**	12-Sep-07 (gordy)
-**	    Created.
-*/
-
-public boolean
-isNull()
-{
     /*
-    ** Data value is NULL if actually NULL or if this is an
-    ** empty date and the replacement value is NULL.
+    ** DAS treats the value passed for an Ingres date as a DB_CHA_TYPE.
+    ** That string type does not permit 0 length values, so for empty
+    ** dates return a non-zero empty string instead.
     */
-    if ( super.isNull() )
-	return( true );
-    else  if ( value.length() == 0  &&  empty_date == null )
-	return( true );
-    else
-	return( false );
-} // isNull
+    return( (value != null  &&  value.length() == 0) ? " " : value );
 
+} // get
 
 /*
 ** Name: isInterval
@@ -543,6 +577,8 @@ getTruncSize()
 ** History:
 **	 1-Dec-03 (gordy)
 **	    Created.
+**      27-Oct-10 (rajus01) SIR 124588, SD issue 147074
+**          Added ability to store blank date back in the DBMS.
 */
 
 public void 
@@ -550,15 +586,24 @@ setString( String value )
     throws SQLException
 {
     if ( value == null )
-	setNull();
-    else  if ( value.length() == 0 )
+    {
+	if( empty_date != null )
+	    super.setNull();
+	else
+	{
+	    setNotNull();
+	    this.value = "";
+	    interval = false;
+	}	
+    }
+    else  if ( value.length() == 0  || value.equals( empty_date ) )
     {
         /*
         ** Zero length strings are permitted as a way
         ** of assigning an Ingres empty date value.
         */
         setNotNull();
-        this.value = value;
+        this.value = "";
         interval = false;
     }
     else
@@ -633,6 +678,8 @@ setString( String value )
 **	    Created.
 **	24-Dec-08 (gordy)
 **	    Use date/time formatter instance.
+**      13-Oct-10 (rajus01) SIR 124588, SD issue 147074
+**          Added ability to store blank date back in the DBMS.
 */
 
 public void 
@@ -640,7 +687,16 @@ setDate( Date value, TimeZone tz )
     throws SQLException
 {
     if ( value == null )
-	setNull();
+    {
+	if ( empty_date != null )
+	    super.setNull();
+	else
+	{
+	    setNotNull();
+	    interval = false;
+	    this.value = "";
+	}
+    }
     else
     {
 	/*
@@ -651,13 +707,53 @@ setDate( Date value, TimeZone tz )
 	** cases to get the actual date in the desired TZ.  Other-
 	** wise, the date in the local TZ is used.
 	*/
+
+        java.util.Date dt = null;
+
 	setNotNull();
 	interval = false;
-	this.value = ( tz != null ) ? dates.formatDate( value, tz )
+
+	if( empty_date == null )
+	    this.value = ( tz != null ) ? dates.formatDate( value, tz )
 				    : dates.formatDate( value, false );
+	else
+	{
+
+	    if( empty_date.length() == 0 ||
+                empty_date.length() == SqlDates.T_FMT.length() )
+	    {
+		if( tz == null )
+		    dt = SqlDates.getEpochDate();
+		else
+	        {
+		    String str = SqlDates.D_EPOCH;
+		    dt = dates.parseDate( str, tz );
+	        }
+	    }
+	    else if( empty_date.length() == SqlDates.D_FMT.length() )
+	    {
+		if( tz == null )
+		    dt = dates.parseDate( empty_date, false );
+		else
+		    dt = dates.parseDate( empty_date, tz);
+	    }
+	    else if( empty_date.length() == SqlDates.TS_FMT.length() )
+	    {
+		String str = dates.formatDate(
+                    dates.parseTimestamp( empty_date, false ), false );
+		dt =  dates.parseDate( str, false );
+	    }
+
+	    if(  dt != null && dt.getTime() == value.getTime() )
+		this.value = "";
+	    else
+		this.value = ( tz != null ) ? dates.formatDate( value, tz )
+				    : dates.formatDate( value, false );
+	}
     }
-    
+
     return;
+
 } // setDate
 
 
@@ -692,6 +788,10 @@ setDate( Date value, TimeZone tz )
 **	    Use osql_dates to determine when to apply external TZ.
 **	24-Dec-08 (gordy)
 **	    Use date/time formatter instance.
+**      27-Oct-10 (rajus01) SIR 124588, SD issue 147074
+**	    Added ability to store blank date back in the DBMS only
+**	    when the replacement value is null. Any other magic values
+**	    will not be mapped back to empty date value.
 */
 
 public void 
@@ -699,7 +799,17 @@ setTime( Time value, TimeZone tz )
     throws SQLException
 {
     if ( value == null )
-	setNull();
+    {
+	if( empty_date != null )
+	    super.setNull();
+	else
+	{
+	    /* Map null value to blank date */
+	    setNotNull();
+	    this.value = "";
+	    interval = false;
+	}
+    }
     else
     {
 	/*
@@ -778,6 +888,8 @@ setTime( Time value, TimeZone tz )
 **	    Use osql_dates to determine when to apply external TZ.
 **	24-Dec-08 (gordy)
 **	    Use date/time formatter instance.
+**      13-Oct-10 (rajus01) SIR 124588, SD issue 147074
+**          Added ability to store blank date back in the DBMS.
 */
 
 public void 
@@ -785,7 +897,16 @@ setTimestamp( Timestamp value, TimeZone tz )
     throws SQLException
 {
     if ( value == null )
-	setNull();
+    {
+	if ( empty_date != null )
+	    super.setNull();
+	else
+	{
+	    setNotNull();
+	    interval = false;
+	    this.value = "";
+	}
+    }
     else
     {
 	/*
@@ -794,6 +915,9 @@ setTimestamp( Timestamp value, TimeZone tz )
 	** timestamps are assumed to be in the client TZ, so timezones
 	** can be applied to store values for specific timezones.
 	*/
+
+	Timestamp ts = null;
+
 	if ( osql_dates  &&  tz != null )
 	{
 	    /*
@@ -811,8 +935,53 @@ setTimestamp( Timestamp value, TimeZone tz )
 	}
 	
 	setNotNull();
- 	this.value = dates.formatTimestamp( value, use_gmt );
 	interval = false;
+
+	if( empty_date == null )
+	    this.value = dates.formatTimestamp( value, use_gmt );
+	else
+	{
+	    if( empty_date.length() == 0 )
+	    {
+		if( tz == null )
+		    ts = SqlDates.getEpochTimestamp();
+		else
+		    ts = dates.parseTimestamp( SqlDates.TS_EPOCH, tz);
+	    }
+	    else if( empty_date.length() == SqlDates.T_FMT.length() )
+	    {
+		java.util.Date dt;
+
+		if( tz == null )
+		    dt = dates.parseTime( empty_date, false);
+		else
+		    dt = dates.parseTime( empty_date, tz);
+		ts = new Timestamp( dt.getTime() );
+	    }
+	    else if( empty_date.length() == SqlDates.D_FMT.length() )
+	    {
+		java.util.Date dt;
+
+		if( tz == null )
+		    dt = dates.parseDate( empty_date, false );
+		else
+		    dt = dates.parseDate( empty_date, tz);
+
+		ts = new Timestamp( dt.getTime() );
+	    }
+	    else if( empty_date.length() == SqlDates.TS_FMT.length() )
+	    {
+		if( tz == null )
+		    ts = dates.parseTimestamp( empty_date, false );
+		else
+		    ts = dates.parseTimestamp( empty_date, tz);
+	    }
+
+	    if(  ts != null && ts.getTime() == value.getTime() )
+		this.value="";
+	    else
+		this.value = dates.formatTimestamp( value, use_gmt );
+	}
     }
     
     return;
@@ -1364,5 +1533,36 @@ getObject()
     return( getTimestamp( null ) );
 } // getObject
 
+/*
+** Name: setNull
+**
+** Description:
+**	Empty date replacement value null needs to stored back as blank date.
+**
+** Input:
+**	None.
+**
+** Output:
+**	None.
+**
+** Returns:
+**      None.
+**
+** History:
+**	29-Oct-10 (rajus01) SIR 124588, SD issue 147074
+**	    Created.
+*/
+public void
+setNull()
+{
+    if( empty_date == null )
+    {
+	setNotNull();
+	this.value = "";
+	interval = false;
+    }
+    else
+	super.setNull();
+}
 
 } // class IngresDate

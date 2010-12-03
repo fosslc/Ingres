@@ -129,6 +129,9 @@
 **	    Remove string length restrictions.
 **	27-Aug-10 (gordy)
 **	    Added symbols for encoding versions.
+**      16-Nov-2010 (Ralph Loen) Bug 122895
+**          Made gcn_encode(), gcn_decode() and gcn_decrypt() public so that
+**          iicvtgcn can use these functions.
 */	
 
 /*
@@ -151,14 +154,6 @@
 ** Default encryption mask.
 */
 static	u_i1		zeros[ CRYPT_SIZE ] ZERO_FILL;
-
-
-/*
-** Forward references.
-*/
-static	STATUS		gcn_decrypt( char *, char *, char * );
-static	STATUS		gcn_encode( char *, u_i1 *, char *, char * );
-static	STATUS		gcn_decode( char *, u_i1 *, char *, char * );
 
 
 /*{
@@ -960,7 +955,7 @@ gcn_login( i4 type, i4 version, bool encrypt, char *key, char *ipb, char *opb )
 **	    directly into output buffer.
 */
 
-static STATUS
+STATUS
 gcn_decrypt( char *key, char *pbuff, char *passwd )
 {
     CI_KS	ksch;
@@ -1036,7 +1031,7 @@ gcn_decrypt( char *key, char *pbuff, char *passwd )
 **	    if actual length exceeds default size.
 */
 
-static STATUS
+STATUS
 gcn_encode( char *key, u_i1 *mask, char *ipb, char *opb )
 {
     CI_KS	ksch;
@@ -1169,7 +1164,7 @@ gcn_encode( char *key, u_i1 *mask, char *ipb, char *opb )
 **	    into output buffer.
 */
 
-static STATUS
+STATUS
 gcn_decode( char *key, u_i1 *mask, char *ipb, char *opb )
 {
     CI_KS	ksch;

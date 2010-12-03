@@ -91,6 +91,15 @@
 **      12-dec-2002 (loera01) SIR 109237
 **          Set the options field in GCC_P_PLIST to according to the results
 **          of the protocol driver's accept operation (bsp->is_remote).
+**      09-jul-2010 (loera01) Bug 120552
+**          Add actual_portID to GC_DCB.  Add a reference to actual_portID
+**          to the GC_REG state when the portmapper is called.
+**      27-oct-2010 (loera01) Bug 124656
+**          Add a reference to actual_portID in the GC_CONNBK state when
+**          the portmapper is called.  Restore the offset to EOS
+**          in the dcb->portbuf argument when the portmapper is called,
+**          so that the port number is appended to the end of the
+**          "hostname::" string.
 */
 /*
 ** External functions
@@ -455,9 +464,9 @@ top:
 	if( hostname && *hostname )
 	    STprintf( dcb->portbuf, "%s::", hostname );
 
-	if( portname && *portname )
-	    (void)(*bsd->portmap)( portname, 0,
-		    dcb->portbuf, dcb->actual_portID );
+        if( portname && *portname )
+            (void)(*bsd->portmap)( portname, 0, dcb->portbuf + 
+                STlength(dcb->portbuf), dcb->actual_portID );
 
 	GCTRACE(1)("GC%s: %x connecting to %s\n",
 	    parms->pce->pce_pid, parms, dcb->portbuf );

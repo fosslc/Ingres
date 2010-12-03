@@ -13,5 +13,7 @@
                    automatically once the current audit log is once again 
                    available for writing.
 
-       SUSPEND -   Suspends requests to write audit records until auditing
-                   is resumed.
+       SUSPEND -   Logically suspends requests to write audit records whilst
+                   allowing users with MAINTAIN_AUDIT to continue to write 
+                   records. Write operations performed by privileged users
+                   may cause max_log_size to be exceeded.

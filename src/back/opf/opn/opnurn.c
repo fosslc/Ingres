@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2005 Ingres Corporation
+**Copyright (c) 2005, 2010 Ingres Corporation
 */
  
 #include    <compat.h>
@@ -64,8 +64,16 @@
 **	    Written.
 **      26-sep-2007 (huazh01)
 **          Add opn_uhandler(). 
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static i4 opn_uhandler(
+	EX_ARGS *args);
+OPH_DOMAIN opn_urn(
+	OPO_TUPLES rballs,
+	OPH_DOMAIN ncells);
 
 /*
 **  Defines of other constants.

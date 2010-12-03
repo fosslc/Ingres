@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -67,8 +67,25 @@
 **          Moved <cs.h> for CS_SID.
 **	3-Jun-2009 (kschendel) b122118
 **	    Fixes for OJ filter removal.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opn_icheck(
+	OPS_SUBQUERY *subquery,
+	OPV_BMVARS *rmap);
+OPN_SRESULT opn_srchst(
+	OPS_SUBQUERY *subquery,
+	OPN_LEAVES nleaves,
+	OPE_BMEQCLS *eqr,
+	OPV_BMVARS *rmap,
+	OPN_STLEAVES rlasg,
+	OPN_TDSC sbstruct,
+	OPN_SUBTREE **subtp,
+	OPN_EQS **eqclp,
+	OPN_RLS **rlmp,
+	bool *icheck);
 
 /*{
 ** Name: opn_icheck	- check if all indexes

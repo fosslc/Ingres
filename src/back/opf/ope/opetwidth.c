@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -66,9 +66,14 @@
 **          Moved <cs.h> for CS_SID.
 **      06-mar-96 (nanpr01)
 **          Use the typedef to be consistent with prototype. 
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+OPS_WIDTH ope_twidth(
+	OPS_SUBQUERY *subquery,
+	OPE_BMEQCLS *emap);
 
 /*{
 ** Name: ope_twidth	- get width of tuple given equivalence class map

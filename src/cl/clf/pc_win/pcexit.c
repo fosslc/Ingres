@@ -71,6 +71,8 @@ GLOBALREF	HWND	hWndStdout;		/* valerier, A25 */
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**	19-Nov-2010 (bonro01) Bug 124685
+**	    Update PCatexit return type to VOID to match new prototype.
 **
 ******************************************************************************/
 VOID
@@ -89,7 +91,7 @@ PCexit(i4  status)
 **
 **
 ******************************************************************************/
-STATUS
+VOID
 PCatexit( func )
 VOID (*func)();
 {

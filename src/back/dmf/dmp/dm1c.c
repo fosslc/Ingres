@@ -36,9 +36,6 @@
 #include    <dmucb.h>
 #include    <dmpecpn.h>
 #include    <dmppn.h>
-#include    <spatial.h>
-
-#define DMPE_NULL_TCB	"\0\0\0\0\0\0\0\0"
 
 /**
 **
@@ -240,8 +237,6 @@
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Add V6, V7 page types, prototype changes
 **	    to page accessors.
-**	24-Feb-2010 (troal01)
-**	    Store the SRID temporarily in the cpn_tcb area of the coupon
 **	14-Apr-2010 (kschendel) SIR 123485
 **	    Changes to LOB handling, using new short-term coupon structure
 **	    and blob query context (BQCB).
@@ -1102,11 +1097,6 @@ dm1c_pdelete(
 **          peripheral attributes might not be aligned. Use the expression
 **          "(...val_coupon)->cpn_tcb" in the assign macro instead.
 **          bug 120329.
-**	24-Feb-2010 (troal01)
-**	    The first byte of the cpn_tcb area is set to 1 to indicate there is
-**	    an SRID in there, the next four bytes is the actual SRID and the rest
-**	    is left NULL. The cpn_tcb will be zeroed out again AFTER the SRID has
-**	    been read.
 **	14-Apr-2010 (kschendel) SIR 123485
 **	    Fill in new short-term coupon info.
 **	28-Apr-2010 (kschendel) SIR 123485
@@ -1125,12 +1115,6 @@ dm1c_pget(
     DMPE_COUPON		*cpn;
     i2			flags, att_id;
     i4			i;
-    CPN_SRID_STORAGE srid;
-
-    /*
-     * Zero srid out
-     */
-    MEfill(sizeof(CPN_SRID_STORAGE), 0, &srid);
 
     CLRDBERR(dberr);
 

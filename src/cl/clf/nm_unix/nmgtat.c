@@ -7,6 +7,7 @@
 # include	<lo.h>
 # include	<st.h>
 # include       <me.h>
+# include	<nm.h>
 # include	"nmlocal.h"
 
 /**
@@ -62,6 +63,8 @@
 **	20-may-2000 (somsa01)
 **	    The previous change did not allow the correct pickup of
 **	    SystemTermType if the variable was TERM_INGRES.
+**	15-nov-2010 (stephenb)
+**	    Include nm.h for prototyping.
 **/
 
 /* # defines */

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -70,8 +70,19 @@
 **          Moved <cs.h> for CS_SID.
 **      06-mar-96 (nanpr01)
 **          Initialize the new field in opo_cost structure.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opo_initco(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop);
+OPO_PERM *opn_cpmemory(
+	OPS_SUBQUERY *subquery,
+	i4 cocount);
+OPO_CO *opn_cmemory(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opo_initco	- initialize a CO node
@@ -279,7 +290,7 @@ opn_cmemory(
     }
     else
     {
-	if ((4*global->ops_mstate.ops_mlimit) > global->ops_mstate.ops_memleft)
+	if ((4*global->ops_mstate.ops_mlimit) > (i4)global->ops_mstate.ops_memleft)
 	{   /* check if memory limit has been reached prior to allocating
             ** another CO node from the stream...  in this case try to
             ** fetch unused CO nodes 

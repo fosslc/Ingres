@@ -1339,6 +1339,10 @@ DB_DATA_VALUE		*rdv)
 **	    init value of count).  So, use count instead of tmp_size.
 **	09-May-2007 (gupsh01)
 **	    Added support for UTF8 character sets.
+**	13-Oct-2010 (thaju02) B124469
+**	    For DB_LVCH_TYPE and UTF8, need to retrieve segments to 
+**	    determine length in char units. Coupon per_length1 is 
+**	    length in bytes.
 **	    
 */
 
@@ -1402,6 +1406,22 @@ register DB_DATA_VALUE	*rdv)
 	    break;
 
 	  case DB_LVCH_TYPE:
+	  {
+		if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+		{
+		    DB_DATA_VALUE	cnt_dv;
+
+		    cnt_dv.db_data = (PTR)&count;
+		    cnt_dv.db_length  = sizeof(count);
+		    cnt_dv.db_datatype = DB_INT_TYPE;
+		    cnt_dv.db_prec = 0;
+		    
+		    if (db_stat = adu_19lvch_chrlen(adf_scb, dv1, &cnt_dv))
+			return(db_stat);
+		    break;
+		}
+		/* otherwise if non-UTF8, drop down to DB_LBYTE_TYPE case. */ 
+	  }
 	  case DB_LBYTE_TYPE:
 	  case DB_GEOM_TYPE:
           case DB_POINT_TYPE:
@@ -6944,6 +6964,9 @@ DB_DATA_VALUE       *rdv)
 **	    Correct prior change by actually changing the return type
 **	    as it is ultimatly needed to avoid UTF8 interferance with
 **	    single characters.
+**	08-Nov-2010 (thaju02) B124713
+**	    For UTF8 to determine start position, in char_len while-loop 
+**	    CMbytecnt() of src1, not src.
 */
 
 static DB_STATUS
@@ -7014,7 +7037,7 @@ DB_DATA_VALUE	*rdv)
 	    i4 char_len = 0;
 	    char *src1 = src;
 
-	    while (src1 + CMbytecnt(src) < endsrc)
+	    while (src1 + CMbytecnt(src1) < endsrc)
 	    {
 		CMnext(src1);
 		char_len++;

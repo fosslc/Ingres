@@ -1473,6 +1473,9 @@
 #	06-Oct-2010 (troal01)
 #	    Add GEOLINKSTATIC to IITOOLSEXE and modified IINEEDLIBS to link
 #	    in the geospatial dependencies statically if binary is in that list
+#	01-Nov-2010 (bonro01)
+#	    Add rule ADDDIRCCFLAGS and IISUBDIRCCFLAGS to allow
+#	    adding compiler flags to specific directory trees.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -3459,6 +3462,8 @@ rule IISUBSYS
 	LOCATE_TARGET = $(UDTDEMO) ;
     }
 	
+    # Add directory specific compile flags specified by IISUBDIRCCFLAGS rule
+    ADDDIRCCFLAGS $(<) ;
 }
 
 rule IINEEDLIBS 	
@@ -9234,6 +9239,89 @@ rule IIDBMAXNAME1
     MODE on $(<) = $(FILEMODE) ; 
     Chmod $(<) ;
     Clean clean : $(<) ;
+}
+
+#
+# IISUBDIRCCFLAGS
+#
+# Description:
+#    Define directory specific compile flags for the specified directory tree.
+#    The specified directory and all lower directories will be assigned the
+#    same compile paramters.
+#    Alternatively the variable can be explicitly set instead of using this
+#    rule.  This is necessary for being able to set these flags from the
+#    Jamdefs files where the Jamrules have not been loaded yet.
+#
+# Usage:
+#    IISUBDIRCCFLAGS <directory> ... : <compile parameter> ;
+#
+#    <directory> is a single directory where each subdirectory part is
+#        separated by spaces.
+#    <compile parameter> is the specified compiler parameter.
+#
+# Example:
+#    IISUBDIRCCFLAGS back dmf : -Wmissing-prototypes ;
+#  or
+#    DIRCCFLAGS_back_dmf += -Wmissing-prototypes ;
+#
+rule IISUBDIRCCFLAGS
+{
+    local _dir = "" ;
+    local _i ;
+
+    for _i in $(<)
+    {
+      _dir = $(_dir)_$(_i) ;
+    }
+    DIRCCFLAGS$(_dir) += $(>) ;
+}
+
+#
+# ADDDIRCCFLAGS
+#
+# Description:
+#    Define directory specific compile flags for the specified directory tree.
+#    This rule is intended to be called from the IISUBSYS rule which is called
+#    from a Jamfile in each source directory.  It should be called with the same
+#    parameters as IISUBSYS.
+#    This rule looks for directory specific compile flags to apply to the local
+#    directory.  It also looks for compile flags set on higher directories and
+#    sets those on the current directory.
+#
+# Usage:
+#    ADDDIRCCFLAGS <directory> ... ;
+#
+#    <directory> is a single directory where each subdirectory part is
+#        separated by spaces.
+#
+# Example:
+#    ADDDIRCCFLAGS back dmf ;
+#
+rule ADDDIRCCFLAGS
+{
+    local _dir = "" ;
+    local _dirflags ;
+    local _i ;
+
+    for _i in $(<)
+    {
+      _dir = $(_dir)_$(_i) ;
+    }
+    _dirflags = $(DIRCCFLAGS$(_dir)) ;
+
+    if $(_dirflags) 
+    {
+      SubDirCcFlags $(_dirflags) ;
+    }
+
+    # Call recursively to get flags from higher directories
+    if $(<[2])
+    {
+      local upperdir = [ FReverse $(<) ] ;
+      upperdir = $(upperdir[2-]) ;
+      upperdir = [ FReverse $(upperdir) ] ;
+      ADDDIRCCFLAGS $(upperdir) ;
+    }
 }
 
 #

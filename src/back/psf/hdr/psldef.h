@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 /**
 ** Name: PSLDEF.H - Function prototypes for default-manipulation functions.
@@ -24,20 +24,20 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
-FUNC_EXTERN DB_STATUS
-psl_1col_default(
-		 PSS_SESBLK	*sess_cb,
-		 i4	col_type,
-		 DMF_ATTR_ENTRY	*attr,
-		 DB_TEXT_STRING	*def_txt,
-		 PST_QNODE	*def_node,
-		 DB_ERROR	*err_blk);
+FUNC_EXTERN DB_STATUS psl_1col_default(
+	PSS_SESBLK *sess_cb,
+	i4 col_type,
+	DMF_ATTR_ENTRY *attr,
+	DB_TEXT_STRING *def_txt,
+	PST_QNODE *def_node,
+	DB_ERROR *err_blk);
 
-FUNC_EXTERN DB_STATUS
-psl_2col_ingres_default(
-			PSS_SESBLK	*sess_cb,
-			DMF_ATTR_ENTRY	*attr,
-			DB_ERROR	*err_blk);
+FUNC_EXTERN DB_STATUS psl_2col_ingres_default(
+	PSS_SESBLK *sess_cb,
+	DMF_ATTR_ENTRY *attr,
+	DB_ERROR *err_blk);
 

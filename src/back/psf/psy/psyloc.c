@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -103,12 +103,23 @@
 **          psy_cloc() Use DB_MAXNAME stack buffer for location name
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward static functions.
-*/
 
+/* TABLE OF CONTENTS */
+i4 psy_loc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_cloc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_aloc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_kloc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psy_loc - Dispatch location qrymod routines
@@ -352,7 +363,6 @@ psy_cloc(
 {
     DB_STATUS		status, stat;
     RDF_CB		rdf_cb;
-    i4		err_code;
     register RDR_RB	*rdf_rb = &rdf_cb.rdf_rb;
     DU_LOCATIONS	lotuple;
     register DU_LOCATIONS   *lotup = &lotuple;
@@ -484,7 +494,6 @@ psy_aloc(
 {
     DB_STATUS		status, stat;
     RDF_CB		rdf_cb;
-    i4		err_code;
     register RDR_RB	*rdf_rb = &rdf_cb.rdf_rb;
     DU_LOCATIONS	lotuple;
     register DU_LOCATIONS   *lotup = &lotuple;

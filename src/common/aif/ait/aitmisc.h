@@ -27,6 +27,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 
@@ -71,10 +73,10 @@ FUNC_EXTERN bool 	ait_openfile( char *filename,
 				      FILE **fptrptr );
 
 FUNC_EXTERN VOID 	ait_closefile( FILE *fptr );
-FUNC_EXTERN VOID 	ait_exit();
-FUNC_EXTERN VOID 	free_calltrackList();
-FUNC_EXTERN VOID 	free_dscrpList();
-FUNC_EXTERN VOID 	free_datavalList();
+FUNC_EXTERN VOID 	ait_exit(void);
+FUNC_EXTERN VOID 	free_calltrackList(void);
+FUNC_EXTERN VOID 	free_dscrpList(void);
+FUNC_EXTERN VOID 	free_datavalList(void);
 FUNC_EXTERN VOID	ait_initTrace( char* tracefile );
 FUNC_EXTERN VOID	ait_termTrace( VOID );
 FUNC_EXTERN bool	ait_isTrace( i4  currentTrace ); 

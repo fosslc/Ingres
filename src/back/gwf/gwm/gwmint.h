@@ -78,6 +78,8 @@
 **     22-apr-2010 (stial01)
 **          Fixed GM_XATT_TUPLE(iigw07_attribute), GM_XIND_TUPLE(iigw07_index)
 **          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing function prototypes.
 */
 
 /*----------------------------------------------------------------
@@ -1039,8 +1041,8 @@ FUNC_EXTERN bool GM_chk_priv( char *user_name, char *priv_name );
 
 FUNC_EXTERN GW_EXIT_FUNC GXinit;
 
-/* Missing from <scf.h> */
 
-FUNC_EXTERN STATUS scf_call();
-
+FUNC_EXTERN VOID GM_i_out_row( GWX_RCB *gwx_rcb );
+FUNC_EXTERN i4 GM_att_offset( GM_RSB *gwx_rcb, i4 att_number );
+FUNC_EXTERN i4 GM_key_offset( GM_RSB *gwx_rcb, i4 key_seq );
 /* end of gwmint.h */

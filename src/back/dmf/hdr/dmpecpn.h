@@ -133,9 +133,6 @@
 **	6-May-2004 (schka24)
 **	    RCB's belong to threads, and passing RCB's around fails in the
 **	    face of parallel query.  Use TCB instead.  Attempt to doc.
-**	26-Feb-2010 (troal01)
-**	    Added CPN_SRID_STORAGE and unionized the temporary storage area
-**	    of DMPE_COUPON.
 **	12-Apr-2010 (kschendel) SIR 123485
 **	    Redo the short-term part (again), this time to pass base ID, attr
 **	    ID, and flags.  The new blob query CB (BQCB) will supply the
@@ -155,15 +152,6 @@
 ** If you need an object larger than an i4 (which isn't going to happen
 ** unless it's redefined entirely), define it as a char or i2/i4 array.
 */
-/*
- * Structure used in the new union to temporarily
- * store the SRID for dmpe_get
- */
-typedef struct _CPN_SRID_STORAGE
-{
-	i4 css_has_srid;
-	i4 css_srid;
-} CPN_SRID_STORAGE;
 
 typedef struct _DMPE_COUPON
 {

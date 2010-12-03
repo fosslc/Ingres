@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -163,8 +163,75 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
+/* TABLE OF CONTENTS */
+i4 psl_2col_ingres_default(
+	PSS_SESBLK *sess_cb,
+	DMF_ATTR_ENTRY *attr,
+	DB_ERROR *err_blk);
+static i4 psl_col_user_default(
+	PSS_SESBLK *sess_cb,
+	DMF_ATTR_ENTRY *attr,
+	DB_TEXT_STRING *def_txt,
+	PST_QNODE *def_node,
+	DB_ERROR *err_blk);
+i4 psl_1col_default(
+	PSS_SESBLK *sess_cb,
+	i4 col_type,
+	DMF_ATTR_ENTRY *attr,
+	DB_TEXT_STRING *def_txt,
+	PST_QNODE *def_node,
+	DB_ERROR *err_blk);
+static i4 psl_make_def_const(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	u_i2 length,
+	char *defvalue,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk);
+static i4 psl_make_def_seq(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	u_i2 length,
+	char *defvalue,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk);
+static i4 psl_make_func_node(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	ADI_OP_ID opid,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk);
+static i4 psl_make_canon_default(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	DB_DEF_ID *defaultID,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk);
+static i4 psl_make_user_default(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	PSS_RNGTAB *rngvar,
+	i2 attno,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk);
+i4 psl_make_default_node(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	PSS_RNGTAB *rngvar,
+	i2 attno,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk);
+i4 psl_check_defaults(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *resrng,
+	PST_QNODE *root_node,
+	i4 insert_into_view,
+	DB_TAB_NAME *view_name,
+	DB_ERROR *err_blk);
 
 /*
 ** Name: psl_2col_ingres_default  - set up the default ID for a column declared
@@ -239,10 +306,10 @@
 **	    Initialise the ADF_FN_BLK .adf_fi_desc and adf_dv_n members.
 */
 DB_STATUS
-psl_2col_ingres_default(
-		       PSS_SESBLK     *sess_cb,
-		       DMF_ATTR_ENTRY *attr,
-		       DB_ERROR	      *err_blk)
+psl_2col_ingres_default(sess_cb,attr,err_blk)
+		       PSS_SESBLK     *sess_cb;
+		       DMF_ATTR_ENTRY *attr;
+		       DB_ERROR	      *err_blk;
 {
     /* we have an INGRES default,
     ** so set up default id based on datatype;

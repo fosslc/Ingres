@@ -547,11 +547,11 @@ WTSOpenSession(
                         err = WTSGetData(scb, &type, &query, &read, moredata);
                         if (err == GSTAT_OK)
                         {
-                            if (type != DB_LBYTE_TYPE && type != DB_GEOM_TYPE ||
-                              type == DB_POINT_TYPE || type == DB_MPOINT_TYPE ||
-                              type == DB_LINE_TYPE  || type == DB_MLINE_TYPE  ||
-                              type == DB_POLY_TYPE  || type == DB_MPOLY_TYPE  ||
-                              type == DB_GEOMC_TYPE )
+                            if (type != DB_LBYTE_TYPE && type != DB_GEOM_TYPE &&
+                              type != DB_POINT_TYPE && type != DB_MPOINT_TYPE &&
+                              type != DB_LINE_TYPE  && type != DB_MLINE_TYPE  &&
+                              type != DB_POLY_TYPE  && type != DB_MPOLY_TYPE  &&
+                              type != DB_GEOMC_TYPE )
                                 err = DDFStatusAlloc(E_WS0014_NO_INFO_AVAILABLE);
                             else if (session->status != NO_UPLOAD)
                             {

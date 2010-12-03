@@ -99,6 +99,9 @@
 **	    Update GCA API to LEVEL 5
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype rqu_error() with variable params,
+**	    delete declarations of dmf_call, dmf_trace.
 */
 
 
@@ -421,13 +424,6 @@ FUNC_EXTERN i4 * rqf_neednl(char fmt[]);
 FUNC_EXTERN DB_STATUS rqf_call(		i4		rqr_type, 
 					RQR_CB		*rqr_cb);
 
-/********************
-** Module RQUDMF.C **
-********************/
-
-FUNC_EXTERN DB_STATUS dmf_call(		DM_OPERATION	operation, 
-					DMC_CB		*control_block);
-FUNC_EXTERN DB_STATUS dmf_trace(	VOID);
 /* 
 **  LGcluser() and LGcnode_info are defined in LG.H, so they are NOT included 
 **  here to avoid error messages about double definitions
@@ -451,21 +447,11 @@ FUNC_EXTERN VOID rqu_client_trace(	i4		msg_length,
 					char		*msg_buffer);
 FUNC_EXTERN VOID rqu_relay(		RQL_ASSOC	*assoc, 
 					GCA_RV_PARMS	*rv);
-/* do not prototype this routine because it accepts a variable length number
-** of arguments and that is NOT supported for prototypes at this time
-**  FUNC_EXTERN VOID rqu_error(		i4		log_error_only, 
-**					i4		rqf_err, 
-**					PTR		os_error, 
-**					i4		num_parms, 
-**					i4		p1_len,	    
-**					i4		*p1, 
-**					i4		p2_len,
-**					i4		*p2,
-**					i4		p3_len,
-**					i4		*p3, 
-**					i4		p4_len,
-**					i4		*p4);
-*/
+FUNC_EXTERN VOID rqu_error(		i4		log_error_only, 
+  					i4		rqf_err, 
+  					PTR		os_error, 
+  					i4		num_parms, 
+					... );
 FUNC_EXTERN VOID rqu_gca_error(		RQL_ASSOC	*assoc, 
 					GCA_ER_DATA	*gca_error_blk);
 FUNC_EXTERN RQL_ASSOC *rqu_find_lid(	DD_LDB_DESC	*site, 

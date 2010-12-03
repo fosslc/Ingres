@@ -18,6 +18,8 @@ XX##     ccpp leaves them in and the ODBC can't compile.
 XX##  06-Sep-2010 (Ralph Loen) Bug 124348
 XX##     Re-instated ConfigDSN() and SQLConfigDataSource(), inadvertently
 XX##     wiped out by 03-Sep-2010 change.
+XX##  15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+XX##     Changes to eliminate compiler prototype warnings.
 XX##
 XX*/
 XX#ifndef __SQLEXT
@@ -1877,6 +1879,13 @@ XX    SQLHWND       hwndParent,
 XX    SQLSMALLINT   fRequest,
 XX    SQLCHAR       *lpszDriver,
 XX    SQLCHAR       *lpszAttributes);
+XX
+XXSQLRETURN SQL_API SQLInstallerError(
+XX    SQLSMALLINT iError,
+XX    SQLINTEGER *pfErrorCode,
+XX    SQLCHAR *lpszErrorMsg,
+XX    SQLSMALLINT cbErrorMsgMax,
+XX    SQLSMALLINT *pcbErrorMsg);
 XX
 XX#ifdef __cplusplus
 XX}                                     /* End of extern "C" { */

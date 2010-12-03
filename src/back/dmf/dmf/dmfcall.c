@@ -459,11 +459,13 @@ static const struct
 **	    dmr functions.
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Add two DMPE functions.
+**	02-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Changed control_block param from PTR to void *
 */
 DB_STATUS
 dmf_call(operation, control_block)
 DM_OPERATION        operation;
-PTR		    control_block;
+void		    *control_block;
 {
     DMC_CB	    *cb = (DMC_CB *)control_block;
     i4	    err_code;

@@ -26,6 +26,8 @@
 **	    Define DM0S_READAHEAD_EVENT, ch dm0s_ewait to return status.
 **	26-Oct-1996 (jenjo02)
 **	    Added *name to dm0s_minit() prototype.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype dm0s_name()
 [@history_template@]...
 **/
 
@@ -42,6 +44,7 @@
 */
 
 FUNC_EXTERN VOID dm0s_minit(DM_MUTEX *mutex, char *name);
+FUNC_EXTERN VOID dm0s_name(DM_MUTEX *mutex, char *name);
 FUNC_EXTERN VOID dm0s_mlock(DM_MUTEX *mutex);
 FUNC_EXTERN VOID dm0s_mrelease(DM_MUTEX *mutex);
 FUNC_EXTERN VOID dm0s_munlock(DM_MUTEX *mutex);

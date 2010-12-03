@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 **
 */
  
@@ -31,6 +31,7 @@
 #include    <pshparse.h>
 #include    <usererror.h>
 #include    <psftrmwh.h>
+#include    <uld.h>
 
 /*
 **
@@ -183,161 +184,209 @@
 **	    Key count in statement node changed to i2, fix here.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
+**	9-Nov-2010 (kschendel) SIR 121123
+**	    Further untangle the DMT-vs-DMF att entry fiasco by fixing
+**	    referential integrity checks to deal in DMT_ATT_ENTRY's always.
+**	    Get rid of the newtbl flag which was unnecessary and mis-
+**	    documented.
 */
 
-/* function prototypes for static functions
- */
-static DB_STATUS    psl_ver_cons_columns(
-					 PSS_SESBLK       *sess_cb,
-					 char 	    	  *cons_str,
-					 i4		  qmode,
-					 PSF_QUEUE	  *colq,
-					 DMU_CB	     	  *dmu_cb,
-					 PSS_RNGTAB    	  *rngvar,
-					 i4	     	  newtbl,
-					 bool		  dmtatt,
-					 DB_COLUMN_BITMAP *col_map,
-					 DMT_ATT_ENTRY    **att_array,
-					 PST_COL_ID       **colid_listp,
-					 i2		  *numcols,
-					 DB_ERROR  	  *err_blk);
-static DB_STATUS    psl_ver_unique_cons(
-					PSS_SESBLK    *sess_cb, 
-					i4           qmode, 
-					PSS_CONS      *cons,
-					i4           newtbl,
-					DMU_CB	      *dmu_cb,
-					PSS_RNGTAB    *rngvar,
-					PST_CREATE_INTEGRITY *cr_integ,
-					DB_ERROR      *err_blk);
-static DB_STATUS    psl_ver_ref_cons(
-				     PSS_SESBLK       *sess_cb, 
-				     i4  	      qmode, 
-				     PSS_CONS         *cons,
-				     i4	      newtbl,
-				     DMU_CB    	      *dmu_cb,
-				     PSS_RNGTAB	      *refing_rngvar,
-				     PST_STATEMENT    *stmt,
-				     DB_ERROR         *err_blk);
-static DB_STATUS    psl_ver_check_cons(
-				       PSS_SESBLK   *sess_cb,
-				       PSQ_CB	    *psq_cb,
-				       PSS_CONS     *cons,
-				       i4           newtbl,
-				       DMU_CB  	    *dmu_cb,
-				       PSS_RNGTAB   *rngvar,
-				       PST_CREATE_INTEGRITY *cr_integ);
-static DB_STATUS    psl_cons_text(
-				  PSS_SESBLK      *sess_cb,
-				  PSS_CONS	  *cons, 
-				  SIZE_TYPE	  *memleft,
-				  PSF_MSTREAM	  *mstream,
-				  DB_TEXT_STRING  **txtp,
-				  PTR	  	  text_chain,
-				  DB_ERROR	  *err_blk);
-static DB_STATUS    psl_add_col_list(
-				     PSF_QUEUE	*colq,
-				     PTR	text_chain,
-				     DB_ERROR	*err_blk);
-static DB_STATUS    psl_add_schema_table(
-					 DB_OWN_NAME	*ownname,
-					 i4		ownname_is_regid,
-					 DB_TAB_NAME	*tabname,
-					 i4		tabname_is_regid,
-					 PTR		text_chain,
-					 DB_ERROR	*err_blk);
-static DB_STATUS    psl_ixopts_text(
-				PSS_CONS	*cons, 
-				PTR		text_chain, 
-				DB_ERROR	*err_blk, 
-				bool		firstwith);
-static DB_STATUS    psl_ver_ref_priv(
-				     PSS_SESBLK		*sess_cb,
-				     PSS_RNGTAB		*rngvar,
-				     DB_COLUMN_BITMAP	*ref_map,
-				     PST_CREATE_INTEGRITY *cr_integ,
-				     DB_ERROR		*err_blk);
-static DB_STATUS    psl_ver_ref_types(
-				      PSS_SESBLK     *sess_cb, 
-				      i4  	     qmode, 
-				      i4             newtbl,
-				      i4             num_cols,
-				      DMF_ATTR_ENTRY **cons_att_array, 
-				      DMT_ATT_ENTRY  **ref_att_array,
-				      DB_ERROR       *err_blk);
-static DB_STATUS    psl_find_primary_cons(
-					  PSS_SESBLK	    *sess_cb,
-					  PSS_RNGTAB	    *rngvar,
-					  DB_COLUMN_BITMAP  *col_map,
-					  DB_CONSTRAINT_ID  *cons_id,
-					  u_i4		    *integ_no,
-					  DMT_ATT_ENTRY	    **att_array,
-					  PST_COL_ID	    **collistp,
-					  DB_ERROR	    *err_blk);
-static DB_STATUS psl_qual_primary_cons(
-				      PTR		*qual_args,
-				      DB_INTEGRITY      *integ,
-				      i4		*satisfies);
-static DB_STATUS    psl_find_unique_cons(
-					 PSS_SESBLK 	  *sess_cb,
-					 DB_COLUMN_BITMAP *col_map,
-					 PSS_RNGTAB 	  *rngvar,
-					 DB_CONSTRAINT_ID *cons_id,
-					 u_i4		  *integ_no,
-					 DB_ERROR	  *err_blk);
-static DB_STATUS   psl_qual_unique_cons(
-		     			PTR		*qual_args,
-		     			DB_INTEGRITY    *integ,
-		     			i4		*satisfies);
-static DB_STATUS    psl_handle_self_ref(
-					PSS_SESBLK	*sess_cb,
-					PST_STATEMENT	*stmt,
-					PSS_OBJ_NAME	*obj_name,
-					PSS_CONS	*cons,
-					DB_ERROR	*err_blk);
-static DB_STATUS    psl_check_unique_set(
-					 DB_INTEGRITY	*integ_tup1,
-					 DB_INTEGRITY	*integ_tup2,
-					 i4		name1_specified,
-					 i4	  	name2_specified,
-					 i4	  	qmode,
-					 DB_ERROR     	*err_blk);
-static DB_STATUS psl_compare_multi_cons(
-					PSS_SESBLK	*sess_cb,
-					PST_STATEMENT	**stmt_list,
-					DMU_CB		*dmu_cb,
-					i4		qmode,
-					DB_ERROR	*err_blk);
-static DB_STATUS psl_qual_dup_cons(
-				   PTR		*qual_args,
-				   DB_INTEGRITY	*integ,
-				   i4		*dummy);
-static DB_STATUS psl_compare_agst_table(
-					PSS_SESBLK	*sess_cb,
-					PST_STATEMENT	*stmt,
-					PSS_RNGTAB	*rngvar,
-					i4		qmode,
-					DB_ERROR	*err_blk);
-static DB_STATUS psl_compare_agst_schema(
-					 PSS_SESBLK	*sess_cb,
-					 PST_STATEMENT	*stmt_list,
-					 i4		qmode,
-					 DB_ERROR	*err_blk);
-
-static bool psl_verify_new_index(
-		PSS_SESBLK		*sess_cb,
-		PST_CREATE_INTEGRITY	*cinteg,
-		PST_CREATE_INTEGRITY	*xinteg);
-
+/* TABLE OF CONTENTS */
+i4 psl_verify_cons(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DMU_CB *dmu_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_CONS *cons_list,
+	PST_STATEMENT **stmt_listp);
+static i4 psl_ver_cons_columns(
+	PSS_SESBLK *sess_cb,
+	char *cons_str,
+	i4 qmode,
+	PSF_QUEUE *colq,
+	DMU_CB *dmu_cb,
+	PSS_RNGTAB *rngvar,
+	DB_COLUMN_BITMAP *col_map,
+	DMT_ATT_ENTRY **att_array,
+	PST_COL_ID **colid_listp,
+	i2 *num_cols,
+	DB_ERROR *err_blk);
+static i4 psl_cons_text(
+	PSS_SESBLK *sess_cb,
+	PSS_CONS *cons,
+	SIZE_TYPE *memleft,
+	PSF_MSTREAM *mstream,
+	DB_TEXT_STRING **txtp,
+	PTR text_chain,
+	DB_ERROR *err_blk);
+static i4 psl_add_col_list(
+	PSF_QUEUE *colq,
+	PTR text_chain,
+	DB_ERROR *err_blk);
+static i4 psl_add_schema_table(
+	DB_OWN_NAME *ownname,
+	i4 ownname_is_regid,
+	DB_TAB_NAME *tabname,
+	i4 tabname_is_regid,
+	PTR text_chain,
+	DB_ERROR *err_blk);
+static i4 psl_ixopts_text(
+	PSS_CONS *cons,
+	PTR text_chain,
+	DB_ERROR *err_blk,
+	bool firstwith);
+i4 psl_gen_alter_text(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	SIZE_TYPE *memleft,
+	DB_OWN_NAME *ownname,
+	DB_TAB_NAME *tabname,
+	PSS_CONS *cons,
+	DB_TEXT_STRING **query_textp,
+	DB_ERROR *err_blk);
+static i4 psl_ver_unique_cons(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	PSS_CONS *cons,
+	DMU_CB *dmu_cb,
+	PSS_RNGTAB *rngvar,
+	PST_CREATE_INTEGRITY *cr_integ,
+	DB_ERROR *err_blk);
+static i4 psl_ver_ref_cons(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	PSS_CONS *cons,
+	DMU_CB *dmu_cb,
+	PSS_RNGTAB *refing_rngvar,
+	PST_STATEMENT *stmt,
+	DB_ERROR *err_blk);
+static i4 psl_ver_ref_types(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	i4 num_cols,
+	DMT_ATT_ENTRY **cons_att_array,
+	DMT_ATT_ENTRY **ref_att_array,
+	DB_ERROR *err_blk);
+static i4 psl_handle_self_ref(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT *stmt,
+	PSS_OBJ_NAME *obj_name,
+	PSS_CONS *cons,
+	DB_ERROR *err_blk);
+static i4 psl_ver_ref_priv(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	DB_COLUMN_BITMAP *ref_map,
+	PST_CREATE_INTEGRITY *cr_integ,
+	DB_ERROR *err_blk);
+static i4 psl_qual_primary_cons(
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *satisfies,
+	PSS_SESBLK *sess_cb);
+i4 psl_qual_ref_cons(
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *satisfies,
+	PSS_SESBLK *sess_cb);
+i4 psl_find_cons(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_CONS_QUAL_FUNC qual_func,
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *found,
+	DB_ERROR *err_blk);
+static i4 get_primary_key_cols(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	DB_CONSTRAINT_ID *cons_id,
+	DMT_ATT_ENTRY **att_array,
+	PST_COL_ID **colid_listp,
+	DB_ERROR *err_blk);
+static i4 psl_find_primary_cons(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	DB_COLUMN_BITMAP *col_map,
+	DB_CONSTRAINT_ID *cons_id,
+	u_i4 *integ_no,
+	DMT_ATT_ENTRY **att_array,
+	PST_COL_ID **colid_listp,
+	DB_ERROR *err_blk);
+static i4 psl_find_unique_cons(
+	PSS_SESBLK *sess_cb,
+	DB_COLUMN_BITMAP *col_map,
+	PSS_RNGTAB *rngvar,
+	DB_CONSTRAINT_ID *cons_id,
+	u_i4 *integ_no,
+	DB_ERROR *err_blk);
+static i4 psl_qual_unique_cons(
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *satisfies,
+	PSS_SESBLK *sess_cb);
+static i4 psl_ver_check_cons(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_CONS *cons,
+	DMU_CB *dmu_cb,
+	PSS_RNGTAB *rngvar,
+	PST_CREATE_INTEGRITY *cr_integ);
+static i4 psl_check_unique_set(
+	DB_INTEGRITY *integ_tup1,
+	DB_INTEGRITY *integ_tup2,
+	i4 name1_specified,
+	i4 name2_specified,
+	i4 qmode,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+static i4 psl_compare_multi_cons(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT **stmt_list,
+	DMU_CB *dmu_cb,
+	i4 qmode,
+	DB_ERROR *err_blk);
+static i4 psl_compare_agst_table(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT *stmt,
+	PSS_RNGTAB *rngvar,
+	i4 qmode,
+	DB_ERROR *err_blk);
+static i4 psl_qual_dup_cons(
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *dummy,
+	PSS_SESBLK *sess_cb);
+static i4 psl_compare_agst_schema(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT *stmt_list,
+	i4 qmode,
+	DB_ERROR *err_blk);
+i4 psl_find_column_number(
+	DMU_CB *dmu_cb,
+	DB_ATT_NAME *col_name);
 static bool psl_verify_existing_index(
-		PST_CREATE_INTEGRITY	*cinteg,
-		i4			keycount,
-		i4			*keyarray);
-
-static VOID    psl_print_conslist(PSS_CONS *cons_list, i4  print);
-static VOID    psl_print_cons(PSS_CONS *cons);
-static VOID    psl_print_colq(PSF_QUEUE *q);
-
+	PST_CREATE_INTEGRITY *cinteg,
+	i4 keycount,
+	i4 *keyarray);
+static bool psl_verify_new_index(
+	PSS_SESBLK *sess_cb,
+	PST_CREATE_INTEGRITY *cinteg,
+	PST_CREATE_INTEGRITY *xinteg);
+static void psl_print_conslist(
+	PSS_CONS *cons_list,
+	i4 print);
+static void psl_print_colq(
+	PSF_QUEUE *q);
+static void psl_print_cons(
+	PSS_CONS *cons);
+i4 psl_find_iobj_cons(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	i4 *found,
+	DB_ERROR *err_blk);
 
 /*
 ** Name: psl_verify_cons  - verify that constraints for a CREATE TABLE statement
@@ -358,7 +407,7 @@ static VOID    psl_print_colq(PSF_QUEUE *q);
 **          constraints are created (since they must depend on one of these
 **          unique constraints), so all execute-immediate nodes are put at the
 **          end of the list of statements returned by this function.
-**      
+**
 ** Inputs:
 **	sess_cb		    ptr to PSF session CB
 **	    pss_object	      ptr to QEU_CB (which contains DMU_CB)
@@ -366,12 +415,9 @@ static VOID    psl_print_colq(PSF_QUEUE *q);
 **	psq_cb		    PSF request CB
 **	    psq_mode	      query mode 
 **	cons_list	    list of constraint info blocks for this table
-**      newtbl		    TRUE implies table is being created, 
-**                              and table info is in 'dmu_cb';
-**               	    FALSE implies table already exists, 
-**                              and table info is in 'rngvar'.
-**     			(ONLY ONE OF BELOW (dmu_cb/rngvar) SHOULD BE USED!!)
-**	dmu_cb		    info block for table if CREATE TABLE, else NULL
+**	dmu_cb		    info block for table if CREATE TABLE, or info
+**				for added column if alter table add column, or
+**				NULL if not create or add column
 **	rngvar	    	    info block for table if ALTER TABLE,  else NULL
 **	     
 **
@@ -423,7 +469,6 @@ DB_STATUS
 psl_verify_cons(
 		PSS_SESBLK	*sess_cb,
 		PSQ_CB		*psq_cb,
-		i4		newtbl,
 		DMU_CB	   	*dmu_cb,
 		PSS_RNGTAB   	*rngvar,
 		PSS_CONS   	*cons_list,
@@ -516,7 +561,7 @@ psl_verify_cons(
 	/* store table name and schema name
 	** (note that schema name is the same for both constraint and table)
 	*/
-	if (newtbl)
+	if (rngvar == NULL)
 	{
 	    STRUCT_ASSIGN_MACRO(dmu_cb->dmu_table_name, 
 				cr_integ->pst_cons_tabname);
@@ -557,21 +602,21 @@ psl_verify_cons(
 		& (PSS_CONS_UNIQUE | PSS_CONS_REF | PSS_CONS_CHECK))
 	{
 	case PSS_CONS_UNIQUE:
-	    status = psl_ver_unique_cons(sess_cb, qmode, curcons, newtbl,
+	    status = psl_ver_unique_cons(sess_cb, qmode, curcons,
 					 dmu_cb, rngvar, cr_integ, err_blk);
 	    if (DB_FAILURE_MACRO(status))
 		return (status);
 	    break;
 	    
 	case PSS_CONS_REF:
-	    status = psl_ver_ref_cons(sess_cb, qmode, curcons, newtbl,
+	    status = psl_ver_ref_cons(sess_cb, qmode, curcons,
 				      dmu_cb, rngvar, newstmt, err_blk);
 	    if (DB_FAILURE_MACRO(status))
 		return (status);
 	    break;
 	    
 	case PSS_CONS_CHECK:
-	    status = psl_ver_check_cons(sess_cb, psq_cb, curcons, newtbl,
+	    status = psl_ver_check_cons(sess_cb, psq_cb, curcons,
 					dmu_cb, rngvar, cr_integ);
 	    if (DB_FAILURE_MACRO(status))
 		return (status);
@@ -613,7 +658,9 @@ psl_verify_cons(
 	    /* Check for index options to be copied, too. */
 	    if (curcons->pss_cons_flags & PSS_CONS_INDEX_OPTS)
 	    {
-		STRUCT_ASSIGN_MACRO(curcons->pss_restab, 
+		STRUCT_ASSIGN_MACRO(curcons->pss_restab,
+				cr_integ->pst_indexres);
+		STRUCT_ASSIGN_MACRO(curcons->pss_dmu_chars,
 				cr_integ->pst_indexopts);
 		cr_integ->pst_createIntegrityFlags |= PST_CONS_WITH_OPT;
 	    }
@@ -652,9 +699,10 @@ psl_verify_cons(
     } /* end for (curcons = cons_list) */
     
 
-    if ( newtbl || (qmode == PSQ_ATBL_ADD_COLUMN) )
+    if ( dmu_cb != NULL )
     {
 	/* have a CREATE TABLE with possibly more than one constraint,
+	** or an ALTER TABLE ADD COLUMN,
 	** so do specific checks between the different constraints
 	** (look for duplicate constraint names and unique constraints
 	**  on columns that are not declared NOT NULL)
@@ -736,22 +784,17 @@ psl_verify_cons(
 **                              used in error messages
 **	qmode		    query mode  (used for error messages)
 **      colq		    column queue to be processed
-**      newtbl		    TRUE implies table is being created, 
-**                              and table info is in 'dmu_cb';
-**               	    FALSE implies table already exists, 
-**                              and table info is in 'rngvar'.
-**	dmtatt		    TRUE if att_array is of DMT_ATT_ENTRYs, requiring
-**			    mapping from DMU_ATTR_ENTRYs, else FALSE
-**	dmu_cb		    info about table (if newtbl is TRUE), else NULL
-**	rngvar		    info about table (if newtbl is FALSE), else NULL
+**	dmu_cb		    info block for table if CREATE TABLE, or info
+**				for added column if alter table add column, or
+**				NULL if not create or add column
+**	rngvar	    	    info block for table if ALTER TABLE,  else NULL
 **	
 ** Outputs:
 **	col_map		    bitmap of columns contained in colq
 **	att_array	    array of pointers to column info on columns in colq
 **			       if NULL, it is ignored
 **			       if non-NULL, filled in with attribute descriptors
-**                             (DMT_ATT_ENTRY  if newtbl is TRUE,
-**                              DMF_ATTR_ENTRY if newtbl is FALSE)
+**				in order by constraint-column, zero origin
 **      colid_listp	    in-order list of column id's in colq
 **				(needs to be in-order for OPC to use)
 **	num_cols	    count of constraint columns
@@ -786,6 +829,8 @@ psl_verify_cons(
 **	    which may pass either DMT_ATT_ENTRY or DMU_ATTR_ENTRY arrays.
 **	29-Sept-2009 (troal01)
 **		Added geospatial support.
+**	9-Nov-2010 (kschendel)
+**	    Always return DMT_ATT_ENTRY's if att-array requested.
 */
 static DB_STATUS
 psl_ver_cons_columns(
@@ -795,8 +840,6 @@ psl_ver_cons_columns(
 		     PSF_QUEUE	      *colq,
 		     DMU_CB	      *dmu_cb,
 		     PSS_RNGTAB	      *rngvar,
-		     i4	      newtbl,
-		     bool	      dmtatt,
 /*returned*/	     DB_COLUMN_BITMAP *col_map,
 /*returned*/	     DMT_ATT_ENTRY    **att_array,
 /*returned*/	     PST_COL_ID       **colid_listp,
@@ -818,7 +861,7 @@ psl_ver_cons_columns(
 
     *colid_listp = (PST_COL_ID *) NULL;
 
-    if (  newtbl || (qmode == PSQ_ATBL_ADD_COLUMN)  )
+    if ( dmu_cb != NULL )
     {
 	/* set up attrs pointer for use inside of loop
 	 */
@@ -873,7 +916,7 @@ psl_ver_cons_columns(
 	    {
 		/* get command string to pass to error routine
 		 */
-		psl_command_string(qmode, DB_SQL, command, &length);
+		psl_command_string(qmode, sess_cb, command, &length);
 
 		_VOID_ psf_error(E_PS0481_CONS_DUP_COL, 0L, PSF_USERERR,
 				 &err_code, err_blk, 3,
@@ -892,7 +935,7 @@ psl_ver_cons_columns(
 
 	colno = -1;
 
-	if (newtbl || (qmode == PSQ_ATBL_ADD_COLUMN) )
+	if ( dmu_cb != NULL )
 	{
 	    /* get info from DMU control block of table being created
 	     */
@@ -900,44 +943,44 @@ psl_ver_cons_columns(
 
 	    if ((att_array != (DMT_ATT_ENTRY **) NULL) && 
 						(colno != -1))
-	     if (dmtatt)
-	     {
-		/* Compute blank stripped length of attribute name */
-		n = cui_trmwhite(DB_ATT_MAXNAME, 
-			(attrs[colno-1])->attr_name.db_att_name);
+	    {
+		DMT_ATT_ENTRY *dmtatt;
+		DMF_ATTR_ENTRY *dmfatt = attrs[colno-1];
 
-		/* Since att_array is (DMT_ATTR_ENTRY **) and attrs is
-		** (DMU_ATTR_ENTRY **), allocate a DMT_ATTR_ENTRY and 
+		/* Compute blank stripped length of attribute name */
+		n = cui_trmwhite(DB_ATT_MAXNAME, dmfatt->attr_name.db_att_name);
+
+		/* Since att_array is (DMT_ATT_ENTRY **) and attrs is
+		** (DMF_ATTR_ENTRY **), allocate a DMT_ATT_ENTRY and 
 		** copy field by field. */
 		status = psf_malloc(sess_cb, &sess_cb->pss_ostream, 
 			sizeof(DMT_ATT_ENTRY) + (n + 1), 
-			(PTR *) &att_array[attcolno], err_blk);
+			(PTR *) &dmtatt, err_blk);
 		if (DB_FAILURE_MACRO(status))
 		    return(status);
+		att_array[attcolno] = dmtatt;
 
-		MEfill(sizeof(DMT_ATT_ENTRY), (u_char)0, 
-					(PTR)att_array[attcolno]);
-		nextname = (char *)(&att_array[attcolno]) 
-			+ sizeof(DMT_ATT_ENTRY);
+		MEfill(sizeof(DMT_ATT_ENTRY), 0, dmtatt);
+		nextname = (char *)dmtatt + sizeof(DMT_ATT_ENTRY);
 
-		(att_array[attcolno])->att_nmlen = n;
-		(att_array[attcolno])->att_nmstr = nextname;
-		cui_move(n, (attrs[colno-1])->attr_name.db_att_name, '\0',
+		dmtatt->att_nmlen = n;
+		dmtatt->att_nmstr = nextname;
+		cui_move(n, dmfatt->attr_name.db_att_name, '\0',
 				n + 1, nextname);
 
-		(att_array[attcolno])->att_type = (attrs[colno-1])->attr_type;
-		(att_array[attcolno])->att_width = (attrs[colno-1])->attr_size;
-		(att_array[attcolno])->att_prec = 
-					(attrs[colno-1])->attr_precision;
-		(att_array[attcolno])->att_collID =
-					(attrs[colno-1])->attr_collID;
-		(att_array[attcolno])->att_geomtype = (attrs[colno-1])->attr_geomtype;
-		(att_array[attcolno])->att_srid = (attrs[colno-1])->attr_srid;
-	     }
-	     else att_array[attcolno] = (DMT_ATT_ENTRY *)attrs[colno-1];
+		dmtatt->att_type = dmfatt->attr_type;
+		dmtatt->att_width = dmfatt->attr_size;
+		dmtatt->att_prec = dmfatt->attr_precision;
+		dmtatt->att_collID = dmfatt->attr_collID;
+		dmtatt->att_geomtype = dmfatt->attr_geomtype;
+		dmtatt->att_srid = dmfatt->attr_srid;
+		/* Doesn't get everything, but the above is all we need
+		** for constraint checking
+		*/
+	    }
 	}
 
-	if  ( (!newtbl) && (colno == -1) )
+	if  ( colno == -1 && rngvar != NULL )
 	      
 	{
 	    /* existing table; get info from RDF */
@@ -959,7 +1002,7 @@ psl_ver_cons_columns(
 	if (colno == -1)
 	{
 	    /* get command string to pass to error routine */
-	    psl_command_string(qmode, DB_SQL, command, &length);
+	    psl_command_string(qmode, sess_cb, command, &length);
 
 	    _VOID_ psf_error(E_PS0483_CONS_NO_COL, 0L, PSF_USERERR,
 			     &err_code, err_blk, 3,
@@ -1642,7 +1685,8 @@ psl_add_schema_table(
 **
 ** Description:	    
 **          Adds text for accompanying index with clause options to 
-**	    constraint text already built. Simply uses values in pst_indexopts
+**	    constraint text already built. Simply uses values in the
+**	    DMU_CHARACTERISTICS and PST_RESTAB in the PSS_CONS
 **	    to trigger appropriate text.
 **      
 ** Inputs:
@@ -1667,6 +1711,8 @@ psl_add_schema_table(
 **	    Written as part of constraint index with option enhancement.
 **      8-Oct-2010 (hanal04) Bug 124561
 **          Add handling of compression settings for the index.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Work from new dmu characteristics structure.
 */
 static
 DB_STATUS
@@ -1679,11 +1725,11 @@ psl_ixopts_text(
     DB_STATUS	status;
     char	tbuf[128];
     PTR		result;		/* returned from psq_tadd, but unused */
-    
+
     /* Text string has already been started. Simply examine all possible
     ** index options and add appropriate text (comma-separated) for each. */
 
-    if (cons->pss_restab.pst_struct != 0)	/* "structure = ..." */
+    if (BTtest(DMU_STRUCTURE, cons->pss_dmu_chars.dmu_indicators))
     {
 	char	*structname;
 
@@ -1694,24 +1740,7 @@ psl_ixopts_text(
 	    if (DB_FAILURE_MACRO(status)) return(status);
 	}
 
-	switch(cons->pss_restab.pst_struct) {
-	 case DB_ISAM_STORE:
-	    structname = "ISAM";
-	    break;
-
-	 case DB_HASH_STORE:
-	    structname = "HASH";
-	    break;
-
-	 case DB_BTRE_STORE:
-	    structname = "BTREE";
-	    break;
-
-	 default:
-	    structname = "unsupported";
-	    break;
-	}
-
+	structname = uld_struct_name(cons->pss_dmu_chars.dmu_struct);
 	STprintf(tbuf, ERx("STRUCTURE = %s"), structname);
 	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf), 
 	    &result, err_blk);
@@ -1719,7 +1748,7 @@ psl_ixopts_text(
 	firstwith = FALSE;
     }	/* end of "structure = ... " */
 
-    if (cons->pss_restab.pst_fillfac != 0)	/* "fillfactor = n" */
+    if (BTtest(DMU_DATAFILL, cons->pss_dmu_chars.dmu_indicators))
     {
 	if (!firstwith)		/* prepend with ", ", if necessary */
 	{
@@ -1728,15 +1757,15 @@ psl_ixopts_text(
 	    if (DB_FAILURE_MACRO(status)) return(status);
 	}
 
-	STprintf(tbuf, ERx("FILLFACTOR = %d"), 
-					cons->pss_restab.pst_fillfac);
-	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf), 
+	STprintf(tbuf, ERx("FILLFACTOR = %d"),
+					cons->pss_dmu_chars.dmu_fillfac);
+	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf),
 	    &result, err_blk);
 	if (DB_FAILURE_MACRO(status)) return(status);
 	firstwith = FALSE;
     }	/* end of "fillfactor = n" */
 
-    if (cons->pss_restab.pst_minpgs != 0)	/* "minpages = n" */
+    if (BTtest(DMU_MINPAGES, cons->pss_dmu_chars.dmu_indicators))
     {
 	if (!firstwith)		/* prepend with ", ", if necessary */
 	{
@@ -1745,15 +1774,15 @@ psl_ixopts_text(
 	    if (DB_FAILURE_MACRO(status)) return(status);
 	}
 
-	STprintf(tbuf, ERx("MINPAGES = %d"), 
-					cons->pss_restab.pst_minpgs);
-	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf), 
+	STprintf(tbuf, ERx("MINPAGES = %d"),
+					cons->pss_dmu_chars.dmu_minpgs);
+	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf),
 	    &result, err_blk);
 	if (DB_FAILURE_MACRO(status)) return(status);
 	firstwith = FALSE;
     }	/* end of "minpages = n" */
 
-    if (cons->pss_restab.pst_maxpgs != 0)	/* "maxpages = n" */
+    if (BTtest(DMU_MAXPAGES, cons->pss_dmu_chars.dmu_indicators))
     {
 	if (!firstwith)		/* prepend with ", ", if necessary */
 	{
@@ -1762,15 +1791,15 @@ psl_ixopts_text(
 	    if (DB_FAILURE_MACRO(status)) return(status);
 	}
 
-	STprintf(tbuf, ERx("MAXPAGES = %d"), 
-					cons->pss_restab.pst_maxpgs);
-	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf), 
+	STprintf(tbuf, ERx("MAXPAGES = %d"),
+					cons->pss_dmu_chars.dmu_maxpgs);
+	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf),
 	    &result, err_blk);
 	if (DB_FAILURE_MACRO(status)) return(status);
 	firstwith = FALSE;
     }	/* end of "maxpages = n" */
 
-    if (cons->pss_restab.pst_leaff != 0)	/* "leaffill = n" */
+    if (BTtest(DMU_LEAFFILL, cons->pss_dmu_chars.dmu_indicators))
     {
 	if (!firstwith)		/* prepend with ", ", if necessary */
 	{
@@ -1779,15 +1808,15 @@ psl_ixopts_text(
 	    if (DB_FAILURE_MACRO(status)) return(status);
 	}
 
-	STprintf(tbuf, ERx("LEAFFILL = %d"), 
-					cons->pss_restab.pst_leaff);
-	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf), 
+	STprintf(tbuf, ERx("LEAFFILL = %d"),
+					cons->pss_dmu_chars.dmu_leaff);
+	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf),
 	    &result, err_blk);
 	if (DB_FAILURE_MACRO(status)) return(status);
 	firstwith = FALSE;
     }	/* end of "leaffill = n" */
 
-    if (cons->pss_restab.pst_nonleaff != 0)	/* "nonleaffill = n" */
+    if (BTtest(DMU_IFILL, cons->pss_dmu_chars.dmu_indicators))
     {
 	if (!firstwith)		/* prepend with ", ", if necessary */
 	{
@@ -1796,15 +1825,15 @@ psl_ixopts_text(
 	    if (DB_FAILURE_MACRO(status)) return(status);
 	}
 
-	STprintf(tbuf, ERx("NONLEAFFILL = %d"), 
-					cons->pss_restab.pst_nonleaff);
-	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf), 
+	STprintf(tbuf, ERx("NONLEAFFILL = %d"),
+					cons->pss_dmu_chars.dmu_nonleaff);
+	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf),
 	    &result, err_blk);
 	if (DB_FAILURE_MACRO(status)) return(status);
 	firstwith = FALSE;
     }	/* end of "nonleaffill = n" */
 
-    if (cons->pss_restab.pst_alloc != 0)	/* "allocation = n" */
+    if (BTtest(DMU_ALLOCATION, cons->pss_dmu_chars.dmu_indicators))
     {
 	if (!firstwith)		/* prepend with ", ", if necessary */
 	{
@@ -1813,15 +1842,15 @@ psl_ixopts_text(
 	    if (DB_FAILURE_MACRO(status)) return(status);
 	}
 
-	STprintf(tbuf, ERx("ALLOCATION = %d"), 
-					cons->pss_restab.pst_alloc);
-	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf), 
+	STprintf(tbuf, ERx("ALLOCATION = %d"),
+					cons->pss_dmu_chars.dmu_alloc);
+	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf),
 	    &result, err_blk);
 	if (DB_FAILURE_MACRO(status)) return(status);
 	firstwith = FALSE;
     }	/* end of "allocation = n" */
 
-    if (cons->pss_restab.pst_extend != 0)	/* "extend = n" */
+    if (BTtest(DMU_EXTEND, cons->pss_dmu_chars.dmu_indicators))
     {
 	if (!firstwith)		/* prepend with ", ", if necessary */
 	{
@@ -1830,15 +1859,15 @@ psl_ixopts_text(
 	    if (DB_FAILURE_MACRO(status)) return(status);
 	}
 
-	STprintf(tbuf, ERx("EXTEND = %d"), 
-					cons->pss_restab.pst_extend);
-	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf), 
+	STprintf(tbuf, ERx("EXTEND = %d"),
+					cons->pss_dmu_chars.dmu_extend);
+	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf),
 	    &result, err_blk);
 	if (DB_FAILURE_MACRO(status)) return(status);
 	firstwith = FALSE;
     }	/* end of "extend = n" */
 
-    if (cons->pss_restab.pst_page_size != 0)	/* "page_size = n" */
+    if (BTtest(DMU_PAGE_SIZE, cons->pss_dmu_chars.dmu_indicators))
     {
 	if (!firstwith)		/* prepend with ", ", if necessary */
 	{
@@ -1847,17 +1876,18 @@ psl_ixopts_text(
 	    if (DB_FAILURE_MACRO(status)) return(status);
 	}
 
-	STprintf(tbuf, ERx("PAGE_SIZE = %d"), 
-					cons->pss_restab.pst_page_size);
-	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf), 
+	STprintf(tbuf, ERx("PAGE_SIZE = %d"),
+					cons->pss_dmu_chars.dmu_page_size);
+	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf),
 	    &result, err_blk);
 	if (DB_FAILURE_MACRO(status)) return(status);
 	firstwith = FALSE;
     }	/* end of "page_size = n" */
 
-    if (cons->pss_restab.pst_compress != 0) /* COMPRESSION=(...) */
+    if (BTtest(DMU_KCOMPRESSION, cons->pss_dmu_chars.dmu_indicators)
+      || BTtest(DMU_DCOMPRESSION, cons->pss_dmu_chars.dmu_indicators))
     {
-	char	*compression;
+	char compression[20];	/* Longest is "nokey,nodata" */
 
 	if (!firstwith)		/* prepend with ", ", if necessary */
 	{
@@ -1866,30 +1896,28 @@ psl_ixopts_text(
 	    if (DB_FAILURE_MACRO(status)) return(status);
 	}
 
-	switch(cons->pss_restab.pst_compress) {
-	 case PST_INDEX_COMP:
-	    compression = "KEY";
-	    break;
-
-	 case PST_NO_INDEX_COMP:
-	    compression = "NOKEY";
-	    break;
-
-	 case PST_DATA_COMP:
-	    compression = "DATA";
-	    break;
-
-	 case PST_NO_DATA_COMP:
-	    compression = "NODATA";
-	    break;
-
-	 default:
-	    compression = "unsupported";
-	    break;
+	compression[0] = '\0';
+	if (BTtest(DMU_KCOMPRESSION, cons->pss_dmu_chars.dmu_indicators))
+	{
+	    if (cons->pss_dmu_chars.dmu_kcompress == DMU_COMP_ON)
+		STcat(compression, "KEY");
+	    else
+		STcat(compression, "NOKEY");
+	}
+	if (BTtest(DMU_DCOMPRESSION, cons->pss_dmu_chars.dmu_indicators))
+	{
+	    if (compression[0] != '\0')
+		STcat(compression, ",");
+	    if (cons->pss_dmu_chars.dmu_dcompress == DMU_COMP_OFF)
+		STcat(compression, "NODATA");
+	    else if (cons->pss_dmu_chars.dmu_dcompress == DMU_COMP_ON)
+		STcat(compression, "DATA");
+	    else
+		STcat(compression, "HIDATA");	/* Should be impossible */
 	}
 
 	STprintf(tbuf, ERx("COMPRESSION = (%s)"), compression);
-	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf), 
+	status = psq_tadd(text_chain, (u_char *)tbuf, STlength(tbuf),
 	    &result, err_blk);
 	if (DB_FAILURE_MACRO(status)) return(status);
 	firstwith = FALSE;
@@ -1918,8 +1946,8 @@ psl_ixopts_text(
 	/* Loop over location string, copying one location at a time. */
         while (locleft)
         {
-            for (locsize = (sizeof(DB_LOC_NAME) < locleft) ?
-                sizeof(DB_LOC_NAME) : locleft; locsize; locsize--)
+            for (locsize = ((i4)sizeof(DB_LOC_NAME) < locleft) ?
+                (i4)sizeof(DB_LOC_NAME) : locleft; locsize; locsize--)
              if (locaddr[locsize-1] != ' ') break;
                                 /* wee loop to strip trailing blanks */
 	    MEcopy((char *)locaddr, locsize, (char *)tbufaddr);
@@ -2088,12 +2116,10 @@ psl_gen_alter_text(
 **	sess_cb		    ptr to PSF session CB (passed to other routines)
 **	qmode		    query mode  (used for error messages)
 **      cons		    constraint info block
-**      newtbl		    TRUE implies table is being created, 
-**                              and table info is in 'dmu_cb';
-**               	    FALSE implies table already exists, 
-**                              and table info is in 'rngvar'.
-**	dmu_cb		    info about table (if newtbl is TRUE), else NULL
-**	rngvar		    info about table (if newtbl is FALSE), else NULL
+**	dmu_cb		    info block for table if CREATE TABLE, or info
+**				for added column if alter table add column, or
+**				NULL if not create or add column
+**	rngvar	    	    info block for table if ALTER TABLE,  else NULL
 **
 ** Outputs:
 **	cr_integ	    statement node; following fields are filled in:
@@ -2133,13 +2159,14 @@ psl_gen_alter_text(
 **	    bug.  Was checking for PSS_CONS_BASEIX bit in 
 **	    cons->pss_cons_type, bit is set only for cons->pss_cons_flags. fix
 **	    worked b/cos for PRIMARY KEY PSS_CONS_BASEIX == PSS_CONS_PRIMARY
+**	9-Nov-2010 (kschendel)
+**	    Update call signature; disable journaling check for VW tables.
 */
 static DB_STATUS
 psl_ver_unique_cons(
 		    PSS_SESBLK    *sess_cb, 
 		    i4            qmode, 
 		    PSS_CONS      *cons,
-		    i4            newtbl, /* 1 =>CREATE TABLE, 0 =>ALTER TABLE*/
 		    DMU_CB        *dmu_cb,
 		    PSS_RNGTAB    *rngvar,
 		    PST_CREATE_INTEGRITY *cr_integ, /* modified */
@@ -2191,8 +2218,11 @@ psl_ver_unique_cons(
     ** user may choose to override this restriction by specifying 
     ** WITH NOJOURNAL_CHECK in which case we will send a warning 
     ** message to the error log
+    **
+    ** No journaling checks are made for Vectorwise tables.
     */
-    if (!newtbl && (sess_cb->pss_ses_flag & PSS_JOURNALED_DB))
+    if (rngvar != NULL && (sess_cb->pss_ses_flag & PSS_JOURNALED_DB)
+      && rngvar->pss_tabdesc->tbl_storage_type <= DB_STDING_STORE_MAX)
     {
 	if (~rngvar->pss_tabdesc->tbl_status_mask & DMT_JNL)
 	{
@@ -2236,9 +2266,9 @@ psl_ver_unique_cons(
     ** and also check for duplicate column names
     */
     status = psl_ver_cons_columns(sess_cb, cons_str, qmode,
-				  &cons->pss_cons_colq, dmu_cb, rngvar, 
-				  newtbl, TRUE, &integ_tup->dbi_columns,
-				  (DMT_ATT_ENTRY **) NULL, &collist, 
+				  &cons->pss_cons_colq, dmu_cb, rngvar,
+				  &integ_tup->dbi_columns,
+				  NULL, &collist,
 				  &cr_integ->pst_key_count, err_blk);
     if (DB_FAILURE_MACRO(status))
 	return (status);
@@ -2271,12 +2301,10 @@ psl_ver_unique_cons(
 **	sess_cb		    ptr to PSF session CB (passed to other routines)
 **	qmode		    query mode  (used for error messages)
 **      cons		    constraint info block
-**      newtbl		    TRUE implies table is being created, 
-**                              and table info is in 'dmu_cb';
-**               	    FALSE implies table already exists, 
-**                              and table info is in 'rngvar'.
-**	dmu_cb		    info about table (if newtbl is TRUE), else NULL
-**	rngvar		    info about table (if newtbl is FALSE), else NULL
+**	dmu_cb		    info block for table if CREATE TABLE, or info
+**				for added column if alter table add column, or
+**				NULL if not create or add column
+**	rngvar	    	    info block for table if ALTER TABLE,  else NULL
 **
 ** Outputs:
 **	cr_integ	    statement node; following fields are filled in:
@@ -2368,13 +2396,15 @@ psl_ver_unique_cons(
 **	    (pslsgram will catch this anyway, or at least should!).
 **	19-Jun-2010 (kiria01) b123951
 **	    Add extra parameter to psl_rngent for WITH support.
+**	9-Nov-2010 (kschendel)
+**	    Get rid of "newtbl", clear up confusion between DMF-att and
+**	    DMT-att, disable journaling checks for VW tables.
 */
 static DB_STATUS
 psl_ver_ref_cons(
 		 PSS_SESBLK    *sess_cb, 
 		 i4  	       qmode, 
 		 PSS_CONS      *cons,
-		 i4            newtbl,
 		 DMU_CB	       *dmu_cb,
 		 PSS_RNGTAB    *refing_rngvar,
 		 PST_STATEMENT *stmt,
@@ -2388,7 +2418,7 @@ psl_ver_ref_cons(
     PST_COL_ID	     *cons_collist;
     PST_COL_ID	     *ref_collist;
     PSY_COL	     *curcol;
-    DMF_ATTR_ENTRY   **cons_att_array;
+    DMT_ATT_ENTRY    **cons_att_array;
     DMT_ATT_ENTRY    **ref_att_array;
     DB_COLUMN_BITMAP ref_map;
     DB_CONSTRAINT_ID ref_cons_id;
@@ -2408,6 +2438,9 @@ psl_ver_ref_cons(
 				** constraint may be created
 				*/
     i4		refing_jour = 0L;
+    bool	vw_involved;
+
+    psl_command_string(qmode, sess_cb, command, &length);
 
     /* set bit flagging this as a referential constraint;
      */
@@ -2425,27 +2458,22 @@ psl_ver_ref_cons(
 	num_cols++;
 
     status = psf_malloc(sess_cb, &sess_cb->pss_ostream, 
-			num_cols * sizeof(DMF_ATTR_ENTRY *), 
-			(PTR *) &cons_att_array, err_blk);
+			num_cols * sizeof(DMT_ATT_ENTRY *), 
+			&cons_att_array, err_blk);
     if (DB_FAILURE_MACRO(status))
 	return (status);
 
-    MEfill(num_cols * sizeof(DMF_ATTR_ENTRY *),
-	   (u_char) 0, (PTR) cons_att_array);
+    MEfill(num_cols * sizeof(DMT_ATT_ENTRY *), 0, (PTR) cons_att_array);
 
     /* check that columns actually exist in table,
     ** and check for duplicate column names in the constraint;
     ** also, fill in cons_att_array and cons_collist with column info
-    **
-    ** (note: if newtbl is FALSE, cons_att_array will be filled with
-    **  DMT_ATT_ENTRYs instead of DMF_ATTR_ENTRY.  But that's OK because
-    **  the size of (<struct> *) is the same for both)
     */
     status = psl_ver_cons_columns(sess_cb, ERx("REFERENTIAL"), qmode,
 				  &cons->pss_cons_colq,
-				  dmu_cb, refing_rngvar, newtbl, FALSE,
+				  dmu_cb, refing_rngvar,
 				  &integ_tup->dbi_columns,
-				  (DMT_ATT_ENTRY **) cons_att_array,
+				  cons_att_array,
 				  &cons_collist, &dummy, err_blk);
     if (DB_FAILURE_MACRO(status))
 	return (status);
@@ -2481,11 +2509,12 @@ psl_ver_ref_cons(
     ** constraint and vanilla referential constraints, rather than having a
     ** significant amount of special-case code for self-referential.
     */
-    if (newtbl)
+    vw_involved = FALSE;
+    if (refing_rngvar == NULL)
     {
-    	bool		     	self_ref, found;
-	DMU_CHAR_ENTRY		*char_entry;
-	DMU_CHAR_ENTRY		*char_end;
+    	bool		     	self_ref;
+
+	vw_involved = (dmu_cb->dmu_chars.dmu_struct > DB_STDING_STORE_MAX);
 
 	/*
 	** determine journaling status of the referencing table; if the 
@@ -2497,28 +2526,9 @@ psl_ver_ref_cons(
 	** determine whether the constraint may be created
 	*/
 
-	/*
-	** point char_entry at the first entry in the char array and look for 
-	** the entry describing journaling status of the new table.
-	** 
-	** Note that, if no entry is found, the default journaling status is
-	** assumed to be NOJOURNALING (this is the internal DMF default).
-	** 				[rblumer 18-apr-94]
-	*/
-	char_entry = (DMU_CHAR_ENTRY *) dmu_cb->dmu_char_array.data_address;
-	char_end   = (DMU_CHAR_ENTRY *) (dmu_cb->dmu_char_array.data_address
-					 + dmu_cb->dmu_char_array.data_in_size);
-	found = FALSE;
-	for (; char_entry < char_end; char_entry++)
-	{
-	    if (char_entry->char_id == DMU_JOURNALED)
-	    {
-		found = TRUE;
-		break;
-	    }
-	}
-
-	if (found && (char_entry->char_value == DMU_C_ON))
+	if (! vw_involved
+	  && BTtest(DMU_JOURNALED, dmu_cb->dmu_chars.dmu_indicators)
+	  && dmu_cb->dmu_chars.dmu_journaled != DMU_JOURNAL_OFF)
 	{
 	    /* 
 	    ** if the database is being journaled, this table will be created 
@@ -2528,7 +2538,7 @@ psl_ver_ref_cons(
 	    refing_jour = (sess_cb->pss_ses_flag & PSS_JOURNALED_DB)
 		? DMT_JNL : DMT_JON;
 	}
-        else if (sess_cb->pss_ses_flag & PSS_JOURNALED_DB)
+        else if (! vw_involved && sess_cb->pss_ses_flag & PSS_JOURNALED_DB)
         {
             /* 
             ** user attempted to create a REF constraint on a non-journaled 
@@ -2597,13 +2607,15 @@ psl_ver_ref_cons(
 					 ref_obj_name, cons, err_blk);
 	    return(status);
 	}
-    }  /* end if (newtbl) */
+    }
     else
     {
+	vw_involved = (refing_rngvar->pss_tabdesc->tbl_storage_type > DB_STDING_STORE_MAX);
+
 	refing_jour = refing_rngvar->pss_tabdesc->tbl_status_mask & 
 			  (DMT_JNL | DMT_JON);
 
-	if (   (~refing_jour & DMT_JNL)
+	if (! vw_involved && (~refing_jour & DMT_JNL)
 	    && (sess_cb->pss_ses_flag & PSS_JOURNALED_DB))
         {
             /* 
@@ -2693,8 +2705,7 @@ psl_ver_ref_cons(
 	if (rngvar_info & PSS_BY_SYNONYM)
 	{
 	    psl_syn_info_msg(sess_cb, rngvar, ref_obj_name, rngvar_info,
-			     sizeof(ERx("ALTER TABLE"))-1,
-			     newtbl ? ERx("CREATE TABLE") : ERx("ALTER TABLE"),
+			     length, command,
 			     err_blk);
 	}				      
 
@@ -2710,9 +2721,14 @@ psl_ver_ref_cons(
     ** determine whether, based on journaling status of the referencing and 
     ** referenced tables and of the database itself, we should prevent user 
     ** from creating this constraint
+    **
+    ** Don't complain about Vectorwise tables (either referencing or
+    ** referenced), as they are non-journaled by fiat.
     */
 
-    if (sess_cb->pss_ses_flag & PSS_JOURNALED_DB)
+    vw_involved = vw_involved || (rngvar->pss_tabdesc->tbl_storage_type > DB_STDING_STORE_MAX);
+
+    if (! vw_involved && sess_cb->pss_ses_flag & PSS_JOURNALED_DB)
     {
         /* 
         ** if the database if being journaled, we have already validated the 
@@ -2733,7 +2749,7 @@ psl_ver_ref_cons(
 	    ** message to the error log
             */
 
-	    if (newtbl)
+	    if (refing_rngvar == NULL)
 	    {
 		refing_name = &dmu_cb->dmu_table_name;
 		refing_schema = &dmu_cb->dmu_owner;
@@ -2788,7 +2804,7 @@ psl_ver_ref_cons(
 	    }
         }
     }
-    else
+    else if (!vw_involved)
     {
 	/*
 	** if the database is not being journaled, we must verify that both the
@@ -2807,7 +2823,7 @@ psl_ver_ref_cons(
 	    DB_TAB_NAME		*refing_name;
 	    DB_OWN_NAME		*refing_schema;
 
-	    if (newtbl)
+	    if (refing_rngvar == NULL)
 	    {
 		refing_name = &dmu_cb->dmu_table_name;
 		refing_schema = &dmu_cb->dmu_owner;
@@ -2973,9 +2989,9 @@ psl_ver_ref_cons(
 	** also, fill in att_array with description of referenced columns
 	*/
 	status = psl_ver_cons_columns(sess_cb, ERx("REFERENTIAL"), qmode,
-				      &cons->pss_ref_colq, 
-				      dmu_cb, rngvar, FALSE, TRUE,
-				      &ref_map, ref_att_array, 
+				      &cons->pss_ref_colq,
+				      NULL, rngvar,
+				      &ref_map, ref_att_array,
 				      &ref_collist, &dummy, err_blk);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
@@ -2993,12 +3009,11 @@ psl_ver_ref_cons(
     /* check that number of columns match in cons_cols and ref_cols
      */
     num_cols = BTcount((char *)&integ_tup->dbi_columns, DB_COL_BITS);
-    
+
     if (BTcount((char *) &ref_map, DB_COL_BITS) != num_cols)
     {
 	char *tabname = cr_integ->pst_cons_tabname.db_tab_name;
 
-	psl_command_string(qmode, sess_cb->pss_lang, command, &length);
 
 	(void) psf_error(E_PS0484_REF_NUM_COL, 0L, PSF_USERERR, 
 			 &err_code, err_blk, 2,
@@ -3027,7 +3042,7 @@ psl_ver_ref_cons(
     
     /* check that types of columns match in cons_cols and ref_cols
      */
-    status = psl_ver_ref_types(sess_cb, qmode, newtbl, num_cols, 
+    status = psl_ver_ref_types(sess_cb, qmode, num_cols, 
 			       cons_att_array, ref_att_array, err_blk);
     if (DB_FAILURE_MACRO(status))
 	return (status);
@@ -3085,19 +3100,19 @@ psl_ver_ref_cons(
 **	19-Nov-96 (nanpr01)
 **	    Alter table bug : 79064. Referential constraint does not
 **	    work.
+**	9-Nov-2010 (kschendel)
+**	    Straighten out DMF vs DMT att entry confusion.
 */
 static DB_STATUS
 psl_ver_ref_types(
 		  PSS_SESBLK     *sess_cb, 
 		  i4		 qmode,
-		  i4             newtbl,
 		  i4             num_cols,
-		  DMF_ATTR_ENTRY **cons_att_array, 
+		  DMT_ATT_ENTRY  **cons_att_array, 
 		  DMT_ATT_ENTRY  **ref_att_array,
 		  DB_ERROR       *err_blk)
 {
-    DMF_ATTR_ENTRY *cur_col;        /* used if newtbl == FALSE */
-    DMT_ATT_ENTRY  *cur_col_dmt;    /* used if newtbl == TRUE  */
+    DMT_ATT_ENTRY  *cur_col;
     DMT_ATT_ENTRY  *cur_ref_col;
     PST_VAR_NODE   varnode;
     PST_OP_NODE    opnode;
@@ -3153,8 +3168,8 @@ psl_ver_ref_types(
 	cur_col     = cons_att_array[colno];
 	cur_ref_col = ref_att_array[colno];
 
-	if ((cur_col == (DMF_ATTR_ENTRY *) NULL) 
-	    || (cur_ref_col == (DMT_ATT_ENTRY *) NULL))
+	if ((cur_col == NULL) 
+	    || (cur_ref_col == NULL))
 	{
 	    /* should never happen */
 	    (VOID) psf_error(E_PS0002_INTERNAL_ERROR, 0L, 
@@ -3176,41 +3191,17 @@ psl_ver_ref_types(
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
 
-	/* depending on attr info passed in, setup info for 2nd column
-	 */
-	if ((newtbl) || (qmode == PSQ_ATBL_ADD_COLUMN))
-	{
-	    /* have new table and DMF_ATTR_ENTRY structure 
-	     */
-	    STRUCT_ASSIGN_MACRO(cur_col->attr_name, varnode.pst_atname);
-	
-	    status = pst_node(sess_cb, &sess_cb->pss_ostream, 
-			      (PST_QNODE *) NULL, (PST_QNODE *) NULL, 
-			      PST_VAR, (char *) &varnode, sizeof(PST_VAR_NODE), 
-			      cur_col->attr_type, cur_col->attr_precision,
-			      cur_col->attr_size, (DB_ANYTYPE *) NULL, 
-			      &node1, err_blk, PSS_NOALLOC);
-	    if (DB_FAILURE_MACRO(status))
-		return (status);
-	}
-	else 
-	{
-	    /* have existing table, so use DMT_ATT_ENTRY structure 
-	     */
-	    cur_col_dmt = (DMT_ATT_ENTRY *) cons_att_array[colno];
+	cui_move(cur_col->att_nmlen, cur_col->att_nmstr, ' ',
+	    DB_ATT_MAXNAME, varnode.pst_atname.db_att_name);
 
-	    cui_move(cur_col_dmt->att_nmlen, cur_col_dmt->att_nmstr, ' ',
-		DB_ATT_MAXNAME, varnode.pst_atname.db_att_name);
-
-	    status = pst_node(sess_cb, &sess_cb->pss_ostream, 
-			      (PST_QNODE *) NULL, (PST_QNODE *) NULL, 
-			      PST_VAR, (char *) &varnode, sizeof(PST_VAR_NODE), 
-			      cur_col_dmt->att_type, cur_col_dmt->att_prec,
-			      cur_col_dmt->att_width, (DB_ANYTYPE *) NULL, 
-			      &node1, err_blk, PSS_NOALLOC);
-	    if (DB_FAILURE_MACRO(status))
-		return (status);
-	}
+	status = pst_node(sess_cb, &sess_cb->pss_ostream, 
+			  (PST_QNODE *) NULL, (PST_QNODE *) NULL, 
+			  PST_VAR, (char *) &varnode, sizeof(PST_VAR_NODE), 
+			  cur_col->att_type, cur_col->att_prec,
+			  cur_col->att_width, (DB_ANYTYPE *) NULL, 
+			  &node1, err_blk, PSS_NOALLOC);
+	if (DB_FAILURE_MACRO(status))
+	    return (status);
 	
 	/* now perform the type resolution
 	 */
@@ -3549,7 +3540,8 @@ static DB_STATUS
 psl_qual_primary_cons(
 		     PTR		*qual_args,
 		     DB_INTEGRITY       *integ,
-		     i4		*satisfies)
+		     i4		*satisfies,
+		     PSS_SESBLK	*sess_cb)
 {
     if (integ->dbi_consflags & CONS_PRIMARY)
 	*satisfies = TRUE;
@@ -3586,7 +3578,8 @@ DB_STATUS
 psl_qual_ref_cons(
 		  PTR		*qual_args,
 		  DB_INTEGRITY  *integ,
-		  i4		*satisfies)
+		  i4		*satisfies,
+		  PSS_SESBLK	*sess_cb)
 {
     if (integ->dbi_consflags & CONS_REF)
 	*satisfies = TRUE;
@@ -3733,7 +3726,7 @@ psl_find_cons(
 	    {
 		cur_integ = (DB_INTEGRITY*) qp->dt_data;
 
-		status = qual_func(qual_args, cur_integ, found);
+		status = qual_func(qual_args, cur_integ, found, sess_cb);
 		if (DB_FAILURE_MACRO(status))
 		    break;
 
@@ -4229,10 +4222,11 @@ static DB_STATUS
 psl_qual_unique_cons(
 		     PTR		*qual_args,
 		     DB_INTEGRITY       *integ,
-		     i4		*satisfies)
+		     i4		*satisfies,
+		     PSS_SESBLK	*sess_cb)
 {
     if (   integ->dbi_consflags & CONS_UNIQUE
-        && !MEcmp((PTR) &integ->dbi_columns, qual_args[0], 
+        && !MEcmp((PTR) &integ->dbi_columns, qual_args[0],
 	       sizeof(DB_COLUMN_BITMAP)))
     {
 	/* tuple represents a UNIQUE constraint on a desired set of columns */
@@ -4261,12 +4255,10 @@ psl_qual_unique_cons(
 **	psq_cb		    PSF request CB
 **	    psq_mode	      query mode  (used for error messages)
 **      cons		    constraint info block
-**      newtbl		    TRUE implies table is being created, 
-**                              and table info is in 'dmu_cb';
-**               	    FALSE implies table already exists, 
-**                              and table info is in 'rngvar'.
-**	dmu_cb		    info about table (if newtbl is TRUE), else NULL
-**	rngvar		    info about table (if newtbl is FALSE), else NULL
+**	dmu_cb		    info block for table if CREATE TABLE, or info
+**				for added column if alter table add column, or
+**				NULL if not create or add column
+**	rngvar	    	    info block for table if ALTER TABLE,  else NULL
 **
 ** Outputs:
 **	cr_integ	    statement node; following fields are filled in:
@@ -4332,13 +4324,14 @@ psl_qual_unique_cons(
 **	    Change params for psl_p_telem call again.
 **	04-nov-05 (toumi01)
 **	    Add xform_avg parameter to psl_p_telem call.
+**	9-Nov-2010 (kschendel)
+**	    Get rid of "newtbl", disable journaling checks for VW tables.
 */
 static DB_STATUS
 psl_ver_check_cons(
 		   PSS_SESBLK	*sess_cb,
 		   PSQ_CB	*psq_cb,
 		   PSS_CONS     *cons,
-		   i4		newtbl,
 		   DMU_CB	*dmu_cb,
 		   PSS_RNGTAB	*rngvar,
 		   PST_CREATE_INTEGRITY *cr_integ)
@@ -4378,10 +4371,10 @@ psl_ver_check_cons(
 	    */
 	    status = psl_ver_cons_columns(sess_cb, ERx("CHECK"), qmode,
 					  &cons->pss_cons_colq,
-					  dmu_cb, rngvar, TRUE, TRUE,
+					  dmu_cb, rngvar,
 					  &known_not_nullable_map,
-					  (DMT_ATT_ENTRY**) NULL, 
-					  &cr_integ->pst_cons_collist, 
+					  NULL,
+					  &cr_integ->pst_cons_collist,
 					  &dummy, err_blk);
 	    if (DB_FAILURE_MACRO(status))
 		return (status);
@@ -4404,17 +4397,16 @@ psl_ver_check_cons(
     }  /* end if PSS_CONS_NOT_NULL */
     else 
     {
-	bool unresolved = FALSE;
-
 	/*
 	** we have an EXPLICIT constraint
 	*/
 	
-	if (newtbl || (qmode == PSQ_ATBL_ADD_COLUMN) )
+	if (dmu_cb != NULL)
 	{
 	    PSL_P_TELEM_CTX ctx;
 	    /*
 	    ** constraint was specified inside CREATE TABLE statement.
+	    ** or alter table add column.
 	    */
 
 	    /* While parsing the <search condition> we postponed looking up
@@ -4491,8 +4483,11 @@ psl_ver_check_cons(
 	    ** user may choose to override this restriction by specifying 
 	    ** WITH NOJOURNAL_CHECK in which case we will send a warning 
 	    ** message to the error log
+	    **
+	    ** Never check VW tables, they are forced to be nojournaling.
 	    */
-	    if (sess_cb->pss_ses_flag & PSS_JOURNALED_DB)
+	    if (rngvar->pss_tabdesc->tbl_storage_type <= DB_STDING_STORE_MAX
+	      && sess_cb->pss_ses_flag & PSS_JOURNALED_DB)
 	    {
 		if (~rngvar->pss_tabdesc->tbl_status_mask & DMT_JNL)
 		{
@@ -4609,9 +4604,9 @@ psl_ver_check_cons(
 		    ** column-level constraint can only be specified using
 		    ** CREATE TABLE statement, so look in dmu_cb for info.
 		    */
-		    
+
 		    tabname = dmu_cb->dmu_table_name.db_tab_name;
-		    psl_command_string(psq_cb->psq_mode, DB_SQL, command,
+		    psl_command_string(psq_cb->psq_mode, sess_cb, command,
 			&length);
 
 		    _VOID_ psf_error(E_PS0472_COL_CHECK_CONSTRAINT, 0L,
@@ -4639,14 +4634,6 @@ psl_ver_check_cons(
 	** of rule implementing constraint
 	*/
 	cr_integ->pst_checkRuleText = cons->pss_check_rule_text;
-	
-
-	/* check if any columns are made known-not-nullable
-	 */
-	/***** This check has been postponed to a future release;
-	****** we do not have to support known-not-nullable until we
-	****** support the SQL92 INFO_SCHEMA.      rjb  28-dec-1992
-	*****/
 
     }  /* end else EXPLICIT constraint */
 
@@ -4685,6 +4672,7 @@ psl_check_unique_set(
 		     i4	  name1_specified,
 		     i4	  name2_specified,
 		     i4	  qmode,
+		     PSS_SESBLK *sess_cb,
 		     DB_ERROR     *err_blk)
 {
     char	  command[PSL_MAX_COMM_STRING];
@@ -4697,7 +4685,7 @@ psl_check_unique_set(
     if (MEcmp((PTR) &integ_tup1->dbi_columns,
 	      (PTR) &integ_tup2->dbi_columns, sizeof(DB_COLUMN_BITMAP))  == 0)
     {
-	psl_command_string(qmode, DB_SQL, command, &length);
+	psl_command_string(qmode, sess_cb, command, &length);
 
 	if ((name1_specified) && (name2_specified))
 	{
@@ -4839,12 +4827,12 @@ psl_compare_multi_cons(
 	    bool	firstun = TRUE, firstref = TRUE;
 
 	    /* Loop over preceding constraints, looking for match. */
-	    for (stmt2 = *stmt_list; stmt2 != stmt1; 
+	    for (stmt2 = *stmt_list; stmt2 != stmt1;
 					stmt2 = stmt2->pst_next)
 	    {
 		xinteg = &stmt2->pst_specific.pst_createIntegrity;
-		if (!(MEcmp((PTR)&xinteg->pst_indexopts.pst_resname,
-			(PTR)&cr_integ1->pst_indexopts.pst_resname,
+		if (!(MEcmp((PTR)&xinteg->pst_indexres.pst_resname,
+			(PTR)&cr_integ1->pst_indexres.pst_resname,
 			sizeof(DB_TAB_NAME)) == 0)) continue;
 
 		if (psl_verify_new_index(sess_cb, cr_integ1, xinteg))
@@ -4896,13 +4884,13 @@ psl_compare_multi_cons(
 			}
 		    }
 		}
-		else 
+		else
 		{
 		    (void) psf_error(E_PS048D_CONS_BADINDEX, 0L, PSF_USERERR,
 				&err_code, err_blk, 1,
 				psf_trmwhite(sizeof(DB_TAB_NAME),
-				  (PTR)&cr_integ1->pst_indexopts.pst_resname),
-				&cr_integ1->pst_indexopts.pst_resname);
+				  (PTR)&cr_integ1->pst_indexres.pst_resname),
+				&cr_integ1->pst_indexres.pst_resname);
 		    return(E_DB_ERROR);
 		}
 	    }
@@ -4932,7 +4920,7 @@ psl_compare_multi_cons(
 			   integ_tup2->dbi_consname.db_constraint_name,
 			   sizeof(DB_CONSTRAINT_NAME)))
 		{
-		    psl_command_string(qmode, DB_SQL, command, &length);
+		    psl_command_string(qmode, sess_cb, command, &length);
 
 		    _VOID_ psf_error(E_PS047C_DUP_CONS_NAME, 0L, PSF_USERERR,
 				 &err_code, err_blk, 2,
@@ -4953,8 +4941,8 @@ psl_compare_multi_cons(
 		&& (integ_tup2->dbi_consflags & CONS_UNIQUE))
 	    {
 		status = psl_check_unique_set(integ_tup1, integ_tup2,
-					      name1_spec, name2_spec, 
-					      qmode, err_blk);
+					      name1_spec, name2_spec,
+					      qmode, sess_cb, err_blk);
 		if (DB_FAILURE_MACRO(status))
 		    return (status);
 
@@ -5029,9 +5017,9 @@ psl_compare_multi_cons(
 	    char *tabname = stmt1->pst_specific.pst_createIntegrity
 					.pst_cons_tabname.db_tab_name;
 
-	    psl_command_string(qmode, DB_SQL, command, &length);
-	    
-	    (void) psf_error(E_PS0480_UNIQUE_NOT_NULL, 0L, PSF_USERERR, 
+	    psl_command_string(qmode, sess_cb, command, &length);
+
+	    (void) psf_error(E_PS0480_UNIQUE_NOT_NULL, 0L, PSF_USERERR,
 			     &err_code, err_blk, 2,
 			     length, command,
 			     psf_trmwhite(DB_TAB_MAXNAME, tabname), tabname);
@@ -5056,7 +5044,7 @@ stmt_swap:
 	** proper index definition. Flags in the swapped constraints must
 	** also be changed, but that was done earlier in the loop when the
 	** need to swap was first detected. */
-	if (longer_ref || integ_tup1->dbi_consflags & CONS_UNIQUE &&
+	if ((longer_ref || integ_tup1->dbi_consflags & CONS_UNIQUE) &&
 	    cr_integ1->pst_createIntegrityFlags & PST_CONS_SHAREDIX)
 	{
 	    for (stmtx = stmt_list; (*stmtx)->pst_next != stmt1;
@@ -5182,7 +5170,7 @@ psl_compare_agst_table(
 	    ** found, named index will be created specifically
 	    ** for constraint. */
 	    for (i = 0; i < rdrinfo->rdr_no_index; i++)
-	     if (MEcmp((PTR)&cr_integ->pst_indexopts.pst_resname,
+	     if (MEcmp((PTR)&cr_integ->pst_indexres.pst_resname,
 		(PTR)&rdrinfo->rdr_indx[i]->idx_name,
 		sizeof(DB_TAB_NAME)) == 0)
 	    {
@@ -5198,7 +5186,7 @@ psl_compare_agst_table(
 		    DMT_I_PERSISTS_OVER_MODIFIES)) badixopts = TRUE;
 		keycount = rdrinfo->rdr_indx[i]->idx_key_count;
 		keyarray = &rdrinfo->rdr_indx[i]->idx_attr_id[0];
-		err_name = &cr_integ->pst_indexopts.pst_resname;
+		err_name = &cr_integ->pst_indexres.pst_resname;
 	    }
 	}
 
@@ -5264,9 +5252,9 @@ psl_compare_agst_table(
     {
 	char *tabname = cr_integ->pst_cons_tabname.db_tab_name;
 
-	psl_command_string(qmode, DB_SQL, command, &length);
-	
-	(void) psf_error(E_PS0480_UNIQUE_NOT_NULL, 0L, PSF_USERERR, 
+	psl_command_string(qmode, sess_cb, command, &length);
+
+	(void) psf_error(E_PS0480_UNIQUE_NOT_NULL, 0L, PSF_USERERR,
 			 &err_code, err_blk, 2,
 			 length, command,
 			 psf_trmwhite(DB_TAB_MAXNAME, tabname), tabname);
@@ -5337,20 +5325,23 @@ psl_compare_agst_table(
 ** History:
 **	09-jan-94 (andre)
 **	    written
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Update psl-command-string call.
 */
 static DB_STATUS
 psl_qual_dup_cons(
 		  PTR		*qual_args,
 		  DB_INTEGRITY	*integ,
-		  i4		*dummy)
+		  i4		*dummy,
+		  PSS_SESBLK	*sess_cb)
 {
     i4		err_code;
     DB_STATUS		status = E_DB_OK;
-    DB_INTEGRITY	*new_cons 	= (DB_INTEGRITY *) qual_args[0];
-    PSS_RNGTAB		*rngvar	  	= (PSS_RNGTAB *)   qual_args[1];
-    i4			name_specified 	= *((i4 *)   	   qual_args[2]);
-    i4			qmode          	= *((i4 *)   	   qual_args[3]);
-    DB_ERROR		*err_blk  	= (DB_ERROR *)     qual_args[4];
+    DB_INTEGRITY	*new_cons	= (DB_INTEGRITY *) qual_args[0];
+    PSS_RNGTAB		*rngvar		= (PSS_RNGTAB *)   qual_args[1];
+    i4			name_specified	= *((i4 *)   	   qual_args[2]);
+    i4			qmode		= *((i4 *)   	   qual_args[3]);
+    DB_ERROR		*err_blk	= (DB_ERROR *)     qual_args[4];
 
     /* 
     ** only look at UNIQUE constraints
@@ -5375,7 +5366,7 @@ psl_qual_dup_cons(
 	    ** are identical
 	    */
 	    status = psl_check_unique_set(new_cons, integ, name_specified, TRUE,
-		qmode, err_blk);
+		qmode, sess_cb, err_blk);
 	}
     }
 
@@ -5386,15 +5377,7 @@ psl_qual_dup_cons(
 /*
 ** Name: psl_compare_agst_schema  - check for name conflicts between 
 **				    constraints in the same schema
-
-/* 
 ** 
-** 
-**
-** History:
-**	sometime (someone)
-**	    written
-
 ** Description:	    
 **          Compares a list of constraints for names that conflict with other
 **          constraints in the same schema.  Returns an error if the name of a
@@ -5947,7 +5930,6 @@ DB_ERROR                  *err_blk)
     DB_IIDBDEPENDS      dbdep[RDF_MAX_QTCNT];
     DB_IIDBDEPENDS      *cur_dbdep;
     RDF_CB              rdf_cb;
-    QEF_DATA            *qp;
     i4                  tupcount;
     i4                  err_code;
 

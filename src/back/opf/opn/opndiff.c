@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -49,25 +49,6 @@
 #include    <opxlint.h>
 #include    <adulcol.h>
 
-/* static function prototypes */
-
-static OPN_DIFF	opn_chardiff(
-		    char		*high,
-		    char		*low,
-		    i4			*forcemax,
-		    i4			nunique,
-		    OPN_PERCENT		density,
-		    PTR			tbl);
-
-static OPN_DIFF	opn_stringdiff(
-		    char		*high,
-		    char		*low,
-		    i4			*charlength,
-		    OPN_PERCENT		cellcount,
-		    OPZ_ATTS		*attrp,
-		    DB_DATA_VALUE	*datatype,
-		    PTR			tbl);
-
 /**
 **
 **  Name: OPNDIFF.C - return measure of difference between two histogram values
@@ -98,7 +79,36 @@ static OPN_DIFF	opn_stringdiff(
 **       Added casts and casted assigns to avoid unaligned access in axp_osf.   
 **      18-sep-2009 (joea)
 **          Add case for DB_BOO_TYPE in opn_diff.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opn_initcollate(
+	OPS_STATE *global);
+static OPN_DIFF opn_chardiff(
+	char *high,
+	char *low,
+	i4 *forcemax,
+	i4 nunique,
+	OPN_PERCENT density,
+	PTR tbl);
+static OPN_DIFF opn_stringdiff(
+	char *high,
+	char *low,
+	i4 *charlength,
+	OPO_TUPLES celltups,
+	OPZ_ATTS *attrp,
+	DB_DATA_VALUE *datatype,
+	PTR tbl);
+OPN_DIFF opn_diff(
+	PTR high,
+	PTR low,
+	i4 *charlength,
+	OPO_TUPLES celltups,
+	OPZ_ATTS *attrp,
+	DB_DATA_VALUE *datatype,
+	PTR tbl);
 
 /*{
 ** Name: opn_initcollate - Initialize collation sequence flags

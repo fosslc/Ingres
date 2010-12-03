@@ -486,6 +486,12 @@ SQLSTATE_MAPPING_REQUIRED
 **	    only the one encrypted column.
 **      28-Sep-2010 (gupsh01) BUG 124572.
 **	    Added rename options to alter table syntax error E_US0F0A_3850.
+**	11-Oct-2010 (kschendel) SIR 124544
+**	    Drop a bunch of almost-duplicated WITH-option errors, rework
+**	    the remaining ones.
+**	1-Nov-2010 (kschendel) more 124544
+**	    Drop 5977, obsolete quel message.  Drop a few other unused
+**	    messages about long-deleted features such as set cache.
 */
 
 #define _US_CLASS   0
@@ -804,8 +810,7 @@ E_US07D1_2001:SS5000A_QUERY_ERROR
 "CREATE or ALTER TABLE: number of column names and number of target list 
 elements in the subselect do not match."
 E_US07D2_2002:SS42000_SYN_OR_ACCESS_ERR
-"CREATE TABLE: Bad storage structure '%0c'.\n
-The valid storage structure names are [c]btree, [c]isam, [c]hash, [c]heap."
+"%0c: Unrecognized storage structure '%1c'."
 E_US07D3_2003:SS42000_SYN_OR_ACCESS_ERR
 "CREATE or ALTER TABLE: invalid option '%0c'. Try NOT NULL WITH DEFAULT."
 E_US07D4_2004:SS42000_SYN_OR_ACCESS_ERR
@@ -858,13 +863,26 @@ E_US07D5_2005:SS42000_SYN_OR_ACCESS_ERR
 \nSTRUCTURE is the only valid keyword for this type of subclause."
 E_US07D6_2006:SS5000A_QUERY_ERROR
 "CREATE TABLE: Location specified twice: '%0c' conflicts with '%1c'."
-E_US07D7_2007:SS42000_SYN_OR_ACCESS_ERR
-"CREATE TABLE: '%0c' is either an invalid option or the syntax
-of the WITH subclause is invalid.
-\nThe valid keywords for this type of subclause are:
-\n[NO]DUPLICATES, [NO]JOURNALING, [NO]COMPRESSION."
-E_US07D8_2008:SS50002_LIMIT_EXCEEDED
-"CREATE or ALTER TABLE: excessive table width on column '%0c'."
+E_US07D7_2007_UNKNOWN_WITHOPT:SS42000_SYN_OR_ACCESS_ERR
+"%0c: '%1c' is not a recognized %2c style WITH-option."
+/*%
+** Parameters:
+**	%0c - The type of statement being parsed.
+**	%1c - The unknown option name
+**	%2c - The way the option was used, such as keyword-only
+**
+** Explanation:
+**	The statement used a WITH-option keyword that is not recognized.
+**	Either the option keyword is completely unknown, or it is only
+**	recognized with different syntax usage (for example, mis-using the
+**	DUPLICATES keyword option as DUPLICATES=value will produce this error).
+**
+** System Status:
+**	The statement is rejected.
+**
+** Recommendation:
+**	Correct the statement syntax to use a valid WITH-option.
+*/
 E_US07D9_2009:SS5000A_QUERY_ERROR
 "'%0c' is a system table."
 E_US07DA_2010:SS42502_DUPL_OBJECT
@@ -877,8 +895,6 @@ E_US07DD_2013:SS5000A_QUERY_ERROR
 "CREATE TABLE/VIEW: duplicate column name '%0c'."
 E_US07DE_2014:SS42000_SYN_OR_ACCESS_ERR
 "CREATE or ALTER TABLE: invalid column format '%0c' on column '%1c'."
-E_US07DF_2015:SS5000A_QUERY_ERROR
-"CREATE TABLE: Too many options in the WITH clause."
 E_US07E0_2016:SS5000A_QUERY_ERROR
 "CREATE TABLE: Improper use of NULL in the target list;\n
         use conversion function to specify data type of the null value."
@@ -902,13 +918,8 @@ of the WITH subclause is invalid.
 E_US07E7_2023:SS5000A_QUERY_ERROR
 "CREATE TABLE: Number of key columns must not be greater than
 the number of columns in the table."
-E_US07E8_2024:SS5000A_QUERY_ERROR
-"CREATE TABLE: Key column '%0c' is undefined."
 E_US07E9_2025:SS5000A_QUERY_ERROR
-"CREATE TABLE: Duplicate key column '%0c'."
-E_US07EA_2026:SS5000A_QUERY_ERROR
-"CREATE TABLE: WITH option '%0c' allowed only in the version of the
-\n      CREATE TABLE statement using a subselect."
+"%0c: Duplicate key column '%1c'."
 E_US07EB_2027:SS5000A_QUERY_ERROR
 "CREATE TABLE: Illegal MINPAGES value '%0d' in a CREATE TABLE command.
 \n      The value must be less than or equal to the MAXPAGES value."
@@ -990,23 +1001,48 @@ row size exceeded the maximum allowable row width."
 **	internal request to create a temporary table, the user should report
 **	the problem to Ingres Corporation Technical Support.
 */
-E_US07FE_2046:SS42000_SYN_OR_ACCESS_ERR
-"CREATE: '%0c' is either an invalid option or the syntax
-of the WITH subclause is invalid.
-\nThe valid keywords for this type of subclause are:
-\n[NO]DUPLICATES, [NO]JOURNALING, [NO]LOGGING."
-E_US07FF_2047:SS42000_SYN_OR_ACCESS_ERR
-"CREATE: '%0c' is either an invalid option or the syntax of the
-\nWITH subclause is invalid.
-\nThe only valid keywords for this type of subclause are LOCATION
-\nand PAGE_SIZE."
+E_US07FE_2046_WITHOPT_USAGE:SS42000_SYN_OR_ACCESS_ERR
+"%0c: '%1c' is not a valid WITH-option for this statement."
+/*%
+** Parameters:
+**	%0c - The type of statement being parsed.
+**	%2c - The option name
+**
+** Explanation:
+**	The query used a WITH-option keyword that is not permitted
+**	by that sort of statement.  For instance, the WITH STRUCTURE=value
+**	option is not allowed on a MODIFY table TO structure WITH ...
+**	statement, since the WITH-option would be redundant.
+**
+** System Status:
+**	The statement is rejected.
+**
+** Recommendation:
+**	Correct the statement syntax to use a valid WITH-option.
+*/
+E_US07FF_2047_WITHOPT_VALUE:SS42000_SYN_OR_ACCESS_ERR
+"%0c: %1c is an invalid value for the %2c WITH-clause option."
+/*%
+** Parameters:
+**	%0c - The type of statement being parsed.
+**	%1c - The given option value
+**	%2c - The option name
+**
+** Explanation:
+**	The value supplied for the given WITH-clause option is not
+**	a recognized value for that option.
+**
+** System Status:
+**	The statement is rejected.
+**
+** Recommendation:
+**	Correct the statement syntax to use a valid WITH-option value.
+*/
 E_US0800_2048:SS42000_SYN_OR_ACCESS_ERR
 "CREATE or ALTER TABLE: national character data types require 
 \n'-n' or '-i' option with CREATEDB."
 E_US0801_2049:SS42000_SYN_OR_ACCESS_ERR
 "MODIFY: you may not modify page_size for a temporary table."
-E_US0802_2050:SS42000_SYN_OR_ACCESS_ERR
-"%0c: you may only use '%1c' with CREATE INDEX and STRUCTURE=RTREE"
 E_US0803_2051:SS5000A_QUERY_ERROR
 "CREATE VIEW: number of column names and number of target list elements
 \n      in the subselect do not match."
@@ -1155,12 +1191,10 @@ E_US0840_2112:SS42507_RESERVED_IDENTIFIER
 "line %0d, Invalid column name 'tid'."
 E_US0841_2113:SS5000A_QUERY_ERROR
 "line %0d, Too many entries in argument list to process in this statement."
-E_US0842_2114:SS5000A_QUERY_ERROR
-"line %0d, Attempt to specify location more than once."
 E_US0843_2115:SS5000A_QUERY_ERROR
-"line %0d, Too many locations specified."
+"%0c: line %1d, Too many locations specified; the maximum is %2d."
 E_US0844_2116:SS5000A_QUERY_ERROR
-"line %0d, Location '%1c' has already been specified."
+"%0c: line %1d, Location '%2c' has already been specified."
 E_US0845_2117:SS42500_TBL_NOT_FOUND
 "Table '%0c' does not exist or is not owned by you."
 E_US0846_2118:SS5000A_QUERY_ERROR
@@ -1222,54 +1256,11 @@ E_US0859_2137:SS5000A_QUERY_ERROR
 "line %0d, There is no such minute as '%1d', use a 24 hour clock system."
 E_US085A_2138:SS5000A_QUERY_ERROR
 "line %0d, There is no such time as 24:%1d, use a 24 hour clock system."
-E_US085B_2139:SS42000_SYN_OR_ACCESS_ERR
-"RETRIEVE: line %0d, '%1c' is either an invalid option or the syntax
-of the WITH subclause is invalid.
-\nSTRUCTURE is the only valid keyword for this type of subclause."
-E_US085C_2140:SS42000_SYN_OR_ACCESS_ERR
-"RETRIEVE: line %0d, '%1c' is either an invalid option or the syntax
-of the WITH subclause is invalid.
-\nThe valid keywords for this type of subclause are:
-\n   FILLFACTOR, MINPAGES, MAXPAGES, NONLEAFFILL, LEAFFILL, MAXINDEXFILL."
 E_US085D_2141:SS5000A_QUERY_ERROR
 "You must not specify a WITH clause on a RETRIEVE command
 unless it is a RETRIEVE INTO."
-E_US085E_2142:SS5000A_QUERY_ERROR
-"RETRIEVE INTO: Improper use of NULL in the target list; use conversion
-\nfunction to specify data type of the null value."
-E_US085F_2143:SS5000A_QUERY_ERROR
-"RETRIEVE INTO: Illegal MINPAGES value '%0d' in a RETRIEVE command.
-\nThe value must be less or equal to the MAXPAGES value."
-E_US0860_2144:SS5000A_QUERY_ERROR
-"RETRIEVE INTO: Bad storage structure '%0c'.
-\nThe valid storage structure names are [c]btree, [c]isam, [c]hash, [c]heap."
-E_US0861_2145:SS5000A_QUERY_ERROR
-"RETRIEVE INTO: Invalid FILLFACTOR of '%0d' specified.
-\nMust be in 1 - 100 range (inclusive)."
-E_US0862_2146:SS5000A_QUERY_ERROR
-"RETRIEVE INTO: Invalid MINPAGES of '%0d' specified. Must be greater than 0."
-E_US0863_2147:SS5000A_QUERY_ERROR
-"RETRIEVE INTO: Invalid MAXPAGES of '%0d' specified. Must be greater than 0."
-E_US0864_2148:SS5000A_QUERY_ERROR
-"RETRIEVE INTO: Invalid NONLEAFFILL of '%0d' specified.
-Must be in 1 - 100 range (inclusive)."
-E_US0865_2149:SS5000A_QUERY_ERROR
-"RETRIEVE INTO: Invalid LEAFFILL/INDEXFILL of '%0d' specified.
-Must be in 1 - 100 range (inclusive)."
-E_US0866_2150:SS42000_SYN_OR_ACCESS_ERR
-"RETRIEVE INTO: Unrecognized option '%0c' in the WITH clause."
-E_US0867_2151:SS5000A_QUERY_ERROR
-"RETRIEVE INTO: duplicate key '%0c'."
-E_US0868_2152:SS5000A_QUERY_ERROR
-"RETRIEVE INTO: The '%0c' entry in the WITH clause
-is incompatible with the storage structure."
 E_US0869_2153:SS5000H_UNAVAILABLE_RESOURCE
 "Repeat query is unknown to server.  Please send the definition"
-E_US086A_2154:SS42000_SYN_OR_ACCESS_ERR
-"RETRIEVE: line %0d, '%1c' is either an invalid option or the syntax
-of the WITH subclause is invalid.
-\nThe valid keywords for this type of subclause are:
-\n[NO]DUPLICATES, [NO]JOURNALING."
 E_US086B_2155:SS42000_SYN_OR_ACCESS_ERR
 "RETRIEVE: line %0d, '%1c' is either an invalid option or the syntax
 \nof the WITH subclause is invalid.
@@ -3124,9 +3115,6 @@ E_US0B6A_2922:SS42000_SYN_OR_ACCESS_ERR
 WHERE, or GROUP BY clauses."
 E_US0B6B_2923:SS5000A_QUERY_ERROR
 "line %0d, Aggregates cannot contain correlated variables."
-E_US0B6C_2924:SS42000_SYN_OR_ACCESS_ERR
-"line %0d, Syntax error.
-There are too many entries in the WITH or WHERE clause."
 E_US0B6D_2925:SS5000A_QUERY_ERROR
 "SELECT: FOR UPDATE clause found in non-updatable SELECT statement.
 \n      May not use set function, GROUP, HAVING, DISTINCT, UNION, ORDER or more
@@ -5343,8 +5331,6 @@ E_US1201_4609:SS42506_INVALID_IDENTIFIER
 "Owner name is not valid."
 E_US1202_4610:SS50000_MISC_ERRORS
 "Invalid attribute type specified."
-E_US1203_4611:SS50000_MISC_ERRORS
-"A bad attribute name was specified."
 E_US1204_4612:SS50000_MISC_ERRORS
 "Invalid size for specified attribute type."
 E_US1205_4613:SS50000_MISC_ERRORS
@@ -5507,8 +5493,6 @@ E_US13F2_5106:SS42000_SYN_OR_ACCESS_ERR
 "CREATE %0c: invalid column format '%1c' on column '%2c'."
 E_US13F3_5107:SS50002_LIMIT_EXCEEDED
 "CREATE: It is not allowed to create a table with more than 1024 columns."
-E_US13F4_5108:SS50002_LIMIT_EXCEEDED
-"CREATE %0c: excessive table width on column '%1c'."
 E_US13F5_5109:SS42506_INVALID_IDENTIFIER
 "CREATE %0c: underscore not allowed in table names."
 E_US13F6_5110:SS50000_MISC_ERRORS
@@ -5607,8 +5591,6 @@ E_US145D_5213:SS42505_OBJ_NOT_FOUND
 */
 E_US14B4_5300:SS42500_TBL_NOT_FOUND
 "CREATE INDEX: cannot find primary table '%0c'."
-E_US14B5_5301:SS50002_LIMIT_EXCEEDED
-"CREATE INDEX: A secondary index may be created on at most 6 columns."
 E_US14B6_5302:SS42501_COL_NOT_FOUND
 "CREATE INDEX: Invalid column '%0c'."
 E_US14B7_5303:SS42500_TBL_NOT_FOUND
@@ -5626,52 +5608,6 @@ E_US14BE_5310:SS50000_MISC_ERRORS
 which points to a non-existent row in base table %2c. The error status was %3d."
 E_US14BF_5311:SS50008_UNSUPPORTED_STMT
 "The INDEX statement is not allowed in distributed INGRES."
-E_US14C0_5312:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: Location specified twice: '%0c' conflicts with '%1c'."
-E_US14C1_5313:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: Bad storage structure '%0c'.
-The valid storage structure names are [c]btree, [c]isam, [c]hash."
-E_US14C2_5314:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: '%0c' is either an invalid option or the syntax of
-the WITH subclause is invalid.
-\nSTRUCTURE is the only valid keyword for this type of subclause."
-E_US14C3_5315:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: Structure must be specified before '%0c'."
-E_US14C4_5316:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: Invalid FILLFACTOR of '%0d' specified.
-Must be in 1 - 100 range (inclusive)."
-E_US14C5_5317:SS42000_SYN_OR_ACCESS_ERR
-"INDEX/CREATE INDEX: FILLFACTOR can be specified only for
-\nbtree, [c]isam, [c]hash storage structure."
-E_US14C6_5318:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: Invalid MINPAGES of '%0d' specified. Must be greater than 0."
-E_US14C7_5319:SS42000_SYN_OR_ACCESS_ERR
-"INDEX/CREATE INDEX: MINPAGES can be specified only for
-\n[c]hash storage structure."
-E_US14C8_5320:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: Invalid MAXPAGES of '%0d' specified. Must be greater than 0."
-E_US14C9_5321:SS42000_SYN_OR_ACCESS_ERR
-"INDEX/CREATE INDEX: MAXPAGES can be specified only for
-\n[c]hash storage structure."
-E_US14CA_5322:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: Invalid NONLEAFFILL of '%0d' specified.
-Must be in 1 - 100 range (inclusive)."
-E_US14CB_5323:SS42000_SYN_OR_ACCESS_ERR
-"INDEX/CREATE INDEX: NONLEAFFILL can be specified only for
-\nbtree storage structure."
-E_US14CC_5324:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: Invalid LEAFFILL/INDEXFILL of '%0d' specified.
-Must be in 1 - 100 range (inclusive)."
-E_US14CD_5325:SS42000_SYN_OR_ACCESS_ERR
-"INDEX/CREATE INDEX: LEAFFILL/INDEXFILL can be specified only for
-\nbtree storage structure."
-E_US14CE_5326:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: '%0c' is either an invalid option or the syntax of
-the WITH subclause is invalid.
-\nValid options for this type of subclause are:
-\n   FILLFACTOR, MINPAGES, MAXPAGES, NONLEAFFILL, LEAFFILL, MAXINDEXFILL."
-E_US14CF_5327:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: Too many options in the WITH clause."
 E_US14D0_5328:SS50002_LIMIT_EXCEEDED
 "CREATE INDEX: Too many columns in key of index."
 E_US14D1_5329:SS42501_COL_NOT_FOUND
@@ -5680,81 +5616,40 @@ list.  The key list must be a prefix of the column list."
 E_US14D3_5331:SS42000_SYN_OR_ACCESS_ERR
 "CREATE INDEX: The number of elements in the KEY clause must not be greater
 than the number of indexed columns."
-E_US14D4_5332:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX: Illegal MINPAGES value '%0d' in a CREATE INDEX command.
-The value must be less or equal to the MAXPAGES value."
-E_US14D5_5333:SS42000_SYN_OR_ACCESS_ERR
-"%0c: MINPAGES can be specified only for
-\n[c]hash storage structure."
-E_US14D6_5334:SS42000_SYN_OR_ACCESS_ERR
-"%0c: MAXPAGES can be specified only for
-\n[c]hash storage structure."
-E_US14D7_5335:SS42000_SYN_OR_ACCESS_ERR
-"%0c: NONLEAFFILL can be specified only for
-\n[c]btree storage structure."
-E_US14D8_5336:SS42000_SYN_OR_ACCESS_ERR
-"%0c: LEAFFILL/INDEXFILL can be specified only for
-\n[c]btree storage structure."
-E_US14D9_5337:SS42000_SYN_OR_ACCESS_ERR
-"%0c: FILLFACTOR can be specified only for
-\n[c]btree, [c]isam, [c]hash storage structure."
 E_US14DA_5338:SS42000_SYN_OR_ACCESS_ERR
 "%0c: Illegal MINPAGES value '%1d' in a %0c command.
 The value must be less or equal to the MAXPAGES value."
-E_US14DB_5339:SS42000_SYN_OR_ACCESS_ERR
-"%0c: KEY can be specified only for
-\n[c]btree, [c]isam, [c]hash storage structure."
-E_US14DC_5340:SS42000_SYN_OR_ACCESS_ERR
-"%0c: '%1c' is either an invalid option or the syntax of\n
-        the WITH subclause is invalid."
+E_US14DC_5340_WITHOPT_TOOMANY:SS42000_SYN_OR_ACCESS_ERR
+"%0c: Too many values given for the %1c WITH-option.
+The maximum number of list values allowed is %2d."
+/*%
+** Parameters:
+**	%0c - The type of statement being parsed.
+**	%1c - The WITH option name
+**	%2d - The maximum number values allowed
+**
+** Explanation:
+**	A WITH-option list of the form option=(value, value, ...) is
+**	being parsed, but too many values were supplied.
+**
+** System Status:
+**	The statement is rejected.
+**
+** Recommendation:
+**	Correct the statement syntax and supply fewer option values.
+*/
 E_US14DD_5341:SS42000_SYN_OR_ACCESS_ERR
 "%0c: Invalid %1c of '%2d' specified.
 \nMust be between %3d and %4d inclusively."
-E_US14DE_5342:SS42000_SYN_OR_ACCESS_ERR
-"%0c: '%1c' is either an invalid option or the syntax of
-the WITH subclause is invalid.
-\nValid options for this type of subclause are:
-\n   FILLFACTOR, MINPAGES, MAXPAGES, NONLEAFFILL, LEAFFILL, MAXINDEXFILL,
-\n   ALLOCATION, EXTEND, PAGE_SIZE."
 E_US14DF_5343:SS42000_SYN_OR_ACCESS_ERR
-"%0c: '%1c' is either an invalid option or the syntax
-of the WITH subclause is invalid.
-\nValid keywords for this type of subclause are: KEY, LOCATION, COMPRESSION."
-E_US14E0_5344:SS42000_SYN_OR_ACCESS_ERR
-"%0c: Too many options in the WITH clause."
-E_US14E1_5345:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: '%0c' is either an invalid option or the syntax
-of the WITH subclause is invalid.
-\nValid keywords for this type of subclause are:
-\nLOCATION, OLDLOCATION, NEWLOCATION, COMPRESSION."
-E_US14E2_5346:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: '%0c' is either an invalid option or the syntax
-of the WITH subclause is invalid.
-\nThe only valid keyword for this type of subclause is EXTEND."
-E_US14E3_5347:SS42000_SYN_OR_ACCESS_ERR
-"%0c clause is an invalid option for %1c into %2c table."
+"%0c: The double-quoted value '%1c' may not be used as a WITH-option
+list value.  Double-quoted strings are delimited identifiers, not
+string or option values."
 E_US14E4_5348_COPY_NON_FAST:SS42000_SYN_OR_ACCESS_ERR
 "Invalid options have been specified for a non fast-load COPY.
 \nInvalid options are:
 \n   FILLFACTOR, MINPAGES, MAXPAGES, NONLEAFFILL, LEAFFILL, MAXINDEXFILL,
 \n   ALLOCATION, EXTEND."
-/*%
-** Parameters:
-**	None.
-**
-** Explanation:
-**	The user has specified options which are only valid for the
-**	fast-load version of "COPY", but fast-load is not possible. 
-**
-** System Status:
-**	The statement is aborted.
-**
-** Recommendation:
-**	Reenter the statement with valid options.
-*/
-E_US14E5_5349_MODIFY_NO_WITH:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: the WITH subclause is invalid for 
-\n MODIFY to [NO]READONLY"
 /*%
 ** Parameters:
 **	None.
@@ -5879,24 +5774,6 @@ E_US14EC_5356:SS42000_SYN_OR_ACCESS_ERR
 "%0c: Invalid %1c of '%2d' specified."
 E_US14ED_5357_INCONSISTENT_INDEX_ERR:SS42000_SYN_OR_ACCESS_ERR
 "Table has one or more inconsistent indicies.  Drop or recreate them."
-E_US14EE_5358:SS42000_SYN_OR_ACCESS_ERR
-"%0c: '%1c' is an invalid option for with clause of copy statement. 
-Valid options for this subclause are:
-\n   FILLFACTOR, MINPAGES, MAXPAGES, NONLEAFFILL, LEAFFILL, MAXINDEXFILL,
-\n   ALLOCATION, EXTEND, ROW_ESTIMATE"
-/*%
-** Parameters:
-**      none.
-**
-** Explanation:
-**      User has supplied an invalid option for the with clause of copy statement,
-** eg page_size.
-**
-** System Status:
-**      The statement is aborted.
-**
-** Recommendation:
-*/
 E_US1518_5400:SS5000B_INTERNAL_ERROR
 "HELP: Internal errors preclude further operation.  Please report
 problem to product vendor."
@@ -5946,21 +5823,9 @@ E_US1587_5511:SS42501_COL_NOT_FOUND
 "MODIFY %0c: bad column name '%1c'."
 E_US1588_5512:SS42000_SYN_OR_ACCESS_ERR
 "MODIFY %0c: '%1c' not allowed or specified more than once."
-E_US1589_5513:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: Illegal FILLFACTOR '%0d' in a MODIFY command.  The value
-must be between 1 and 100, inclusive."
-E_US158A_5514:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: Illegal MINPAGES value '%0d' in a MODIFY command.
-The value must be greater than zero."
 E_US158B_5515:SS42000_SYN_OR_ACCESS_ERR
 "MODIFY: column keys must not be specified unless storage
 structure is present."
-E_US158C_5516:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: Illegal MAXPAGES value '%0d' in a MODIFY command.
-The value must be greater than zero."
-E_US158D_5517:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: Illegal MINPAGES value '%0d' in a MODIFY command.
-The value must be less or equal to the MAXPAGES value."
 E_US158E_5518:SS42000_SYN_OR_ACCESS_ERR
 "MODIFY: invalid sequence specifier '%0c' for column '%1c'."
 E_US158F_5519:SS42000_SYN_OR_ACCESS_ERR
@@ -5986,12 +5851,6 @@ E_US1597_5527:SS5000A_QUERY_ERROR
 "MODIFY: %0c: compressed row size can exceed maximum row width."
 E_US1598_5528:SS5000A_QUERY_ERROR
 "MODIFY: May not alter key sequence of secondary index table."
-E_US1599_5529:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: '%0c' is either an invalid option or the syntax of
-the WITH subclause is invalid.
-\nThe valid keywords for this type of subclause are:
-\n   FILLFACTOR, MINPAGES, MAXPAGES, NONLEAFFILL, LEAFFILL, MAXINDEXFILL,
-\n   ALLOCATION, EXTEND, TABLE_OPTION."
 E_US159A_5530:SS50008_UNSUPPORTED_STMT
 "The MODIFY command is not allowed in distributed INGRES."
 E_US159B_5531:SS5000A_QUERY_ERROR
@@ -6032,37 +5891,10 @@ E_US15A5_5541:SS5000A_QUERY_ERROR
 E_US15A6_5542:SS42000_SYN_OR_ACCESS_ERR
 "MODIFY: The RELOCATE variant requires new and old location lists,
 they must be of equal length."
-E_US15A7_5543:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: The LOCATION with-option may only be used with MODIFY TO
-storage-structure, RECONSTRUCT, or REORGANIZE variants."
-E_US15A8_5544:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: line %0d, The WITH clause of the RELOCATE variant must have
-only NEWLOCATION and OLDLOCATION subclauses."
-E_US15A9_5545:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: line %0d, LOCATION keyword not allowed in the RELOCATE variant.
-Use NEWLOCATION or OLDLOCATION instead."
-E_US15AA_5546:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: line %0d, '%1c' can be only used with RELOCATE variant."
 E_US15AB_5547:SS42000_SYN_OR_ACCESS_ERR
 "MODIFY: '%0c' option has already been specified."
 E_US15AC_5548:SS42000_SYN_OR_ACCESS_ERR
 "MODIFY: REORGANIZE variant requires location(s) to be specified."
-E_US15AD_5549:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: line %0d, '%1c' option cannot be used with REORGANIZE variant."
-E_US15AE_5550:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: Illegal ALLOCATION value '%0d' in a MODIFY command."
-E_US15AF_5551:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: Illegal EXTEND value '%0d' in a MODIFY command."
-E_US15B0_5552:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: Illegal TABLE_OPTION value '%0d' in a MODIFY command."
-E_US15B1_5553:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX : Illegal ALLOCATION value '%0d' in a INDEX command."
-E_US15B2_5554:SS42000_SYN_OR_ACCESS_ERR
-"CREATE INDEX : Illegal EXTEND value '%0d' in a INDEX command."
-E_US15B3_5555:SS42000_SYN_OR_ACCESS_ERR
-"CREATE TABLE: Illegal ALLOCATION value '%0d' in a CREATE TABLE command."
-E_US15B4_5556:SS42000_SYN_OR_ACCESS_ERR
-"CREATE TABLE: Illegal EXTEND value '%0d' in a CREATE TABLE command."
 E_US15B5_5557:SS42000_SYN_OR_ACCESS_ERR
 "MODIFY or ALTER TABLE: %0c is a gateway table and cannot be modified."
 /*%
@@ -6081,10 +5913,6 @@ E_US15B5_5557:SS42000_SYN_OR_ACCESS_ERR
 **	in the underlying gateway/DBMS, then reissue the "REGISTER...IMPORT"
 **	command, specifying the appropriate "STRUCTURE" clause.
 */
-E_US15B6_5558:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: '%0c' is either an invalid option or the syntax of\n
-        the WITH subclause is invalid.
-\nUNIQUE_SCOPE is the only valid keyword for this type of subclause."
 E_US15B7_5559:SS42000_SYN_OR_ACCESS_ERR
 "CREATE TABLE: column '%0c' can not be defined as a non-nullable\n
 	datatype with a default value of null."
@@ -6260,20 +6088,12 @@ E_US1712_5906:SS42503_INSUF_PRIV
 "SET TRACE: You do not have permission to set trace flags."
 E_US1713_5907:SS42000_SYN_OR_ACCESS_ERR
 "SET TRACE: Trace flag specification too long."
-E_US1714_5908:SS42000_SYN_OR_ACCESS_ERR
-"SET JOURNAL_SIZE: This function no longer available."
 E_US1715_5909:SS50000_MISC_ERRORS
 "SET JOURNALING: Journaling not enabled on this database."
 E_US1716_5910:SS42000_SYN_OR_ACCESS_ERR
 "SET: This set command takes only a single argument (in quotes)."
 E_US1717_5911:SS42000_SYN_OR_ACCESS_ERR
 "SET: An integer argument is required (in quotes)."
-E_US1718_5912:SS42000_SYN_OR_ACCESS_ERR
-"SET: The merge factor must be between 3 and 15 inclusive."
-E_US1719_5913:SS42000_SYN_OR_ACCESS_ERR
-"SET: The sort buffer size must be between 1000 and 1000000 inclusive."
-E_US171A_5914:SS42000_SYN_OR_ACCESS_ERR
-"SET: The freespace buffer size must be between 1000 and 1000000 inclusive."
 E_US171B_5915:SS42000_SYN_OR_ACCESS_ERR
 "Unrecognized storage structure in a SET RET_INTO command.
 Please use one of the following:
@@ -6358,23 +6178,6 @@ in a money value.  Allowed precision values are '0', '1', or '2'
 \n  '0' indicates no digits after the decimal indicator (e.g., 10)
 \n  '1' indicates one digit (e.g. 10.8)
 \n  '2' indicates two digits (e.g. 10.85)"
-E_US1732_5938:SS42000_SYN_OR_ACCESS_ERR
-"SET CACHE: Invalid cache size.  Legal range is 0 - 500.  Setting the
-size of the cache to a larger size than 500 will result in a cache size of 500."
-E_US1733_5939:SS25000_INV_XACT_STATE
-"SET CACHE: You may not issue a SET CACHE command in a multi-query transaction."
-E_US1734_5940:SS50008_UNSUPPORTED_STMT
-"The SET J_FREESZ1 command is no longer supported.
-This function is now done automatically by the system."
-E_US1735_5941:SS50008_UNSUPPORTED_STMT
-"The SET J_FREESZ2 command is no longer supported.
-This function is now down automatically by the system."
-E_US1736_5942:SS50008_UNSUPPORTED_STMT
-"The SET J_FREESZ3 command is no longer supported.
-This function is now done automatically by the system."
-E_US1737_5943:SS50008_UNSUPPORTED_STMT
-"The SET J_FREESZ4 command is no longer supported.
-This function is now done automatically by the system."
 E_US1738_5944:SS50008_UNSUPPORTED_STMT
 "The SET AGGREGATE command is not allowed in distributed INGRES."
 E_US1739_5945:SS50008_UNSUPPORTED_STMT
@@ -6458,19 +6261,10 @@ E_US1753_5971:SS42000_SYN_OR_ACCESS_ERR
 Please use one of the following:
 \n
 \n          PROJECT, NOPROJECT"
-E_US1754_5972:SS50008_UNSUPPORTED_STMT
-"The SET QUERY_SIZE command is no longer supported.
-This function is now done automatically by the system."
 E_US1755_5973:SS42000_SYN_OR_ACCESS_ERR
 "No file name was given for a 'SET TRACE INPUT' or 'SET TRACE OUTPUT' command."
 E_US1756_5974:SS50008_UNSUPPORTED_STMT
 "The SET AUTOCOMMIT command is not supported in QUEL."
-E_US1757_5975:SS50008_UNSUPPORTED_STMT
-"The SET CACHE command is no longer supported."
-E_US1758_5976:SS50008_UNSUPPORTED_STMT
-"The SET J_SORBUFSZ command is no longer supported."
-E_US1759_5977:SS50008_UNSUPPORTED_STMT
-"The SET RESULT_STRUCTURE command is no longer supported."
 E_US175A_5978:SS50008_UNSUPPORTED_STMT
 "The SET RET_INTO command is no longer supported."
 E_US175B_5979:SS50008_UNSUPPORTED_STMT
@@ -6479,8 +6273,6 @@ E_US175C_5980:SS50008_UNSUPPORTED_STMT
 "The SET JOINOP [NO]TIMEOUT command is not allowed in distributed INGRES."
 E_US175D_5981:SS42000_SYN_OR_ACCESS_ERR
 "SET JOINOP: invalid option '%0c'. Must be [NO]TIMEOUT."
-E_US175E_5982:SS50008_UNSUPPORTED_STMT
-"The SET J_SORTBUFSZ command is no longer supported."
 E_US175F_5983:SS42000_SYN_OR_ACCESS_ERR
 "SET AUTOCOMMIT: invalid option '%0c'. Must be ON or OFF."
 E_US1760_5984:SS50000_MISC_ERRORS
@@ -9954,6 +9746,22 @@ E_US1951_6481_PART_ONEP:SS42000_SYN_OR_ACCESS_ERR
 **     Revise your partition definition so that each dimension has at
 **     least two partitions defined.
 */
+E_US1962_6498_X_REQUIRES_Y:SS42000_SYN_OR_ACCESS_ERR
+"%0c: %1c requires %2c."
+/*%
+** Parameters:
+**	%0c - The query name
+**
+** Explanation:
+**	Some query parameter or option mandates the use of an additional
+**	parameter or option that was not specified.
+**
+** System Status:
+**	The query is aborted.
+**
+** Recommendation:
+**	Supply the missing option, or choose a different option combination.
+*/
 E_US1963_6499_X_ONLYWITH_Y:SS42000_SYN_OR_ACCESS_ERR
 "%0c: %1c may only be used with %2c."
 /*%
@@ -10481,13 +10289,6 @@ itself is invalid, or it has been incorrectly qualified."
 ** Recommendation:
 **	Reissue the "REGISTER" statement after correcting the problem.
 */
-E_US1F47_8007:SS42000_SYN_OR_ACCESS_ERR
-"REGISTER TABLE: invalid option '%0c'. Legal single-word options for the 'with'
-clause are:  [no]duplicates, [no]journaling, [no]update, [no]recovery."
-E_US1F48_8008:SS50002_LIMIT_EXCEEDED
-"REGISTER TABLE: excessive table width on column '%0c'."
-E_US1F49_8009:SS5000A_QUERY_ERROR
-"REGISTER TABLE: '%0c' is a system table."
 E_US1F4A_8010:SS42502_DUPL_OBJECT
 "REGISTER TABLE: Duplicate object name '%0c'."
 E_US1F4B_8011:SS50002_LIMIT_EXCEEDED
@@ -10530,16 +10331,6 @@ E_US2079_8313:SS42000_SYN_OR_ACCESS_ERR
 ** Recommendation:
 **	Reissue the "REGISTER" statement after correcting the storage structure.
 */
-E_US207A_8314:SS42000_SYN_OR_ACCESS_ERR
-"REGISTER INDEX: '%0c' is either an invalid option or the syntax of the WITH
-subclause is invalid."
-E_US2087_8327:SS42000_SYN_OR_ACCESS_ERR
-"REGISTER INDEX: Too many options in the WITH clause."
-E_US2088_8328:SS50002_LIMIT_EXCEEDED
-"REGISTER INDEX: Too many columns in key of index."
-E_US213E_8510:SS42000_SYN_OR_ACCESS_ERR
-"Column name in list incorrectly modified (word seen is '%0c').  The format of
-a column list is '(col_name [ASC | DESC] {,col_name [ASC | DESC]})."
 E_US215C_8540:SS5000A_QUERY_ERROR
 "REGISTER INDEX: %0c: invalid or no storage structure specified for gateway
 secondary index."
@@ -10572,8 +10363,6 @@ E_US2233_8755:SS5000A_QUERY_ERROR
 "REMOVE [TABLE]: object '%0c' is not a gateway object"
 E_US239A_9114:SS50008_UNSUPPORTED_STMT
 "The REGISTER command is not allowed in distributed INGRES."
-E_US245B_9307:SS5000A_QUERY_ERROR
-"REGISTER TABLE/INDEX: duplicate column name '%0c' specified in 'key' clause."
 E_US245C_9308:SS50002_LIMIT_EXCEEDED
 "REGISTER TABLE: name for gateway object in 'from' clause is too long."
 E_US245D_9309:SS5000A_QUERY_ERROR
@@ -10624,23 +10413,6 @@ structures are valid and how to use them."
 E_US2461_9313:SS42000_SYN_OR_ACCESS_ERR
 "REGISTER TABLE: Bad option '%0c' specified with UNIQUE qualifier.  Only the
 'structure' option may include the UNIQUE qualifier."
-E_US2462_9314:SS5000A_QUERY_ERROR
-"REGISTER TABLE: duplicate or conflicting '%0c' entry in 'with' clause."
-/*%
-** Parameters:
-**	%0c - specified option
-**
-** Explanation:
-**	A duplicate or conflicting option was specified in the "WITH" clause.
-**	For example, both "RECOVERY" and "NORECOVERY" were specified.
-**
-** System Status:
-**	The current statement is aborted.
-**
-** Recommendation:
-**	Reissue the "REGISTER" statement with the desired option specified only
-**	once, and without conflicting options being specified.
-*/
 E_US2463_9315:SS5000A_QUERY_ERROR
 "REGISTER TABLE:  No 'DBMS' clause specified.  'DBMS' is a required parameter
 in the 'register table' command."
@@ -10667,10 +10439,6 @@ provided."
 **	your gateway to find out whether such limitations apply and if so,
 **	what they are.
 */
-E_US2465_9317:SS5000A_QUERY_ERROR
-"REGISTER TABLE:  One or more key columns has been specified for the table, but
-the structure has been specified as 'none' or it has not been specified
-(default storage structure is 'none')."
 E_US2466_9318:SS5000A_QUERY_ERROR
 "REGISTER TABLE:  table structure other than 'none' has been specified, but no
 keys have been specified."
@@ -11092,24 +10860,6 @@ type is 'group' or 'role'."
 ** Recommendation:
 **	Specify a valid grantee then try again
 */
-E_US2481_9345_MODIFY_TO_NO_WITH:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: the WITH subclause is invalid for\n
- MODIFY tablename TO\n
-  [ PHYS_[IN]CONSISTENT | LOG_[IN]CONSISTENT | TABLE_RECOVERY_[DIS]ALLOWED ]"
-/*%
-** Parameters:
-**	None.
-**
-** Explanation:
-**	The user has specified options which alter status of a table or index
-**	and cannot be used with other options.
-**
-** System Status:
-**	The statement is aborted.
-**
-** Recommendation:
-**	Reenter the statement with valid option.
-*/
 E_US2482_9346:SS42000_SYN_OR_ACCESS_ERR
 "An invalid permit operation has been specified."
 /*%
@@ -11216,22 +10966,6 @@ the table structure necessary to enforce the constraint(s)."
 **	NODEPENDENCY_CHECK.
 */
 
-E_US248A_9354_MODIFY_TO_TABLE_OPTION:SS42000_SYN_OR_ACCESS_ERR
-"MODIFY: TABLE_OPTION is an invalid option of the\n
- MODIFY tablename TO command."
-/*%
-** Parameters:
-**	%0c - invalid name in "is" clause
-**
-** Explanation:
-**	The name given is not valid within IMA gateway
-**
-** System Status:
-**	The current statement is aborted.
-**
-** Recommendation:
-**	Reissue the "REGISTER" statement, specifying a valid "is" clause
-*/
 E_US248B_9355:SS5000A_QUERY_ERROR
 "REGISTER TABLE: Invalid item name in \"is\" clause: %0c"
 /*%

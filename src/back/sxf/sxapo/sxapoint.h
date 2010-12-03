@@ -25,6 +25,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes
 */
 
 # define	SAXPO_DISP_PARAM_MAX	10
@@ -179,6 +181,10 @@ FUNC_EXTERN DB_STATUS sxapo_alter(
     PTR             filename,
     i4         flags,
     i4         *err_code);
+
+FUNC_EXTERN DB_STATUS sxapo_msgid_to_desc(
+    i4         		msgid,
+    DB_DATA_VALUE	*desc);
 
 /*
 ** Name - SXAPOSTATS

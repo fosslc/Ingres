@@ -122,6 +122,18 @@
 **          Added E_UL0400_BAD_TRACE_DIR and E_UL0401_BAD_TRACE_DIR.
 **          ult_set_tracefile() now returns STATUS
 **          ult_tracefile_loc() now extern
+**      19-oct-2010 (maspa05) Bug 124551
+**          Added SC930_DATAVAL_BUFSIZE
+**      04-Nov-2010 (maspa05) bug 124654
+**          Added SC930_LTYPE_XA_START, SC930_LTYPE_XA_END, 
+**          SC930_LTYPE_XA_PREPARE, SC930_LTYPE_XA_COMMIT, 
+**          SC930_LTYPE_XA_ROLLBACK, SC930_LTYPE_XA_UNKNOWN and bumped the
+**          SC930_VERSION
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Declare uleFormatNV unconditionally.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Add uleFormatFcnV to enable calling of uleFormatFcn with
+**	    direct parameter vector.
 **/
 #ifndef TR_HDR_INCLUDED
 #include <tr.h>
@@ -635,6 +647,21 @@ FUNC_EXTERN VOID      ule_initiate( char *node_name, i4  l_node_name,
 ** in a way that is type correct for the first twelve arguments.
 */
 
+FUNC_EXTERN DB_STATUS uleFormatFcnV(
+	DB_ERROR       *dberror,
+	i4	       error_code,
+	CL_ERR_DESC    *clerror,
+	i4             flag,
+	DB_SQLSTATE    *sqlstate,
+	char           *msg_buffer,
+	i4             msg_buf_length,
+	i4             *msg_length,
+	i4	       *uleError,
+	PTR	       FileName,
+	i4	       LineNumber,
+	i4	       num_parms,
+	va_list		ap);
+
 FUNC_EXTERN DB_STATUS uleFormatFcn(
         DB_ERROR       *dberror,
 	i4	       error_code,
@@ -647,6 +674,31 @@ FUNC_EXTERN DB_STATUS uleFormatFcn(
         i4	       *uleError,
 	PTR	       FileName,
 	i4	       LineNumber,
+	i4	       num_parms,
+        ...);
+
+FUNC_EXTERN DB_STATUS uleFormatNV(
+        DB_ERROR       *dberror,
+	i4	       error_code,
+        CL_ERR_DESC    *clerror,
+        i4             flag,
+        DB_SQLSTATE    *sqlstate,
+        char           *msg_buffer,
+        i4             msg_buf_length,
+        i4             *msg_length,
+        i4	       *uleError,
+	i4	       num_parms,
+        ...);
+
+FUNC_EXTERN DB_STATUS ule_formatNV(
+	i4	       error_code,
+        CL_ERR_DESC    *clerror,
+        i4             flag,
+        DB_SQLSTATE    *sqlstate,
+        char           *msg_buffer,
+        i4             msg_buf_length,
+        i4             *msg_length,
+        i4	       *uleError,
 	i4	       num_parms,
         ...);
 
@@ -674,32 +726,7 @@ FUNC_EXTERN DB_STATUS uleFormatFcn(
 /* Variadic macros not supported */
 #define uleFormat uleFormatNV
 
-FUNC_EXTERN DB_STATUS uleFormatNV(
-        DB_ERROR       *dberror,
-	i4	       error_code,
-        CL_ERR_DESC    *clerror,
-        i4             flag,
-        DB_SQLSTATE    *sqlstate,
-        char           *msg_buffer,
-        i4             msg_buf_length,
-        i4             *msg_length,
-        i4	       *uleError,
-	i4	       num_parms,
-        ...);
-
 #define ule_format ule_formatNV
-
-FUNC_EXTERN DB_STATUS ule_formatNV(
-	i4	       error_code,
-        CL_ERR_DESC    *clerror,
-        i4             flag,
-        DB_SQLSTATE    *sqlstate,
-        char           *msg_buffer,
-        i4             msg_buf_length,
-        i4             *msg_length,
-        i4	       *uleError,
-	i4	       num_parms,
-        ...);
 
 #endif /* HAS_VARIADIC_MACROS */
 
@@ -730,7 +757,7 @@ FUNC_EXTERN void ult_close_tracefile(void *);
 FUNC_EXTERN STATUS ult_set_tracefile(char *);
 FUNC_EXTERN PTR ult_tracefile_loc(void);
 
-#define	SC930_VERSION		8	/* version of SC930 output */
+#define	SC930_VERSION		9	/* version of SC930 output */
 
 /* SC930 trace flags */
 #define SC930_TRACE               0x00000001  /* SC930 tracing ON */
@@ -767,6 +794,15 @@ FUNC_EXTERN PTR ult_tracefile_loc(void);
 #define SC930_LTYPE_REQUEL		26
 #define SC930_LTYPE_REQUERY		27
 #define SC930_LTYPE_ENDQRY		28
+#define SC930_LTYPE_XA_START   		29
+#define SC930_LTYPE_XA_END   		30
+#define SC930_LTYPE_XA_PREPARE 		31
+#define SC930_LTYPE_XA_COMMIT  		32
+#define SC930_LTYPE_XA_ROLLBACK		33
+#define SC930_LTYPE_XA_UNKNOWN          34
+
+/* Buffer size for SC930 data values - used by adu_valuetomystr */
+#define SC930_DATAVAL_BUFSIZE         2048
 
 /* 
 ** SC925 trace functions

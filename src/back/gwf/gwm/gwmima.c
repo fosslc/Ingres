@@ -154,6 +154,8 @@
 **          Removed gwxit.h inclusion which is not required.
 **	10-Mar-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Repair function prototypes.
 */
 
 /* forward refs */
@@ -164,21 +166,22 @@ static GM_GW *GM_flags_gw( i4 xrel_flags );
 static DB_STATUS GM_errmap( DB_STATUS db_stat, GWX_RCB *gwx_rcb );
 
 static DB_STATUS GM_init( GWX_RCB *gwx_rcb );
-static DB_STATUS GM_term();
-static DB_STATUS GM_sterm();
-static DB_STATUS GM_tabf();
-static DB_STATUS GM_open();
-static DB_STATUS GM_close();
-static DB_STATUS GM_position();
-static DB_STATUS GM_get();
-static DB_STATUS GM_put();
-static DB_STATUS GM_replace();
-static DB_STATUS GM_delete();
-static DB_STATUS GM_begin();
-static DB_STATUS GM_commit();
-static DB_STATUS GM_abort();
-static DB_STATUS GM_info();
-static DB_STATUS GM_idxf();
+static DB_STATUS GM_term( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_sterm( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_tabf( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_open( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_close( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_position( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_get( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_put( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_replace( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_delete( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_begin( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_commit( GWX_RCB *gwx_rcb );
+static DB_STATUS GM_abort( GWX_RCB * gwx_rcb );
+static DB_STATUS GM_info( GWX_RCB * gwx_rcb );
+static DB_STATUS GM_idxf( GWX_RCB * gwx_rcb );
+FUNC_EXTERN DB_STATUS gw07_init( GWX_RCB * gwx_rcb );
 
 /* Global vars */
 

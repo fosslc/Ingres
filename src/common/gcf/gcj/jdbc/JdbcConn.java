@@ -141,6 +141,13 @@ package	com.ingres.gcf.jdbc;
 **	    Check for 'send_ingres_dates' connection parameter (internal). 
 **	30-Jul-10 (gordy)
 **	    Check for 'send_integer_booleans' connection parameter (internal). 
+**	10-Nov-10 (gordy)
+**	    Using the DAS default for the date alias property when
+**	    the send_ingres_dates property is set to false results
+**	    in the conflicting behavior of ANSI date/time values
+**	    being sent to the server when the DATE keyword is being
+**	    interpreted as "ingresdate".  The date alias default
+**	    should be determined from the send_ingres_dates setting.
 */
 
 import	java.util.Hashtable;
@@ -681,13 +688,20 @@ checkLocalUser( Config config )
 **	30-Jul-10 (gordy)
 **	    Added connection parameter for 'send_integer_booleans'.
 **	    Converted config item snd_ing_dte to config flag.
+**	10-Nov-10 (gordy)
+**	    Made defaults for date_alias and send_ingres_dates consistent.
+**	    If neither is set, ANSI dates are used.  If one is set, the
+**	    other is default to a similar setting.
 */
 
 private void
 client_parms( Config config )
     throws SQLException
 {
-    byte i1;
+    boolean	date_alias_set = false;
+    boolean	send_ingdate_set = false;
+    boolean	use_ingres_dates = false;
+    byte	i1;
     
     if ( trace.enabled( 3 ) )  
 	trace.write( tr_id + ": sending connection parameters" );
@@ -875,11 +889,22 @@ client_parms( Config config )
 	    ** Ignored at lower protocol levels to permit setting
 	    ** in property file for all connections.
 	    */
+	    if ( value.equalsIgnoreCase( "ingresdate" ) )
+		use_ingres_dates = true;
+	    else  if ( ! value.equalsIgnoreCase( "ansidate" ) )
+	    {
+		if ( trace.enabled( 1 ) ) 
+		    trace.write( tr_id + ": date alias '" + value + "'" );
+		throw SqlExFactory.get( ERR_GC4010_PARAM_VALUE );
+	    }
+
 	    if ( conn.msg_protocol_level >= MSG_PROTO_6 )
 	    {
 		msg.write( propInfo[ i ].msgID );
 		msg.write( value );
 	    }
+
+	    date_alias_set = true;
 	    break;
 
 	case DRV_CP_SELECT_LOOP :
@@ -933,16 +958,21 @@ client_parms( Config config )
 	    ** This is a local connection property
 	    ** and is not forwarded to the server.
 	    */
-	    if ( value.equalsIgnoreCase( "true" ) ) 
-		conn.cnf_flags |= conn.CNF_INGDATE;
-	    else  if ( value.equalsIgnoreCase( "false" ) )
+	    if ( value.equalsIgnoreCase( "false" ) )
 		conn.cnf_flags &= ~conn.CNF_INGDATE;
+	    else  if ( value.equalsIgnoreCase( "true" ) ) 
+	    {
+		conn.cnf_flags |= conn.CNF_INGDATE;
+		use_ingres_dates = true;
+	    }
 	    else
 	    {
 		if ( trace.enabled( 1 ) ) 
-		    trace.write( tr_id + ": send ingres dates '" + value + "'" );
+		    trace.write(tr_id + ": send ingres dates '" + value + "'");
 		throw SqlExFactory.get( ERR_GC4010_PARAM_VALUE );
 	    }
+
+	    send_ingdate_set = true;
 	    break;
 
 	case DRV_CP_SND_INT_BOOL :
@@ -971,6 +1001,52 @@ client_parms( Config config )
 
 	if ( trace.enabled( 3 ) )  
 	    trace.write( "    " + propInfo[ i ].desc + ": '" + value + "'" );
+    }
+
+    /*
+    ** The date_alias and send_ingres_dates property defaults are
+    ** codependent.  If neither is set, the default is ANSI dates.
+    ** If one of the two is set, the other should default to a
+    ** similar setting.  Nothing to do if both are set.
+    **
+    ** Note: use_ingres_dates is initialized to false and set to 
+    ** true if either of these properties is configured for Ingres 
+    ** dates.
+    */
+    if ( ! date_alias_set  &&  conn.msg_protocol_level >= MSG_PROTO_6 )
+    {
+	/*
+	** The default for the date_alias property depends
+	** on the setting for the property send_ingres_dates.
+	** If Ingres dates are being used, then default date
+	** alias should be "ingresdate".  If ANSI dates are
+	** being sent, then "ansidate" should be the default.
+	*/
+	String value = use_ingres_dates ? "ingresdate" : "ansidate";
+	msg.write( MSG_CP_DATE_ALIAS );
+	msg.write( value );
+
+	if ( trace.enabled( 3 ) )  
+	    trace.write( "    Date Alias (default): '" + value + "'" );
+    }
+
+    if ( ! send_ingdate_set )
+    {
+	/*
+	** The default for the send_ingres_dates property depends
+	** on the setting for the property date_alias.  If Ingres
+	** dates are being used, then default to sending Ingres
+	** date values.  If ANSI dates are being used, then ANSI
+	** date/time values should be sent.
+	*/
+	if ( use_ingres_dates )
+	    conn.cnf_flags |= conn.CNF_INGDATE;
+	else
+	    conn.cnf_flags &= ~conn.CNF_INGDATE;
+
+	if ( trace.enabled( 3 ) )  
+	    trace.write( "    Send Ingres Dates (default): '" + 
+			 use_ingres_dates + "'" );
     }
 
     return;

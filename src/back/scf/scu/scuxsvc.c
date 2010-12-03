@@ -37,6 +37,7 @@
 #include    <scc.h>
 #include    <scs.h>
 #include    <scd.h>
+#include    <scu.h>
 #include    <sc0e.h>
 #include    <sc0m.h>
 #include    <scfcontrol.h>
@@ -93,6 +94,8 @@
 **	10-Sep-2008 (jonj)
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value scf_error structure.
 **	    Use new form of sc0ePut().
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include scu.h to get scu_xencode() prototype.
 **/
 
 /*

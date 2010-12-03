@@ -411,6 +411,7 @@ i4     *errcol;		/* scroll to this row if error occurs */
                        dbv.db_datatype==DB_MLINE_TYPE ||
                        dbv.db_datatype==DB_POLY_TYPE ||
                        dbv.db_datatype==DB_MPOLY_TYPE ||
+                       dbv.db_datatype==DB_GEOMC_TYPE ||
                        dbv.db_datatype==DB_LBYTE_TYPE) &&
                       IIUGyn(isnullable, NULL)))	/* column is NULLable */
            {

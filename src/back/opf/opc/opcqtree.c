@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -65,7 +65,6 @@
 **      trees for query compilation. This tends to border on being a  
 **      miscellaneous file, since any routines that are big and important 
 **      enough have their own file, opcqual.c for example.  
-[@comment_line@]...
 **
 **	Externally visible routines:
 **          opc_keyqual()   - Build a query tree qualification.
@@ -74,14 +73,12 @@
 **          opc_gtqual()    - Get the qualification to be applied at a co/qen node
 **          opc_metaops()   - Return the number of meta operator nodes in a qtree
 **          opc_cnst_expr() - Is a qual a constant expression?
-[@func_list@]...
 **
 **	Internal only routines:
 **          opc_onlyatts()  - Check if a clause only contains specified atts
 **          opc_cvclause()  - Convert a qtree qual into an OPC_QAND struct.
 **	    opc_complex_clause() - Check if a BF contains AND nested under OR
 **			      (possible in nonCNF parse trees).
-[@func_list@]...
 **
 **  History:
 **      31-aug-86 (eric)
@@ -143,27 +140,70 @@
 **	04-Aug-2010 (kiria01) b124178
 **	    Allow for the potential of PST_COP nodes which can now be in
 **	    a boolean position with ii_true/ii_false.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Defines of External, static, and forward routines.
-*/
-static VOID
-opc_cvclause(
-	OPS_STATE	*global,
-	OPC_NODE	*cnode,
-	OPC_QUAL	*cqual,
-	OPC_QAND	*cnf_and,
-	PST_QNODE	*root,
-	RDR_INFO	*rel );
 
-static bool
-opc_complex_clause(
-	OPS_STATE	*global,
-	PST_QNODE	*clause,
-	bool		underor);
-
+/* TABLE OF CONTENTS */
+OPC_QUAL *opc_keyqual(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE *root_qual,
+	OPV_IVARS varno,
+	i4 tid_key);
+static bool opc_complex_clause(
+	OPS_STATE *global,
+	PST_QNODE *clause,
+	bool underor);
+i4 opc_onlyatts(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_QUAL *cqual,
+	PST_QNODE *root,
+	OPV_IVARS varno,
+	RDR_INFO *rel,
+	OPC_QSTATS *qstats,
+	i4 *ncompares);
+i4 opc_cnst_expr(
+	OPS_STATE *global,
+	PST_QNODE *root,
+	i4 *pm_flag,
+	DB_LANG *qlang);
+static void opc_cvclause(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_QUAL *cqual,
+	OPC_QAND *cnf_and,
+	PST_QNODE *root,
+	RDR_INFO *rel);
+PST_QNODE *opc_qconvert(
+	OPS_STATE *global,
+	DB_DATA_VALUE *dval,
+	PST_QNODE *qconst);
+i4 opc_compare(
+	OPS_STATE *global,
+	PST_QNODE *d1,
+	PST_QNODE *d2);
+void opc_gtqual(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPB_BMBF *bfactbm,
+	PST_QNODE **pqual,
+	OPE_BMEQCLS *qual_eqcmp);
+void opc_gtiqual(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPB_BMBF *bfactbm,
+	PST_QNODE **pqual,
+	OPE_BMEQCLS *qual_eqcmp);
+void opc_ogtqual(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	PST_QNODE **pqual,
+	OPE_BMEQCLS *qual_eqcmp);
+i4 opc_metaops(
+	OPS_STATE *global,
+	PST_QNODE *root);
 
 /*{
 ** Name: OPC_KEYQUAL	- Build a query tree key qualification.
@@ -292,11 +332,8 @@ opc_keyqual(
     OPC_QAND	    *cnf_and;
     OPC_QCONST	    *cqconst;
     i4		    constno;
-    PST_PROCEDURE   *dbproc;
-    i4		    parm_map_size;
     i4		    begin_hiparm;
     i4		    szparm;
-    i4		    parmno;
 
     /* Initialize some vars to keep line length down. */
     rel = subqry->ops_vars.opv_base->opv_rt[varno]->opv_grv->opv_relation;
@@ -2628,7 +2665,6 @@ opc_gtiqual(
     OPB_IBF		ibf;
     OPO_CO		*co = cnode->opc_cco;
     OPL_IOUTER		outerJoinID = co->opo_variant.opo_local->opo_ojid;
-    i4			ncomp;
 
     /* Set the output variables to their beginning values */
     *pqual = (PST_QNODE *)NULL;

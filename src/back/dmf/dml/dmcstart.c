@@ -871,6 +871,8 @@ static STATUS dmcm_lkinit(
 **	    no page padding and with default to 0.
 **	3-Aug-2010 (kschendel) SIR 122757
 **	    Add trdisplay of direct IO settings.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    dmf_tbl_info(), dmf_last_id() prototyped in dml.h
 */
 
 DB_STATUS
@@ -2695,8 +2697,6 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	*/
 	{
 	    ADF_CB		    adf_scb;
-	    FUNC_EXTERN DB_STATUS   dmf_tbl_info();
-	    FUNC_EXTERN DB_STATUS   dmf_last_id();
 	    FUNC_EXTERN DB_STATUS   dmf_get_srs();
 
 	    MEfill(sizeof(ADF_CB),0,(PTR)&adf_scb);

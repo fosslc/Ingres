@@ -1,3 +1,6 @@
 INGLIB:frontmain.obj, -
 MAINOBJ.obj, -
+INGLIB:libgcn.olb/library, -
+INGLIB:libgcf.olb/library, -
+INGLIB:libcuf.olb/library, -
 INGLIB:libcompat.olb/library

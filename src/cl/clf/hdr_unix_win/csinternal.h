@@ -173,6 +173,8 @@
 **	12-apr-2004 (somsa010
 **	    Updated cs_size to be a SIZE_TYPE in CS_SCB, to correspond
 **	    to the changes made to SC0M_OBJECT.
+**      04-nov-2010 (joea)
+**          Add prototype for CSMTnoresnow and CSMT_swuser.
 **/
 
 /*
@@ -756,3 +758,8 @@ typedef struct _CS_ARGTAB
 */
 #define CS_ALTSTK_SZ	32384
 #endif
+
+/* These are used internally by CS, but defined in CSMT */
+FUNC_EXTERN void CSMTnoresnow(char *descrip, int pos);
+
+FUNC_EXTERN void CSMT_swuser(void);

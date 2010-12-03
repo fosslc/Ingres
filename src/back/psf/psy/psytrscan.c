@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2007 Ingres Corporation
+**Copyright (c) 2007, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -68,9 +68,50 @@
 **          can automate this next time.
 **	10-Jan-2001 (jenjo02)
 **	    Added *PSS_SELBLK parm to pst_treedup().
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* Forward referenced structure in protoptype */
+typedef struct _PSY_STK PSY_STK;
+
+/* TABLE OF CONTENTS */
+i4 psy_vfind(
+	u_i2 vn,
+	PST_QNODE *vtree,
+	PST_QNODE **result,
+	DB_ERROR *err_blk);
+PST_QNODE *psy_qscan(
+	PST_QNODE *tree,
+	i4 vn,
+	u_i2 an);
+void psy_varset(
+	PST_QNODE *tree,
+	PST_VRMAP *bitmap);
+i4 psy_subsvars(
+	PSS_SESBLK *cb,
+	PST_QNODE **proot,
+	PSS_RNGTAB *rngvar,
+	PST_QNODE *transtree,
+	i4 vmode,
+	PST_QNODE *vqual,
+	PSS_RNGTAB *resvar,
+	PST_J_MASK *from_list,
+	i4 qmode,
+	DB_CURSOR_ID *cursid,
+	i4 *mask,
+	PSS_DUPRB *dup_rb);
+void psy_vcount(
+	PST_QNODE *tree,
+	PST_VRMAP *bitmap);
+static void psy_push(
+	PSY_STK *base,
+	PTR val,
+	i4 *sts);
+static PTR psy_pop(
+	PSY_STK *base);
+static void psy_pop_all(
+	PSY_STK *base);
 /*
 ** PSY_STK - stack structure to support flattening of heavily recursive
 ** functions. Function psy_push and psy_pop allow for the retention of the
@@ -81,17 +122,13 @@
 ** The size of 50 is unlikely to be tripped by any but the most complex
 ** queries and in tests optimiser memory ran out first.
 */
-typedef struct _PSY_STK
+struct _PSY_STK
 {
-    struct _PSY_STK *head;	/* Stack block link. */
-    i4 sp;			/* 'sp' index into list[] at next free slot */
-#define N_STK 50
-    PTR list[N_STK];		/* Stack list */
-} PSY_STK;
-
-static VOID psy_push(PSY_STK *base, PTR val, STATUS *sts);
-static PTR  psy_pop(PSY_STK *base);
-static VOID psy_pop_all(PSY_STK *base);
+    PSY_STK *head;	/* Stack block link. */
+    i4 sp;		/* 'sp' index into list[] at next free slot */
+#define N_STK 100
+    PTR list[N_STK];	/* Stack list */
+};
 
 
 /*{
@@ -193,7 +230,7 @@ psy_qscan(
 	i4	    vn,
 	u_i2	    an)
 {
-    PSY_STK stk = {0, 0, 0};
+    PSY_STK stk = {0, 0, {0, }};
     STATUS sts;
     while (tree)
     {
@@ -257,7 +294,7 @@ psy_varset(
 	PST_QNODE	*tree,
 	PST_VRMAP	*bitmap)
 {
-    PSY_STK stk = {0, 0, 0};
+    PSY_STK stk = {0, 0, {0, }};
     STATUS sts;
     (VOID)MEfill(sizeof(PST_VRMAP), (u_char) 0, (PTR) bitmap);
 
@@ -283,7 +320,8 @@ psy_varset(
 		(char *)&tree->pst_sym.pst_value.pst_s_root.pst_tvrm, 
 		(char *)bitmap);
             break;
-
+	default:
+	    break;
 	}
 	if (tree->pst_right)
 	    /* Save right tree for later traversal */
@@ -531,7 +569,7 @@ psy_subsvars(
 	PSS_DUPRB	*dup_rb)
 
 {
-    PSY_STK	stk = {0, 0, 0};/* Backtrack stack */
+    PSY_STK	stk = {0, 0, {0, }};/* Backtrack stack */
     PST_QNODE	*t;		/* Temporary for *proot */
     i4		vn = rngvar
 		    ? rngvar->pss_rgno : -1; /* can be NULL on replace cursor statements */
@@ -982,7 +1020,7 @@ psy_vcount(
 	PST_QNODE	*tree,
 	PST_VRMAP	*bitmap)
 {
-    PSY_STK stk = {0, 0, 0};
+    PSY_STK stk = {0, 0, {0, }};
     STATUS sts;
 
     (VOID)MEfill(sizeof(PST_VRMAP), (u_char)0, (PTR)bitmap);
@@ -1003,6 +1041,8 @@ psy_vcount(
 		psy_push(&stk,
 			(PTR)tree->pst_sym.pst_value.pst_s_root.pst_union.pst_next,
 			&sts);
+	    break;
+	default:
 	    break;
 	}
 	/* scan left and right branches if any */

@@ -12,6 +12,10 @@
  *	Add the parent's per-request cost to the requested size,
  *	round up to the parent's preferred service size, and then
  *	substract back off the parent's per-request cost.
+**
+** History:
+**      03-nov-2010 (joea)
+**          Add declaration of internal functions.
  */
 
 # define MM_ROUND_SIZE( n, sz, cost ) \
@@ -25,6 +29,8 @@ typedef STATUS MM_MK_FUNC(
 		MM_POOL		*pool,
 		CL_ERR_DESC 	*err );
 
+FUNC_EXTERN MM_MK_FUNC MM_blk_mk, MM_dfl_mk, MM_mcr_mk, MM_pag_mk;
+
 /*
  * Name: MM_ALLOC_FUNC - a pool's alloc function
  */
@@ -35,6 +41,9 @@ typedef PTR MM_ALLOC_FUNC(
 		STATUS 		*stat,
 		CL_ERR_DESC 	*err );
 
+FUNC_EXTERN MM_ALLOC_FUNC MM_blk_alloc, MM_dfl_alloc, MM_mcr_alloc,
+                           MM_pag_alloc;
+
 /*
  * Name: MM_FREE_FUNC - a pool's free function
  */
@@ -44,6 +53,8 @@ typedef STATUS MM_FREE_FUNC(
 		PTR 		obj,
 		CL_ERR_DESC 	*err );
 
+FUNC_EXTERN MM_FREE_FUNC MM_blk_free, MM_dfl_free, MM_mcr_free, MM_pag_free;
+
 /*
  * Name: MM_RM_FUNC - a pool's remove function
  */
@@ -51,6 +62,8 @@ typedef STATUS MM_FREE_FUNC(
 typedef STATUS MM_RM_FUNC(
 		MM_POOL		*pool,
 		CL_ERR_DESC 	*err );
+
+FUNC_EXTERN MM_RM_FUNC MM_blk_rm, MM_dfl_rm, MM_mcr_rm, MM_pag_rm;
 
 /*
  * Name: MM_BLOCK - block header for chunks held by a pool

@@ -53,6 +53,13 @@
 #include    <dmucb.h>
 #include    <dmpepcb.h>
 #include    <dmpecpn.h>
+/* these to get dml.h */
+#include    <dmccb.h>
+#include    <dmrcb.h>
+#include    <dmscb.h>
+#include    <dmtcb.h>
+#include    <dmxcb.h>
+#include    <dml.h>
 
 /*
 **
@@ -4808,6 +4815,8 @@ DMF_ATP		*atp)
 **	19-Nov-2009 (kschendel) SIR 122890
 **	    Avoid using error-buffer as both source and target simultaneously,
 **	    might be the cause of occasional dm1215 message garblings.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    dmf_tbl_info(), dmf_last_id() prototyped in dml.h
 */
 static DB_STATUS
 atp_prepare(

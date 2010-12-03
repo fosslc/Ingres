@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -85,9 +85,23 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 pst_adresdom(
+	char *attname,
+	PST_QNODE *left,
+	PST_QNODE *right,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE **newnode);
+i4 pst_rsdm_dt_resolve(
+	PST_QNODE *right,
+	DMT_ATT_ENTRY *coldesc,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
 
 /*{
 ** Name: pst_adresdom	- Add a PST_RSDM_NODE to the current query tree.

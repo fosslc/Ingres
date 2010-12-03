@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -89,8 +89,31 @@
 **	    79614 and 79846.
 **      13-Mar-2002 (hanal04) Bug 107316 INGSRV 1722
 **          Prevent SIGSEGV in opv_uindex().
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opv_rbase(
+	OPS_SUBQUERY *subquery,
+	i4 basevar,
+	RDD_KEY_ARRAY *keys,
+	bool *coverqual);
+static bool opv_sameidx(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS basevar,
+	DMT_IDX_ENTRY *indexp);
+static void opv_uindex(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS basevar,
+	DB_OWN_NAME *owner,
+	OPV_IINDEX iindex,
+	bool *gotsub,
+	DMT_IDX_ENTRY *index_ptr,
+	RDD_KEY_ARRAY *prim_keys,
+	bool explicit_index);
+void opv_index(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opv_rbase	- check if index could replace base relation

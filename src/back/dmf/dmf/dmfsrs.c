@@ -69,7 +69,8 @@
  * 	    Created.
 */
 
-STATUS dmf_get_srs(
+STATUS
+dmf_get_srs(
     DB_SPATIAL_REF_SYS *db_srs,
     i4 *errcode)
 {

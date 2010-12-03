@@ -57,6 +57,8 @@
 **	    Define memory pool size as SIZE_TYPE.
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes.
 */
 
 /*
@@ -746,6 +748,9 @@ sxas_poll_resume( i4 *);
 
 FUNC_EXTERN DB_STATUS
 sxc_mo_attach(void);
+
+FUNC_EXTERN VOID
+sxap_shm_dump(void);
 /*
 ** DISPLAY macros (to avoid a variable length arg list)
 ** Extra casts because many args are i4, shuts up compilers.

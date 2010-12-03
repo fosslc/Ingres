@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 **
 NO_OPTIM = i64_aix
 **
@@ -155,7 +155,89 @@ NO_OPTIM = i64_aix
 **	    Compiler warning fixes.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/*
+** Forward Structure Definitions:
+*/
+typedef struct _QTX_STATE QTX_STATE;
+
+/* TABLE OF CONTENTS */
+static void opc_tbflg_ch(
+	struct _QTX_STATE *txtstate,
+	OPV_BMVARS *bmvars,
+	OPD_ITEMP flagval);
+static void opc_endstring(
+	struct _QTX_STATE *txtstate,
+	DD_PACKET *pktptr);
+static void opc_copy(
+	struct _QTX_STATE *txtstate,
+	QEQ_D1_QRY *qryptr);
+static void opc_drop(
+	struct _QTX_STATE *txstate,
+	OPCTABHD *tblptr,
+	bool is_view);
+static void opc_crtable(
+	struct _QTX_STATE *txtstate,
+	QEQ_D1_QRY *qryptr,
+	i4 tempno);
+static void opc_link(
+	struct _QTX_STATE *txtstate);
+static void opc_query(
+	struct _QTX_STATE *txtstate,
+	QEQ_D1_QRY *qact,
+	bool remdup);
+static void opc_ntemp(
+	struct _QTX_STATE *txt_state,
+	i4 *tempno);
+static void opc_addtowhere(
+	struct _QTX_STATE *txstate);
+static void opc_nonsel(
+	struct _QTX_STATE *txstate);
+static void opc_crsel(
+	struct _QTX_STATE *txtstate,
+	QEQ_D1_QRY *qryptr,
+	i4 tempno,
+	DD_LDB_DESC *ldb_create_loc,
+	bool is_union,
+	bool make_view);
+static void opc_sagg(
+	struct _QTX_STATE *txstate,
+	QEQ_D1_QRY *qptr);
+static void opc_addand(
+	struct _QTX_STATE *txstate,
+	QEQ_TXT_SEG *qptr);
+static void opc_qtxt(
+	OPO_CO *conode,
+	struct _QTX_STATE *txstate);
+static DD_PACKET *opc_packet(
+	struct _QTX_STATE *txstate,
+	char *stringptr,
+	OPD_ITEMP tempno,
+	DD_PACKET **pktloc);
+static void opc_dproj(
+	struct _QTX_STATE *txstate,
+	OPS_SUBQUERY *proj_subq,
+	OPD_ITEMP proj_tempno,
+	OPS_SUBQUERY *fagg_subq,
+	OPD_ITEMP fagg_tempno);
+static void opc_psagg(
+	OPS_SUBQUERY *subquery);
+static void opc_subproc(
+	OPS_SUBQUERY *subq_ptr,
+	struct _QTX_STATE *txstate,
+	OPS_SUBQUERY **prev_subq);
+static void opc_subunion(
+	OPS_SUBQUERY *union_list,
+	struct _QTX_STATE *txstate);
+static void opc_evaluv(
+	OPS_SUBQUERY *subquery,
+	struct _QTX_STATE *txstatep,
+	bool isunion);
+void opc_pltext(
+	OPS_STATE *global);
 
 /*}
 ** Name: QTX_STATE - State of query text conversion
@@ -166,7 +248,7 @@ NO_OPTIM = i64_aix
 **      09-oct-88 (robin)
 **          Created.
 */
-typedef struct _QTX_STATE
+struct _QTX_STATE
 {
     OPS_SUBQUERY    *qtx_subq;		/* subuqery currently being processed */
     OPS_STATE	    *qtx_global;		/* global state variable */
@@ -187,39 +269,7 @@ typedef struct _QTX_STATE
     bool	    qtx_nonpresd;	/* non-printing resdoms in target list*/
     bool	    qtx_forcexfer;	/* special case (from coord to coord)
 					** FIXME (hack for 68449) */
-} QTX_STATE;
-
-/*
-**  Forward and/or External function references.
-*/
-
-static VOID
-opc_subproc(
-	OPS_SUBQUERY	*subq_ptr,
-	QTX_STATE	*txstate,
-	OPS_SUBQUERY	**prev_subq );
-
-static VOID
-opc_addand(
-QTX_STATE   *txstate,
-QEQ_TXT_SEG *qptr );
-
-static VOID
-opc_addtowhere(
-QTX_STATE   *txstate );
-
-static VOID
-opc_endstring(
-QTX_STATE   *txtstate,
-DD_PACKET   *pktptr );
-
-static DD_PACKET *
-opc_packet( 
-QTX_STATE	*txstate,
-char		*stringptr,
-OPD_ITEMP	tempno,
-DD_PACKET	**pktloc );
-
+};
 
 /*{
 ** Name: opc_tbflg_ch	-   Change the 'use base table' flag
@@ -470,7 +520,6 @@ opc_drop(
 	DD_PACKET	*pktptr;
 	char		*drop0 = "drop view ";
 	char		*drop1 = "drop table ";
-	char		*drop2 = "destroy ";
 	char		*dropstr;	
 	i4		len;
 
@@ -555,8 +604,6 @@ opc_drop(
 	{
 	    if (is_view)
 	    {
-		QEF_AHD	*hold_act;
-		
 		actionhdr->ahd_next = qp->qp_ddq_cb.qeq_d1_end_p;
 		actionhdr->ahd_prev = NULL;
 		actionhdr->ahd_next->ahd_prev = actionhdr;
@@ -895,7 +942,7 @@ QTX_STATE   *txstate )
 **	    way of referencing end of structure
 [@history_template@]...
 */
-static
+static void
 opc_nonsel(
 	QTX_STATE   *txstate )
 {
@@ -1471,7 +1518,6 @@ opc_qtxt(
     OPS_SUBQUERY	*prev_subq = (OPS_SUBQUERY *)NULL;
     QEF_AHD		*actptr;
     QEF_AHD		**prev_act;
-    OPV_IGVARS          variable;
     i4			saved_cnt;
 
     if ( conode != NULL )
@@ -3103,7 +3149,6 @@ opc_subunion(
 	OPS_SUBQUERY	*union_list,
 	QTX_STATE	*txstate)
 {
-    i4	    		prev_tempno;
     OPS_SUBQUERY	*subq_ptr;
     QEF_AHD		*actionhdr;
     OPD_ITEMP		res_temp;

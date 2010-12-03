@@ -69,13 +69,21 @@
 **	    SIR 120874: dm0m_? functions converted to DB_ERROR *
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	02-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype dump_atts(), dump_modify(), trim() properly.
 */
 
-static void dump_atts();
-static void dump_modify();
-static PTR  trim();
-static
-dump_tcb(
+static void dump_atts(
+	void (*output)(),
+	DB_ATTS **atts_ptr,
+	i4 number);
+static void dump_modify(
+	void (*output)(),
+	DMP_TCB *tcb_ptr);
+static PTR trim(
+	PTR string,
+	i4  len);
+static dump_tcb(
 	DMP_TCB *tcb_ptr,
 	void (*output)(),
 	void (*error)());
@@ -112,8 +120,11 @@ DM_OBJECT	   *obj)
 **  History:
 **	13-Mch-1996 (prida01)
 **	    Created
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototyped.
 */
-dmf_diag_dmp_pool()
+VOID
+dmf_diag_dmp_pool(void)
 {
     i4                 count[DM0M_MAX_TYPE+1][3];
     i4                 err_code;
@@ -147,6 +158,7 @@ dmf_diag_dmp_pool()
     status = dm0m_search((DML_SCB*)NULL, 0, dmd_fmt_cb, &flag, &local_dberr);
     if (status != E_DB_OK)
         TRdisplay("Error searching the memory pool.");
+    return;
 
 }
 /*{
@@ -164,11 +176,12 @@ dmf_diag_dmp_pool()
 **     void (*error)(PTR format,...)       Error function
 **
 **  History:
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototyped.
 */
 
-dmf_diag_dump_tables(output,error)
-void (*output)();
-void (*error)();
+VOID
+dmf_diag_dump_tables( void (*output)(), void (*error)() )
 {
 
 
@@ -195,6 +208,7 @@ void (*error)();
             
         }
     }
+    return;
 }
 
 /*{
@@ -216,10 +230,7 @@ void (*error)();
 */
 
 static
-dump_tcb(tcb_ptr,output,error)
-DMP_TCB *tcb_ptr;
-void (*output)();
-void (*error)();
+dump_tcb( DMP_TCB *tcb_ptr, void (*output)(), void (*error)() )
 {
     i4  c;
 
@@ -356,10 +367,7 @@ void (*error)();
 */
 
 static void
-dump_atts(output,atts_ptr,number)
-void (*output)();
-DB_ATTS **atts_ptr;
-i4  number;
+dump_atts( void (*output)(), DB_ATTS **atts_ptr, i4  number )
 {
     i4  c;
 
@@ -481,9 +489,7 @@ i4  number;
 */
 
 static void
-dump_modify(output,tcb_ptr)
-void (*output)();
-DMP_TCB *tcb_ptr;
+dump_modify( void (*output)(), DMP_TCB *tcb_ptr )
 {
     DMP_LOCATION *location;
     i4  c;
@@ -553,9 +559,7 @@ DMP_TCB *tcb_ptr;
 */
 
 static PTR
-trim(string,len)
-PTR string;
-i4  len;
+trim( PTR string, i4  len )
 {
     static char buffer[100];
     i4  c;

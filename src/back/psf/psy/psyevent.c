@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -91,9 +91,49 @@
 **	    psy_check_objprivs(), psy_insert_objpriv().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psy_devent(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_kevent(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_gevent(
+	PSS_SESBLK *sess_cb,
+	DB_OWN_NAME *event_own,
+	DB_TAB_NAME *event_name,
+	DB_TAB_ID *ev_id,
+	i4 ev_mask,
+	PSS_EVINFO *ev_info,
+	i4 *ret_flags,
+	i4 *privs,
+	i4 qmode,
+	i4 grant_all,
+	DB_ERROR *err_blk);
+i4 psy_evperm(
+	RDF_CB *rdf_cb,
+	i4 *privs,
+	PSS_SESBLK *sess_cb,
+	PSS_EVINFO *ev_info,
+	i4 qmode,
+	i4 grant_all,
+	DB_ERROR *err_blk);
+i4 psy_evraise(
+	PSS_SESBLK *sess_cb,
+	DB_EVENT_NAME *evname,
+	DB_OWN_NAME *evowner,
+	char *evtext,
+	i4 ev_l_text,
+	DB_ERROR *err_blk);
+i4 psy_evget_by_id(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_ID *ev_id,
+	DB_IIEVENT *evtuple,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: psy_devent	- Define an event.
@@ -453,6 +493,8 @@ psy_kevent(
 **	30-dec-93 (robf)
 **          Audit Grant/Revoke on Dbevent as CONTROL operations, not
 **	    CREATE/DROP, which are for creating/dropping the actual event.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Update psl-command-string call.
 */
 DB_STATUS
 psy_gevent(
@@ -475,7 +517,6 @@ psy_gevent(
     SCF_SCI		sci_list[1];
     i4		err_code;
     bool		leave_loop = TRUE;
-    SXF_ACCESS	        access_type;
 
     *ret_flags = 0;
 
@@ -585,7 +626,7 @@ psy_gevent(
 	    char        qry[PSL_MAX_COMM_STRING];
 	    i4     qry_len;
 
-	    psl_command_string(qmode, sess_cb->pss_lang, qry, &qry_len);
+	    psl_command_string(qmode, sess_cb, qry, &qry_len);
 
 	    if (ev_mask & PSS_EV_BY_OWNER)
 	    {

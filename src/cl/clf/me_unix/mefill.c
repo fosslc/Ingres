@@ -88,10 +88,24 @@
 **	16-jul-2001 (somsa01)
 **	    Added inclusion of clconfig.h, and added missing function
 **	    terminator.
+**	15-nov-2010 (stephenb)
+**	    Proto forward funcs.
 */
 
 
-
+/*
+** Forward references
+*/
+VOID
+MEfill(
+	register SIZE_TYPE	n,
+	register unsigned char 	val,
+	register char		*mem);
+VOID
+MEfilllng(
+	register i4		n,
+	register unsigned char 	val,
+	register char		*mem);
 
 /*ARGSUSED*/
 VOID

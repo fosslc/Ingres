@@ -138,6 +138,10 @@
 ;	28-Jul-2010 (drivi01) Bug 121123 Change 506311.
 ;	    Remove dmve_get_tab, dmve_name_unpack.
 ;	    Add dmve_get_tabinfo, dmve_get_tabid.
+;	09-Nov-2010 (jonj) SIR 124685
+;	    Delete LG_check_logwriters, dmm_message,
+;	    no longer global.
+;	    Delete dmse_compare, function deleted.
 ;
 EXPORTS
 LGCnode_names		@1				
@@ -154,7 +158,7 @@ LG_calc_reserved_space		@11
 LG_check_cp_servers		@12				
 LG_check_dead		@13				
 LG_check_logfull		@14				
-LG_check_logwriters		@15				
+;LG_check_logwriters		@15				
 LG_cleanup_checkpoint		@16				
 LG_compute_bof		@17				
 LG_dealloc_lfb_buffers		@18				
@@ -769,7 +773,7 @@ dmm_init_catalog_templates		@627
 dmm_list		@628				
 dmm_loc_validate		@629				
 dmm_makelist		@630				
-dmm_message		@631				
+;dmm_message		@631				
 dmm_putlist		@632				
 dmpe_call		@633				
 dmpe_deallocate		@634				
@@ -804,7 +808,7 @@ dmr_redo_pass		@665
 dmr_replace		@666				
 dmr_undo_pass		@667				
 dmse_begin		@668				
-dmse_compare		@669				
+;dmse_compare		@669				
 dmse_cost		@670				
 dmse_end		@671				
 dmse_get_record		@672				

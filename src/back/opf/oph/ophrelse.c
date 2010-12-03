@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2001, 2004 Ingres Corporation
+** Copyright (c) 1986, 2001, 2004, 2010 Ingres Corporation
 **
 **
 */
@@ -105,8 +105,83 @@
 **	    bug 99120.
 **	20-may-2001 (somsa01)
 **	    Changed nat to i4 due to cross-integration.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/*
+** Forward Structure Definitions:
+*/
+typedef struct _OPH_SELHIST OPH_SELHIST;
+
+/* TABLE OF CONTENTS */
+static void oph_correlation(
+	OPS_SUBQUERY *subquery,
+	OPH_HISTOGRAM *masterhp,
+	OPN_PERCENT newsel,
+	OPH_HISTOGRAM *sehist1p,
+	OPH_HISTOGRAM *sehist2p);
+static OPN_PERCENT oph_and(
+	OPS_SUBQUERY *subquery,
+	OPH_HISTOGRAM *masterhp,
+	OPN_PERCENT mastersel,
+	OPH_HISTOGRAM *updatehp,
+	OPN_PERCENT updatesel);
+static void oph_sarg(
+	OPS_SUBQUERY *subquery,
+	OPN_RLS *trl,
+	OPB_BOOLFACT *bp,
+	OPE_IEQCLS eqcls,
+	OPB_BFVALLIST *valuep,
+	OPH_HISTOGRAM *comphp);
+static void oph_dhist(
+	OPS_SUBQUERY *subquery,
+	OPH_HISTOGRAM **histpp);
+static bool oph_cclookup(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bp);
+static void oph_bfcost(
+	OPS_SUBQUERY *subquery,
+	OPN_RLS *trl,
+	OPB_BOOLFACT *bp);
+static void oph_compbf_setup(
+	OPS_SUBQUERY *subquery,
+	OPN_RLS *trlp,
+	OPB_BMBF *bfmap,
+	OPH_HISTOGRAM ***harrpp,
+	OPV_IVARS varno,
+	i4 *hcount);
+static void oph_compand(
+	OPS_SUBQUERY *subquery,
+	OPH_HISTOGRAM *masterhp,
+	OPH_HISTOGRAM *updatehp);
+static void oph_compcost(
+	OPS_SUBQUERY *subquery,
+	OPN_RLS *trl,
+	OPH_HISTOGRAM **chistp,
+	OPH_HISTOGRAM **ckhistp,
+	OPH_HISTOGRAM **charrpp,
+	i4 chcount);
+static void oph_keyand(
+	OPS_SUBQUERY *subquery,
+	OPH_SELHIST *khistp,
+	OPH_SELHIST *nkhistp);
+static void oph_combine(
+	OPS_SUBQUERY *subquery,
+	OPH_SELHIST *mehistp,
+	OPH_SELHIST *sehistp);
+void oph_relselect(
+	OPS_SUBQUERY *subquery,
+	OPN_RLS **trlpp,
+	OPN_RLS *trl,
+	OPB_BMBF *bfm,
+	OPE_BMEQCLS *eqh,
+	bool *selapplied,
+	OPN_PERCENT *selectivity,
+	OPE_IEQCLS jeqc,
+	OPN_LEAVES nleaves,
+	OPN_JEQCOUNT jxcnt,
+	OPV_IVARS varno);
 
 /*}
 ** Name: OPH_SELHIST - histogram and selectivity structure
@@ -121,11 +196,11 @@
 **          initial creation
 [@history_template@]...
 */
-typedef struct _OPH_SELHIST
+struct _OPH_SELHIST
 {
     OPH_HISTOGRAM   *oph_histp;         /* histogram list */
     OPN_PERCENT     oph_predselect;     /* selectivity of histograms */
-} OPH_SELHIST;
+};
 
 /*{
 ** Name: oph_correlation	- add area based on correlation of data
@@ -717,9 +792,6 @@ oph_sarg(
 
 	if (histval)
 	{	/* normal selectivity calculation */
-	    OPN_PERCENT	repitition; /* percentage selectivity of one tuple given
-				    ** the repitition factor of hp->oph_reptf */
-
 	    for (cellcount = 1; cellcount < numbercells; cellcount++)
 	    {	/* for each cell of histogram (except first which is used
 		** only to provide a min value for the second cell) 
@@ -1458,7 +1530,7 @@ oph_compbf_setup(
 	i4		key;
 	OPB_KA		*kbase = varp->opv_mbf.opb_kbase;
 	OPE_IEQCLS	eqcls1;
-	bool		bfnokey, exact, range, found;
+	bool		bfnokey, exact, range;
 
 	/* Loop over all the composite histograms to determine which
 	** can be used for key selectivity computation. The first 
@@ -2275,9 +2347,6 @@ oph_relselect(
     OPH_HISTOGRAM	*histlistp;	/* list of histograms which contain
 					** current information of boolean factors
 					** evaluated so far */
-    OPH_HISTOGRAM	*comphlistp;	/* list of composite histograms which
-					** contain information of BFs evaluated
-					** so far. */
     OPV_VARS		*varp;
     bool		hashkey;
     PTR			tbl = NULL;	/* collation table */
@@ -2520,8 +2589,6 @@ oph_relselect(
 	    {	/* evaluate the selectivity for each boolean factor */
 		OPB_BOOLFACT        *bp3;    /* ptr to boolean factor being 
 						** analyzed */
-		OPE_BMEQCLS	    *keqcp; /* pointer to keqcmap if any eqc
-					    ** are available */
 		
 		bp3 = bfbase->opb_boolfact[bfi];/* get ptr to next boolean factor */
 		if (!(bp3->opb_mask & OPB_ALLMATCH)

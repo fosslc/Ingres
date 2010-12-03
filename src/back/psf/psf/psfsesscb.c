@@ -43,9 +43,12 @@
 **	    Use (new) GET_PSS_SESBLK macro instead of
 **	    scf_call(SCU_INFORMATION) to return session's
 **	    PSS_SESBLK*.
-[@history_line@]...
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+PSF_SESSCB_PTR psf_sesscb(void);
 
 
 /*{
@@ -83,7 +86,7 @@
 [@history_line@]...
 [@history_template@]...
 */
-PSS_SESBLK*
+PSF_SESSCB_PTR
 psf_sesscb(void)
 {
     CS_SID	sid;

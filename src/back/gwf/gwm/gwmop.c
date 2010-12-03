@@ -167,6 +167,8 @@
 **	    Add all other spatial types.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes.
 */
 
 /* forwards */
@@ -183,6 +185,7 @@ GM_rop( i4  op, GM_RSB *rsb,
 static char * GM_attr_type( i4  type );
 
 static void GM_str_to_uns(char *a, u_i8 *u);
+static char * GM_opblk_type( i4  op );
 
 
 /*{
@@ -1393,7 +1396,7 @@ GM_val_dump( i4  rownum, i4  n, char *buf, i4  *indexp )
 **	    documented.
 */
 
-char *
+static char *
 GM_opblk_type( i4  op )
 {
     switch( op )

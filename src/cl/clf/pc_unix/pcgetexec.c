@@ -7,6 +7,7 @@
 #include    <systypes.h>
 #include    <pc.h>
 #include    <st.h>
+#include    <ex.h>
 #include    <errno.h>
 #include    <clsigs.h>
 
@@ -16,6 +17,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <limits.h>
+#include "pclocal.h"
 
 static long	get_file_mode(char *path);
 static char	*getPathElement(register char *path, register char *buffer);
@@ -43,6 +45,8 @@ static char	*getPathElement(register char *path, register char *buffer);
 **	    Fix up prototypes to quiet warnings.
 **	23-Jun-2008 (bonro01)
 **	    Replace deprecated getwd() with getcwd().
+**	15-nov-2010 (stephenb)
+**	    include ex.h and pclocal.h for prototyping.
 */
 STATUS
 PCgetexecname(char *argv0, char *buf)

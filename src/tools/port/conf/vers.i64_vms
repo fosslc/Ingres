@@ -1,6 +1,0 @@
-config=i64_vms
-option=INGRESII
-build=100
-option=CAS_ENABLED
-option=CLUSTER_BUILD
-option=DBL

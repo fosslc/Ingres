@@ -94,6 +94,8 @@
 **	    On unix SHEMBEDLIB=SHQLIB, SHEMBEDLIB is a windows library.
 **	13-May-2005 (kodse01)
 **	    replace %ld with %d for old nat and long nat variables.
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Fix prototypes
 **/
 
 /*
@@ -106,10 +108,10 @@ NEEDLIBS =	SHQLIB COMPATLIB SHEMBEDLIB
 */
 
 /* Forward declarations */
-i4	sce_menu();
-void	sce_dispatch();
-i4	sce_waserr();
-i4	sce_traptrace();
+static i4 sce_menu(void);
+static void sce_dispatch( i4 op );
+static i4 sce_waserr(void);
+static i4 sce_traptrace( i4 last, DB_DATA_VALUE *dbt );
 
 /* Menu list for operations */
 struct	{
@@ -227,7 +229,7 @@ char	**argv;
 **      30-jan-91 (neil)
 **	    First written to support alerters.
 */
-i4
+static i4
 sce_menu()
 {
     char	buf[100];
@@ -284,9 +286,8 @@ sce_menu()
 **	    sce_dispatch() prints server status.
 **	    sce_dispatch() prints pid in decimal if UNIX
 */
-void
-sce_dispatch(op)
-i4	op;
+static void
+sce_dispatch( i4 op )
 {
     EXEC SQL BEGIN DECLARE SECTION;
 	i4	pidx;
@@ -407,7 +408,7 @@ i4	op;
 **	    First written to support alerters.
 */
 
-i4
+static i4
 sce_waserr()
 {
     EXEC SQL BEGIN DECLARE SECTION;
@@ -448,10 +449,8 @@ sce_waserr()
 **	    sce_traptrace() extracts server status.
 */
 
-i4
-sce_traptrace(last, dbt)
-i4		last;
-DB_DATA_VALUE	*dbt;
+static i4
+sce_traptrace( i4 last, DB_DATA_VALUE *dbt )
 {
     char	*cp;
     char	pbuf[100];

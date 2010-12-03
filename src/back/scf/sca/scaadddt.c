@@ -333,10 +333,12 @@ sca_trace( i4  dispose_mask, i4  length, char *message )
 **      10-nov-1993 (stevet)
 **          deallocate memory the second time not working when loading class
 **          library and udt together.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototyped, SCD_SCB *scb now void *scbp - called from DMF.
 [@history_template@]...
 */
 DB_STATUS
-sca_add_datatypes(SCD_SCB *scb,
+sca_add_datatypes(void *scbp,
 		  PTR adf_svcb,
 		  i4  adf_size,
 		  i4  deallocate_flag,
@@ -344,6 +346,7 @@ sca_add_datatypes(SCD_SCB *scb,
 		  PTR *new_svcb,
 		  i4  *new_size )
 {
+    SCD_SCB		*scb = (SCD_SCB*)scbp;
     ADD_DEFINITION	*add_block;
     PTR                 new_adf_block = (PTR) 0;
     PTR			old_adf_block = (PTR) 0;

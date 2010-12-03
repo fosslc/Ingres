@@ -10,6 +10,8 @@
 #	    Add readme_dba.html for DBA Tools.
 #	04-Jun-2009 (bonro01)
 #	    Remove obsolete readme files
+#	15-Nov-2010 (bonro01)
+#	    Remove readme_usl_us5.html and add readme_axm_vms.html
 
 SubDir ING_SRC tools techpub readme ;
 
@@ -26,7 +28,7 @@ IIRFILES readme_a64_lnx_nptl.html
 	 readme_int_w32.html 
 	 readme_r64_us5.html 
 	 readme_su9_us5.html 
-	 readme_usl_us5.html 
+	 readme_axm_vms.html 
 	 readme_dba.html 
 	 moreinformation.html ;
 

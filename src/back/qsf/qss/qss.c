@@ -68,6 +68,8 @@
 **	    (qsf_sid).
 **	26-Sep-2003 (jenjo02)
 **	    Deleted qsr_psem_owner.
+**	29-Oct-2010 (jonj) SIR 120874
+**	    Conform to use new uleFormat, DB_ERROR constructs.
 */
 
 
@@ -151,7 +153,6 @@ DB_STATUS
 qss_bgn_session( QSF_RCB *qsf_rb )
 {
     STATUS		status;
-    i4             *err_code = &qsf_rb->qsf_error.err_code;
     QSF_CB		*scb = qsf_rb->qsf_scb;
 #ifdef    xDEBUG
     i4		n;
@@ -159,11 +160,15 @@ qss_bgn_session( QSF_RCB *qsf_rb )
     QSF_CB		*nextses;
 #endif /* xDEBUG */
 
+    CLRDBERR(&qsf_rb->qsf_error);
+
     Qsr_scb = (QSR_CB *) qsf_rb->qsf_server;
 
-    *err_code = E_QS001B_NO_SESSION_CB;
     if (scb == NULL)
+    {
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS001B_NO_SESSION_CB);
 	return (E_DB_SEVERE);
+    }
 
     /* Before anything, set up the session CB's standard header portion */
     /* ---------------------------------------------------------------- */
@@ -186,7 +191,7 @@ qss_bgn_session( QSF_RCB *qsf_rb )
     /* -------------------------------------------------- */
     if (CSp_semaphore((i4) TRUE, &Qsr_scb->qsr_psem))
     {
-	*err_code = E_QS0008_SEMWAIT;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0008_SEMWAIT);
 	/* Return now, instead of attempting to do a v() */
 	return (E_DB_ERROR);
     }
@@ -210,13 +215,13 @@ qss_bgn_session( QSF_RCB *qsf_rb )
 	prevses = NULL;
 	nextses = Qsr_scb->qsr_se1st;
 
-	*err_code = E_QS9999_INTERNAL_ERROR;
 	while (n-- > 0)
 	{
 	    if (nextses == NULL)
 	    {
 		TRdisplay("*** Not enough QSF session CBs found");
 		TRdisplay(" while beginning a session.\n");
+		SETDBERR(&qsf_rb->qsf_error, 0, E_QS9999_INTERNAL_ERROR);
 		return (E_DB_FATAL);
 	    }
 
@@ -228,6 +233,7 @@ qss_bgn_session( QSF_RCB *qsf_rb )
 	    {
 		TRdisplay("*** QSF's session CB list found trashed");
 		TRdisplay(" while beginning a session.\n");
+		SETDBERR(&qsf_rb->qsf_error, 0, E_QS9999_INTERNAL_ERROR);
 		return (E_DB_FATAL);
 	    }
 
@@ -239,6 +245,7 @@ qss_bgn_session( QSF_RCB *qsf_rb )
 	{
 	    TRdisplay("*** Too many QSF session CBs detected");
 	    TRdisplay(" while beginning a session.\n");
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS9999_INTERNAL_ERROR);
 	    return (E_DB_FATAL);
 	}
     }
@@ -246,16 +253,13 @@ qss_bgn_session( QSF_RCB *qsf_rb )
 
 
     status = E_DB_OK;
-    *err_code = E_QS0000_OK;
-
-exit:
 
     /* Release exclusive access to QSF's SERVER CONTROL BLOCK */
     /* ------------------------------------------------------ */
     if (CSv_semaphore(&Qsr_scb->qsr_psem))
     {
 	status = E_DB_ERROR;
-        *err_code = E_QS0004_SEMRELEASE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0004_SEMRELEASE);
     }
 
     return (status);
@@ -357,7 +361,6 @@ DB_STATUS
 qss_end_session( QSF_RCB *qsf_rb)
 {
     STATUS		 status = E_DB_OK;
-    i4             *err_code = &qsf_rb->qsf_error.err_code;
     QSF_CB		*scb = qsf_rb->qsf_scb;
     QSF_RCB		int_qsf_rb;
     QSO_OBJ_HDR		*objects = (QSO_OBJ_HDR *) scb->qss_obj_list;
@@ -370,6 +373,8 @@ qss_end_session( QSF_RCB *qsf_rb)
     i4			 trace_003;
 #endif /* xDEBUG */
 
+    CLRDBERR(&qsf_rb->qsf_error);
+
     /* Toss any uncommitted named session-owned objects first.
     ** There shouldn't be any, if QEF did its job right, but who knows.
     ** The important thing is that we NOT have objects pretending to be
@@ -377,6 +382,7 @@ qss_end_session( QSF_RCB *qsf_rb)
     */
     int_qsf_rb.qsf_sid = qsf_rb->qsf_sid;
     int_qsf_rb.qsf_scb = scb;
+    CLRDBERR(&int_qsf_rb.qsf_error);
     (void) qsf_clrsesobj(&int_qsf_rb);
 
     /*
@@ -418,7 +424,8 @@ qss_end_session( QSF_RCB *qsf_rb)
 	    }
 
 	    /* Report the orphaned object. */
-	    ule_format( E_QS001E_ORPHANED_OBJ, NULL, (i4) ULE_LOG, NULL,
+	    uleFormat( &int_qsf_rb.qsf_error, E_QS001E_ORPHANED_OBJ,
+	    		NULL, (i4) ULE_LOG, NULL,
 			NULL, (i4) 0, NULL, &error, 1, 0, type);
 	}
 
@@ -429,7 +436,7 @@ qss_end_session( QSF_RCB *qsf_rb)
 	status = qso_lock(&int_qsf_rb);
 	if (DB_FAILURE_MACRO(status))
 	{
-	    ule_format( int_qsf_rb.qsf_error.err_code, NULL, (i4) ULE_LOG,
+	    uleFormat( &int_qsf_rb.qsf_error, 0, NULL, (i4) ULE_LOG,
 			NULL, NULL, (i4) 0, NULL, &error, 0);
 	}
 
@@ -437,26 +444,27 @@ qss_end_session( QSF_RCB *qsf_rb)
 	status = qso_destroy(&int_qsf_rb);
 	if (DB_FAILURE_MACRO(status))
 	{
-	    ule_format( int_qsf_rb.qsf_error.err_code, NULL, (i4) ULE_LOG,
+	    uleFormat( &int_qsf_rb.qsf_error, 0, NULL, (i4) ULE_LOG,
 			NULL, NULL, (i4) 0, NULL, &error, 0);
 	}
     }
 
     if (count <= 0)
     {
-	ule_format( E_QS001F_TOO_MANY_ORPHANS, NULL, (i4) ULE_LOG,
+	uleFormat( &int_qsf_rb.qsf_error, E_QS001F_TOO_MANY_ORPHANS,
+		    NULL, (i4) ULE_LOG,
 		    NULL, NULL, (i4) 0, NULL, &error, 0);
     }
 
 #ifdef    xDEBUG
     if (Qsr_scb->qsr_tracing && qst_trcheck(&scb, QSF_001_ENDSES_OBJQ))
     {
-	i4			save_err = *err_code;
+	DB_ERROR		save_err = qsf_rb->qsf_error;
 
 	TRdisplay("<<< Dumping QSF object queue before ending session >>>\n");
 	(void) qsd_obq_dump(qsf_rb);
 
-	*err_code = save_err;
+	qsf_rb->qsf_error = save_err;
     }
 
 
@@ -473,7 +481,7 @@ qss_end_session( QSF_RCB *qsf_rb)
     /* ----------------------------------------------------------------- */
     if (CSp_semaphore((i4) TRUE, &Qsr_scb->qsr_psem))
     {
-	*err_code = E_QS0008_SEMWAIT;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0008_SEMWAIT);
 	/* Return now, instead of attempting to do a v() */
 	return (E_DB_ERROR);
     }
@@ -515,13 +523,13 @@ qss_end_session( QSF_RCB *qsf_rb)
 	prevses = NULL;
 	nextses = Qsr_scb->qsr_se1st; 
 
-	*err_code = E_QS9999_INTERNAL_ERROR;
 	while (count-- > 0)
 	{
 	    if (nextses == NULL)
 	    {
 		TRdisplay("*** Not enough QSF session CBs found");
 		TRdisplay(" while ending a session.\n"); 
+		SETDBERR(&qsf_rb->qsf_error, 0, E_QS9999_INTERNAL_ERROR);
 		return (E_DB_FATAL);
 	    }
 
@@ -533,6 +541,7 @@ qss_end_session( QSF_RCB *qsf_rb)
 	    {
 		TRdisplay("*** QSF's session CB list found trashed");
 		TRdisplay(" while ending a session.\n");
+		SETDBERR(&qsf_rb->qsf_error, 0, E_QS9999_INTERNAL_ERROR);
 		return (E_DB_FATAL);
 	    }
 	    prevses = nextses;
@@ -543,6 +552,7 @@ qss_end_session( QSF_RCB *qsf_rb)
 	{
 	    TRdisplay("*** Too many QSF session CBs detected");
 	    TRdisplay(" while ending a session.\n");
+	    SETDBERR(&qsf_rb->qsf_error, 0, E_QS9999_INTERNAL_ERROR);
 	    return (E_DB_FATAL);
 	}
     }
@@ -550,16 +560,13 @@ qss_end_session( QSF_RCB *qsf_rb)
 
 
     status = E_DB_OK;
-    *err_code = E_QS0000_OK;
-
-exit:
 
     /* Release exclusive access to QSF's SERVER CONTROL BLOCK */
     /* ------------------------------------------------------ */
     if (CSv_semaphore(&Qsr_scb->qsr_psem))
     {
 	status = E_DB_ERROR;
-        *err_code = E_QS0004_SEMRELEASE;
+	SETDBERR(&qsf_rb->qsf_error, 0, E_QS0004_SEMRELEASE);
     }
 
     return (status);

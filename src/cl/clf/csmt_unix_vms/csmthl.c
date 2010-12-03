@@ -615,6 +615,9 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**     04-nov-2010 (joea)
+**         Change CSMT_rcv_request to static.  Add return types to the latter
+**         and to CSMT_del_thread.
 **/
 
 /*
@@ -1420,7 +1423,7 @@ CSMT_find_scb(CS_SID sid)
 **
 [@history_template@]...
 */
-
+static STATUS
 CSMT_rcv_request()
 {
     STATUS	    status;
@@ -1574,8 +1577,8 @@ CSMT_rcv_request()
 **          destroying the admin thread's TLS. This lead to a server
 **          crash.
 */
-CSMT_del_thread(scb)
-CS_SCB		*scb;
+i4
+CSMT_del_thread(CS_SCB *scb)
 {
     static int		ac_ifi = -2;	/* Accounting file descriptor/status:
 					**	>=0	File is open

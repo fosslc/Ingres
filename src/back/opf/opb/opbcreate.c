@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -98,8 +98,98 @@
 **		Repaired tests for ifnull, tests are now 
 **		nodep->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags & 
 **		nodep->ADI_F32768_IFNULL
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opb_cbf(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	bool *value);
+static OPE_IEQCLS opb_eqcls(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	PST_QNODE *var);
+static void opl_bfnull(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *root,
+	OPB_BOOLFACT *bfp);
+static void opb_isconst(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	PST_QNODE **rootpp,
+	bool *novars,
+	bool not_first);
+static void opb_ikey(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	PTR keyvalue,
+	OPB_BFKEYINFO *keyhdr,
+	PST_QNODE *constant,
+	OPB_SARG operator,
+	ADI_OP_ID opid,
+	bool null_flag);
+static void opb_keybuild(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	OPB_BFKEYINFO *keyhdr,
+	PST_QNODE *opqnodep,
+	PST_QNODE *constant);
+static void opb_ckilist(
+	OPS_SUBQUERY *subquery,
+	OPE_IEQCLS eqcls,
+	OPB_BOOLFACT *bfp);
+static void opb_bfkey(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	PST_QNODE *var,
+	PST_QNODE *opqnodep,
+	PST_QNODE *constant);
+OPB_BOOLFACT *opb_bfget(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp);
+static bool opb_isnullck(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static void opb_nulljoin(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bp,
+	bool first_time);
+bool opb_bfinit(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	PST_QNODE *root,
+	bool *complex);
+static void opb_rtminmax(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	OPE_EQCLIST *eqclsp,
+	OPB_IBF bfi);
+static void opb_cojoin(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS virtual);
+static void opb_relabel(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *qnode,
+	OPE_BMEQCLS *eqcmap,
+	OPE_BMEQCLS *eqcbfmap);
+static void opb_correlated(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS virtual,
+	OPV_SUBSELECT *subp);
+static bool opl_bfeqc(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp);
+static void opb_bfsinit(
+	OPS_SUBQUERY *subquery);
+void opb_create(
+	OPS_SUBQUERY *subquery);
+void opb_mboolfact(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *expr1,
+	PST_QNODE *expr2,
+	PST_J_ID joinid);
 
 /* Some useful constants */
 static i4 intc0 = 0;
@@ -3943,7 +4033,7 @@ opl_bfeqc(
 **	    restrictions) are outer joined with constant ON clauses.
 [@history_line@]...
 */
-static
+static void
 opb_bfsinit(
 	OPS_SUBQUERY       *subquery)
 {

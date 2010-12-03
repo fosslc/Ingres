@@ -17,6 +17,8 @@
 **	    Created.
 **	 19-Sept-2004 (wansh01)
 **	    added gca_rg_parm in GCADM_SCB.parms.
+**       15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 #ifndef _GCADMINT_INCLUDED_
@@ -134,7 +136,7 @@ typedef struct
 }GCADM_RCB;
 
 
-FUNC_EXTERN void	gcadm_smt_init();
+FUNC_EXTERN void	gcadm_smt_init(void);
 FUNC_EXTERN STATUS 	gcadm_request( u_i1, GCADM_SCB * );
 FUNC_EXTERN GCADM_SCB * gcadm_new_scb( i4, PTR );
 FUNC_EXTERN void	gcadm_free_scb( GCADM_SCB * );

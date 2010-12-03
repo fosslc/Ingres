@@ -15,7 +15,9 @@
 **	    Added support for statement level rules. (FIPS)
 **      12-oct-2000 (stial01)
 **          Added opv_kpleaf Related change 441299
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes and switch stack flattening
+**	    routines to be copies of those in the parser as more powerful.
 **/
 
 /*}
@@ -902,6 +904,7 @@ typedef struct _OPV_GLOBAL_RANGE
 */
 typedef struct _OPV_STK
 {
+    struct _OPS_STATE *cb;
     struct OPV_STK1 *free;      /* Stack block head. */
     struct OPV_STK1 {
         struct OPV_STK1 *link;  /* Stack block link. */
@@ -911,17 +914,32 @@ typedef struct _OPV_STK
     } stk;
 } OPV_STK;
 
+#define OPV_STK_INIT(_s,_cb) \
+    {(_s).cb = _cb; (_s).free = NULL; (_s).stk.link = NULL; (_s).stk.sp = 0;}
+
+#define OPV_DESCEND_MARK ((PST_QNODE**)TRUE)
+
 VOID
-opv_push_item(struct _OPS_STATE *,OPV_STK *, PTR);
+opv_push_ptr(OPV_STK *, PTR);
 PTR
-opv_pop_item(OPV_STK *);
+opv_pop_ptr(OPV_STK *);
 VOID
 opv_pop_all(OPV_STK *);
+#define OPV_DEFINE_STK_FNS(_name, _type) \
+static void opv_push_##_name(OPV_STK *s, _type p){opv_push_ptr(s, (PTR)p);}\
+static _type opv_pop_##_name(OPV_STK *s){return (_type)opv_pop_ptr(s);}
+PST_QNODE *
+opv_parent_node(OPV_STK *base, PST_QNODE *child);
+PST_QNODE *
+opv_antecedant_by_1type(OPV_STK *base, PST_QNODE *child,
+	PST_TYPE t1);
+PST_QNODE *
+opv_antecedant_by_2types(OPV_STK *base, PST_QNODE *child,
+	PST_TYPE t1,PST_TYPE t2);
+PST_QNODE *
+opv_antecedant_by_3types(OPV_STK *base, PST_QNODE *child,
+	PST_TYPE t1, PST_TYPE t2, PST_TYPE t3);
+PST_QNODE *
+opv_antecedant_by_4types(OPV_STK *base, PST_QNODE *child,
+	PST_TYPE t1, PST_TYPE t2, PST_TYPE t3, PST_TYPE t4);
 
-#define OPV_STKDECL OPV_STK _opv_stk;
-#define OPV_STKINIT (_opv_stk.free = NULL,\
-		_opv_stk.stk.link = NULL,\
-		_opv_stk.stk.sp = 0);
-#define OPV_STKPUSH(_v) opv_push_item(global, &_opv_stk, (PTR)(_v))
-#define OPV_STKPOP() opv_pop_item(&_opv_stk)
-#define OPV_STKRESET opv_pop_all(&_opv_stk);

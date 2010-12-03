@@ -4981,7 +4981,8 @@ DB_DATA_VALUE   *rdv)
  * Used for rtree indexing.  Returns 1 is g1 > g2, 0 if g1 = g2, -1 if g1< g2.
  * Each point is compared to get the final result.
  */
-i4 coordSeq_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1,
+i4
+coordSeq_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1,
                 const GEOSGeometry *g2)
 {
     const GEOSCoordSequence *gcs1, *gcs2;
@@ -5038,7 +5039,8 @@ i4 coordSeq_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1,
  * Compares two polygons by breaking them up into their linear ring pieces and
  * called coordSeq_cmp
  */
-i4 polygon_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1, 
+i4 
+polygon_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1, 
                const GEOSGeometry *g2)
 {
     i4 result = 0;
@@ -5076,7 +5078,8 @@ i4 polygon_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1,
  * Multpolygon call polygon_cmp for each polygon contained
  * Geometry collections recursively call geom_cmp for each geometry contained.
  */
-i4 geom_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1, 
+i4 
+geom_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1, 
             const GEOSGeometry *g2, i4 g1Type, i4 g2Type)
 {
     i4 g1NumPts, g2NumPts, ptCnt;
@@ -5278,7 +5281,8 @@ i4                  *cmp_result)
 /*      Translate angular values between degrees and radians or back.   */
 /************************************************************************/
 
-static void adjust_angles( double *xyz, int num_points, double mult_factor )
+static void 
+adjust_angles( double *xyz, int num_points, double mult_factor )
 
 {
     int i;
@@ -5294,8 +5298,8 @@ static void adjust_angles( double *xyz, int num_points, double mult_factor )
 /*                         geos_pj_transform()                          */
 /************************************************************************/
 #ifdef _WITH_GEO
-static
-int geos_pj_transform( GEOSGeometry *geom, GEOSContextHandle_t hCtx,
+static int 
+geos_pj_transform( GEOSGeometry *geom, GEOSContextHandle_t hCtx,
                        projPJ src_pj, projPJ dst_pj )
 
 {
@@ -5430,7 +5434,8 @@ int geos_pj_transform( GEOSGeometry *geom, GEOSContextHandle_t hCtx,
 /*                           ii_init_proj4()                            */
 /************************************************************************/
 
-static void ii_init_proj4()
+static void 
+ii_init_proj4()
 
 {
     static int initialized = 0;
@@ -5461,7 +5466,8 @@ static void ii_init_proj4()
 /*                           geos_transform()                           */
 /************************************************************************/
 
-static int geos_transform( GEOSGeometry *geom, GEOSContextHandle_t hCtx,
+static int 
+geos_transform( GEOSGeometry *geom, GEOSContextHandle_t hCtx,
                            const char *src_srs, 
                            const char *dst_srs )
 {

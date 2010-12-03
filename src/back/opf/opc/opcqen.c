@@ -66,19 +66,15 @@
 **      node type specific portions (ie. for orig nodes, or one of the various 
 **      join nodes, etc) are filled in by routines in OPCORIG.C, OPCJOIN.C, 
 **      OPCSEJOIN.C, OPCRAN.C, and OPCSORT.C.
-[@comment_line@]...
 **
 **	Externally visable routines:
 **          opc_qentree_build() - Build a QEN_NODE tree from a CO tree.
 **          opc_qnatts() - Fill in the qen_atts and qen_natts of a QEN_NODE.
 **          opc_fatts() - Materialize the function atts for a CO/QEN node.
 **	    opc_getFattDataType() - Fill in data type info for a function attribute.
-[@func_list@]...
 **
 **	Internal only routines:
 **	    none yet.
-[@func_list@]...
-**
 **
 **  History:
 **      4-aug-86 (eric)
@@ -142,16 +138,34 @@
 **	    Minor cleanup, delete unused adbase parameters.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Forward and/or External function references.
-*/
-
-/*
-**  Defines of other constants.
-*/
+
+/* TABLE OF CONTENTS */
+void opc_qentree_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+void opc_qnatts(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPO_CO *tco,
+	QEN_NODE *qn);
+void opc_fatts(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPO_CO *co,
+	QEN_NODE *qn,
+	QEN_ADF **pqadf,
+	OPE_BMEQCLS *fattmap);
+void opc_getFattDataType(
+	OPS_STATE *global,
+	i4 attno,
+	ADE_OPERAND *adeOp);
+void opc_ojspfatts(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	i4 *ojspecialEQCrow);
 
 /*{
 ** Name: OPC_QENTREE_BUILD	- Build a QEN_NODE (sub)tree from a CO (sub)tree
@@ -270,10 +284,6 @@ opc_qentree_build(
 	*/
     OPO_CO		*tco = cnode->opc_cco;
     OPO_CO		*bco = cnode->opc_cco;
-
-	/* var is used in deciding whether we need a KJOIN, TJOIN, or an SEJOIN
-	*/
-    OPV_VARS		*var;
 
 	/* qn points to the QEN node that we are building. */
     QEN_NODE		*qn;
@@ -781,7 +791,7 @@ opc_qnatts(
     if (qn->qen_natts > 0)
     {
 	/*
-	/* alloc space for att pointers
+	** alloc space for att pointers
 	** 
         ** We could allocate the DMT_ATT_ENTRY and space for attribute names
 	** if we loop through and calculate attr_nametot
@@ -1216,8 +1226,6 @@ opc_fatts(
 	/* Ingres attribute number and the joinop attribute numbers. Iattno
 	** is not currently used.
 	*/
-    i4			iattno;
-    OPZ_IATTS		jattno;
        
         /* If this is DB_PR or DB_ORIG, save varno for later */
     OPV_IVARS           varno = -1;
@@ -1676,7 +1684,6 @@ opc_ojspfatts(
     OPZ_FT		*fbase;
 
 	/* rowno holds the DSH row number that holds the fatts. */
-    i4			rowno;
 
     i4	    offset;
 
@@ -1707,7 +1714,6 @@ opc_ojspfatts(
 	    )
 	{
 	    OPZ_BMATTS		*attmap;
-	    OPE_BMEQCLS		need_eqcmp;
 	    OPZ_IATTS		attno;
 
 	    /* get the joinop attribute number for the fatt to be created */

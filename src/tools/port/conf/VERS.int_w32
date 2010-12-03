@@ -10,10 +10,8 @@
 #	    Fixed a typo in set option WITH_GEO
 
 #set: config int_w32
-#set: build 03
+#set: build 00
 #set: inc 00
-# This should not be submitted to main
-#set: option GEO
 
 
 # Any jam definitions go here, e.g. VAR = value ;

@@ -25,6 +25,8 @@
 #include    <rqf.h>
 #include    <tpfcat.h>
 #include    <tpfddb.h>
+#include    <tpfqry.h>
+#include    <tpfproto.h>
 
 /**
 **
@@ -52,6 +54,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include tpfqry.h, tpfproto.h to get prototypes.
 **/
 
 GLOBALREF   char                *IITP_09_3dots_p;

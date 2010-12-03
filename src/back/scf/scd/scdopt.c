@@ -59,7 +59,6 @@ NO_OPTIM=dr6_us5
 #include <qefcopy.h>
 
 #include    <sc.h>
-#include    <sca.h>
 #include    <scc.h>
 #include    <scs.h>
 #include    <scd.h>
@@ -374,6 +373,11 @@ NO_OPTIM=dr6_us5
 **      11-Aug-2010 (hanal04) Bug 124180
 **          Added money_compat for backwards compatibility of money
 **          string constants.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Result-structure is handled by PSF now, not OPF.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Delete sca.h include. Function prototypes moved to
+**	    scf.h for exposure to DMF.
 */
 
 /*
@@ -1418,8 +1422,8 @@ scd_options(
 			value = DB_HEAP_STORE;
 			compressed = TRUE;
 		    }
-		    opf_cb->opf_value = value;
-		    opf_cb->opf_compressed = compressed;
+		    psq_cb->psq_result_struct = value;
+		    psq_cb->psq_result_compression = compressed;
 		    break;
 		}
 
@@ -1769,11 +1773,11 @@ scd_options(
 	    case SCO_CREATE_COMPRESSION:
 		/* Values should be validated by cbf */
 		if (STcasecmp(scd_svalue, "none") == 0)
-		    psq_cb->psq_create_compression = DMU_C_OFF;
+		    psq_cb->psq_create_compression = DMU_COMP_OFF;
 		else if (STcasecmp(scd_svalue, "data") == 0)
-		    psq_cb->psq_create_compression = DMU_C_ON;
+		    psq_cb->psq_create_compression = DMU_COMP_ON;
 		else if (STcasecmp(scd_svalue, "hidata") == 0)
-		    psq_cb->psq_create_compression = DMU_C_HIGH;
+		    psq_cb->psq_create_compression = DMU_COMP_HI;
 		else
 		    TRdisplay("%@ Invalid create_compression value %s ignored\n",
 			scd_svalue);

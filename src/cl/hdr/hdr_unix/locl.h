@@ -72,6 +72,9 @@ typedef	struct _LOCATION	LOCATION;   /* needed for si.h */
 **	    query of more exact file attributes: LO_IS_LNK, LO_IS_CHR,
 **	    LO_IS_BLK, LO_IS_FIFO, LO_IS_SOCK. Also add the ability to
 **	    stat a link and not the referenced file.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    In cleaning up PSF errors, added LOCATION_INIT as a supported
+**	    initial value for LOCATION.
 **/
 
 
@@ -162,6 +165,7 @@ struct _LOCATION
 	FILE	*fp;
 	char	desc;
 } ;
+#define LOCATION_INIT {NULL,NULL,NULL,NULL,NULL,0}
 
 /*
 **	structure for LOinfo calls.

@@ -4,10 +4,10 @@
 
 # include <compat.h>
 # include <gl.h>
-# include <sl.h>
 # include <iicommon.h>
 # include <dbdbms.h>
 # include <dudbms.h>
+# include <bt.h>
 # include <cm.h>
 # include <cs.h>
 # include <er.h>
@@ -1834,7 +1834,7 @@ GM_dbslen( char *str )
 **	yes.
 **
 ** Inputs:
-**	gwx_rcb->xrcb_var_data4		DMF table characteristics array.
+**	gwx_rcb->xrcb_dmu_chars		DMF table characteristics struct.
 **
 ** Outputs:
 **	journaled		set 0 if not journaled.
@@ -1849,53 +1849,54 @@ GM_dbslen( char *str )
 ** History:
 **	3-Feb-1993 (daveb)
 **	    documented.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
+**	    Fix the loop here.
+**	27-Oct-2010 (kschendel)
+**	    Fix above to positively init all the return elements.
 */
 
 void
 GM_info_reg( GWX_RCB *gwx_rcb, i4  *journaled, i4  *structure,
 	    i4  *unique, i4  *update )
 {
-    DMU_CHAR_ENTRY    *chr;
-    DMU_CHAR_ENTRY    *charlim;
+    DMU_CHARACTERISTICS *dmuchars;
+    i4 indicator;
 
-    /*
-     **	Pull ouy gateway registration information.
-     */
-    chr=(DMU_CHAR_ENTRY*) gwx_rcb->xrcb_var_data4.data_address;
+    /* Init the return values.  We should always see structure, but be
+    ** safe.
+    */
+    *journaled = *unique = *update = 0;
+    *structure = DB_BTRE_STORE;
 
-    /* Find the end of the characteristics array */
-    charlim = (DMU_CHAR_ENTRY *)((char *) chr + gwx_rcb->xrcb_var_data4.data_in_size);
-    
-    for( ; chr < charlim; chr++ )
+    /* Now inspect the dmu-characteristics and set what was sent */
+    dmuchars = gwx_rcb->xrcb_dmu_chars;
+    if (dmuchars == NULL)
+	return;
+
+    indicator = -1;
+    while ((indicator = BTnext(indicator, dmuchars->dmu_indicators, DMU_CHARIND_LAST)) != -1)
     {
-	switch( chr->char_id )
+	switch( indicator )
 	{
 	case DMU_JOURNALED:
-
-	    /* DMU_C_ON, DMU_C_OFF, DMU_C_NOT_SET */
-
-	    *journaled = (chr->char_value == DMU_C_ON);
+	    *journaled = (dmuchars->dmu_journaled != DMU_JOURNAL_OFF);
 	    break;
 
 	case DMU_STRUCTURE:
 
 	    /* DB_HEAP_STORE, DB_ISAM_STORE, DB_HASH_STORE, DB_BTRE_STORE */
 
-	    *structure = chr->char_value;
+	    *structure = dmuchars->dmu_struct;
 	    break;
 
 	case DMU_GW_UPDT:
 
-	    /* DMU_C_ON, DMU_C_OFF, DMU_C_NOT_SET */
-
-	    *update = (chr->char_value == DMU_C_ON);
+	    *update = (dmuchars->dmu_flags & DMU_FLAG_UPDATE) != 0;
 	    break;
 
 	case DMU_UNIQUE:
-
-	    /* DMU_C_ON, DMU_C_OFF, DMU_C_NOT_SET */
-
-	    *unique = (chr->char_value == DMU_C_ON);
+	    *unique = TRUE;
 
 	default:
 	    break;

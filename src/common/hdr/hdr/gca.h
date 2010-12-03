@@ -2789,6 +2789,8 @@ struct _GCA_XA_DATA
 # define	GCA_TYPE_QTXT_N		(-51)
 # define	GCA_TYPE_NQTXT		54	/* Query UCS2	DB_NQTXT_TYPE */
 # define	GCA_TYPE_NQTXT_N	(-54)
+# define	GCA_TYPE_NBR		64      /* Geometry	DB_NBR_TYPE*/
+# define	GCA_TYPE_NBR_N		(-64)
 
 /*
 ** Variable array types
@@ -2923,6 +2925,24 @@ struct _GCA_XA_DATA
 # define	GCA_TYPE_LBYTE_N	(-25)
 # define	GCA_TYPE_LNCHR		28	/* Long UCS2	DB_LNVCHR_TYPE*/
 # define	GCA_TYPE_LNCHR_N	(-28)
+# define	GCA_TYPE_GEOM		56      /* Geometry	DB_GEOM_TYPE*/
+# define	GCA_TYPE_GEOM_N		(-56)
+# define	GCA_TYPE_POINT		57      /* Geometry	DB_POINT_TYPE*/
+# define	GCA_TYPE_POINT_N	(-57)
+# define	GCA_TYPE_MPOINT		58      /* Geometry	DB_MPOINT_TYPE*/
+# define	GCA_TYPE_MPOINT_N	(-58)
+# define	GCA_TYPE_LINE		59      /* Geometry	DB_LINE_TYPE*/
+# define	GCA_TYPE_LINE_N		(-59)
+# define	GCA_TYPE_SECL		60	/* Sec Label	DB_SEC_TYPE */
+# define	GCA_TYPE_SECL_N		(-60)
+# define	GCA_TYPE_MLINE		61      /* Geometry	DB_MLINE_TYPE*/
+# define	GCA_TYPE_MLINE_N	(-61)
+# define	GCA_TYPE_POLY		62      /* Geometry	DB_POLY_TYPE*/
+# define	GCA_TYPE_POLY_N		(-62)
+# define	GCA_TYPE_MPOLY		63      /* Geometry	DB_MPOLY_TYPE*/
+# define	GCA_TYPE_MPOLY_N	(-63)
+# define	GCA_TYPE_GEOMC		65      /* Geometry	DB_GEOMC_TYPE*/
+# define	GCA_TYPE_GEOMC_N	(-65)
 
 /*
 ** Long locator types
@@ -3117,26 +3137,6 @@ struct _GCA_XA_DATA
 # define	GCA_TYPE_INTDS_N	(-34)
 # define	GCA_TYPE_BOOL		38	/* Boolean	DB_BOO_TYPE */
 # define	GCA_TYPE_BOOL_N		(-38)
-# define	GCA_TYPE_GEOM		56      /* Geometry	DB_GEOM_TYPE*/
-# define	GCA_TYPE_GEOM_N		(-56)
-# define	GCA_TYPE_POINT		57      /* Geometry	DB_POINT_TYPE*/
-# define	GCA_TYPE_POINT_N	(-57)
-# define	GCA_TYPE_MPOINT		58      /* Geometry	DB_MPOINT_TYPE*/
-# define	GCA_TYPE_MPOINT_N	(-58)
-# define	GCA_TYPE_LINE		59      /* Geometry	DB_LINE_TYPE*/
-# define	GCA_TYPE_LINE_N		(-59)
-# define	GCA_TYPE_SECL		60	/* Sec Label	DB_SEC_TYPE */
-# define	GCA_TYPE_SECL_N		(-60)
-# define	GCA_TYPE_MLINE		61      /* Geometry	DB_MLINE_TYPE*/
-# define	GCA_TYPE_MLINE_N	(-61)
-# define	GCA_TYPE_POLY		62      /* Geometry	DB_POLY_TYPE*/
-# define	GCA_TYPE_POLY_N		(-62)
-# define	GCA_TYPE_MPOLY		63      /* Geometry	DB_MPOLY_TYPE*/
-# define	GCA_TYPE_MPOLY_N	(-63)
-# define	GCA_TYPE_NBR		64      /* Geometry	DB_NBR_TYPE*/
-# define	GCA_TYPE_NBR_N		(-64)
-# define	GCA_TYPE_GEOMC		65      /* Geometry	DB_GEOMC_TYPE*/
-# define	GCA_TYPE_GEOMC_N	(-65)
 
 #endif
 /************************** End of gca.h *************************************/

@@ -1,3 +1,4 @@
+/* psyrereg.c */
 FUNC_EXTERN DB_STATUS
 psy_reregister(
 	PSY_CB          *psy_cb,

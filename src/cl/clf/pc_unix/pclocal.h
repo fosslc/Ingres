@@ -36,6 +36,9 @@
 **	    replace nat and longnat with i4
 **	17-jun-2004 (somsa01)
 **	    Cleaned up code for Open Source.
+**	15-nov-2010 (stephenb)
+**	    Add defined from redundant local copy of pc.h (now removed) and
+**	    correctly prototype local functions.
 **/
 
 # ifndef CLCONFIG_H_INCLUDED
@@ -61,6 +64,36 @@
 # define	ACCESSIBLE	 0
 # define	BAD_ACCESS	-1
 
+# define	EXEC		01	/* access mode for executing */
+
+# define	AREAD		0444	/* all read access */
+# define	AWRITE		0222	/* all write access */
+# define	AEXEC		0111	/* all execute access */
+
+
+# define	OREAD		0400	/* owner read access */
+# define	OWRITE		0200	/* owner write access */
+# define	OEXEC		0100	/* owner execute access */
+
+/*
+**	needed as UNIX doesn't check world status
+**		if user is in same group as owner???
+*/
+
+# define	WREAD		0044	/* group and world read access */
+# define	WWRITE		0022	/* group and world write access */
+# define	WEXEC		0011	/* group and world execute access */
+
+# define	UNKNOWN		0	/* unknown permission status */
+# define	GIVE		1	/* give permission status */
+# define	TAKE		2	/* take away permission status */
+
+# define	UMASKLENGTH	6	/* length of the umask */
+# define	PEBUFSZ		256	/* string buffer size in PE.c */
+
+# define	NONE		0	/* resets the permission bits */
+
+
 /*
 	UNIX system global error number variable
 */
@@ -74,3 +107,11 @@ extern		int		errno;	/* it's supposed to be an int   */
 */
 
 extern		STATUS		PCstatus;
+
+/* local functions */
+STATUS	PCsspawn(i4, char **, bool, PIPE *, PIPE *, PID *);
+STATUS	PCno_fork(void);
+STATUS	PCno_exec(char *);
+STATUS 	PCdospawn(i4, char **, bool, LOCATION *, LOCATION *, i4, i4, PID *);
+STATUS	PCsendex(EX, PID);
+STATUS	PCgetexecname(char *argv0, char *buf);

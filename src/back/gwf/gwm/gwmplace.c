@@ -130,6 +130,8 @@
 **	    Update GCA API to LEVEL 5
 **	24-Aug-10 (gordy)
 **	    Skip servers registered with NMSVR mib.
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing static prototypes
 **/
 
 /* forwards */
@@ -153,6 +155,11 @@ static GM_PLACE_BLK *GM_i_place( char *place_name );
 static void GM_zp_srvr( GM_PLACE_BLK *place_blk );
 static STATUS GM_query_vnode( GM_PLACE_BLK *vnode_place );
 static bool GM_check_vnode( GM_PLACE_BLK *pb );
+static void GM_rm_vnode( GM_PLACE_BLK *place );
+static char * GM_conn_state( GM_CONN_BLK *conn );
+static void GM_conn_dump( GM_CONN_BLK *conn );
+static void GM_req_conn( GM_CONN_BLK *conn );
+static void GM_resp_conn( GM_CONN_BLK *conn );
 
 
 
@@ -837,7 +844,7 @@ GM_gt_vnode( char *vnode )
 **	    created
 */
 
-void
+static void
 GM_rm_vnode( GM_PLACE_BLK *place )
 {
     /* does nothing, we don't use it. */
@@ -1653,7 +1660,7 @@ GM_conn_error( GM_CONN_BLK *conn )
 }
 
 
-char *
+static char *
 GM_conn_state( GM_CONN_BLK *conn )
 {
     switch( conn->conn_state )
@@ -1681,7 +1688,7 @@ GM_conn_state( GM_CONN_BLK *conn )
     }
 }
 
-void
+static void
 GM_conn_dump( GM_CONN_BLK *conn )
 {
     TRdisplay("CONN BLK %p, key %x\n", conn, conn->conn_blk.key );
@@ -1696,13 +1703,13 @@ GM_conn_dump( GM_CONN_BLK *conn )
 	       conn->conn_data_last - conn->conn_data_start );
 }
 
-void
+static void
 GM_req_conn( GM_CONN_BLK *conn )
 {
     GM_opblk_dump( &conn->conn_rsb->request );
 }
 
-void
+static void
 GM_resp_conn( GM_CONN_BLK *conn )
 {
     GM_opblk_dump( &conn->conn_rsb->response );

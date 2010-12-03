@@ -9,6 +9,7 @@
 # include	<st.h>
 # include	<systypes.h>
 # include	<lo.h>			/* LOCATION library header file */
+# include	<pe.h>
 # include	<sys/stat.h>		/* header for info on a file */
 # include	"pelocal.h"		/* PE local header file */
 
@@ -81,6 +82,8 @@
 **	03-jun-1996 (canor01)
 **	    removed above semaphore--code must be protected by caller
 **	    if used in a multi-threaded server
+**	15-nov-2010 (stephenb)
+**	    Include pe.h for prototypes.
 **/
 
 
@@ -430,7 +433,7 @@ PEsave()
 */
 
 VOID
-PEreset()
+PEreset(void)
 {
 # ifdef VMS
 	sys$setdfprot(&prot);

@@ -173,6 +173,8 @@
 **	10-Dec-2008 (jonj)
 **	    SIR 120874: Remove last vestiges of CL_SYS_ERR,
 **	    old form uleFormat.
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Return int instead of VOID to agree with function prototype.
 **/
 
 /*
@@ -266,13 +268,14 @@ static STATUS ex_handler(EX_ARGS *ex_args);
 **	    For supportability add process info to shared memory.
 **      06-Aug-2009 (wanfr01)
 **          Bug 122418 - Print OS generic LKinitialize error
+**	04-Nov-2010 (bonro01) SIR 124685
+**	    Fix windows syntax error introduced by previous change.
 */
 
 # ifdef	II_DMF_MERGE
-VOID MAIN(argc, argv)
+int MAIN(argc, argv)
 # else
-VOID 
-main(argc, argv)
+int main(argc, argv)
 # endif
 i4	argc;
 char	*argv[];
@@ -281,6 +284,9 @@ char	*argv[];
     MEadvise(ME_INGRES_ALLOC);
 # endif
     PCexit(lockstat(argc, argv));
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 static STATUS
