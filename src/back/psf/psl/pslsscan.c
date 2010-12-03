@@ -1,6 +1,5 @@
-/* Copyright (c) 1986, 2005, 2010 Ingres Corporation
-**
-**
+/*
+** Copyright (c) 1986, 2005, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -522,6 +521,8 @@
 **	    Use the macro symbol with ult_check_macro instead of literal.
 **	08-Nov-2010 (kiria01) SIR 124685
 **	    Rationalise function prototypes
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for SET SESSION *COLLATION*
 **/
 
 /* TABLE OF CONTENTS */
@@ -1403,8 +1404,8 @@ static const KEYINFO                Key_info[] = {
 /* 207 */	       { /*SIMILAR*/0,	    0,	SIMILARSIZE,(SECONDARY *)Similarwords},
 /* 208 */	       {/* GENERATED */ 0,  0, GENERATEDSIZE, (SECONDARY *)
 								Generatedwords},
-/* 209 */	       { AUTOINCREMENT,	    0,	0,	(SECONDARY *) NULL   },
-/* 210 */	       { IDENTITY,	    0,	0,	(SECONDARY *) NULL   },
+/* 209 */	       { AUTOINCREMENT,	    0,	0,	(SECONDARY *)NULL   },
+/* 210 */	       { IDENTITY,	    0,	0,	(SECONDARY *)NULL   },
 /* 211 */	       {/*OVERRIDING */ 0,  0, OVERRIDINGSIZE, (SECONDARY *)
                                                                Overridingwords},
 /* 212 */              { FALSECONST,        0,  0,      (SECONDARY *)NULL },
@@ -1413,8 +1414,9 @@ static const KEYINFO                Key_info[] = {
 /* 215 */	       { SINGLETON,	    0,	0,	(SECONDARY *)NULL },
 /* 216 */	       { RENAME,    PSL_GOVAL,	0,	(SECONDARY *)NULL },
 /* 217 */	       { ENCRYPT,	    0,  0,	(SECONDARY *)NULL },
-/* 218 */              { SEGMENTED,         0,  0,      (SECONDARY *) NULL   },
-/* 219 */              { SRID,              0,  0,      (SECONDARY *)NULL }
+/* 218 */              { SEGMENTED,         0,  0,      (SECONDARY *)NULL },
+/* 219 */              { COLLATION,         0,  0,      (SECONDARY *)NULL },
+/* 220 */              { SRID,              0,  0,      (SECONDARY *)NULL }
 };
 
 /* Alternate keyword lists for inside WITH parsing (specifically, when
@@ -4424,6 +4426,8 @@ i4	    token)
 	nvchr = yacc_cb->yylval.psl_utextype;
 	dv1.db_datatype = DB_NVCHR_TYPE;
 	dv1.db_length = (nvchr->count * sizeof(UCS2)) + DB_CNTSIZE;
+	dv1.db_collID = DB_UNSET_COLL;
+	dv1.db_prec = 0;
 	dv1.db_data = (PTR)nvchr;
 	rdv.db_datatype = DB_NVCHR_TYPE;
     }
@@ -4432,6 +4436,8 @@ i4	    token)
 	text = yacc_cb->yylval.psl_textype;
 	dv1.db_datatype = DB_VCH_TYPE;
 	dv1.db_length = text->db_t_count + DB_CNTSIZE;
+	dv1.db_collID = DB_UNSET_COLL;
+	dv1.db_prec = 0;
 	dv1.db_data = (PTR)text;
 	rdv.db_datatype = DB_VCH_TYPE;
 
@@ -4493,6 +4499,8 @@ i4	    token)
 	/* For NAME tokens, don't normalize the null, just add it back */
 	namelen = STlength(name);
 	dv1.db_length = namelen;
+	dv1.db_collID = DB_UNSET_COLL;
+	dv1.db_prec = 0;
 	dv1.db_data = (PTR)name;
 	rdv.db_datatype = DB_VCH_TYPE;
     }

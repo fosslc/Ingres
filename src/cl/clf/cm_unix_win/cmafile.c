@@ -135,6 +135,8 @@
 **	    UTF8 is now doublebyte
 **	    Initialize CM_isDBL based on II_CHARSET
 **	    Double_byte has same function as CM_isDBL now - removing.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 /*
@@ -150,7 +152,8 @@ GLOBALREF i4 CM_BytesForUTF8[];
 GLOBALREF CM_UTF8ATTR CM_attrtab_UTF8[];
 GLOBALREF CM_UTF8CASE CM_casetab_UTF8[];
 
-static char *attrfile();
+static char * attrfile(
+	char *name,LOCATION *loc,char *lbuf,CL_ERR_DESC *err,bool *exists);
 
 static CMATTR Readattr;
 
@@ -501,12 +504,7 @@ CL_ERR_DESC *err;
 */
 
 static char *
-attrfile(name,loc,lbuf,err,exists)
-char *name;
-LOCATION *loc;
-char *lbuf;
-CL_ERR_DESC *err;
-bool *exists;
+attrfile(char *name,LOCATION *loc,char *lbuf,CL_ERR_DESC *err,bool *exists)
 {
 	LOCATION	tloc;
 	char		*str;

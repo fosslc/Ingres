@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2008,2009 Ingres Corporation
+** Copyright (c) 2008, 2009, 2010 Ingres Corporation
 */
 
 /**
@@ -7,18 +7,20 @@
 **  Name: adupatexec.c - Pattern execution
 **
 **  Description:
-**	This file contains the execution engines shells for the pattern match
-**	code. Each shell iimplements the state control and data access needed
+**	This file contains the execution engine shells for the pattern match
+**	code. Each shell implements the state control and data access needed
 **	to support the pattern matching itself. The matching logic itself is
-**	imported from an generated state machine that is included in each shell
+**	imported from a generated state machine that is included in each shell
 **	to ensure that the logic used will be the same for each datatype.
 **
 **
 ** This file defines the following externally visible routines:
 **
-**	adu_pat_execute()  - Do the pattern scan
-**	adu_pat_execute_col()  - Do the pattern scan for collated data
-**	adu_pat_execute_uni()  - Do the pattern scan for unicode
+**	adu_pat_execute()  - Do the pattern scan for non-UTF8 non-Unicode
+**	adu_pat_execute_utf8()  - Do the pattern scan for UTF8 UCS_BASIC
+**	adu_pat_execute_col()  - Do the pattern scan for non-Unicode collation
+**	adu_pat_execute_uni()  - Do the pattern scan for unicode UCS_BASIC
+**	adu_pat_execute_uniCE()  - Do the pattern scan for unicode CE
 **
 **  Function prototypes defined in ADUINT.H file.
 **
@@ -33,6 +35,11 @@
 **	08-Jan-2010 (kiria01) b123118
 **	    Corrected the datatype of the temporary variables
 **	    to be signed.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation: Added adu_pat_execute_utf8()
+**	    to handle the UCS_BASIC UTF8 and renamed adu_pat_execute_uni() to
+**	    adu_pat_execute_uniCE() to highlight use of CEs and added a new
+**	    adu_pat_execute_uni() to handle UCS_BASIC UCS2
 **/
 
 #include <compat.h>
@@ -56,10 +63,11 @@
 /*		*********************
 **		*** Big UTF8 NOTE ***
 **		*********************
-** This module is designed so that it never need process UTF8 chars itself
-** as they will have been converted to NVARCHARs and handled with them.
-** Therefore to remove the redundant per-character UTF8 overheads - they
-** have been short-circuited below.
+** This module is designed so that it knows when it needs to process UTF8 chars
+** or not and they will either have been converted to NVARCHARs and handled with them
+** or be localised in a UTF8 only varient routine.
+** Therefore to remove the redundant per-character UTF8 overheads - they are controlled
+** by short-circuiting like below:
 */
 #ifdef CMGETUTF8
 #undef CMGETUTF8
@@ -180,7 +188,7 @@ static bool tstPAT_EOS(AD_PAT_CTX *ctx){
 **
 ** History:
 */
-AD_PAT_CTX *alloc_ctx(AD_PAT_CTX *ctx){
+static AD_PAT_CTX *alloc_ctx(AD_PAT_CTX *ctx){
     AD_PAT_CTX *ctx2 = ctx->parent->free;
     if (!ctx2)
     {
@@ -530,6 +538,222 @@ adu_pat_execute(
 #undef NEXTCH
 #undef DIFFPAT
 
+
+_SUCCESS:
+#if PAT_DBG_TRACE>1
+/*SUCCESS*/ if (sea_ctx->trace)
+	    {
+		TRdisplay("%d|%d SUCCESS ch[%.#s]\n",
+			ctx->idp, ctx->id,
+			min(8,sea_ctx->bufend-REG_CH), REG_CH);
+	    }
+#endif
+/*SUCCESS*/ *rcmp = 0;
+	    return db_stat;
+
+_FAILm1:    last_diff = -1;
+	    goto _FAIL;
+
+_FAIL1:	    last_diff = 1;
+_FAIL:
+#if PAT_DBG_TRACE>1
+/*FAIL*/    if (sea_ctx->trace)
+	    {
+		TRdisplay("%d|%d FAILED %d ch[%.#s]\n",
+			ctx->idp, ctx->id, last_diff,
+			min(8,sea_ctx->bufend-REG_CH), REG_CH);
+	    }
+#endif
+/*FAIL*/    ctx->next = sea_ctx->free;
+	    sea_ctx->free = ctx;
+	    continue;
+
+	_STALL:
+/*STALL*/   REG_STORE(ctx)
+#if PAT_DBG_TRACE>1
+/*STALL*/   if (sea_ctx->trace)
+	    {
+		TRdisplay("%d|%d STALLED ch[%.#s]\n",
+			ctx->idp, ctx->id,
+			min(8,sea_ctx->bufend-REG_CH), REG_CH);
+	    }
+#endif
+	    /*
+	    ** Reset current char pointer to start of data buffer
+	    ** which will be loaded with new data shortly
+	    */
+/*STALL*/   ctx->ch = sea_ctx->buffer;
+	    /* Add to end of stalled list */
+	    for (p = &sea_ctx->stalled; *p; p = &(*p)->next)
+		/*SKIP*/;
+	    ctx->next = 0;
+	    *p = ctx;
+	    continue;
+	}
+    }
+    *rcmp = last_diff;
+    return db_stat;
+}
+
+
+/*
+** Name: adu_pat_execute_utf8() - Basic state machine for UCS_BASIC UTF8 patterns
+**
+**      This routine compares a data stream or string defined by da_ctx
+**	with one or more patterns in sea_ctx.
+**
+**	This varient of the engine handles UTF8 non-collating character data
+**	types (UCS_BASIC) and should be IDENTICAL to adu_pat_execute apart
+**	from the fat that it defines CMGETUTF8 as true to force UTF8 for the
+**	routine.
+**
+** Inputs:
+**	sea_ctx		This structure contains the execution contects and
+**			state for the pattern(s). This routine will manage
+**			these as its scans through the data from da_ctx.
+**	da_ctx		This structure defines the input data. It could be
+**			a simple string or long object, eiter way the data
+**			be passed back in a standard manner.
+**
+** Outputs:
+**	rcmp				Result of comparison, as follows:
+**					    <0  if  str_dv1 < pat_dv2
+**					    =0  if  str_dv1 = pat_dv2
+**					    >0  if  str_dv1 > pat_dv2
+**
+** Returns:
+**
+** Exceptions:
+**	none
+**
+** Side Effects:
+**	None
+**
+** History:
+**	19-Nov-2010 (kiria01) SIR 124690
+**          Initial creation.
+*/
+DB_STATUS
+adu_pat_execute_utf8(
+	AD_PAT_SEA_CTX *sea_ctx,
+	AD_PAT_DA_CTX *da_ctx,
+	i4 *rcmp)
+{
+    typedef u_char CHAR;
+    DB_STATUS db_stat = E_DB_OK;
+    AD_PAT_CTX *ctx, **p;
+    i8 tmp;
+    REG_DEFS
+    register CHAR *t;
+    register i4 last_diff = 1;
+    register u_i4 ch;
+
+    while (sea_ctx->pending = sea_ctx->stalled)
+    {
+	sea_ctx->stalled = 0;
+	/* Get next/only segment for all stalled */
+	if (db_stat = adu_patda_get(da_ctx))
+	    break;
+
+	while (ctx = sea_ctx->pending){
+	    /* Unlink from pending list */
+	    sea_ctx->pending = ctx->next;
+	    REG_LOAD(ctx)
+#if PAT_DBG_TRACE>1
+	    if (sea_ctx->trace)
+	    {
+		if (!REG_CH)
+		    /* We're about to do this anyway but need it for trace */
+		    REG_CH = sea_ctx->buffer;
+		TRdisplay("%d|%d %s %d ch[%.#s]\n",
+			ctx->idp, ctx->id,
+			ctx->state == PAT_NOP ? "START":"RESUME",
+			ctx->state,
+			min(8,sea_ctx->bufend-REG_CH), REG_CH);
+	    }
+#endif
+	    /*
+	    ** True beginings will have current state set to NOP
+	    ** other states will reflect a restart from stall and will
+	    ** be the true restart state or a child from CASE.
+	    */
+	    if (ctx->state == PAT_NOP)
+		/* Set current char pointer to start of data buffer */
+		REG_CH = sea_ctx->buffer;
+	    else if (ctx->state != PAT_CASE)
+		goto _restart_from_stall;
+
+
+/*
+** We are about to include the file that has the state machine in
+** it generated from the dotty file. It defines 2 entry points
+** and jumps out to one of four exits.
+** The first entry is the 'GetPatOp' entry at the
+** true start. The second is the _restart_from_stall
+** entry for doing just that.
+** The various exit points relate to the state of the operation.
+**
+** To allow for the same state table to be used for each shell, reference
+** will be made to the macros below. These allow the datatypes specifics
+** to be isolated.
+*/
+/* For this version we know that the char set is UTF8 so avoid the per-char
+** overhead of checking */
+#undef CMGETUTF8
+#define CMGETUTF8 1
+
+#define DIFFPAT(lbl) if (COMPARECH(REG_litset)) goto lbl;
+#define NEXTCH ADV(REG_CH);
+#define NEXTPAT ADV(REG_litset);
+
+#define COMPARECH(b) (last_diff=CMcmpcase(REG_CH, b))
+#define ADV(ptr) CMnext(ptr)
+#define HAVERANGE(ptr) (*(ptr)==AD_5LIKE_RANGE?(ptr)++:0)
+#if PAT_DBG_TRACE>1
+#define DISASS(ctx) \
+    if (ctx->parent->trace){\
+	char buf[140];\
+	u_i1 *tmp = REG_PC;\
+	i8 v = 0;\
+	char *p = buf;\
+	if (REG_litsetend&&REG_litset&&REG_litsetend>REG_litset)\
+	    TRdisplay("%d|%d %p N=%d M=%d ch[%.#s]l=%d cf[%.#s]\n",\
+		    ctx->idp, ctx->id, REG_PC, REG_N, REG_M,\
+		    min(8,REG_bufend-REG_CH), REG_CH,\
+		    REG_litsetend-REG_litset,\
+		    min(4,REG_litsetend-REG_litset), REG_litset);\
+	else\
+	    TRdisplay("%d|%d %p N=%d M=%d ch[%.#s]\n",\
+		    ctx->idp, ctx->id, REG_PC, REG_N, REG_M,\
+		    min(8,REG_bufend-REG_CH), REG_CH);\
+	while (adu_pat_disass(buf, sizeof(buf), &tmp, &p, &v, FALSE)){\
+	    *p++ = '\n';\
+	    TRwrite(0, p - buf, buf);\
+	    p = buf;\
+	    *p++ = '\t';\
+	    *p++ = '\t';\
+	}\
+	*p = '\n';\
+	TRwrite(0, p - buf, buf);\
+    }
+#else
+#define DISASS(ctx)
+#endif
+
+#include "adupatexec_inc.i"
+
+#undef DISASS
+#undef HAVERANGE
+#undef ADV
+#undef COMPARECH
+
+#undef NEXTPAT
+#undef NEXTCH
+#undef DIFFPAT
+
+/* Restore disabling of UTF8 */
+#undef CMGETUTF8
+#define CMGETUTF8 0
 
 _SUCCESS:
 #if PAT_DBG_TRACE>1
@@ -999,13 +1223,222 @@ _FAIL:
 
 
 /*
-** Name: adu_pat_execute_uni() - Unicode pattern state machine
+** Name: adu_pat_execute_uni() - Basic state machine for UCS_BASIC unicode
 **
 **      This routine compares a data stream or string defined by da_ctx
 **	with one or more patterns in sea_ctx.
 **
-**	This varient of the engine handles unicode data typess. For the
-**	non-unicode equivalent, see the sister routine adu_pat_execute()
+**	This varient of the engine handles Unicode with UCS_BASIC collation.
+**
+** Inputs:
+**	sea_ctx		This structure contains the execution contects and
+**			state for the pattern(s). This routine will manage
+**			these as its scans through the data from da_ctx.
+**	da_ctx		This structure defines the input data. It could be
+**			a simple string or long object, eiter way the data
+**			be passed back in a standard manner.
+**
+** Outputs:
+**	rcmp				Result of comparison, as follows:
+**					    <0  if  str_dv1 < pat_dv2
+**					    =0  if  str_dv1 = pat_dv2
+**					    >0  if  str_dv1 > pat_dv2
+**
+** Returns:
+**
+** Exceptions:
+**	none
+**
+** Side Effects:
+**	None
+**
+** History:
+**	19-Nov-2010 (kiria01) SIR 124690
+**          Initial creation.
+*/
+DB_STATUS
+adu_pat_execute_uni(
+	AD_PAT_SEA_CTX *sea_ctx,
+	AD_PAT_DA_CTX *da_ctx,
+	i4 *rcmp)
+{
+    typedef UCS2 CHAR;
+    DB_STATUS db_stat = E_DB_OK;
+    AD_PAT_CTX *ctx, **p;
+    i8 tmp;
+    REG_DEFS
+    register CHAR *t;
+    register i4 last_diff = 1;
+    register u_i4 ch;
+
+    while (sea_ctx->pending = sea_ctx->stalled)
+    {
+	sea_ctx->stalled = 0;
+	/* Get next/only segment for all stalled */
+	if (db_stat = adu_patda_get(da_ctx))
+	    break;
+
+	while (ctx = sea_ctx->pending){
+	    /* Unlink from pending list */
+	    sea_ctx->pending = ctx->next;
+	    REG_LOAD(ctx)
+#if PAT_DBG_TRACE>1
+	    if (sea_ctx->trace)
+	    {
+		if (!REG_CH)
+		    /* We're about to do this anyway but need it for trace */
+		    REG_CH = sea_ctx->buffer;
+		TRdisplay("%d|%d %s %d ch[%.#s]\n",
+			ctx->idp, ctx->id,
+			ctx->state == PAT_NOP ? "START":"RESUME",
+			ctx->state,
+			min(8,sea_ctx->bufend-REG_CH), REG_CH);
+	    }
+#endif
+	    /*
+	    ** True beginings will have current state set to NOP
+	    ** other states will reflect a restart from stall and will
+	    ** be the true restart state or a child from CASE.
+	    */
+	    if (ctx->state == PAT_NOP)
+		/* Set current char pointer to start of data buffer */
+		REG_CH = sea_ctx->buffer;
+	    else if (ctx->state != PAT_CASE)
+		goto _restart_from_stall;
+
+
+/*
+** We are about to include the file that has the state machine in
+** it generated from the dotty file. It defines 2 entry points
+** and jumps out to one of four exits.
+** The first entry is the 'GetPatOp' entry at the
+** true start. The second is the _restart_from_stall
+** entry for doing just that.
+** The various exit points relate to the state of the operation.
+**
+** To allow for the same state table to be used for each shell, reference
+** will be made to the macros below. These allow the datatypes specifics
+** to be isolated.
+*/
+#define DIFFPAT(lbl) if (COMPARECH(REG_litset)) goto lbl;
+#define NEXTCH ADV(REG_CH);
+#define NEXTPAT ADV(REG_litset);
+
+#define COMPARECH(b) (last_diff=(i4)(((UCS2*)REG_CH)[0])-(i4)(((UCS2*)b)[0]))
+#define ADV(ptr) (ptr++)
+#define HAVERANGE(ptr) (*(ptr)==U_RNG?ADV(ptr):0)
+#if PAT_DBG_TRACE>1
+#define DISASS(ctx) \
+    if (ctx->parent->trace){\
+	char buf[140];\
+	u_i1 *tmp = REG_PC;\
+	i8 v = 0;\
+	char *p = buf;\
+	UCS2 *x = (UCS2*)REG_CH;\
+	if (REG_litsetend&&REG_litset&&REG_litsetend>REG_litset)\
+	    TRdisplay("%d|%d %p N=%d M=%d ch%d%#.2{ %4.2x%} cf%d%#.2{ %4.2x%}\n",\
+		    ctx->idp, ctx->id, REG_PC, REG_N, REG_M,\
+		    (REG_bufend-REG_CH)/2,\
+		    min(21,(REG_bufend-REG_CH)/2), REG_CH,0,\
+		    (REG_litsetend-REG_litset)/2,\
+		    min(21,(REG_litsetend-REG_litset)/2), REG_litset,0);\
+	else\
+	    TRdisplay("%d|%d %p N=%d M=%d ch%d%#.2{ %4.2x%}\n",\
+		    ctx->idp, ctx->id, REG_PC, REG_N, REG_M,\
+		    (REG_bufend-REG_CH)/2,\
+		    min(21,(REG_bufend-REG_CH)/2), REG_CH,0);\
+	while (adu_pat_disass(buf, sizeof(buf), &tmp, &p, &v, TRUE)){\
+	    *p++ = '\n';\
+	    TRwrite(0, p - buf, buf);\
+	    p = buf;\
+	    *p++ = '\t';\
+	    *p++ = '\t';\
+	}\
+	*p = '\n';\
+	TRwrite(0, p - buf, buf);\
+    }
+#else
+#define DISASS(ctx)
+#endif
+
+#include "adupatexec_inc.i"
+
+#undef DISASS
+#undef HAVERANGE
+#undef ADV
+#undef COMPARECH
+
+#undef NEXTPAT
+#undef NEXTCH
+#undef DIFFPAT
+
+
+_SUCCESS:
+#if PAT_DBG_TRACE>1
+/*SUCCESS*/ if (sea_ctx->trace)
+	    {
+		TRdisplay("%d|%d SUCCESS ch[%.#s]\n",
+			ctx->idp, ctx->id,
+			min(8,sea_ctx->bufend-REG_CH), REG_CH);
+	    }
+#endif
+/*SUCCESS*/ *rcmp = 0;
+	    return db_stat;
+
+_FAILm1:    last_diff = -1;
+	    goto _FAIL;
+
+_FAIL1:	    last_diff = 1;
+_FAIL:
+#if PAT_DBG_TRACE>1
+/*FAIL*/    if (sea_ctx->trace)
+	    {
+		TRdisplay("%d|%d FAILED %d ch[%.#s]\n",
+			ctx->idp, ctx->id, last_diff,
+			min(8,sea_ctx->bufend-REG_CH), REG_CH);
+	    }
+#endif
+/*FAIL*/    ctx->next = sea_ctx->free;
+	    sea_ctx->free = ctx;
+	    continue;
+
+	_STALL:
+/*STALL*/   REG_STORE(ctx)
+#if PAT_DBG_TRACE>1
+/*STALL*/   if (sea_ctx->trace)
+	    {
+		TRdisplay("%d|%d STALLED ch[%.#s]\n",
+			ctx->idp, ctx->id,
+			min(8,sea_ctx->bufend-REG_CH), REG_CH);
+	    }
+#endif
+	    /*
+	    ** Reset current char pointer to start of data buffer
+	    ** which will be loaded with new data shortly
+	    */
+/*STALL*/   ctx->ch = sea_ctx->buffer;
+	    /* Add to end of stalled list */
+	    for (p = &sea_ctx->stalled; *p; p = &(*p)->next)
+		/*SKIP*/;
+	    ctx->next = 0;
+	    *p = ctx;
+	    continue;
+	}
+    }
+    *rcmp = last_diff;
+    return db_stat;
+}
+
+
+/*
+** Name: adu_pat_execute_uniCE() - Unicode CE pattern state machine
+**
+**      This routine compares a data stream or string defined by da_ctx
+**	with one or more patterns in sea_ctx.
+**
+**	This varient of the engine handles unicode CE data which will
+**	have been compiled from Unicode or UTF8 data with other than the
+**	UCS_BASIC collation.
 **
 ** Inputs:
 **	sea_ctx		This structure contains the execution contects and
@@ -1034,9 +1467,11 @@ _FAIL:
 ** History:
 **      04-Apr-2008 (kiria01) SIR120473
 **          Initial creation.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Renamed from adu_pat_execute_uni()
 */
 DB_STATUS
-adu_pat_execute_uni(
+adu_pat_execute_uniCE(
 	AD_PAT_SEA_CTX *sea_ctx,
 	AD_PAT_DA_CTX *da_ctx,
 	i4 *rcmp)

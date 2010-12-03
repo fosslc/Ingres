@@ -236,6 +236,8 @@
 **	    Add support for i64_aix
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Tighten up callback prototype.
 */
 
 #ifdef	TLIDEBUG
@@ -472,7 +474,7 @@ int   fd;
 	struct t_optmgmt t_opt;
         int     status;
  
-# if defined(sparc_sol) || defined(sui_us5)
+# if defined(sparc_sol)
  
         struct {
                 struct opthdr   opthdr;
@@ -494,7 +496,7 @@ int   fd;
  
         (void)t_optmgmt( fd, &t_opt, &t_opt );
 
-# endif /* su4_us5 sui_us5 */
+# endif /* su4_us5 */
 
 }
 
@@ -736,8 +738,8 @@ BS_PARMS	*bsp;
 	if( lbcb->fd >= 0 )
 	{
 	    /* unregister file descriptors */
-	    (void)iiCLfdreg( lbcb->fd, FD_READ, (VOID (*))0, (PTR)0, -1 );
-	    (void)iiCLfdreg( lbcb->fd, FD_WRITE, (VOID (*))0, (PTR)0, -1 );
+	    (void)iiCLfdreg( lbcb->fd, FD_READ, NULL, NULL, -1 );
+	    (void)iiCLfdreg( lbcb->fd, FD_WRITE, NULL, NULL, -1 );
 
 	    (VOID)t_unbind( lbcb->fd );
 	    (VOID)t_close( lbcb->fd );
@@ -1207,8 +1209,8 @@ BS_PARMS	*bsp;
 	
 	(void)t_unbind( bcb->fd );
 
-	(void)iiCLfdreg( bcb->fd, FD_READ, (VOID (*))0, (PTR)0, -1 );
-	(void)iiCLfdreg( bcb->fd, FD_WRITE, (VOID (*))0, (PTR)0, -1 );
+	(void)iiCLfdreg( bcb->fd, FD_READ, NULL, NULL, -1 );
+	(void)iiCLfdreg( bcb->fd, FD_WRITE, NULL, NULL, -1 );
 
         if( t_close( bcb->fd ) < 0 )
         {

@@ -53,8 +53,8 @@
 #define CS_EXSPTR  	CS_MACH_DEP + 16
 #define CS_REGISTERS	CS_MACH_DEP + 24
 #define CS_FLOATS	CS_MACH_DEP + 96
-#define CS_CURRENT	312
-#define CS_INKERNEL	340
+#define CS_CURRENT	20
+#define CS_INKERNEL	16
 
 #define CS_COLLIDE	2
 

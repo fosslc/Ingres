@@ -128,6 +128,8 @@
 **      22-Jan-2007 (hanal04) Bug 117533
 **          hpb compiler warning mesages when calling aio_error(). Call
 **          aio_error64() instead.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete DG ports.
 **/
 
 /* # defines */
@@ -386,11 +388,7 @@ DI_force(
 	    {
 #ifdef xCL_092_NO_RAW_FSYNC
 		/* AIX returns EINVAL on character special files */
-#if defined( dg8_us5 ) || defined( dgi_us5 ) 
-		if (errno != EOPNOTSUPP)
-#else
 		if (errno != EINVAL) 
-#endif /* dg8_us5 */
 #endif /* xCL_092_NO_RAW_FSYNC */
 		{
 	            SETCLERR(err_code, 0, ER_fsync);

@@ -220,6 +220,8 @@
 **	7-Mar-2007 (kschendel) SIR 122512
 **	    Signal don't truncate first, with NULL file ptr input.
 **	    (A clumsy way to signal it, but expedient.)
+**	15-Nov-2010 (kschendel) SIR 124685
+**	    Delete unused variables.
 */
 STATUS
 DIdelete(
@@ -336,12 +338,6 @@ DIdelete(
     }
     else
     {
-#ifdef LARGEFILE64
-	struct stat64	fd_stat;
-#else /* LARGEFILE64 */
-	struct stat	fd_stat;
-#endif /* LARGEFILE64 */
-
 	MEcopy((PTR) path, pathlength, (PTR) pathbuf);
 	pathbuf[pathlength] = '/';
 	MEcopy((PTR) filename, filelength, 

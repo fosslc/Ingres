@@ -87,6 +87,8 @@
 **	6-Nov-2009 (kschendel) SIR 122757
 **	    Use fallocate reservations before zeroing, if possible.
 **	    Make io-sem a SYNCH.
+**	15-Nov-2010 (kschendel) SIR 124685
+**	    Delete unused variables.
 **/
 
 
@@ -110,14 +112,6 @@ static STATUS 	DI_galloc(
 
 
 /* typedefs go here */
-
-
-/*
-** Definition of all global variables owned by this file.
-*/
-
-/* count of DIgalloc() for debugging */
-static i4             Di_galloc_count ZERO_FILL; 
 
 
 /*

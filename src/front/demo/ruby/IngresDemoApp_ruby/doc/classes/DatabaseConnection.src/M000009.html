@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>getEmailAddresses (DatabaseConnection)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File src/database_connection.rb, line 161</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">getEmailAddresses</span>
+    <span class="ruby-identifier">emailAddressResults</span> = <span class="ruby-identifier">execute</span>(<span class="ruby-value str">&quot;SELECT up_email FROM user_profile ORDER BY up_email&quot;</span>)
+    <span class="ruby-identifier">emailAddresses</span> = <span class="ruby-constant">Array</span>.<span class="ruby-identifier">new</span>
+    <span class="ruby-identifier">emailAddressResults</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span> <span class="ruby-identifier">emailAddressDetails</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">emailAddresses</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">emailAddressDetails</span>[<span class="ruby-value">0</span>] }
+    <span class="ruby-identifier">emailAddresses</span>
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

@@ -109,6 +109,8 @@
 ;	    Comment out MO_tr_set missed in previous change.
 ;	08-Nov-2010 (kiria01) SIR 124685
 ;	    Add missing TRvformat
+;	16-Nov-2010 (kschendel) SIR 124685
+;	    Comment out CS routines no longer in existence for Windows.
 
 EXPORTS
 	iiBTand	@1				
@@ -174,11 +176,11 @@ EXPORTS
 	CS_admin_task	@61				
 	CS_breakpoint	@62				
 	CS_checktime	@63				
-	CS_del_thread	@64				
-	CS_dump_scb	@65				
-	CS_exit_handler	@66				
+;CS_del_thread	@64				
+;CS_dump_scb	@65				
+;CS_exit_handler	@66				
 	CS_find_scb	@67				
-	CS_rcv_request	@68				
+;CS_rcv_request	@68				
 	CS_setup	@69				
 	CS_swuser	@70				
 	CS_addrcmp	@71				
@@ -213,8 +215,8 @@ EXPORTS
 	CS_breakpoint_set	@100				
 	CS_crashserver_set	@101				
 	CS_debug_set	@102				
-	CS_is_internal	@103				
-	CS_mod_session	@104				
+;CS_is_internal	@103				
+;CS_mod_session	@104				
 	CS_resume_session_set	@105				
 	CS_rm_session_set	@106				
 	CS_shutserver_set	@107				

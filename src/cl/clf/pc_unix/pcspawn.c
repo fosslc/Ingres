@@ -15,6 +15,7 @@
 # include	<clconfig.h>
 # include	<clsigs.h>
 # include       <ex.h>
+# include	<exinternal.h>
 # include	<errno.h>
 # include	<unistd.h>
 
@@ -146,17 +147,14 @@
 **	    Include unistd.h to quite compiler warnings for system functions.
 **	15-nov-2010 (stephenb)
 **	    Include pccl.h and fix up finction defines for prototyping.
+**	1-Dec-2010 (kschendel)
+**	    Modernize declaration style for Sun compiler.
 */
 
 
 STATUS
-PCspawn(argc, argv, wait, in_name, out_name, pid)
-i4		argc;
-char		**argv;
-bool		wait;
-LOCATION	*in_name;
-LOCATION	*out_name;
-PID		*pid;
+PCspawn(i4 argc, char **argv, bool wait,
+	LOCATION *in_name, LOCATION *out_name, PID *pid)
 {
     /* 
     ** Someday the added functionality of appended output and redirected
@@ -165,22 +163,18 @@ PID		*pid;
     return PCdospawn(argc, argv, wait, in_name, out_name, FALSE, FALSE, pid);
 }
 
-STATUS PCdospawn(argc, argv, wait, in_name, out_name, append, rederr, pid)
-i4              argc;
-char            **argv;
-bool            wait;
-LOCATION        *in_name;
-LOCATION        *out_name;
-i4		append;		/* non-zero to append, rather than recreate,
-				** output file */
-i4		rederr;		/* Non-zero to redirect stderr to err_log */
-PID		*pid;
+/* append = nonzero to append to output file.
+** rederr = nonzero to redirect stderr to error log.
+*/
+STATUS PCdospawn(i4 argc, char **argv, bool wait,
+	LOCATION *in_name, LOCATION *out_name,
+	i4 append, i4 rederr, PID *pid)
 {
     char		buf[64];
     char		*in_fname;
     char		*out_fname;
     STATUS		PCwait();
-    TYPESIG             (*old_handler)(), (*EXsetsig())();
+    TYPESIG             (*old_handler)();
     int			flags = 0;
     STATUS		status;
 

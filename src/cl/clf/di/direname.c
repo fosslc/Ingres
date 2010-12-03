@@ -179,6 +179,8 @@ GLOBALREF i4		    htb_initialized;
 **	    searching for a file-open conflict.
 **	30-Sep-2005 (jenjo02)
 **	    htb_fd_list_mutex, fd_mutex are now CS_SYNCH objects.
+**	15-Nov-2010 (kschendel) SIR 124685
+**	    Delete unused variables.
 */
 STATUS
 DIrename(
@@ -193,7 +195,7 @@ DIrename(
 {
     char    oldfile[DI_FULL_PATH_MAX];
     char    newfile[DI_FULL_PATH_MAX];
-    STATUS  ret_val, intern_status;
+    STATUS  ret_val;
     CL_ERR_DESC	    local_err;
 
     /* unix variables */

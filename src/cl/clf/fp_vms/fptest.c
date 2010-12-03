@@ -18,6 +18,8 @@
 **          axp_osf for generation of INF and moved finite tests
 **          to the head of the list so they can fail in an obvious
 **          manner if they are going to.
+**      29-Nov-2010 (frima01) SIR 124685
+**          Added static declaration to local functions.
 */
 
 #define abs(x)	((x) > 0 ? (x) : -(x))
@@ -25,7 +27,7 @@
 double Infinity;
 double Zero = 0.0;
 
-void
+static void
 TestFPdfinite( void )
 {
     double i;
@@ -38,7 +40,7 @@ TestFPdfinite( void )
 	SIprintf("%.16f should not have been finite.\n", Infinity, '.');
 }
 
-void
+static void
 TestFPffinite( void )
 {
     float i;
@@ -51,7 +53,7 @@ TestFPffinite( void )
 	SIprintf("%.16f should not have been finite.\n", Infinity, '.');
 }
 
-void
+static void
 TestTrig( void )
 {
     double	i, result;
@@ -87,6 +89,7 @@ TestTrig( void )
     }
 }
 
+static void
 TestFPceil()
 {
     double	i, result;
@@ -107,6 +110,7 @@ TestFPceil()
     }
 }
 
+static void
 TestFPfdint()
 {
     double	i, result;
@@ -120,6 +124,7 @@ TestFPfdint()
     }
 }
 
+static void
 TestRand()
 {
     int i;
@@ -131,6 +136,7 @@ TestRand()
 	SIprintf("\t%.16f\n", FPrand(), '.');
 }
 
+static void
 TestFPsqrt()
 {
     double	i, result;
@@ -151,6 +157,7 @@ TestFPsqrt()
 	SIprintf("FPsqrt(): Could not compute sqrt(321979074624.0).\n");
 }
 
+static void
 TestEfuncs()
 {
     double	i, result;
@@ -208,6 +215,7 @@ TestEfuncs()
 
 }
 
+static void
 TestFPipow()
 {
     double	x, result;
@@ -238,6 +246,7 @@ TestFPipow()
 	SIprintf("FPipow(): %.16f, %d should have underflowed.\n", x, '.', i);
 }
 
+static void
 TestFPpow()
 {
     double	x, y, result;
@@ -288,6 +297,7 @@ TestFPpow()
 		 '.');
 }
 
+static void
 TestFPdadd()
 {
     double	i, j, result;
@@ -315,6 +325,7 @@ TestFPdadd()
         SIprintf("FPdadd(): %.16f should have underflowed.\n", result);
 }
 
+static void
 TestFPdsub()
 {
     double	i, j, result;
@@ -344,6 +355,7 @@ TestFPdsub()
         SIprintf("FPdsub(): %.16f should have underflowed.\n", result);
 }
 
+static void
 TestFPdmul()
 {
     double	i, j, result;
@@ -375,6 +387,7 @@ TestFPdmul()
 		 result);
 }
 
+static void
 TestFPddiv()
 {
     double	i, j, result;

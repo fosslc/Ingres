@@ -64,133 +64,103 @@
 **          Ingres Janitor's project. Fix compiler warnings by making
 **          CM_UTF8toUTF32() FUNC_EXTERN consistent with its declaration
 **          and usage in cmutf8.c files.
+**      29-Nov-2010 (frima01) SIR 124685
+**          Add argument void to CMgetDefCS and CMset_locale declaration.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 FUNC_EXTERN STATUS      CMclose_col(
-#ifdef	CL_PROTOTYPED
 	CL_ERR_DESC *	syserr,
 	i4		loctype		
-#endif
 );
 FUNC_EXTERN STATUS      CMdump_col(
-#ifdef	CL_PROTOTYPED
 	char		*colname, 
 	PTR		tablep, 
 	i4		tablen, 
 	CL_ERR_DESC	*syserr,
 	i4		loctype		
-#endif
 );
 FUNC_EXTERN STATUS      CMopen_col(
-#ifdef	CL_PROTOTYPED
 	char		*colname, 
 	CL_ERR_DESC	*syserr,
 	i4		loctype		
-#endif
 );
 FUNC_EXTERN STATUS      CMread_col(
-#ifdef	CL_PROTOTYPED
 	char		*bufp, 
 	CL_ERR_DESC	*syserr
-#endif
 );
 FUNC_EXTERN STATUS      CMset_attr(
-#ifdef	CL_PROTOTYPED
 	char		*name, 
 	CL_ERR_DESC	*err
-#endif
 );
 FUNC_EXTERN STATUS      CMwrite_attr(
-#ifdef	CL_PROTOTYPED
 	char		*name, 
 	CMATTR		*attr, 
 	CL_ERR_DESC	*syserr
-#endif
 );
 FUNC_EXTERN char *      CMunctrl(
-#ifdef	CL_PROTOTYPED
 	char		*str
-#endif
 );
-FUNC_EXTERN STATUS      CMset_locale();
+FUNC_EXTERN STATUS      CMset_locale(void);
 
 FUNC_EXTERN STATUS      CM_getcharset(
-#ifdef	CL_PROTOTYPED
 	char		*pcs
-#endif
 );
 
 #ifndef CMoper
 FUNC_EXTERN u_char *    CMoper(
-#ifdef	CL_PROTOTYPED
 	char		*str
-#endif
 );
 #endif
 
 # ifndef CMread_attr
 FUNC_EXTERN STATUS      CMread_attr(
-#ifdef	CL_PROTOTYPED
 	char		*name, 
 	char		*filespec, 
 	CL_ERR_DESC	*err
-#endif
 );
 # endif /* CMread_attr */
 
 FUNC_EXTERN void	CMget_charset_name(
-#ifdef	CL_PROTOTYPED
 	char		*charset
-#endif
 );
 
 FUNC_EXTERN STATUS	CMset_charset(
-#ifdef	CL_PROTOTYPED
 	CL_ERR_DESC	*cl_err
-#endif
 );
 
 # ifndef CMvalidhostname
 FUNC_EXTERN bool
 CMvalidhostname(
-# ifdef	CL_PROTOTYPED
 	char* hostname
-# endif /* CL_PROTOTYPED */
 );
 # endif /* CMvalidhostname */
 
 # ifndef CMvalidusername
 FUNC_EXTERN bool
 CMvalidusername(
-# ifdef	CL_PROTOTYPED
 	char* username
-# endif /* CL_PROTOTYPED */
 );
 # endif /* CMvalidusername */
 
 # if defined(NT_GENERIC)
 # ifndef CMvalidpath
-FUNC_EXTERN bool
-CMvalidpath(
-# ifdef	CL_PROTOTYPED
+FUNC_EXTERN bool CMvalidpath(
 	char* path
-# endif /* CL_PROTOTYPED */
 );
 # endif /* CMvalidpath */
 
 # ifndef CMvalidpathname
-FUNC_EXTERN bool
-CMvalidpathname(
-# ifdef	CL_PROTOTYPED
+FUNC_EXTERN bool CMvalidpathname(
 	char* path
-# endif /* CL_PROTOTYPED */
 );
 # endif /* CMvalidpathname */
 
 # endif /* NT_GENERIC */
 
 FUNC_EXTERN i4 
-CMgetDefCS();
+CMgetDefCS(void);
 
 FUNC_EXTERN bool
 CMischarset_doublebyte(void);

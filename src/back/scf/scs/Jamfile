@@ -3,18 +3,17 @@
 #
 #     20-Oct-2009 (hweho01)
 #       Remove the IINOOPTIM entries that were generated incorrectly.
+#	23-Nov-2010 (kschendel)
+#	    Delete obsolete nooptim's.
 
 SubDir ING_SRC back scf scs ;
 
 IISUBSYS back scf scs ;
 
-IINOOPTIM scsrole.c : su4_u42 su4_cmw ;
-IINOOPTIM scsqncr.c : su4_u42 su4_cmw ;
-IINOOPTIM scsdbfcn.c : dr6_us5 dgi_us5 int_lnx int_rpl ibm_lnx i64_aix a64_lnx ;
-IINOOPTIM scsdata.c : dr6_us5 dgi_us5 int_lnx int_rpl ibm_lnx i64_aix a64_lnx ;
-IINOOPTIM scscopy.c : dr6_us5 dgi_us5 int_lnx int_rpl ibm_lnx i64_aix a64_lnx ;
-IINOOPTIM scscompress.c : dr6_us5 dgi_us5 int_lnx int_rpl ibm_lnx i64_aix a64_lnx ;
-IINOOPTIM scsalarm.c : su4_u42 su4_cmw ;
+IINOOPTIM scsdbfcn.c : int_lnx int_rpl ibm_lnx a64_lnx ;
+IINOOPTIM scsdata.c : int_lnx int_rpl ibm_lnx a64_lnx ;
+IINOOPTIM scscopy.c : int_lnx int_rpl ibm_lnx a64_lnx ;
+IINOOPTIM scscompress.c : int_lnx int_rpl ibm_lnx a64_lnx ;
 
 IIL1OPTIM scsinit.c : axp_osf ;
 IIL1OPTIM scsqncr.c : axp_osf ;

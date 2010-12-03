@@ -8,7 +8,7 @@
 #include   <clconfig.h>
 #include   <systypes.h>
 #include   <clsocket.h>
-#if defined(dg8_us5) || defined(dgi_us5) || defined(LNX) 
+#if defined(LNX) 
 #include   <stdlib.h>
 extern char *__dg_fcvt_r( double, int, int *, int *, char * );
 extern char *__dg_ecvt_r( double, int, int *, int *, char * );
@@ -21,13 +21,8 @@ extern char *__dg_ecvt_r( double, int, int *, int *, char * );
 # endif /* UNIX */
 #include   <diracc.h>
 #include   <handy.h>
-#if defined(dg8_us5) || defined(dgi_us5) || defined(sgi_us5) || \
-    defined(OSX)
+#if defined(sgi_us5) || defined(OSX)
 #include   <cs.h>
-#endif
-
-#if defined(dg8_us5) || defined(dgi_us5) || defined(sgi_us5) || \
-    defined(OSX)
 GLOBALREF       CS_SEMAPHORE     CL_misc_sem;
 #endif
 
@@ -43,7 +38,6 @@ GLOBALDEF       CS_SYNCH	fcvt_mutex ZERO_FILL;
 	extern int h_errno;
 # endif
 
-# ifndef DESKTOP
 /*
 ** iireaddir.c -- MT-safe call to readdir.  
 **
@@ -145,13 +139,15 @@ GLOBALDEF       CS_SYNCH	fcvt_mutex ZERO_FILL;
 **	15-Sep-2009 (hanje04)
 **	    Return NULL on failure for axp_osf, OSX etc as failure to do
 **	    so causes problems on OSX.
+**	1-Dec-2010 (kschendel)
+**	    Drop obsolete ports.
 */
  
 struct dirent
 *iiCLreaddir(DIR *dirp, struct dirent *readdir_buf)
 {
 
-#if (defined(OS_THREADS_USED) && !defined(NT_GENERIC)) || defined(ts2_us5)
+#if (defined(OS_THREADS_USED) && !defined(NT_GENERIC))
 
 # if defined(sparc_sol) || defined(a64_sol)
 # define have_readdir_r
@@ -191,15 +187,6 @@ struct dirent
     }
     return(return_dirent);
 # endif /* axp_osf */
-
-#if defined(dgi_us5) || defined(dg8_us5)
-# define have_readdir_r
-struct dirent *retptr ;
-    gen_Psem(&CL_misc_sem);
-    retptr = readdir(dirp);
-    gen_Vsem(&CL_misc_sem);
-    return( retptr );
-#endif /* dgi_us5   */ 
 
 # if defined(sgi_us5)
 # define have_readdir_r
@@ -313,11 +300,6 @@ struct passwd
     return(getpwnam(name));  
 # endif  /* usl_us5 */
 
-# if defined( dg8_us5 )
-# define have_getpwnam_r
-    return(getpwnam_r(name, pwd, pwnam_buf, size));
-# endif /* dgi_us5 */
-
 # if defined(sgi_us5) || defined(i64_lnx)
 # define have_getpwnam_r    
     struct passwd *return_pwd;
@@ -402,11 +384,6 @@ struct passwd
     return(getpwuid(uid));
 # endif  /* usl_us5 */
 
-# if defined(dg8_us5)
-# define have_getpwuid_r
-    return(getpwuid_r(uid, pwd, pwuid_buf, size));
-# endif /* dgi_us5 */
-
 # if defined(sgi_us5)
 # define have_getpwuid_r    
     struct passwd *return_pwd;
@@ -421,7 +398,6 @@ struct passwd
 # endif /* ! have_getpwuid_r */
  
 }
-#endif /* DESKTOP */
 
 
 /*
@@ -511,8 +487,7 @@ iiCLgethostbyname( char *name,
     }
 # endif /* i64_lnx */
 
-# if defined(usl_us5) || defined(dg8_us5) || defined(dgi_us5) || \
-     defined(sgi_us5) || defined(OSX)
+# if defined(usl_us5) || defined(sgi_us5) || defined(OSX)
 { 
 # define have_gethostbyname_r
     struct s_hostent_data {
@@ -521,8 +496,7 @@ iiCLgethostbyname( char *name,
        char r_addr_entry[5];
     } *hostent_data;
 
-#if defined(dg8_us5) || defined(dgi_us5) || defined(sgi_us5) || \
-    defined(OSX)
+#if defined(sgi_us5) || defined(OSX)
 
     gen_Psem(&CL_misc_sem);
 #endif
@@ -530,8 +504,7 @@ iiCLgethostbyname( char *name,
     hostent_data = (struct s_hostent_data *)buffer;
     hostp = gethostbyname( name );
 
-#if defined(dg8_us5) || defined(dgi_us5) || defined(sgi_us5) || \
-    defined(OSX)
+#if defined(sgi_us5) || defined(OSX)
 
     if ( h_errnop )
     *h_errnop = h_errno;
@@ -548,8 +521,7 @@ iiCLgethostbyname( char *name,
 	hostent_data->r_addr_list[1] = NULL;
 	hostent_data->r_hostent.h_addr_list = &hostent_data->r_addr_list[0];
     }
-#if defined(dg8_us5) || defined(dgi_us5) || defined(sgi_us5) || \
-    defined(OSX)
+#if defined(sgi_us5) || defined(OSX)
 
     gen_Vsem(&CL_misc_sem);
 #endif
@@ -671,8 +643,7 @@ iiCLgethostbyaddr( char *addr,
     }
 # endif /* i64_lnx */
 
-# if defined(usl_us5) || defined(dg8_us5) || defined(dgi_us5) || \
-     defined(sgi_us5) || defined(OSX)
+# if defined(usl_us5) || defined(sgi_us5) || defined(OSX)
 { 
 # define have_gethostbyaddr_r
     struct s_hostent_data {
@@ -681,16 +652,14 @@ iiCLgethostbyaddr( char *addr,
        char r_addr_entry[5];
     } *hostent_data;
 
-#if defined(dg8_us5) || defined(dgi_us5) || defined(sgi_us5) || \
-    defined(OSX)
+#if defined(sgi_us5) || defined(OSX)
     gen_Psem(&CL_misc_sem);
 #endif
 
     hostent_data = (struct s_hostent_data *)buffer;
     hostp = gethostbyaddr( addr, len, type );
 
-#if defined(dg8_us5) || defined(dgi_us5) || defined(sgi_us5) || \
-    defined(OSX)
+#if defined(sgi_us5) || defined(OSX)
     if ( h_errnop )
     *h_errnop = h_errno;
 #endif
@@ -707,8 +676,7 @@ iiCLgethostbyaddr( char *addr,
 	hostent_data->r_hostent.h_addr_list = &hostent_data->r_addr_list[0];
     }
 
-#if defined(dg8_us5) || defined(dgi_us5) || defined(sgi_us5) || \
-    defined(OSX)
+#if defined(sgi_us5) || defined(OSX)
     gen_Vsem(&CL_misc_sem);
 #endif
 
@@ -835,27 +803,6 @@ char
     return (buf);
     }
 # endif /* usl_us5  */
-
-# if defined(dg8_us5)
-# define have_fcvt_r
-    {
-    char *fcvtp;
-
-    gen_Psem(&CL_misc_sem);
-
-    fcvtp = fcvt(value, ndigit, decpt, sign);
-    STcopy(fcvtp, buf);
-
-    gen_Vsem(&CL_misc_sem);
-
-    return(buf);
-    }
-# endif
-
-# if defined(dgi_us5) 
-# define have_fcvt_r
-    return __dg_fcvt_r(value, ndigit, decpt, sign, buf);
-# endif
 
 # if defined(sgi_us5)
 # define have_fcvt_r
@@ -1033,27 +980,6 @@ char
     return (buf);
     }
 # endif /* usl_us5  */
-
-# if defined(dgi_us5)
-# define have_ecvt_r
-   return(__dg_ecvt_r(value, ndigit, decpt, sign,buf));
-# endif /* dgi_us5  */  
-
-# if defined(dg8_us5)
-# define have_ecvt_r
-    {
-    char *ecvtp;
-
-    gen_Psem(&CL_misc_sem);
-
-    ecvtp = ecvt(value, ndigit, decpt, sign);
-    STcopy(ecvtp, buf);
-
-    gen_Vsem(&CL_misc_sem);
-
-    return(buf);
-    }
-# endif
 
 # if defined(sgi_us5)
 # define have_ecvt_r

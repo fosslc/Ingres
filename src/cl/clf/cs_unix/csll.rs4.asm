@@ -44,6 +44,8 @@
 #	    Include r64_us5 code too.  Jam will now cpp csll.s (which
 #	    will include this file, and select the proper variant)
 #	    before it m4's and as's the result.
+#	12-Nov-2010 (kschendel) SIR 124685
+#	    Moved inkernel and current to front of CS_SYSTEM, fix here.
 #
 
 #if defined(LP64)
@@ -59,8 +61,8 @@
 	
 # offsets into a CS_SYSTEM structure */
 
-	.set CS__INKERNEL,340
-	.set CS__CURRENT,312
+	.set CS__INKERNEL,16
+	.set CS__CURRENT,20
 
 # Parameters of the stack frame used by CS */
 

@@ -51,6 +51,8 @@
 **          Will be revisited and submitted at a later date. 
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added static declaration to local functions.
 **/
 
 /*
@@ -63,7 +65,7 @@ double	One = 1.0;
 double	Zero = 0.0;
 double	Infinity;
 
-void
+static void
 TestFPdfinite( void )
 {
     double i;
@@ -76,7 +78,7 @@ TestFPdfinite( void )
 	SIprintf("%.16f should not have been finite.\n", Infinity, '.');
 }
 
-void
+static void
 TestFPffinite( void )
 {
     float i;
@@ -90,7 +92,7 @@ TestFPffinite( void )
 	SIprintf("%.16f should not have been finite.\n", Infinity, '.');
 }
 
-void
+static void
 TestTrig( void )
 {
     double	i, result;
@@ -128,7 +130,7 @@ TestTrig( void )
     }
 }
 
-VOID
+static void
 TestFPceil()
 {
     double	i, result;
@@ -150,7 +152,7 @@ TestFPceil()
     }
 }
 
-VOID
+static void
 TestFPfdint()
 {
     double	i, result;
@@ -164,7 +166,7 @@ TestFPfdint()
     }
 }
 
-VOID
+static void
 TestRand()
 {
     int i;
@@ -176,7 +178,7 @@ TestRand()
 	SIprintf("\t%.16f\n", FPrand(), '.');
 }
 
-VOID
+static void
 TestFPsqrt()
 {
     double	i, result;
@@ -198,7 +200,7 @@ TestFPsqrt()
 	SIprintf("FPsqrt(): Could not compute sqrt(321979074624.0).\n");
 }
 
-VOID
+static void
 TestEfuncs()
 {
     double	i, result;
@@ -257,7 +259,7 @@ TestEfuncs()
 
 }
 
-VOID
+static void
 TestFPipow()
 {
     double	x, result;
@@ -289,7 +291,7 @@ TestFPipow()
 	SIprintf("FPipow(): %.16f, %d should have underflowed.\n", x, '.', i);
 }
 
-VOID
+static void
 TestFPpow()
 {
     double	x, y, result;
@@ -343,7 +345,7 @@ TestFPpow()
 		 '.');
 }
 
-VOID
+static void
 TestFPdadd()
 {
     double	i, j, result;
@@ -366,7 +368,7 @@ TestFPdadd()
         SIprintf("FPdadd(): %.16f should have overflowed.\n", result);
 }
 
-VOID
+static void
 TestFPdsub()
 {
     double	i, j, result;
@@ -394,7 +396,7 @@ TestFPdsub()
         SIprintf("FPdsub(): %.16f should have overflowed.\n", result);
 }
 
-VOID
+static void
 TestFPdmul()
 {
     double	i, j, result;
@@ -426,7 +428,7 @@ TestFPdmul()
 		 result);
 }
 
-VOID
+static void
 TestFPddiv()
 {
     double	i, j, result;

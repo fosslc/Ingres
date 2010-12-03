@@ -4,6 +4,7 @@
 
 #include <pc.h>
 #include <csinternal.h>
+#include <clconfig.h>
 
 /**CL_SPEC
 ** Name: DILOCAL.H - This file contains the internal defines for di routines
@@ -56,6 +57,8 @@
 **	    Remove old zero buffer definition.
 **	6-Nov-2009 (kschendel) SIR 122757
 **	    Remove DI-global direct-io switch.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 
@@ -63,7 +66,6 @@
 /*
 ** Definition of all global references owned by this file.
 */
-GLOBALREF CS_SYSTEM	Cs_srv_block;
 GLOBALREF CSSL_CB       *Di_slave;      /* slave control block */
 
 /* measure of outstanding ops per slave */
@@ -175,4 +177,29 @@ FUNC_EXTERN STATUS	DI_sense(
 				i4     *end_of_file,
 				CL_ERR_DESC *err_code);
 
+#if defined(xCL_ASYNC_IO) || defined(OS_THREADS_USED)
 
+#include <diasync.h>
+
+FUNC_EXTERN DI_AIOCB *DI_get_aiocb(void);
+FUNC_EXTERN STATUS DI_chk_aio_list(void);
+FUNC_EXTERN STATUS DI_aio_inprog(i4 fd);
+FUNC_EXTERN i4 DI_aio_rw(
+	i4 op,
+	DI_OP *diop,
+	char *buf,
+	i4 len,
+	OFFSET_TYPE off,
+	OFFSET_TYPE *loffp,
+	CL_ERR_DESC *err);
+
+FUNC_EXTERN int DI_thread_rw(
+	int op,
+	DI_OP *diop,
+	char *buf,
+	int len,
+	OFFSET_TYPE off,
+	OFFSET_TYPE *loffp,
+	CL_ERR_DESC *err);
+
+#endif /* pseudo-async I/O */

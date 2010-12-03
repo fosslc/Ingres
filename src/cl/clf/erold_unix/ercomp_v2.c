@@ -33,6 +33,10 @@
 **	    Compiler warning fixes.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	15-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
+**	29-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup. Remove VMS conditional code.
 [@history_template@]...
 */
 
@@ -49,41 +53,147 @@
 */
 #include <cs.h>	    /* Needed for "erloc.h" */
 #include "erloc_v2.h"
-#ifdef  VMS
-#include <fab.h>
-#include <rab.h>
-#include <rmsdef.h>
-#endif
 /*
-**  Forward and/or External function references.
+**  Forward and/or function references.
 */
-FUNC_EXTERN 	VOID	check_arg();
-FUNC_EXTERN 	VOID	usage();
-FUNC_EXTERN 	VOID	sort_msg();
-FUNC_EXTERN 	STATUS	parser();
-FUNC_EXTERN	VOID	build_ge_list();
-FUNC_EXTERN	STATUS	validate_generr();
-FUNC_EXTERN 	STATUS  build_fast_index();
-FUNC_EXTERN 	STATUS	build_slow_index();
-FUNC_EXTERN 	STATUS	take();
-FUNC_EXTERN 	char	*scan();
-static  	bool	get_next_rec();
-FUNC_EXTERN	bool	get_record();
-FUNC_EXTERN	bool	open_input_file();
-FUNC_EXTERN	VOID	delete_file();
-FUNC_EXTERN	VOID	put_record();
-FUNC_EXTERN	STATUS  convert_hex();
-FUNC_EXTERN	i4     convert_esc();
-FUNC_EXTERN	i4     write_fastrec();
-FUNC_EXTERN	i4	er__cmpids();	/* Compare two message ids */
-FUNC_EXTERN	i4	er__cntids();	/* Count message ids in input file */
-FUNC_EXTERN	STATUS	er__qsortids();	/* Quick sort copied from IIugqsort */
-FUNC_EXTERN	i4	er__bldracc();	/* Writes tmp racc file & msgid arr */ 
-FUNC_EXTERN	i4	er__wrtids();	/* Write msgs from file using array */
-#ifdef  VMS
-FUNC_EXTERN 	VOID	create_output_file();
-FUNC_EXTERN 	VOID	close_file();
-#endif
+typedef struct	_MSGID_PAIR
+{
+    i4	msgid;			/* msg id  */
+    i4	offset;			/* msg location in file as an offset */
+    i4	msglen;			/* # bytes for all 3 lines of msg */
+}   MSGID_PAIR;
+
+static	VOID	check_arg(
+	i4	argc,
+	char	**argv,
+	char	slow[],
+	char	fast[],
+	char	generr[],
+	char	headersuffix[],
+	i4	*flag
+);
+static	VOID	usage(VOID);
+static	VOID	sort_msg(
+	char	*inf_name,
+	char	*outf_name,
+	i4	flag
+);
+static	STATUS	parser(
+	i4	argc,
+	char	**argv,
+	i4	*flag,
+	bool	*fnosort,
+	bool	*snosort,
+	char	headersuffix[],
+	char	*fastfile,
+	char	*slowfile,
+	char	*gefile
+);
+static	STATUS	build_fast_index(
+	char	*input_file_name,
+	char	*output_file_name,
+	i4	flag
+);
+static	STATUS	build_slow_index(
+	char	*infile,
+	char	*outfile,
+	i4	flag
+);
+static	STATUS	take(
+	char	buf[],
+	char	*start_char,
+	char	**end_char,
+	char	*wordbuf,
+	i4	*ln,
+	char **fn,
+	FILE *fp
+);
+static	char	*scan(
+	char	buf[],
+	char	*stp,
+	i4	*ln,
+	char	**fn,
+	FILE	*fp
+);
+static	bool	get_next_rec(
+	char	buf[],
+	char	**next_char,
+	i4	*ln,
+	char	**fn,
+	FILE	*fp
+);
+static	bool	get_record(
+	char	*record,
+	i4	*result_size,
+	i4	record_size,
+	FILE	*fp,
+	i4	*line_count
+);
+static	bool	open_input_file(
+	char	*file_name,
+	FILE	**fp
+);
+static	VOID	delete_file(
+	char	*file_name
+);
+static	VOID	put_record(
+	FILE	*fp,
+	i4	record_number,
+	char	*record,
+	i4	record_size
+);
+static	STATUS	convert_hex(
+	char	record[],
+	i4	record_size,
+	i4	*number
+);
+static	i4	convert_esc(
+	char	*buf,
+	i4	length
+);
+static	i4	write_fastrec(
+	FILE	*fp,
+	char	*record,
+	i4	recordsize
+);
+static	i4	er__cmpids(	/* Compare two message ids */
+	MSGID_PAIR	*id1,
+	MSGID_PAIR	*id2
+);
+static	i4	er__cntids(	/* Count message ids in input file */
+	LOCATION	*inf_loc
+);
+static	STATUS	er__qsortids(	/* Quick sort copied from IIugqsort */
+	char	*arr,
+	i4	nel,
+	i4	size,
+	i4	(*compare)()
+);
+static	i4	er__bldracc(	/* Writes tmp racc file & msgid arr */
+	LOCATION	*inf_loc,
+	LOCATION	*raccf_loc,
+	MSGID_PAIR	*prptr
+);
+static	i4	er__wrtids(	/* Write msgs from file using array */
+	LOCATION	*raccf_loc,
+	LOCATION	*outf_loc,
+	MSGID_PAIR	*arr,
+	i4		nummsgs
+);
+static	VOID	do_qs(
+	char *arr,
+	i4 nel
+);
+static	VOID	bubble(
+	register char	*arr,
+	i4		nel
+);
+static	VOID	build_ge_list(
+	char	*fn
+);
+static	STATUS	validate_generr(
+	char	*ge_code
+);
 
 /*
 **  Local defines.
@@ -1590,7 +1700,7 @@ char *fn;
     Generr_codes = i;
 
     /* sort them by generic error */
-    er__qsortids(Generr_list, Generr_codes, GE_MAX_LEN, STcompare);
+    er__qsortids((char *)Generr_list, Generr_codes, GE_MAX_LEN, STcompare);
     
 #ifdef xDEBUG
     SIprintf("The %d generic codes read were:\n", Generr_codes);
@@ -1966,30 +2076,7 @@ FILE	*fp;
 #define VT		0x0b
 #define FF		0x0c
 #define CR		0x0d
-#ifdef  VMS
-#define	WRITE_SIZE	4096
-#endif
 
-/*}
-** Name: FILE_CONTEXT - Information needed to handle files.
-**
-** Description:
-**      This structure is used in calls to open, create, read, write, and 
-**      close the files used by the ERCOMPILE program.
-**
-** History:
-**     03-oct-1985 (derek)
-**          Created new for 5.0.
-*/
-#ifdef  VMS
-typedef struct _FILE_CONTEXT
-{
-    struct FAB      fc_fab;             /* RMS FAB. */
-    struct RAB      fc_rab;		/* RMS RAB. */
-    i4		    *fc_result_size;	/* Location to store result size. */
-    i4		    *fc_line_number;	/* Location to store line number. */
-}   FILE_CONTEXT;
-#endif
 /*}
 ** Name: FILE_CONTROL - Information needed to load files.
 **
@@ -2036,193 +2123,6 @@ typedef struct _FILE_CONTROL
 **	07-oct-1986 (kobayashi)
 **          Created new for 5.0 KANJI.
 */
-#ifdef  VMS
-STATUS
-build_fast_index(input_file_name, output_file_name, flag)
-char               *input_file_name;
-char               *output_file_name;
-i4		   flag;
-{
-    FILE_CONTROL    file_control;
-    char	    record[RW_MAXLINE];
-    FILE	    *in_fp;
-    FILE_CONTEXT    output_file_context;
-    i4		    end_of_file;
-    i4		    record_size;
-    i4		    line_number = 1;
-    ER_MSGID	    last_msgid = 0;
-    ER_MSGID	    msgid;
-    ER_CLASS	    class_no;
-    i4              mess_no;
-    i4		    text_offset;
-    i4		    tblsize;
-    i4		    text_size;
-    i4		    i;
-    ER_CLASS	    last_class_no = -1;
-    i4		    last_mess_no;
-    i4		    loop_flag = 1;
-    char	    textbuf[ER_MAX_LEN];
-    i4		    text_length;
-
-    /*	Create the output file. */
-    create_output_file(&output_file_context, output_file_name, WRITE_SIZE);
-    /*	Write an empty index block. */
-    MEfill(sizeof(file_control), 0, &file_control);
-    put_record(&output_file_context, 0, &file_control, WRITE_SIZE);
-    /*  Open the input file. */
-    if (open_input_file(input_file_name, &in_fp))
-    {
-	SIprintf("Error opening input file '%s'.\n", input_file_name);
-	PCexit(FAIL);
-    }
-    /*  Read the first record. */
-    if ( get_record(record, &record_size, sizeof(record), in_fp, &line_number) )
-        loop_flag = 0;
-#ifdef xDEBUG
-    SIprintf("Record : %s\n", record);
-    SIprintf("Rec. size : %d\n", record_size);
-#endif
-    /*  Read message from file until end. */
-    while(loop_flag)
-    {
-	/*  This record must begin with a '~'. */
-        if (record[0] != '~')
-	{
-	    SIprintf("Error - Expecting '~' on line %d.\n\tOf file '%s'.\n",
-		line_number, input_file_name);
-	    PCexit(FAIL);
-        }
-	/* Convert the hexidecimal number that follows. */
-	if ( convert_hex(record, record_size, &msgid) != OK )
-        {
-            SIprintf("Error - Bad hexidecimal digit on line %d.\n\tOf file '%s'.\n",
-		line_number, input_file_name);
-	    PCexit(FAIL);
-	}
-	/*	Check that the errors have been presented in ascending order. */
-	if (msgid <= last_msgid)
-	{
-	    SIprintf("Error - Message number out of sequence at line %d.\n\tOf file '%s'.\n",
-		line_number, input_file_name);
-		SIprintf("msgid <= last_msgid: %d <= %d\n", msgid, last_msgid);
-	    PCexit(FAIL);
-	}
-	last_msgid = msgid;
-	/* Get class_number and mess_number from msgid */
-	 class_no = ((msgid & CLASSMASK1) >> 16);
-	 mess_no = msgid & MESSMASK;
-        if (class_no  >= CLASS_SIZE)
-        {
-	    SIprintf("Error - Too many class number to fit in current file design.\n");
-	    PCexit(FAIL);
-        }
-	/* If class number isn't order sequential, dummy data must be set.*/
-	if (class_no != last_class_no)
-	{
-	    if(last_class_no != -1)
-	    {
-		file_control.control_record[last_class_no].offset = text_offset;
-		file_control.control_record[last_class_no].areasize = text_size;
-		file_control.control_record[last_class_no].tblsize = tblsize;
-		text_offset += text_size;
-	    }
-	    else
-	    {
-		text_offset = WRITE_SIZE;
-	    }
-	    text_size = 0;
-	    tblsize = 0;
-	    last_class_no++;
-	    for(; last_class_no != class_no; last_class_no++)
-	    {
-		file_control.control_record[last_class_no].offset = 
-		0;
-		file_control.control_record[last_class_no].areasize =
-		0; 
-		file_control.control_record[last_class_no].tblsize =
-		0;
-	    }
-	    last_mess_no = -1;
-	} 
-    /* If mess number isn't order sequential, dummy data must be set.*/
-        last_mess_no++;
-        for(; last_mess_no < mess_no; last_mess_no++)
-	{
-        /* '0xff' for dummy data has to be set in file.
-	**	And record_size is 1, Because null is usually set to file in 
-	**	write_fastrec function.
-	*/
-	    text_size += write_fastrec(&output_file_context,"\377",1);
-	    ++tblsize;
-	}
-    /*
-    **	In fast message, next record isn't used, because next record
-    **	is used only error message.
-    */
-	if ( get_record(record, &record_size, sizeof(record), in_fp,
-	     &line_number) )
-	{
-	    SIprintf("Error - Unexpected end of file at line %d.\n\tOf file '%s'.\n",
-		line_number, input_file_name);
-	    break;
-	}
-#ifdef xDEBUG
-    SIprintf("Record : %s\n", record);
-    SIprintf("Rec. size : %d\n", record_size);
-#endif
-	/* Read the text of the message. */
-	text_length = 0;
-	MEfill(sizeof(textbuf), 0, textbuf);
-	for (;;)
-	{
-	    if ( end_of_file = get_record(record, &record_size, sizeof(record),
-		in_fp, &line_number) )
-		break;
-#ifdef xDEBUG
-    SIprintf("Record : %s\n", record);
-    SIprintf("Rec. size : %d\n", record_size);
-#endif
-	    if (record[0] == '~')
-	    {
-		text_size += write_fastrec(&output_file_context,textbuf,text_length);
-		tblsize++;
-		break;
-	    }
-	    record_size = convert_esc(record, record_size);
-	    if ( record_size + text_length > ER_MAX_LEN )
-	    {
-		if ( text_length < ER_MAX_LEN )
-		{
-		    SIprintf("Warning - Message text truncated at line %d.\n\tOf file '%s'.\n",
-			line_number, input_file_name);
-		}
-		record_size = ER_MAX_LEN - text_length;
-	    }
-	    MEcopy(record, (u_i2) record_size, &textbuf[text_length]);
-	    text_length += record_size;
-	}
-	if (end_of_file)
-	    break;
-    }
-    text_size += write_fastrec(&output_file_context,textbuf,text_length);
-    tblsize++;
-	/*  Close the current file. */
-    SIclose(in_fp);    
-    /*	Force the last data block to disk. */
-    (VOID)write_fastrec(&output_file_context, (char *)NULL,0);
-    file_control.control_record[class_no].offset = text_offset;
-    file_control.control_record[class_no].areasize = text_size;
-    file_control.control_record[class_no].tblsize = tblsize;
-    file_control.classsize = class_no + 1;
-    /*	Write the index block. */
-    put_record(&output_file_context, 0, &file_control, WRITE_SIZE);
-    /*	Close the output file. */
-    close_file(&output_file_context);
-    if ( !(flag & SAON) )
-        delete_file(input_file_name);
-    return (OK);
-}
-#else
 STATUS
 build_fast_index(input_file_name, output_file_name, flag)
 char               *input_file_name;
@@ -2258,7 +2158,7 @@ i4		   flag;
     }
     /*	Write an empty index block. */
     MEfill(sizeof(file_control), 0, &file_control);
-    put_record(out_fp, 0, &file_control, sizeof(file_control));
+    put_record(out_fp, 0, (char *)&file_control, sizeof(file_control));
     /*  Open the input file. */
     if (open_input_file(input_file_name, &in_fp))
     {
@@ -2416,7 +2316,6 @@ SIprintf("Mesg no.: %d\n", mess_no);
         delete_file(input_file_name);
     return (OK);
 }
-#endif
 
 
 /*{
@@ -2451,209 +2350,7 @@ SIprintf("Mesg no.: %d\n", mess_no);
 **	    Changed for new txt.s format and new slow.mnx format to support
 **	    generic error codes in slow messages.
 */
-#ifdef  VMS
-i4
-build_slow_index(infile, outfile, flag)
-char	*infile;
-char	*outfile;
-i4	flag;
-{
-    INDEX_PAGE	    index_page = { 0 };
-    char	    data_page[sizeof(INDEX_PAGE)];
-    char	    record[RW_MAXLINE];
-    MESSAGE_ENTRY   current_message;
-    FILE	    *in_fp;
-    FILE_CONTEXT    output_file_context;
-    i4		    end_of_file;
-    i4		    record_size;
-    i4		    line_number = 1;
-    i4		    page_next = 0;
-    i4	    last_message = -1;
-    i4	    message_number;
-    i4	    ge_code;
-    i4		    msg_name_len;
-    char	    *p;
-    i4		    i;
-
-    /*	Create the output file. */
-    create_output_file(&output_file_context, outfile, sizeof(index_page));
-    /*	Write an empty index block. */
-    MEfill(sizeof(index_page), 0, &index_page);
-    put_record(&output_file_context, 0, &index_page, sizeof(index_page));
-    MEfill(sizeof(data_page), 0, data_page);
-    /*	Process the list of files given. */
-	/*  Open the input file. */
-	if (open_input_file(infile, &in_fp))
-	{
-	    SIprintf("Error opening input file '%s'.\n", infile);
-	    PCexit(FAIL);
-	}    
-	/*  Read the first record. */
-	if ( get_record(record, &record_size, sizeof(record), in_fp,
-	     &line_number) )
-	{
-	    SIprintf("Error - Unexpected end of file at line 1.\n\tOf file '%s'.\n", infile);
-	    PCexit(FAIL);
-	}
-#ifdef xDEBUG
-    SIprintf("Record : %s\n", record);
-    SIprintf("Rec. size : %d\n", record_size);
-#endif /* xDEBUG */
-	/*  Read message from file until end. */
-	for (;;)
-	{
-	    /*  This record must begin with a '~'. */
-	    if (record[0] != '~')
-	    {
-		SIprintf("Error - Expecting '~' on line %d.\n\tOf file '%s'.\n",
-		    line_number, infile);
-		PCexit(FAIL);
-	    }
-
-	    /* Convert the hexidecimal number that follows. */
-	    if ( convert_hex(record, record_size, &message_number) != OK )
-	    {
-	 	SIprintf("Error - Bad hexidecimal digit on line %d.\n\tOf file '%s'.\n",
-		    line_number, infile);
-		PCexit(FAIL);
-	    }
-	    /*	Check that the errors have been presented in ascending order. */
-	    if (message_number <= last_message)
-	    {
-		SIprintf("Error - Message number out of sequence at line %d.\n\tOf file '%s'.\n",
-		    line_number, infile);
-		PCexit(FAIL);
-	    }
-	    if ( get_record(record, &record_size, sizeof(record), in_fp,
-		 &line_number) )
-	    {
-		SIprintf("Error - Unexpected end of file at line %d.\n\tOf file '%s'.\n",
-		    line_number, infile);
-		break;
-	    }
-#ifdef xDEBUG
-    SIprintf("Record : %s\n", record);
-    SIprintf("Rec. size : %d\n", record_size);
-#endif /* xDEBUG */
-
-	    if ((p = STindex(record, ":", record_size)) == NULL)
-	    {
-		SIprintf("Error - generic error code not appended to message name.\n");
-		SIprintf("\taborting at %d in file '%s'.\n", line_number, infile);
-		PCexit(FAIL);
-	    }
-	    
-	    /* set name length */
-	    msg_name_len = p - record;
-
-	    if (msg_name_len > ER_MAX_NAME)
-	    {
-		SIprintf("Warning - Message name truncated at line %d.\n\tOf file '%s'.\n",
-		    line_number, infile);
-		msg_name_len = ER_MAX_NAME;
-	    }
-
-	    /* Convert the hexadecimal number that follows p (the generic   */
-	    /* error code). Note that although p points to the ':'	    */
-	    /* character and not to the character after it, the convert_hex */
-	    /* routine will work because it already assumes that it should  */
-	    /* skip the first character (because it has to skip the '~'	    */
-	    /* character when used above).				    */
-	    if ( convert_hex(p, record_size-msg_name_len, &ge_code) != OK )
-	    {
-	 	SIprintf("Error - Bad hexadecimal digit on line %d.\n\tOf file '%s'.\n",
-		    line_number, infile);
-		PCexit(FAIL);
-	    }
-	    
-	    MEfill(sizeof(current_message), 0, &current_message);
-	    MEcopy(record, (u_i2)msg_name_len, &current_message.me_name_text);
-	    current_message.me_name_text[msg_name_len] = '\t';
-	    current_message.me_msg_number = message_number;
-	    current_message.me_name_length = msg_name_len;
-	    current_message.me_generic_code = ge_code;
-	    /* Read the text of the message. */
-	    for (;;)
-	    {
-		MEfill(sizeof(record), 0, record);
-		if (end_of_file = get_record(record, &record_size,
-		    sizeof(record), in_fp, &line_number))
-		    break;
-#ifdef xDEBUG
-    SIprintf("Record : %s\n", record);
-    SIprintf("Rec. size : %d\n", record_size);
-#endif /* xDEBUG */
-		if (record[0] == '~')
-		    break;
-		record_size = convert_esc(record, record_size);
-		if (record_size + current_message.me_text_length > ER_MAX_LEN)
-		{
-		    if (current_message.me_text_length < ER_MAX_LEN)
-		    {
-			SIprintf("Warning - Message text truncated at line %d.\n\tOf file '%s'.\n",
-			    line_number, infile);
-		    }
-		    record_size = ER_MAX_LEN - current_message.me_text_length;
-		}
-		MEcopy(record, (u_i2)record_size, &current_message.me_name_text[
-		    current_message.me_name_length + 1 +
-		    current_message.me_text_length]);
-		current_message.me_text_length += record_size;
-	    }
-
-	    /* Calculate size of message with roundup to multiple of 4. */
-	    current_message.me_length = sizeof(current_message) -
-		sizeof(current_message.me_name_text) +
-		current_message.me_name_length + 1 +
-		current_message.me_text_length;
-	    current_message.me_length += 4 - (current_message.me_length & 3);
-	    /*  See if message will fit in current data page. */
-	    if (page_next + current_message.me_length > sizeof(data_page))
-	    {
-		if (index_page.index_count >= ER_SMAX_KEY)
-		{
-		    SIprintf("Error - Too many messages to fit in current file design.\n");
-		    PCexit(FAIL);
-		}
-		index_page.index_key[index_page.index_count] = last_message;
-		++index_page.index_count;
-		put_record(&output_file_context, index_page.index_count, 
-		    data_page, sizeof(data_page));
-		MEfill(sizeof(data_page), 0, data_page);
-		page_next = 0;
-	    }
-	    MEcopy(&current_message, (u_i2)current_message.me_length, &data_page[page_next]);
-	    page_next += current_message.me_length;
-	    last_message = current_message.me_msg_number;
-	    if (end_of_file)
-		break;
-    	}
-	/*  Close the current file. */
-	SIclose(in_fp);    
-    /*	Force the last data block to disk. */
-    if (page_next)
-    {
-	if (index_page.index_count >= ER_SMAX_KEY)
-	{
-	    SIprintf("Error - Too many messages to fit in current file design.\n");
-	    PCexit(FAIL);
-	}
-	index_page.index_key[index_page.index_count] = last_message;
-	index_page.index_count++;
-	put_record(&output_file_context, index_page.index_count, data_page,
-	    sizeof(data_page));
-    }
-    /*	Write the index block. */
-    put_record(&output_file_context, 0, &index_page, sizeof(index_page));
-    /*	Close the output file. */
-    close_file(&output_file_context);
-
-    if ( !(flag & SAON) )
-        delete_file(infile);
-    return (OK);
-}
-#else
-i4
+STATUS
 build_slow_index(infile, outfile, flag)
 char	*infile;
 char	*outfile;
@@ -2860,7 +2557,6 @@ i4	flag;
         delete_file(infile);
     return (OK);
 }
-#endif
 
 
 /*{
@@ -2889,43 +2585,6 @@ i4	flag;
 ** History:
 **	06-Oct-1986 (kobayashi) - first written
 */
-#ifdef  VMS
-i4
-write_fastrec(file_context,record,recordsize)
-FILE_CONTEXT	*file_context;
-char		*record;
-i4		recordsize;
-{
-    static char	    tempbuf[WRITE_SIZE];
-    static char	    *ptemp = tempbuf;
-    i4  i;
-    static i4	    blk = 1;
-
-    if (record == (char *)NULL)
-    {
-	if (ptemp != tempbuf)
-	    put_record(file_context,blk,tempbuf,WRITE_SIZE);
-	return(0);
-    }
-    if (*record == NULL)
-	recordsize = 0;
-    for (i = 0; i <= recordsize; ++i)
-    {
-	if (i == recordsize)
-	    *ptemp++ = NULL;
-	else
-	    *ptemp++ = *record++;
-	if (ptemp >= tempbuf + WRITE_SIZE)
-	{
-	    put_record(file_context,blk,tempbuf,WRITE_SIZE);
-	    ptemp = tempbuf;
-	    MEfill(WRITE_SIZE,0,tempbuf);
-	    blk++;
-	}
-    }
-    return(i);
-}
-#else
 i4
 write_fastrec(fp, record, recordsize)
 FILE		*fp;
@@ -2960,7 +2619,6 @@ i4		recordsize;
     }
     return(i);
 }
-#endif
 
 
 /*{
@@ -2989,44 +2647,6 @@ i4		recordsize;
 **	03-oct-1986
 **          Created new for 5.0.
 */
-#ifdef  VMS
-VOID
-put_record(file_context, record_number, record, record_size)
-FILE_CONTEXT       *file_context;
-i4                 record_number;
-char               *record;
-i4                 record_size;
-{
-    FILE_CONTEXT        *f = file_context;
-    i4		status;
-
-    /*	Setup for the write. */
-    f->fc_rab.rab$l_rbf = record;
-    f->fc_rab.rab$w_rsz = record_size;
-    if (record_size != f->fc_fab.fab$w_mrs)
-    {
-	SIprintf("Error - Bad record size on page %d for output file '%s'\n", record_number,
-	    f->fc_fab.fab$l_fna);
-	PCexit(FAIL);
-    }
-    f->fc_rab.rab$l_bkt = 0;
-    /* If this is a random write, then set the block number. */
-    if (f->fc_rab.rab$l_ctx != record_number)
-    {
-	f->fc_rab.rab$l_bkt = record_number * (record_size / 512) + 1;
-    }
-    else
-	f->fc_rab.rab$l_ctx++;
-    /*	Write the record. */
-    status = sys$write(&f->fc_rab);
-    if ((status & 1) == 0)
-    {
-	SIprintf("Error writing page %d to output file '%s'.\n", record_number,
-	    f->fc_fab.fab$l_fna);
-	PCexit(FAIL);
-    }
-}
-#else
 VOID
 put_record(fp, record_number, record, record_size)
 FILE	*fp;
@@ -3046,127 +2666,6 @@ i4	record_size;
 	PCexit(FAIL);
     }
 }
-#endif
-
-
-/*{
-** Name: create_output_file	- Create the message output file.
-**
-** Description:
-**      Create the file used to output the compiled message text.  The file
-**	is created as fixed length records that are a multiple of the block
-**	size of the disk.
-**
-** Inputs:
-**      file_context                    File context initialized by the call.
-**      file_name                       String containing the name of the file.
-**      record_size                     The size of the records written to disk.
-**
-** Outputs:
-**	Returns:
-**	    VOID
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    With exit with an error if output file can't be created.
-**
-** History:
-**	03-oct-1985 (derek)
-**          Created new for 5.0.
-*/
-#ifdef  VMS
-VOID
-create_output_file(file_context, file_name, record_size)
-FILE_CONTEXT       *file_context;
-char               *file_name;
-i4                 record_size;
-{
-    FILE_CONTEXT        *f = file_context;
-    i4		status;
-
-    /*  Initialize the FAB and RAB. */
-    MEfill(sizeof(*f), 0, f);
-    f->fc_fab.fab$b_bid = FAB$C_BID;
-    f->fc_fab.fab$b_bln = FAB$C_BLN;
-    f->fc_rab.rab$b_bid = RAB$C_BID;
-    f->fc_rab.rab$b_bln = RAB$C_BLN;
-    f->fc_rab.rab$l_fab = &f->fc_fab;
-    f->fc_fab.fab$b_rfm = FAB$C_FIX;
-    f->fc_fab.fab$b_rat = 0;
-    f->fc_fab.fab$b_org = FAB$C_SEQ;
-    f->fc_fab.fab$w_mrs = record_size;
-    f->fc_fab.fab$l_fna = file_name;
-    f->fc_fab.fab$b_fns = STlength(file_name);
-    /*  Special options to perform block i/o. */
-    f->fc_fab.fab$b_fac = FAB$M_BRO;
-    f->fc_rab.rab$l_rop = RAB$M_BIO;
-    /*	Next sequential block to write. */
-    f->fc_rab.rab$l_ctx = 0;
-    /*	Create the file. */
-    status = sys$create(&f->fc_fab);
-    if ((status & 1) == 0)
-    {
-	SIprintf("Error creating output file '%s'.\n\tVMS ERROR %%%X.\n",
-	    file_name, status);
-	PCexit(FAIL);
-    }
-    status = sys$connect(&f->fc_rab);
-    if ((status & 1) == 0)
-    {
-	SIprintf("Error connecting output file '%s'.\n\tVMS ERROR %%%X.\n",
-	    file_name, status);
-	PCexit(FAIL);
-    }    
-}
-#endif
-
-
-/*{
-** Name: close_file	- Close a input or output file.
-**
-** Description:
-**      Close the input or output file that is passed in.
-**
-** Inputs:
-**      file_context                    The file context of an open file.
-**
-** Outputs:
-**	Returns:
-**	    VOID
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    Error message is written and program exitted if any erros occur.
-**
-** History:
-**	03-oct-1985 (derek)
-**          Created new for 5.0.
-*/
-#ifdef  VMS
-VOID
-close_file(file_context)
-FILE_CONTEXT       *file_context;
-{
-    FILE_CONTEXT        *f = file_context;
-    i4		status;
-
-    /*	Close the file. */
-    status = sys$disconnect(&f->fc_rab);
-    if ((status & 1) == 0)
-    {
-	SIprintf("Error disconnecting file '%s'.\n", f->fc_fab.fab$l_fna);
-	PCexit(FAIL);
-    }
-    status = sys$close(&f->fc_fab);
-    if ((status & 1) == 0)
-    {
-	SIprintf("Error closing file '%s'.\n", f->fc_fab.fab$l_fna);
-	PCexit(FAIL);
-    }
-}
-#endif
 
 
 /*{
@@ -3487,12 +2986,6 @@ exit:
 **		Changed sort_msg function to do its own quick sort
 **		instead of calling database sort
 */
-typedef struct 	_MSGID_PAIR
-{
-    i4	msgid;			/* msg id  */
-    i4		offset;			/* msg location in file as an offset */
-    i4	msglen;			/* # bytes for all 3 lines of msg */
-}   MSGID_PAIR;
 
 VOID
 sort_msg(inf_name, outf_name, flag)
@@ -3787,8 +3280,6 @@ static i4  Tempsize = 0;
 static i4  Eltsize;
 static char *Tempblock;
 static i4  (*Compfunc)();
-static	VOID	do_qs();
-static	VOID	bubble();
 
 
 /*{

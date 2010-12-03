@@ -375,6 +375,8 @@ i4 psq_bgn_session(
 **	    Initialize default compression from facility cb.
 **	14-Oct-2010 (kschendel) SIR 124544
 **	    Initialize default result structure from facility cb.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for setting installation wide collation defaults.
 */
 DB_STATUS
 psq_bgn_session(
@@ -877,6 +879,15 @@ psq_bgn_session(
 	sess_cb->pss_result_struct = Psf_srvblk->psf_result_struct;
 	sess_cb->pss_result_compression = Psf_srvblk->psf_result_compression;
     }
+
+    if (psq_cb->psq_def_coll > DB_NOCOLLATION)
+	sess_cb->pss_def_coll = psq_cb->psq_def_coll;
+    else
+	sess_cb->pss_def_coll = Psf_srvblk->psf_def_coll;
+    if (psq_cb->psq_def_unicode_coll > DB_NOCOLLATION)
+	sess_cb->pss_def_unicode_coll = psq_cb->psq_def_unicode_coll;
+    else
+	sess_cb->pss_def_unicode_coll = Psf_srvblk->psf_def_unicode_coll;
 
     return (E_DB_OK);
 }

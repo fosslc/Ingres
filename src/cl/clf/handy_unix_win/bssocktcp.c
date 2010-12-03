@@ -21,6 +21,7 @@
 
 # include	<bsi.h>
 # include	"bssockio.h"
+# include	"handylocal.h"
 
 
 /*
@@ -121,6 +122,8 @@
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of handylocal.h.
 */
 
 
@@ -315,7 +318,6 @@ BS_PARMS	*bsp;
 ** Exported driver specification.
 */
 
-extern	STATUS	BS_tcp_port();
 extern	VOID	iisock_unlisten();
 extern  VOID	iisock_send();
 extern  VOID	iisock_receive();

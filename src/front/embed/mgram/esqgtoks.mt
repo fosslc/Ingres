@@ -229,6 +229,8 @@
 **	    Add tokens for RENAME to support RENAME table/column syntax.
 **	26-Aug-2010 (miket) SIR 122403 SD 146503
 **	    Add tENCRYPT.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Added COLLATION.
 */
 /* %T header end */
 
@@ -270,6 +272,7 @@ GLOBALDEF KEY_ELM	 tok_keytab[] =
 	"clearrow",		tCLEARROW,
 	"close",		tCLOSE,
 	"collate",		tCOLLATE,
+	"collation",		tCOLLATION,
 	"column",		tCOLUMN,
 	"command",		tCOMMAND,
 	"commit",		tCOMMIT,

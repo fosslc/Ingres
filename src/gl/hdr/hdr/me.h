@@ -69,6 +69,8 @@
 **	    Other ME functions should get the same treatment at some point.
 **	14-May-2009 (kschendel) b122041
 **	    Change MEtls-destroy to match the above.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 /*
@@ -171,9 +173,7 @@ FUNC_EXTERN u_i2 MEgettag(
 
 #define MEfreetag IIMEfreetag
 FUNC_EXTERN STATUS MEfreetag(
-#ifdef	CL_PROTOTYPED
 	u_i2	tag
-#endif
 );
 
 #define MEtls_create IIMEtls_create

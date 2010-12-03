@@ -118,18 +118,11 @@
 **	    historical use of csll.lnx.asm and use minimal low level code
 **	    added to csnormal.h to handle atomic functions. This avoids
 **	    RELTEXT issues that are problematic for SELinux.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Drop some long-obsolete ports (ds3_ulx, pyramid, etc).
+**	23-Nov-2010 (kschendel)
+**	    Drop more obsolete ports (dg and sco).
 */ 
-
-# ifdef ds3_ulx
-# define got_1
-# include "csll.ds3.asm"
-# endif /* ds3_ulx */
-
-
-# if defined(sun_u42) || defined(su4_u42) || defined(su4_cmw)
-# define got_1
-# include "csll.sun.asm"
-# endif  /* sun_u42 su4_u42 */
 
 # if defined(su4_us5) && !defined(su9_us5)
 # define got_1
@@ -141,42 +134,13 @@
 # include "csll.su9.asm"
 # endif  /* su4_us5 */
 
-# ifdef dr4_us5
-# define _CS_tas                CS_tas
-# define _CS_getspin            CS_getspin
-# define _CS_swuser             CS_swuser
-# define _ex_sptr               ex_sptr
-# define _Cs_srv_block          Cs_srv_block
-# define _Cs_idle_scb           Cs_idle_scb
-# define _CS_xchng_thread       CS_xchng_thread
-# define got_1
-# include "csll.400e.asm"
-# endif  /* dr4_us5 */
-
-# if defined(rmx_us5) || defined(rux_us5)
-# define got_1
-# include "csll.pyrvr4.asm"
-# endif /* rmx_us5 */
-
-# if defined(pym_us5) 
-# define got_1
-# include "csll.pyrvr4.asm"
-# endif /* pym_us5 */
-
-# if defined(ts2_us5) 
-# define got_1
-# include "csll.pyrvr4.asm"
-# endif /* ts2_us5 */
-
 # if defined(sgi_us5) 
 # define got_1
 # include "csll.sgi.asm"
 # endif /* sgi_us5 */
 
-# if defined(sco_us5) || defined(sur_u42) || \
-     defined(sqs_ptx) || defined(usl_us5) || \
-     defined(nc4_us5) || defined(sos_us5) || defined(sui_us5)
-     
+# if defined(usl_us5)
+
 # define got_1
 # define _CS_tas		CS_tas
 # define _CS_getspin		CS_getspin
@@ -187,22 +151,8 @@
 # define _Cs_idle_scb		Cs_idle_scb
 # define _CS_xchng_thread	CS_xchng_thread
 # include "csll.sqs.asm"
-# endif	/* sco_us5 sur_u42 sqs_ptx usl_us5 nc4_us5 sos_us5 sui_us5 */
+# endif	/* usl_us5 */
  
-# if defined(dgi_us5)
-     
-# define got_1
-# define _CS_tas              CS_tas
-# define _CS_getspin          CS_getspin
-# define _CS_relspin          CS_relspin
-# define _CS_swuser           CS_swuser
-# define _ex_sptr             ex_sptr
-# define _Cs_srv_block        Cs_srv_block
-# define _Cs_idle_scb         Cs_idle_scb
-# define _CS_xchng_thread     CS_xchng_thread
-# include "csll.dgi.asm"
-# endif       /* dgi_us5 */
-
 /*
 ** Jamdefs and Jamrules are not set up to support the inclusion of bzarch.h
 ** when the action preprocesses with the C precompiler and then assembles.
@@ -230,39 +180,13 @@
 # include "csll.lnx.asm"
 # endif       /* int_lnx || int_rpl && !NO_INTERNAL_THREADS */
 
-# if (defined(hp8_us5) || defined(hp8_bls) || defined(hpb_us5)) && \
+# if (defined(hp8_us5) || defined(hpb_us5)) && \
      !defined(hp2_us5)
 # include "csll.hp8.asm"
 # endif
 
 # if defined(hp2_us5)
 # include "csll.hp2.asm"
-# endif
-
-# if defined(ib1_us5)
-# define got_1
-# include "csll.pow6.asm"
-# endif       /* CCI Power6/32 processors */
-
-# ifdef hp3_us5
-# define got_1
-# include "csll.hp3.asm"
-# endif
-
-# if defined(dr6_us5)
-# define _CS_tas                CS_tas
-# define _CS_swuser             CS_swuser
-# define _ex_sptr               ex_sptr
-# define _Cs_srv_block          Cs_srv_block
-# define _Cs_idle_scb           Cs_idle_scb
-# define _CS_xchng_thread       CS_xchng_thread
-# define got_1
-# include "csll.ucorn.asm"
-# endif /* dr6_us5 */
-
-# ifdef dg8_us5
-# define got_1
-# include "csll.dg8.asm"
 # endif
 
 #if defined(axp_osf) || defined(axp_lnx) 

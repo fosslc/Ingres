@@ -108,6 +108,8 @@
 **	    Replace mg5_osx with OSX and add support for Intel OSX.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */
 
 #define	DL_H
@@ -172,26 +174,16 @@
 # define DL_LINKCPPLIB ""
 # endif
 
-#if defined(any_hpux) || defined(hp3_us5) || defined(hp8_bls)
+#if defined(any_hpux)
 #define	DL_LOADING_WORKS	1
 #define	DL_UNLOADING_WORKS	0
 #endif
 
-#if defined(su4_u42) || defined(any_aix) || defined(m88_us5) || \
-    defined(nc4_us5) || defined(dg8_us5) || defined(sparc_sol) || \
-    defined(sui_us5) || defined(dgi_us5) || \
-    defined(su4_cmw) || defined(NT_GENERIC) || defined(axp_osf) || \
-    defined(sqs_ptx) || defined(nc4_us5) || \
-    defined(rmx_us5) || defined(sgi_us5) || defined(sos_us5) || \
-    defined(usl_us5) || defined(LNX) || \
-    defined(OSX) || defined(a64_sol)
+#if defined(any_aix) || defined(sparc_sol) || defined(a64_sol) || \
+    defined(NT_GENERIC) || defined(axp_osf) || defined(sgi_us5) || \
+    defined(usl_us5) || defined(LNX) || defined(OSX)
 #define	DL_LOADING_WORKS	1
 #define	DL_UNLOADING_WORKS	1
-#endif
-
-#if defined(dr6_us5) 
-#define DL_LOADING_WORKS        1
-#define DL_UNLOADING_WORKS      0 
 #endif
 
 #if defined(VMS)

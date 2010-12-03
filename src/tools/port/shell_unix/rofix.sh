@@ -46,6 +46,8 @@
 ##      01-Aug-2004 (hanch04)
 ##          First line of a shell script needs to be a ":" and
 ##          then the copyright should be next.
+##	22-Nov-2010 (kschendel) SIR 124685
+##	    Drop a few more ancient / obsolete ports
 #
 
 . readvers
@@ -54,33 +56,6 @@ for i in $*
 do
 	case $vers in
 
-		elx_us5)
-ed $i <<!
-g/^[ 	]*\.var/s// .inst/
-w
-q
-!
-		;;
-
-		sun_u42)
-ed $i <<!
-g/^[ 	]*\.data$/s// .text/
-g/^[ 	]*\.zero[ 	]*\([0-9]*\)/s// .set	.,.+\1/
-w
-q
-!
-		;;
-
-		ds3_ulx)
-echo " " >> $i
-ed $i <<!
-g/^\(.*:\)\.data/s//\1.text/
-g/^[ 	]*\.data/s// .text/
-g/^[ 	]*\.zero[ 	]*\([0-9]*\)/s// .set	.,.+\1/
-w
-q
-!
-		;;
 		axp_osf|axp_lnx)
 ed $i <<!
 g/^\(.*:\)\.data/s//\1.rdata/
@@ -88,15 +63,6 @@ g/^\([ 	]*\)\.data/s//\1.rdata/
 g/\.rdata/s//.data/
 g/\.text.*/s//&\\
 	.set	noreorder/
-w
-q
-!
-		;;
-		ts2_us5)
-ed $i <<!
-g/^\(.*:\)\.data/s//\1.rdata/
-g/^[ 	]*\.data/s// .rdata/
-g/^[ 	]*\.zero[ 	]*\([0-9]*\)/s// .set	.,.+\1/
 w
 q
 !

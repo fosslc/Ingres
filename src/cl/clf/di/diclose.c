@@ -147,6 +147,9 @@
 **	    still dependent on OS_THREADS_USED.
 **	6-Nov-2009 (kschendel) SIR 122757
 **	    Make io-sem a SYNCH.
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Compiler saw that status wasn't always set, fix.  (Problem would
+**	    only occur on an error path.)
 */
 STATUS
 DIclose(
@@ -157,6 +160,7 @@ DIclose(
 
     /* default returns */
     CL_CLEAR_ERR( err_code );
+    status = OK;
 
     /* Check file control block pointer, return if bad.*/
 

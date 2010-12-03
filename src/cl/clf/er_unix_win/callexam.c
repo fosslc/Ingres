@@ -22,6 +22,9 @@ NEEDLIBS =  COMPAT MALLOCLIB
 **	    Added history(!?)
 **	    Add prototype for CLcall() to prevent compiler
 **          errors with GCC 4.0 due to conflict with implicit declaration.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
+*/
 
 /*
 **  Example program showing how to call ERslookup() with CL_ERR_DESC.
@@ -29,11 +32,14 @@ NEEDLIBS =  COMPAT MALLOCLIB
 */
 
 /* local prototypes */
-static CLcall(
-	CL_ERR_DESC *errdesc);
+static i4 CLcall(CL_ERR_DESC *errdesc);
+static i4 client(void);
+static void geterrmsg(STATUS errorcode, CL_ERR_DESC *clerror,
+	ER_ARGUMENT *msgparms, i4 n, bool want_grisly_details,
+	char *message, i4 *length);
 
-main(argc, argv)
-char **argv;
+int
+main(int argc, char **argv)
 {
 	MEadvise(ME_INGRES_ALLOC);
 
@@ -41,10 +47,13 @@ char **argv;
 		PCexit(FAIL);
 
 	PCexit(OK);
+	/* NOTREACHED */
+	return (0);
 }
 
 
-client()
+static i4
+client(void)
 {
 	char msg[ER_MAX_LEN];
 	int msglen;
@@ -61,14 +70,10 @@ client()
 }
 
 
-geterrmsg(errorcode, clerror, msgparms, n, want_grisly_details, message, length)
-STATUS		errorcode;
-CL_ERR_DESC	*clerror;
-ER_ARGUMENT	*msgparms;
-i4			n;
-bool		want_grisly_details;
-char		*message;
-i4			*length;
+static void
+geterrmsg(STATUS errorcode, CL_ERR_DESC *clerror,
+	ER_ARGUMENT *msgparms, i4 n, bool want_grisly_details,
+	char *message, i4 *length)
 {
 	char		text[ER_MAX_LEN];
 	i4			textlen;
@@ -124,7 +129,6 @@ i4			*length;
 	text[*length] = '\0';
 
 	STcopy(text, message);
-	return(OK);
 }
 
 
@@ -136,19 +140,13 @@ i4			*length;
 
 # include   "erloc.h"
 
-static
-CLcall(errdesc)
-CL_ERR_DESC *errdesc;
-# if defined (UNIX) || defined (DESKTOP)
+static i4
+CLcall(CL_ERR_DESC *errdesc)
+# if !defined (VMS)
 {
 	i4 status = OK;
-# ifdef DESKTOP
-	char *filename = "\\file";
-	if (fopen(filename, 0) == -1)
-# else
 	char *filename = "/some/unix/file";
 	if (open(filename, 0) == -1)
-# endif
 
 	{
 		SETCLERR(errdesc, ER_INTERR_TESTMSG, ER_open);
@@ -159,8 +157,7 @@ CL_ERR_DESC *errdesc;
 
 	return (status);
 }
-# endif /* UNIX */
-# ifdef VMS
+#else
 {
 	i4 status = OK;
 

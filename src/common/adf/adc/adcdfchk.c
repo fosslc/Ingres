@@ -198,6 +198,8 @@
 **          (basically returning random data), in adumoney.c this caused bug
 **          #64261, in other files garbage return values from fabs would cause
 **          other problems.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Ensure whole DBV copied.
 */
 DB_STATUS
 adc_defchk(
@@ -263,6 +265,8 @@ DB_DATA_VALUE	    *rdv)
 		    {
 			tmp_dv.db_datatype = DB_FLT_TYPE;    
 			tmp_dv.db_length = 8;
+			tmp_dv.db_prec = 0;
+			tmp_dv.db_collID = DB_NOCOLLATION;
 			tmp_dv.db_data = ME_ALIGN_MACRO((PTR)temp,DB_ALIGN_SZ);
 
 			if( (db_stat = adc_cvinto( adf_scb, dv, &tmp_dv))

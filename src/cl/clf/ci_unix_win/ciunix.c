@@ -7,6 +7,7 @@
 # include	<er.h>
 # include	<nm.h>
 # include	<si.h>
+# include	<ci.h>
 # include	"cilocal.h"
 
 /**
@@ -55,6 +56,8 @@
 **	    adding <gl.h> after <compat.h>
 **	14-may-97 (mcgem01)
 **	    Clean up compiler warnings.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Add include of ci.h neccessary for cilocal.h.
 **/
 
 /* # defines */

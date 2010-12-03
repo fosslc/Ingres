@@ -14,20 +14,18 @@
 ** History:
 **	2-jun-1993 (ed)
 **	    initial creation to define func_externs in glhdr
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 FUNC_EXTERN STATUS  DYinit(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *parm1,
 	    bool	    parm2
-#endif
 );
 
 FUNC_EXTERN STATUS  DYload(
-#ifdef CL_PROTOTYPED
 	    SYMTAB	    *parm1,
 	    LOCATION	    *parm2[], 
 	    char	    *parm3[]
-#endif
 );
 

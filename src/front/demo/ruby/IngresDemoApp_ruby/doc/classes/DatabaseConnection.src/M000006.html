@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>regions (DatabaseConnection)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File src/database_connection.rb, line 106</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">regions</span>(<span class="ruby-identifier">country</span>)
+    <span class="ruby-identifier">regionResults</span> = <span class="ruby-identifier">execute</span>(<span class="ruby-node">&quot;SELECT DISTINCT ap_place, ap_ccode FROM airport WHERE ap_ccode = '#{@countryCodes[country]}' ORDER BY ap_place&quot;</span>)
+    <span class="ruby-identifier">regionCodes</span> = <span class="ruby-constant">Hash</span>.<span class="ruby-identifier">new</span>
+    <span class="ruby-identifier">regions</span> = <span class="ruby-constant">Array</span>.<span class="ruby-identifier">new</span>
+    <span class="ruby-identifier">regionResults</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span> <span class="ruby-identifier">regionDetails</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">regionCodes</span>[<span class="ruby-identifier">regionDetails</span>[<span class="ruby-value">0</span>]]= <span class="ruby-identifier">regionDetails</span>[<span class="ruby-value">1</span>] ; <span class="ruby-identifier">regions</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-identifier">regionDetails</span>[<span class="ruby-value">0</span>] }
+    <span class="ruby-ivar">@regionCodes</span> = <span class="ruby-identifier">regionCodes</span>
+    <span class="ruby-identifier">regions</span>
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

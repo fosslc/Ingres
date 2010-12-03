@@ -66,6 +66,8 @@
 **	    Get pages, not bytes.
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes, use i8 not long long.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **
 ** PROGRAM  = cscastst
 **
@@ -94,6 +96,8 @@
 # include <csinternal.h>
 
 # include "cslocal.h"
+
+# include <stdarg.h>
 
 #if defined(ris_u64)
 # include <stdlib.h>
@@ -146,15 +150,12 @@ i4	AllocedSysSeg;
 
 /* function forward refs */
 
-VOID logger();
-char *maperr();
-
 /* ---------------- actual application ---------------- */
 
 /*
 ** Adjust number of connections, and return previous connect count.
 */
-i4
+static i4
 adj_connects( i4 adj_amt )
 {
     i4	connects;
@@ -168,7 +169,7 @@ adj_connects( i4 adj_amt )
 /*
 ** Adjust TargetSum.
 */
-void
+static void
 adj_target( i4 adj_amt )
 {
     CSp_semaphore( TRUE, &sc0m_semaphore );
@@ -179,7 +180,7 @@ adj_target( i4 adj_amt )
 /*
 ** Get next thread ID.
 */
-i4
+static i4
 next_ident(void)
 {
     i4	curident;
@@ -194,7 +195,7 @@ next_ident(void)
 /*
 ** Thread epilogue code.
 */
-void
+static void
 wrap_up(void)
 {
     CL_ERR_DESC syserr;
@@ -215,10 +216,8 @@ wrap_up(void)
 /*
 **  FOUR byte integer C&S incrementor thread
 */
-test_long( mode, scb, next_mode )
-i4  mode;
-CS_SCB *scb;
-i4  *next_mode;
+static STATUS
+test_long( i4 mode, CS_SCB *scb, i4 *next_mode )
 {
     i4  iteration, curval, newval, myident;
 
@@ -261,14 +260,11 @@ i4  *next_mode;
 /*
 **  Pointer C&S incrementor thread
 */
-test_ptr( mode, scb, next_mode )
-i4  mode;
-CS_SCB *scb;
-i4  *next_mode;
+static STATUS
+test_ptr( i4 mode, CS_SCB *scb, i4 *next_mode )
 {
     i4 		iteration, myident;
     PTR		curval, newval;	
-    CL_ERR_DESC syserr;
 
     switch( mode )
     {
@@ -309,14 +305,11 @@ i4  *next_mode;
 /*
 **  EIGHT byte integer incrementor thread using single process mutex protection
 */
-test_mutex( mode, scb, next_mode )
-i4  mode;
-CS_SCB *scb;
-i4  *next_mode;
+static STATUS
+test_mutex( i4 mode, CS_SCB *scb, i4 *next_mode )
 {
     STATUS	rv;
     i4		iteration, myident;
-    longlong	curval, newval;	
 
     switch( mode )
     {
@@ -364,10 +357,8 @@ i4  *next_mode;
 /*
 **  EIGHT byte integer incrementor thread using cross process mutex protection
 */
-test_cpmutex( mode, scb, next_mode )
-i4  mode;
-CS_SCB *scb;
-i4  *next_mode;
+static STATUS
+test_cpmutex( i4 mode, CS_SCB *scb, i4 *next_mode )
 {
     STATUS	rv;
     i4		iteration, myident;
@@ -420,8 +411,8 @@ i4  *next_mode;
 **	Setup global variables and add threads for each incrementor.
 **	Called by CSinitialize before threads are started
 */
-hello( csib )
-CS_INFO_CB *csib;
+static STATUS
+hello( CS_INFO_CB *csib )
 {
     i4		i;
     STATUS	stat;
@@ -455,7 +446,8 @@ CS_INFO_CB *csib;
 
 /* Called when all thread functions return from the TERMINATE state */
 
-bye()
+static STATUS
+bye(void)
 {
     STATUS	rv;
     int		i, connects;
@@ -503,17 +495,29 @@ bye()
 
 /* log function, called as the output when needed */
 
-VOID
-logger( errnum, arg1, arg2 )
-i4  errnum, arg1, arg2;
+static VOID
+logger( i4 errnum, CL_ERR_DESC *dum, i4 numargs, ... )
 {
     char buf[ ER_MAX_LEN ];
+    va_list args;
 
     if( ERreport( errnum, buf ) == OK )
     	SIfprintf(stderr, "%s\n", buf);
     else
+    {
+	char *arg1 = "";
+	i4 arg2 = 0;
+	if (numargs > 0)
+	{
+	    va_start(args, numargs);
+	    arg1 = va_arg(args, char *);
+	    if (numargs > 1)
+		arg2 = va_arg(args, i4);
+	    va_end(args);
+	}
 	SIfprintf(stderr, "ERROR %d (%x), %s %d\n", 
 		errnum, errnum, arg1, arg2 );
+    }
     if(errnum != E_CS0018_NORMAL_SHUTDOWN)
 	PCexit(FAIL);
     PCexit(OK);
@@ -524,10 +528,8 @@ i4  errnum, arg1, arg2;
 **
 ** 'type', passed by 6.1 CS, is ignored here for compatibility with 6.0 CS.
 */
-newscbf( newscb, crb, type )
-CS_SCB **newscb;
-PTR crb;
-i4  type;
+static STATUS
+newscbf( CS_SCB **newscb, void *crb, i4 type )
 {
     /* god this is ugly, making us store type here... */
 
@@ -537,35 +539,53 @@ i4  type;
 
 /* release an scb */
 
-freescb( oldscb )
-CS_SCB *oldscb;
+static STATUS
+freescb( CS_SCB *oldscb )
 {
     free( oldscb );
+    return (OK);
 }
 
 /* Function used when CS_CB insists on having one and we don't care */
 
-fnull()
+static STATUS
+fnull1(void *dum1, i4 dum2)
 {
-    return( OK );
+    return (OK);
 }
 
-VOID
-vnull()
+static STATUS
+fnull2(i4 dum1, CS_SCB *dum2)
+{
+    return (OK);
+}
+static STATUS
+fnull3(CS_SCB *dum1, char *dum2, i4 dum3, i4 dum4)
+{
+    return (OK);
+}
+
+static VOID
+vnull(CS_SCB *dum)
 {
 }
 
 /* Function needed for read and write stub */
 
-rwnull( scb, sync )
-CS_SCB *scb;
-i4  sync;
+static STATUS
+rwnull( CS_SCB *dummy, i4 sync )
 {
     CS_SID sid;
 
     CSget_sid( &sid );
     CSresume( sid );
     return( OK );
+}
+
+static i4
+pidnull(void)
+{
+    return (1234);
 }
 
 
@@ -577,7 +597,6 @@ char	*argv[];
 {
     CS_CB 	cb;
     i4  	rv;
-    i4  	err_code;
     i4  	arg, f_argc;
     char 	**f_argv,*f_arr[3], *argp, dunsel;
     CL_ERR_DESC syserr;
@@ -712,18 +731,18 @@ char	*argv[];
     cb.cs_stksize = (8 * 1024);	/* size of stack in bytes */
     cb.cs_scballoc = newscbf;	/* Routine to allocate SCB's */
     cb.cs_scbdealloc = freescb;	/* Routine to dealloc  SCB's */
-    cb.cs_saddr = fnull;	/* Routine to await session requests */
-    cb.cs_reject = fnull;	/* how to reject connections */
+    cb.cs_saddr = fnull1;	/* Routine to await session requests */
+    cb.cs_reject = fnull1;	/* how to reject connections */
     cb.cs_disconnect = vnull;	/* how to dis- connections */
     cb.cs_read = rwnull;	/* Routine to do reads */
     cb.cs_write = rwnull;	/* Routine to do writes */
     cb.cs_process = Incrementor;/* Routine to do major processing */
-    cb.cs_attn = fnull;		/* Routine to process attn calls */
+    cb.cs_attn = fnull2;		/* Routine to process attn calls */
     cb.cs_elog = logger;	/* Routine to log errors */
     cb.cs_startup = hello;	/* startup the server */
     cb.cs_shutdown = bye;	/* shutdown the server */
-    cb.cs_format = fnull;	/* format scb's */
-    cb.cs_get_rcp_pid = fnull;  /* init to fix SEGV in CSMTp_semaphore*/
+    cb.cs_format = fnull3;	/* format scb's */
+    cb.cs_get_rcp_pid = pidnull;  /* init to fix SEGV in CSMTp_semaphore*/
     cb.cs_scbattach = vnull;    /* init to fix SEGV in CSMT_setup */
     cb.cs_scbdetach = vnull;    /* init to fix SEGV in CSMT_setup */
     cb.cs_stkcache = FALSE;     /* Match csoptions default - no stack caching */

@@ -1,14 +1,14 @@
 #
 # Jamfile file for front!frame!frame
 #
+#	23-Nov-2010 (kschendel)
+#	    Drop obsolete dg8 nooptims.
 
 SubDir ING_SRC front frame frame ;
 
 IISUBSYS front frame frame ;
 
-IINOOPTIM tbutil.c : i64_aix ;
 IINOOPTIM parse.c : i64_hpu ;
-IINOOPTIM fmtchg.c : dg8_us5 ;
 IINOOPTIM datafmt.c : r64_us5 ;
 
 IIMSGHDR erfd.msg ;

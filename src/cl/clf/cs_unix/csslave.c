@@ -7,6 +7,7 @@
 # include    <clconfig.h>
 # include    <systypes.h>
 # include    <cs.h>
+# include    <cv.h>
 # include    <fdset.h>
 # include    <csev.h>
 # include    <er.h>
@@ -14,6 +15,9 @@
 # include    <pc.h>
 # include    <st.h>
 # include    <cx.h>
+# include    <clnfile.h>
+# include    <csinternal.h>
+# include    "cslocal.h"
 
 /**
 **
@@ -77,6 +81,8 @@
 **	    Establish NUMA context.
 **	20-Jun-2009 (kschendel) SIR 122138
 **	    Hybrid add-on symbol changed, fix here.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Delete unused CScalls ref.
 **/
 
 
@@ -113,7 +119,6 @@ i4	awoken = 0;
 */
 
 
-GLOBALREF	CSEV_CALLS	CScalls[];
 
 /*
 **  Definition of static variables and forward static functions.
@@ -127,9 +132,8 @@ NEEDLIBS =	COMPATLIB MALLOCLIB
 DEST = 		bin
 */
 
-main(argc, argv)
-int	argc;
-char	**argv;
+int
+main(int argc, char **argv)
 {
     char        *envp;
     i4		 arg, rad;
@@ -184,4 +188,6 @@ char	**argv;
     iiCL_increase_fd_table_size(TRUE,0); 
     CS_init_slave(argc, argv);
     exit(1);
+    /* NOTREACHED */
+    return (1);
 }

@@ -209,6 +209,8 @@
 **	    Replace BIG_ENDIAN and LITTLE_ENDIAN with BIG_ENDIAN_INT and 
 **	    LITTLE_ENDIAN_INT because the former are already defined in 
 **	    /usr/include/endian.h on Linux.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */
 
 # ifndef CVGCCCL_HDR_INCLUDED
@@ -228,20 +230,19 @@
 ** entries should be made below prior to the defaults.
 */
 
-# if	defined(usl_us5) || defined(dgi_us5) || defined(sui_us5) || \
-	defined(dr6_us5)
+# if	defined(usl_us5)
 
 # define CV_NCSJ_TYPE	CV_8859_NCSJ
 # define CV_NCSN_TYPE	CV_8859_NCSN
 
 # endif /* usl_us5 */
 
-# if	defined(PMFE) || defined(DESKTOP)
+# if	defined(PMFE)
 
 # define CV_NCSJ_TYPE	CV_PC_NCSJ
 # define CV_NCSN_TYPE	CV_PC_NCSN
 
-# endif /* PMFE || DESKTOP */
+# endif /* PMFE */
 
 
 /*
@@ -679,35 +680,27 @@ typedef struct
 */
 
 FUNC_EXTERN VOID CV2n_f4(
-#ifdef CL_PROTOTYPED
     u_i1	*src,
     u_i1	*dst,
     STATUS	*status
-#endif
 );
 
 FUNC_EXTERN VOID CV2l_f4(
-#ifdef CL_PROTOTYPED
     u_i1	*src,
     u_i1	*dst,
     STATUS	*status
-#endif
 );
 
 FUNC_EXTERN VOID CV2n_f8(
-#ifdef CL_PROTOTYPED
     u_i1	*src,
     u_i1	*dst,
     STATUS	*status
-#endif
 );
 
 FUNC_EXTERN VOID CV2l_f8(
-#ifdef CL_PROTOTYPED
     u_i1	*src,
     u_i1	*dst,
     STATUS	*status
-#endif
 );
 
 # endif /* CVGCCCL_HDR_INCLUDED */

@@ -20,10 +20,12 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added void parameter to SAsupports_osaudit.
 */
 
 FUNC_EXTERN bool 
-SAsupports_osaudit();
+SAsupports_osaudit(void);
 
 FUNC_EXTERN STATUS
 SAopen( 

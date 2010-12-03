@@ -37,11 +37,13 @@
 !           Added CScas4, and CScasptr.
 !      31-aug-2004 (stephenb)
 !	    Fix up typing for external functions
+!	12-Nov-2010 (kschendel) SIR 124685
+!	    Moved inkernel and current to front of CS_SYSTEM, fix here.
 !
 
 
-CS_CURRENT		= 0xb8	! Cs_srv_block.cs_current (the current thread)
-CS_INKERNEL		= 0x150	! Cs_srv_block.cs_kernel (is switching on?)
+CS_CURRENT		= 0x14	! Cs_srv_block.cs_current (the current thread)
+CS_INKERNEL		= 0x10	! Cs_srv_block.cs_kernel (is switching on?)
 
 CS_MACHINE_SPECIFIC	= 0x20	! offset of machine dependent information
 				! within the scb

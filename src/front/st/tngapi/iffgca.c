@@ -43,6 +43,8 @@
 **          initialization has occurred multiple times.
 **          Allow multiple terminations from the GCA layer and trace the fact
 **          multiple terminations have occurred.
+**	1-Dec-2010 (kschendel)
+**	    Compiler warning fixes.
 */
 # include <compat.h>
 # include <gl.h>
@@ -94,9 +96,9 @@ static  char*   srvclass[] =
 */
 static	GCM_INFO	inst_info[] =
 {
-    { GCN_MIB_SERVER_CLASS, NULL },
-    { GCN_MIB_SERVER_ADDRESS, NULL },
-    { GCN_MIB_SERVER_OBJECT, NULL }
+    { GCN_MIB_SERVER_CLASS, {EOS} },
+    { GCN_MIB_SERVER_ADDRESS, {EOS} },
+    { GCN_MIB_SERVER_OBJECT, {EOS} }
 };
 
 /*
@@ -104,9 +106,9 @@ static	GCM_INFO	inst_info[] =
 */
 static	GCM_INFO	svr_info[] = 
 {
-    { GCN_MIB_SERVER_CLASS      , NULL },
-    { GCN_MIB_SERVER_ADDRESS    , NULL },
-    { GCN_MIB_SERVER_OBJECT     , NULL }
+    { GCN_MIB_SERVER_CLASS      , {EOS} },
+    { GCN_MIB_SERVER_ADDRESS    , {EOS} },
+    { GCN_MIB_SERVER_OBJECT     , {EOS} }
 };
 
 /*
@@ -114,8 +116,8 @@ static	GCM_INFO	svr_info[] =
 */
 static	GCM_INFO	net_info[] =
 {
-    { GCC_MIB_PROTOCOL          , NULL },
-    { GCC_MIB_PROTO_PORT        , NULL }
+    { GCC_MIB_PROTOCOL          , {EOS} },
+    { GCC_MIB_PROTO_PORT        , {EOS} }
 };
 
 /*
@@ -123,30 +125,30 @@ static	GCM_INFO	net_info[] =
 */
 static  GCM_INFO     gv_info[] = 
 {
-    { ERx("exp.clf.gv.version")      , NULL },
-    { ERx("exp.clf.gv.env")          , NULL },
-    { ERx("exp.clf.gv.majorvers")    , NULL },
-    { ERx("exp.clf.gv.minorvers")    , NULL },
-    { ERx("exp.clf.gv.genlevel")     , NULL },
-    { ERx("exp.clf.gv.bytetype")     , NULL },
-    { ERx("exp.clf.gv.hw")           , NULL },
-    { ERx("exp.clf.gv.os")           , NULL },
-    { ERx("exp.clf.gv.patchlvl")     , NULL },
-    { ERx("exp.clf.gv.instance")     , NULL },
-    { ERx("exp.clf.gv.tcpport")      , NULL },
-    { ERx("exp.clf.gv.sql92_conf")   , NULL },
-    { ERx("exp.clf.gv.language")     , NULL },
-    { ERx("exp.clf.gv.charset")      , NULL },
-    { ERx("exp.clf.gv.system")       , NULL }, 
-    { ERx("exp.clf.gv.bldlevel")     , NULL }
+    { ERx("exp.clf.gv.version")      , {EOS} },
+    { ERx("exp.clf.gv.env")          , {EOS} },
+    { ERx("exp.clf.gv.majorvers")    , {EOS} },
+    { ERx("exp.clf.gv.minorvers")    , {EOS} },
+    { ERx("exp.clf.gv.genlevel")     , {EOS} },
+    { ERx("exp.clf.gv.bytetype")     , {EOS} },
+    { ERx("exp.clf.gv.hw")           , {EOS} },
+    { ERx("exp.clf.gv.os")           , {EOS} },
+    { ERx("exp.clf.gv.patchlvl")     , {EOS} },
+    { ERx("exp.clf.gv.instance")     , {EOS} },
+    { ERx("exp.clf.gv.tcpport")      , {EOS} },
+    { ERx("exp.clf.gv.sql92_conf")   , {EOS} },
+    { ERx("exp.clf.gv.language")     , {EOS} },
+    { ERx("exp.clf.gv.charset")      , {EOS} },
+    { ERx("exp.clf.gv.system")       , {EOS} }, 
+    { ERx("exp.clf.gv.bldlevel")     , {EOS} }
 };
 
 static GCM_INFO     cnf_info[] = 
 {
         
-    { ERx("exp.clf.gv.cnf_index")    , NULL },
-    { ERx("exp.clf.gv.cnf_name")     , NULL },
-    { ERx("exp.clf.gv.cnf_value")    , NULL }
+    { ERx("exp.clf.gv.cnf_index")    , {EOS} },
+    { ERx("exp.clf.gv.cnf_name")     , {EOS} },
+    { ERx("exp.clf.gv.cnf_value")    , {EOS} }
 
 };
 

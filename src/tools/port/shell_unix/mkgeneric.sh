@@ -137,6 +137,8 @@
 #	    Hybrid scheme revised somewhat, fix here; VERS can control jam.
 #	    Stop trolling around in libc, better to do trial compiles; more
 #	    accurate, and stops noise from nm on linux.
+##	22-Nov-2010 (kschendel) SIR 124685
+##	    Drop a few more ancient / obsolete ports
 #
 
 
@@ -178,10 +180,7 @@ echo "# define $vers"
 echo "#endif"
 
 case $vers in
-  su4_us5|\
-  sui_us5|\
-  rmx_us5|\
-  rux_us5) echo "#define DMAKEPP \"/usr/ccs/lib/cpp\""
+  su4_us5) echo "#define DMAKEPP \"/usr/ccs/lib/cpp\""
            ;;
   sgi_us5) echo "#define DMAKEPP \"/usr/lib32/cmplrs/cpp\""
 	   ;;
@@ -196,12 +195,7 @@ case $vers in
 esac
 
 case $vers in
-  rmx_us5|\
-  rux_us5|\
-  dr6_us5) CPP="/usr/ccs/lib/cpp"
-           ;;
-  su4_us5|\
-  sui_us5) CPP="/usr/ccs/lib/cpp"
+  su4_us5) CPP="/usr/ccs/lib/cpp"
            ;;
   usl_us5) CPP="/usr/ccs/lib/cpp"
            ;;
@@ -284,17 +278,8 @@ rm -f ${tmpfile}*
 # killpg
 #
 case $vers in
-     su4_us5|sui_us5)        ;;
+     su4_us5)        ;;
      i64_hpu)	;;
-     nc4_us5)  if [ ! -f /usr/ccs/lib/libc89.a ] ; then
-		echo 'main(){int i,j; killpg(i,j);}' >${tmpfile}.c
-		$CC -o $tmpfile ${tmpfile}.c >/dev/null 2>&1 || \
-			echo "#define killpg(x,y) kill(-(x),y)"
-		rm -f ${tmpfile}*
-               fi
-                ;;
-     rux_us5)  echo "#define killpg(x,y) kill(x,y)"
-     		;;
      *)     if [ ! -f /usr/lib/libjobs.a ] ; then
 		echo 'main(){int i,j; killpg(i,j);}' >${tmpfile}.c
 		$CC -o $tmpfile ${tmpfile}.c >/dev/null 2>&1 || \
@@ -338,9 +323,7 @@ rm -f ${tmpfile}*
 # Some systems define *signal differently.
 
 case $vers in
-  dg8_us5) echo '#define TYPESIG void'
-           ;;
-  dgi_us5|axp_osf) echo '#define TYPESIG void'
+	axp_osf) echo '#define TYPESIG void'
            ;;
 	*_lnx|int_rpl) echo '#define TYPESIG void'
 	   ;;

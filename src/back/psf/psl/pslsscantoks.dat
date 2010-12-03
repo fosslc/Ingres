@@ -1,5 +1,5 @@
 /*
-** Copyright 2010, Ingres Corporation
+** Copyright (c) 2010, Ingres Corporation
 **
 **	pslstoks.dat - token file for SQL
 **
@@ -19,6 +19,8 @@
 **	    Add encrypt token.
 **      23-Aug-2010 (horda03) b124274
 **          Add SEGMENTED as a keyword for SET QEP SEGMENTED.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for SET SESSION *COLLATION*
 */
 
 /* Keywords of length 0, and other non-existent lengths */
@@ -76,7 +78,7 @@
 124 rows
  25 save
  69 some
-219 srid
+220 srid
  33 then
 213 true
  24 user
@@ -205,6 +207,7 @@
  93 rollback
 /* Keywords of length 9 */
 204 beginning
+219 collation
 145 committed
 141 copy_from
 142 copy_into

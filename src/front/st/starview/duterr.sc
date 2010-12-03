@@ -184,6 +184,8 @@ DUT_ERRCB   *dut_errcb;
 **	29-oct-93 (swm)
 **	    Added comments to indicate that code which causes lint
 **	    int/pointer truncation warnings is valid.
+**	1-Dec-2010 (kschendel)
+**	    Fix annoying compiler warning.
 */
 DUT_STATUS
 dut_ee3_error(dut_errcb, dut_errno, dut_pcnt, 
@@ -246,20 +248,15 @@ i4		    *p10;
 
 
     /* put arguments into argument array */
-	/* lint truncation warning if size of ptr > int, but code valid */
-    param[0].er_size  = (i4) p1;
+    param[0].er_size  = (i4) (SCALARP) p1;
     param[0].er_value = (PTR)p2;
-	/* lint truncation warning if size of ptr > int, but code valid */
-    param[1].er_size  = (i4) p3;
+    param[1].er_size  = (i4) (SCALARP) p3;
     param[1].er_value = (PTR)p4;
-	/* lint truncation warning if size of ptr > int, but code valid */
-    param[2].er_size  = (i4) p5;
+    param[2].er_size  = (i4) (SCALARP) p5;
     param[2].er_value = (PTR)p6;
-	/* lint truncation warning if size of ptr > int, but code valid */
-    param[3].er_size  = (i4) p7;
+    param[3].er_size  = (i4) (SCALARP) p7;
     param[3].er_value = (PTR)p8;
-	/* lint truncation warning if size of ptr > int, but code valid */
-    param[4].er_size  = (i4) p9;
+    param[4].er_size  = (i4) (SCALARP) p9;
     param[4].er_value = (PTR)p10;
 
     tmp_status  = ERlookup(dut_errno, (CL_SYS_ERR *) 0, 0, 0,
@@ -286,7 +283,7 @@ i4		    *p10;
 	dut_errcb->dut_e8_errmsg[rslt_msglen++]    = '\n';
 	save_msglen  = rslt_msglen;
 	buf_len	    -= rslt_msglen;
-	tmp_status = ERlookup((i4) 0, dut_errcb->dut_e7_clsyserr, 0, 0,
+	tmp_status = ERlookup((i4) 0, (CL_ERR_DESC *) dut_errcb->dut_e7_clsyserr, 0, 0,
 				&dut_errcb->dut_e8_errmsg[rslt_msglen],
 				buf_len, lang_code, &rslt_msglen,
 				&sys_err, 0, (ER_ARGUMENT *) NULL);

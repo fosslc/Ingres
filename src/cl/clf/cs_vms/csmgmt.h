@@ -13,6 +13,8 @@
 **	Make _classes GLOBALCONSTREFs for VMS sharability.
 **	13-Jul-1995 (dougb)
 **		Add additional classes as per Unix version of this file.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 /* data */
@@ -24,8 +26,6 @@ GLOBALCONSTREF MO_CLASS_DEF CS_mon_classes[];
 GLOBALCONSTREF MO_CLASS_DEF CS_int_classes[];
 
 /* utilities */
-
-VOID CS_mo_init(void);
 
 FUNC_EXTERN STATUS CS_sem_attach( CS_SEMAPHORE *sem );
 FUNC_EXTERN STATUS CS_detach_sem( CS_SEMAPHORE *sem );

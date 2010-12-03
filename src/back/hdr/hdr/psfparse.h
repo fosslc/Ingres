@@ -2539,6 +2539,8 @@ typedef struct _PST_OBJDEP
 **	    Resolve flag conflict in psq_flags2
 **	14-Oct-2010 (kschendel) SIR 124544
 **	    Pass result-structure to PSF startup.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for setting installation wide collation defaults.
 */
 typedef enum psq_mode_enum {
 #define PSQ_MODES_MACRO \
@@ -3256,6 +3258,11 @@ typedef struct _PSQ_CB
     void               *psq_qnode;      /* QSF node details for */
 
     char	       *psq_server_class; /* server_class */
+    DB_COLL_ID		psq_def_coll;		/* Default collation for CHAR,
+						** VARCHAR, C, TEXT and LONG
+						** VARCHAR */
+    DB_COLL_ID		psq_def_unicode_coll;	/* Default collation for NCHAR,
+						** NVARCHAR and LONG NVARCHAR */
 } PSQ_CB;
 
 /*

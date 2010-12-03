@@ -15,6 +15,7 @@
 # include <st.h>
 # include <tr.h>
 # include <me.h>
+# include <qu.h>
 # include <ercl.h>
 
 # include <csinternal.h>
@@ -326,6 +327,10 @@
 **	    resolved.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of qu.h neccessary for QUr_init.
 **/
 
 /*
@@ -336,8 +341,6 @@ static bool CSMT_sem_owner_dead(
 	    CS_SEMAPHORE    *sem,
 	    CS_SCB          *scb);
 
-GLOBALREF CS_SYSTEM           Cs_srv_block;
-GLOBALREF i4		      Cs_incomp;
 GLOBALREF i4             Cs_numprocessors;
 GLOBALREF i4             Cs_max_sem_loops;
 GLOBALREF i4             Cs_desched_usec_sleep;
@@ -989,8 +992,8 @@ CSMTp_semaphore(i4 exclusive, register CS_SEMAPHORE *sem)
     **   decrement the share count, and signal the condition.
     */
     while ( status == OK &&
-	   (exclusive && sem->cs_count) ||
-	   (!exclusive && sem->cs_excl_waiters) )
+	   ((exclusive && sem->cs_count) ||
+	    (!exclusive && sem->cs_excl_waiters)) )
     {
 	sem->cs_cond_waiters++;
         try_logical++;
@@ -2374,8 +2377,10 @@ CSMT_sem_owner_dead(
 **      18-aug-1998 (hweho01)
 **         If the shared segment has been attached, just call 
 **         ME_offset_to_addr() to get the shared memory address.  
+**	10-Nov-2010 (kschendel) SIR 124685
+**	   Make void, nothing uses the return.
 */
-STATUS
+void
 CSMT_cp_sem_cleanup(
     char            *key,
     CL_ERR_DESC     *err_code)
@@ -2431,7 +2436,6 @@ CSMT_cp_sem_cleanup(
         if( called_attach )
           stat = MEdetach(key, shm_addr, &sys_err);
     }
-    return(stat);
 }
 #endif
 

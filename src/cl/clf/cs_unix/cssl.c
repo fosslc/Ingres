@@ -20,6 +20,13 @@ NO_OPTIM = dr6_us5 dr6_ues i64_aix
 # include    <tr.h>
 # include    <er.h>
 # include    <me.h>
+# include    <nm.h>
+# include    <cv.h>
+# include    <di.h>
+# include    <dislave.h>
+# include    <csinternal.h>
+# include    <cslocal.h>
+# include    <exinternal.h>
 
 /**
 **
@@ -140,6 +147,8 @@ NO_OPTIM = dr6_us5 dr6_ues i64_aix
 **        IIDBMS SEGV's creating database when II_THREAD_TYPE set to INTERNAL.
 **        Tempory workaround for GA, silently dissable INTERNAL THREADS. i.e.
 **        ingore II_THREAD_TYPE and always use OS threads. FIX ME!!
+**	14-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 
@@ -150,25 +159,27 @@ NO_OPTIM = dr6_us5 dr6_ues i64_aix
 GLOBALREF	CS_SMCNTRL	*Cs_sm_cb;
 GLOBALREF	CS_SERV_INFO	*Cs_svinfo;
 
-FUNC_EXTERN	STATUS	DI_init_slave(), DI_slave();
-FUNC_EXTERN	STATUS	start_GC_slave(), GC_slave();
-
-GLOBALDEF CSEV_CALLS	CScalls[] = {
-    start_GC_slave, GC_slave,	/* GC_SLAVE = 0 */
-    DI_init_slave, DI_slave,	/* DI_SLAVE = 1 */
-    0, 0
-};
 
 /*
 **  Forward and/or External function references.
 */
 
-FUNC_EXTERN	i4	CSslave_handler();
-# ifdef SIGDANGER
-FUNC_EXTERN     TYPESIG CSslave_danger();       /* handler for sigdanger */
-GLOBALDEF       bool    rcvd_danger = FALSE;    /* flag set in handler */
-# endif /* SIGDANGER */
 
+static void CSslave_exit(PTR address);
+static i4 CSslave_handler(EX_ARGS *);
+
+# ifdef SIGDANGER
+GLOBALDEF       bool    iiCSrcvd_danger = FALSE;    /* flag set in handler */
+
+#ifdef  xCL_011_USE_SIGVEC
+static TYPESIG
+CSslave_danger(i4 signum, i4 code, struct sigcontext *scp);
+# else
+static TYPESIG
+CSslave_danger(i4 signum);
+# endif
+
+# endif /* SIGDANGER */
 
 
 /*
@@ -244,11 +255,13 @@ static	char	*CSev_base;
 **	    fixes bug 106436.
 **	15-Jun-2004 (schka24)
 **	    Safe env variable handling.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Ditch obsolete "GC slave", whatever that was.  Hardwire to
+**	    nearly-as-obsolete DI slaves.
 */
 
-CS_init_slave(argc, argv)
-int	argc;
-char	**argv;
+void
+CS_init_slave(int argc, char **argv)
 {
     i4		slave_no, slave_type, serve_no, subslave;
     fd_set	fdmask;
@@ -305,7 +318,8 @@ char	**argv;
 # endif /* SIGDANGER */
 
     if (argc != 6 || CVan(argv[1], &slave_type) || CVan(argv[2], &slave_no) ||
-	CVan(argv[3], &serve_no) || CVan(argv[4], &subslave))
+	CVan(argv[3], &serve_no) || CVan(argv[4], &subslave) ||
+	slave_type != 1)
     {
         TRdisplay("Bad arguments to slave, exit 3\n" );
 	PCexit(3);
@@ -348,14 +362,11 @@ char	**argv;
 	}
 	++str;
     }
-    if (CScalls[slave_type].evinit)
+    if( (status = DI_init_slave(fdmask, FD_SETSIZE)) != OK )
     {
-      if( (status = (*CScalls[slave_type].evinit)(fdmask, FD_SETSIZE)) != OK )
-	{
-	  TRdisplay("Slave evinit error, status %x:\n%s\nslave exit 6\n",
+      TRdisplay("Slave evinit error, status %x:\n%s\nslave exit 6\n",
 		    status, ERget(status) );
-	  PCexit( 6 );
-	}
+      PCexit( 6 );
     }
     last_evcb = (CSEV_CB *)(CSev_base + slcb->events);
     status = OK;
@@ -409,9 +420,9 @@ char	**argv;
 	** If this slave is signalled to exit, call CSslave_exit().
 	*/
 	if (evcb->flags & EV_EXIT)
-		CSslave_exit(&address);
+	    CSslave_exit(address);
 
-	status = (*CScalls[slave_type].evhandle)(evcb);
+	status = DI_slave(evcb);
         if( status != OK )
 	{
 	    TRdisplay("slave error calling evhandle, status %x:\n%s\n",
@@ -469,9 +480,8 @@ char	**argv;
 **	12-aug-91 (bonobo)
 **	    Updated ERsend() to include ER_ERROR_MSG.
 */
-i4
-CSslave_handler(exargs)
-EX_ARGS	*exargs;
+static i4
+CSslave_handler(EX_ARGS *exargs)
 {
     char	buf[EX_MAX_SYS_REP];
     i4		i;
@@ -507,16 +517,13 @@ EX_ARGS	*exargs;
 */
 #ifdef  xCL_011_USE_SIGVEC
 
-TYPESIG
-CSslave_danger(signum, code, scp)
-i4      signum;
-i4      code;
-struct sigcontext *scp;
+static TYPESIG
+CSslave_danger(i4 signum, i4 code, struct sigcontext *scp)
 
 # else
 
-TYPESIG
-CSslave_danger(signum)
+static TYPESIG
+CSslave_danger(i4 signum)
 
 # endif
 
@@ -525,7 +532,7 @@ CSslave_danger(signum)
         /* re-establish handler */
         signal(signum, CSslave_danger);
 # endif
-        rcvd_danger = TRUE;
+        iiCSrcvd_danger = TRUE;
 }
 # endif /* SIGDANGER */
 
@@ -557,8 +564,9 @@ CSslave_danger(signum)
 **	    Created.
 */
 
+static void
 CSslave_exit(slave_serv_ptr)
-PTR	*slave_serv_ptr;
+PTR	slave_serv_ptr;
 {
     CL_ERR_DESC err_code;
     i4  i;
@@ -578,15 +586,3 @@ PTR	*slave_serv_ptr;
     /* Exit the slave process. */
     PCexit(OK);
 }
-
-#ifndef	GCSLAVES
-STATUS start_GC_slave()
-{
-    return(OK);
-}
-
-STATUS GC_slave()
-{
-    return(OK);
-}
-#endif

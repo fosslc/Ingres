@@ -695,6 +695,8 @@
 ##	    'deprecated' warnings.
 ##	20-Oct-2010 (kschendel)
 ##	    int_osx doesn't use -l for ar, and ls -lo is broken.
+##	23-Nov-2010 (kschendel)
+##	    Drop some more obsolete ports.
 ##
 ##
 #-------------------------------------------------------------------------
@@ -773,21 +775,15 @@ echo export WHOAMI
 
 #-------------------------------------------------------------------------
 case $vers in
-  ds3_ulx)
-      echo BPATHSED="'s/.*\/.//'"
-      ;;
-  hp3_us5 | hp8_us5 |  hp8_bls | hpb_us5 | hp2_us5 | i64_hpu)
+  hp8_us5 |  hpb_us5 | hp2_us5 | i64_hpu)
     echo BPATHSED="'s/.*\///'"
     ;;
-  ris_us5 | rs4_us5 | r64_us5)
+  rs4_us5 | r64_us5)
     cat << !
 BPATHSED='s/r//'
 DFCMD="exec df -M"
 !
       ;;
-  dg8_us5 | dgi_us5)
-    echo BPATHSED='"s/.*\/.//"'
-    ;;
   *)
     echo BPATHSED='s,.*/,,'
 	echo 'DFCMD="exec df"'
@@ -882,7 +878,7 @@ then
 elif [ "$vers" = "rs4_us5" ] || [ "$vers" = "r64_us5" ]
 then
     echo PSCMD=\"env COLUMNS=132 ps -ef\"
-elif [ "$vers" = "su4_us5" -o "$vers" = "sui_us5" -o "$vers" = "su9_us5" -o "$vers" = "dr6_us5" -o "$vers" = "rmx_us5"  -o "$vers" = "rux_us5" -o "$vers" = "hpb_us5" -o "$vers" = "hp2_us5" -o "$vers" = "i64_hpu" -o "$vers" = "a64_sol" ]
+elif [ "$vers" = "su4_us5" -o "$vers" = "su9_us5" -o "$vers" = "hpb_us5" -o "$vers" = "hp2_us5" -o "$vers" = "i64_hpu" -o "$vers" = "a64_sol" ]
 then
     echo PSCMD=\"/bin/ps -ef\"
 elif [ "$vers" = "mg5_osx" ] || [ "$vers" = "int_osx" ] ; then
@@ -952,31 +948,17 @@ case $vers in
     su9_us5|\
     rs4_us5|\
     r64_us5|\
-    pym_us5|\
-    rmx_us5|\
-    ts2_us5|\
-    rux_us5|\
-    ris_u64|\
     a64_sol|\
     i64_hpu)
         echo PINGCMD=/usr/sbin/ping
         ;;
-    dg8_us5)
-        echo PINGCMD=/usr/bin/ping
-        ;;
-    dgi_us5)
-        echo PINGCMD=/usr/ucb/ping
-        ;;
-    hp8_us5|sqs_ptx|hpb_us5|hp2_us5)
+    hp8_us5|hpb_us5|hp2_us5)
         echo PINGCMD=/etc/ping
         ;;
     axp_osf)
         echo PINGCMD=\"/usr/sbin/ping -c 1\"
         ;;
-    sco_us5|sos_us5)
-        echo PINGCMD=\"/usr/bin/ping -c 1\"
-        ;;
-	sgi_us5)
+    sgi_us5)
         echo PINGCMD=\"/usr/etc/ping -c 1\"
         ;;
     *_lnx|int_rpl)
@@ -994,7 +976,7 @@ case $vers in
         *_lnx|int_rpl)
 	        echo PINGARGS=\"\-c 1\"
 		;;
-	hp8_us5|ris_us5|nc4_us5|hpb_us5|hp2_us5|i64_hpu)
+	hp8_us5|hpb_us5|hp2_us5|i64_hpu)
 		echo PINGARGS=\"64 1\"
 		;;
 	*)
@@ -1025,24 +1007,16 @@ echo export LINKCMD
 echo ""
 echo "#  Set a variable to the system's host name:"
 
-case $vers in
-    su4_u42|su4_cmw)
-	echo "HOSTNAME=\`hostname\`"
-	echo SU_FLAGS=-cf
-	;;
-    *)
-	if (uname) > /dev/null 2>&1
-	then
-	    echo "HOSTNAME=\`uname -n\`"
-	elif (hostname) > /dev/null 2>&1
-	then
-	    echo "HOSTNAME=\`hostname\`"
-	else
-	    echo "HOSTNAME=\`uuname -l\`"
-	fi
-	echo SU_FLAGS=-c
-	;;
-esac
+if (uname) > /dev/null 2>&1
+then
+    echo "HOSTNAME=\`uname -n\`"
+elif (hostname) > /dev/null 2>&1
+then
+    echo "HOSTNAME=\`hostname\`"
+else
+    echo "HOSTNAME=\`uuname -l\`"
+fi
+echo SU_FLAGS=-c
 
 echo export HOSTNAME
 
@@ -1096,7 +1070,7 @@ rm -f $TMP1 $TMP2
 
 #-------------------------------------------------------------------------
 
-if [ "$vers" = "ris_u64" ] || [ "$vers" = "i64_aix" ]
+if [ "$vers" = "i64_aix" ]
 then
         echo ""
         echo "# Defined the 64 bit object mode for AIX "
@@ -1123,9 +1097,6 @@ sed  -e 's/ *=/=/' -e 's/= */=/' \
 echo "build_arch=$build_arch"
 
 case $vers in
-    ris_us5)
-      echo LINKTESTFLAG='-L'
-      ;;
     axp_osf)
 	if uname -a | grep "V3\.0" > /dev/null 2>&1
 	then
@@ -1335,7 +1306,7 @@ read_kmem=true          # Does rcheck read /dev/kmem ? default true.
 
 
 case $iisys in
-        ds3.osf|axp.osf)
+        axp.osf)
                 check_swap_space=false
 		etcrcfiles=/sbin/rc3.d
                 pstat=
@@ -1345,13 +1316,6 @@ case $iisys in
                 pstat_kbyte_factor=
                 bsd_df="df -k"
                 ;;
-        ds3*|vax.ulx)
-                pstat_used_arg=3
-                pstat_remain_arg=6
-                pstat_total_arg=1
-		pstat="$pstat | sed 's/[^0-9 ]//g'"	# The command to use
-		check_c2=true
-                ;;
 	sgi.us5)
 		pstat="/etc/swap -s -b "
 		pstat_used_arg=9
@@ -1360,78 +1324,12 @@ case $iisys in
 		pstat_kbyte_factor="'1 / 2'"
                 bsd_df="df -Pk"
 		;;
-        sqs.ptx)
-                etcrcfiles=/etc/rc2.d
-                check_memory_resources=false
-                pstat="/etc/swap -f | grep free"
-## /etc/swap -f gives info "25952 used, 382368 free, 4664 wasted" in 512b blocks
-## plus another line in which we have no interest
-                pstat_used_arg=1
-                pstat_remain_arg=3
-                pstat_kbyte_factor="'1 / 2'"
-                ;;
-	sqs*)
-		etcrcfiles=/etc/rc.sys5
-		check_memory_resources=false
-		pstat_used_arg=1
-		pstat_remain_arg=3
-		;;
-        pym.us5|rmx.us5|ts2.us5|rux.us5)
-# Unfortunately, sh doesn't deal well with args over $9, so we have to trim
-# off the first part of swap's output first.
-# /usr/sbin/swap -s: gives total figure, in 512b blocks.
-# total: 79248 allocated + 37944 reserved = 117192 blocks used, 159824 blocks available
-                etcrcfiles=/etc/rc2.d/
-                pstat="/usr/sbin/swap -s | cut -d= -f2-"
-                pstat_used_arg=1
-                pstat_remain_arg=4
-		pstat_kbyte_factor="'1 / 2'"
-                [ `expr "$iisys" : "pym.us5"` -ne 0 ] && bsd_df="df -k"
-                ;;
-	pyr*)
-		output_sink=
-		pstat_total_arg=1
-		pstat_remain_arg=5
-		pstat_used_arg=
-		;;
-        hp8.bls)
-                check_memory_resources=false
-                check_swap_space=false
-                acpart_not_allowed=false
-                bsd_df=bdf
-                read_kmem=false
-                ;;
-	hp3*|hp8*|hpb*|hp2*|i64.hpu)
+	hp8*|hpb*|hp2*|i64.hpu)
 		check_swap_space=false
 		acpart_not_allowed=false
 		bsd_df=bdf
 		;;
-	dr5*)
-		pstat="df /dev/swap | grep swap"
-		pstat_total_arg=3
-		pstat_remain_arg=3
-		;;
-	odt*|sco*|sos.us5)
-		acpart_not_allowed=false
-		pstat="/etc/swap -l | sed '1d' |
-			awk '{ blks += \\\$4 ; free += \\\$5 } END
-			{ printf \\\"%d %d\\\n\\\",blks,free }'"
-		pstat_used_arg=
-		pstat_remain_arg=2
-		pstat_total_arg=1
-		pstat_kbyte_factor="'1 / 2'"
-		;;
-	nc4*)
-		pstat="/etc/swap -l | sed '1d' |
-			awk '{ blks += \\\$4 ; free += \\\$5 } END
-			{ printf \\\"%d %d\\\n\\\",blks,free }'"
-		pstat_used_arg=
-		pstat_remain_arg=2
-		pstat_total_arg=1
-		pstat_kbyte_factor="'1 / 2'"
-                bsd_df="df -k"
-		;;
-	su4.us5*|sui.us5*|su9.us5*|a64.sol)
+	su4.us5*|su9.us5*|a64.sol)
 		etcrcfiles=/etc/rc2.d
 		pstat="LC_ALL=C;export LC_ALL;/usr/sbin/swap -s|tr -cd \\\"[0-9]/+/-/,/ /=/:/\\\""
 		pstat_used_arg=6
@@ -1445,7 +1343,7 @@ case $iisys in
 		    read_kmem=false
 		fi
 		;;
-	ris.us5*|rs4.us5*|ris.u64*|r64.us5*)
+	rs4.us5*|r64.us5*)
 		acpart_not_allowed=false
 		pstat="/usr/sbin/lsps -a | awk ' BEGIN { TOT = 0; USED = 0}; FNR > 1 { TOT = TOT + \\\$4; USED = USED + \\\$4*\\\$5/100 }; END { REM = TOT - USED; print int(TOT) \\\" \\\" int(USED) \\\" \\\" int(REM)  } '"
 		pstat_total_arg=1
@@ -1456,7 +1354,7 @@ case $iisys in
                 [ `expr "$iisys" : "rs4.us5"` -ne 0 ] && bsd_df="df -k"
                 [ `expr "$iisys" : "r64.us5"` -ne 0 ] && bsd_df="df -k"
 		;;
-	dr6*|dra*|usl.us5)
+	usl.us5)
 		etcrcfiles=/etc/rc2.d
 		pstat="swap -s|tr -d \\\"[a-z]\\\""
 		pstat_used_arg=6
@@ -1464,11 +1362,6 @@ case $iisys in
 		pstat_total_arg=
 		pstat_kbyte_factor="'1 / 2'"
 		;;
-        dg8*|dgi*)
-                check_swap_space=false
-                use_symbolic_links=true
-                bsd_df="df -k"
-                ;;
 	*lnx|int.rpl)
 		check_swap_space=false
 		read_kmem=false
@@ -1492,7 +1385,7 @@ esac
 
 # Establish command to use for finding major and minor numbers of a device
 case $iisys in
-hp3*|hp8*|hpb*|hp2*|i64.hpu)
+hp8*|hpb*|hp2*|i64.hpu)
         sed_major_minor="'s/^.* \([0-9][0-9]*\) *\(0x[0-9a-f]*\) .*$/\1 \2/'"
         ;;
 *)
@@ -1544,33 +1437,11 @@ else
 fi
 
 #-------------------------------------------------------------------------
-# These are used to assign security labels and privileges on machines
-# supporting this functionality
+# No security label functionality since B1 security removed.
 #
-case $vers in
-    su4_cmw)
-      echo SET_B1_PRIV=true
-      echo SETLABEL="setlabel"
-      echo 'ADDPRIV_SERVER="/usr/etc/chpriv af=file_downgrade_il,file_downgrade_sl,file_mac_read,file_mac_write,net_mac_override,net_setil,sys_trans_label,proc_tranquil,proc_nofloat"'
-      echo 'ADDPRIV_MAINT="/usr/etc/chpriv af=file_downgrade_il,file_downgrade_sl,file_mac_read,file_mac_write,file_setpriv,file_upgrade_il,file_upgrade_sl,net_mac_override,net_setil,sys_trans_label,proc_tranquil,proc_nofloat"'
-      echo 'ADDPRIV_CLIENT="/usr/etc/chpriv af=sys_trans_label,proc_nofloat"'
-      echo 'ADDPRIV_SLUTIL="/usr/etc/chpriv a+proc_setil,proc_setsl,file_mac_read,file_mac_write"'
-      echo 'ADDPRIV_KMEM="/usr/etc/chpriv af+file_dac_read"'
-      echo export SET_B1_PRIV SETLABEL
-      echo export ADDPRIV_SERVER ADDPRIV_MAINT ADDPRIV_CLIENT ADDPRIV_SLUTIL ADDPRIV_KMEM
-      ;;
-    hp8_bls)
-      echo SETLABEL="chlevel"
-      echo SET_B1_PRIV=false
-      echo export SET_B1_PRIV SETLABEL
-      echo export ADDPRIV_SERVER ADDPRIV_MAINT ADDPRIV_CLIENT ADDPRIV_KMEM ADDPRIV_SLUTIL
-      ;;
-    *)
-      echo SET_B1_PRIV=false
-      echo SETLABEL=true
-      echo export SET_B1_PRIV SETLABEL
-      ;;
-esac
+echo SET_B1_PRIV=false
+echo SETLABEL=true
+echo export SET_B1_PRIV SETLABEL
 
 echo READ_KMEM=$read_kmem
 echo export READ_KMEM
@@ -1581,10 +1452,8 @@ echo " "
 # The AR_L_OPT variable is "l" on machines that allow "ar l" 
 # and null on machines that don't:
 case $vers in
-   sqs_ptx|\
    su4_us5|\
    su9_us5|\
-   sui_us5|\
    a64_sol|\
    int_osx|\
    usl_us5)
@@ -1651,16 +1520,6 @@ case $vers in
       echo "fi"
       echo "CLUSTER_MAX_NODE=15"
       ;;
-#   dgi_us5 )
-#      echo "if test -f /usr/sadm/sysadm/bin/running_with_clusters &&"
-#      echo "           /usr/sadm/sysadm/bin/running_with_clusters"
-#      echo "then"
-#      echo "    CLUSTERSUPPORT=true"
-#      echo "else"
-#      echo "    CLUSTERSUPPORT=false"
-#      echo "fi"
-#      echo "CLUSTER_MAX_NODE=15"
-#      ;;
    *) 
       echo CLUSTERSUPPORT=true
       echo "CLUSTER_MAX_NODE=15"

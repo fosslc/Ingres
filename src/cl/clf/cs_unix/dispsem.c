@@ -27,6 +27,8 @@
 **	    eliminate su4_us5 acc warning: "semantics of "<" change in ANSI C".
 **	15-jul-93 (ed)
 **	    adding <gl.h> after <compat.h>
+**	14-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 /* Don't grep system header directly, use RTI headers (fredv) */
@@ -35,19 +37,25 @@
 #include    <clconfig.h>
 #include    <systypes.h>
 #include    <clipc.h>
+#include    <stdio.h>
+
+# ifdef xCL_075_SYS_V_IPC_EXISTS
+    static void reptsem(char *);
+#endif
 
 main(argc, argv)
 int	argc;
 char	**argv;
 {
 # ifdef xCL_075_SYS_V_IPC_EXISTS
+
     while (--argc && *++argv)
 	reptsem(*argv);
     exit(0);
 }
 
-reptsem(sid)
-char	*sid;
+static void
+reptsem(char *sid)
 {
     int	id, i;
     struct	semid_ds	semstat;
@@ -58,7 +66,7 @@ char	*sid;
     printf("sem %d:\n", id);
     arg.buf = &semstat;
     semctl(id, 0, IPC_STAT, arg);
-    printf("nsem %d:", semstat.sem_nsems);
+    printf("nsem %ld:", semstat.sem_nsems);
     arg.array = vals;
     semctl(id, 0, GETALL, arg);
     for (i = 0; i < (int) semstat.sem_nsems; i++)

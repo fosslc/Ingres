@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008 Ingres Corporation
+# Copyright (c) 2008,2010 Ingres Corporation
 #
 #
 # The entries in this file associate configuration resource names with
@@ -294,6 +294,12 @@ rms.define_address.title:		'II_DBMS_SERVER Symbol Definition'
 
 *.default_journaling.file:		dbmsjrnl.hlp	
 dbms.default_journaling.title:		'DBMS Default Journaling'
+
+*.default_collation.file:		dbmscoll.hlp
+dbms.default_collation.title:		'Default collation'
+
+*.default_unicode_collation.file:	dbmscoll.hlp
+dbms.default_unicode_collation.title:	'Default Unicode collation'
 
 dbms.degree_of_parallelism.file:	dbmsdegp.hlp
 dbms.degree_of_parallelism.title:	'DBMS Degree of DMF Parallelism'

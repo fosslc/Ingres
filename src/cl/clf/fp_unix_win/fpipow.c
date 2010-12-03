@@ -12,6 +12,7 @@
 # include	<me.h>
 # include	<meprivate.h>
 # include	<fp.h>
+# include	<exinternal.h>
 
 # include	"fplocal.h"
 
@@ -48,7 +49,16 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototype for IIFPipowsig.
 **/
+
+TYPESIG IIFPipowsig(
+        int signum,
+        EX_SIGCODE      SIGCODE(sigcode),
+        EX_SIGCONTEXT   SIGCONTEXT(sigcontext));
 
 /* Externs */
 

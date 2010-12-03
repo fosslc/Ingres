@@ -1721,6 +1721,8 @@ typedef struct _DM_PTR
 **	    Added attgeomtype and attsrid.
 **	28-apr_2010 (miket) SIR 122403
 **	    Add ATT_BYTE and ATT_VBYTE.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Correct type of attflag
 */
 struct _DM_COLUMN
 {
@@ -1804,7 +1806,7 @@ struct _DM_COLUMN
 #define			 ATT_SECID          DB_SECID_TYPE
      i2              attfmp;		    /* Precision for unsigned integer.*/
      u_i2	     attver_altcol;         /* version row altered */
-     u_i2	     attcollID;		    /* explicitly declared Collation */
+     i2		     attcollID;		    /* explicitly declared Collation */
      i4			 attsrid;			/* geometry spatial reference system id */
      i2			 attgeomtype;		/* geometry data type */
      u_i2	     attencflags;	    /* encryption flags */

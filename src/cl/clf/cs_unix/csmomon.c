@@ -74,6 +74,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	14-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 
@@ -169,13 +171,12 @@ GLOBALDEF MO_CLASS_DEF CS_mon_classes[] =
 **	    documented
 */
 
-STATUS
+static STATUS
 CS_mod_session( char *uns_decimal_session, CS_SCB **scbp )
 {
     u_i4 scb_as_ulong;
     CS_SID an_sid;
     CS_SCB *an_scb;
-    CS_SCB *scan_scb;
     STATUS stat;
     CS_SCB *this_scb;
     
@@ -233,7 +234,7 @@ CS_mod_session( char *uns_decimal_session, CS_SCB **scbp )
 **	28-Oct-1992 (daveb)
 **	    documented
 */
-STATUS
+static STATUS
 CS_is_internal( CS_SCB *an_scb )
 {
     STATUS stat = OK;
@@ -283,7 +284,8 @@ CS_is_internal( CS_SCB *an_scb )
 STATUS
 CS_breakpoint_set( i4  offset, i4  lsbuf, char *sbuf, i4  size, PTR object  )
 {
-    return( CS_breakpoint() );
+    CS_breakpoint();
+    return (OK);
 }
 
 
@@ -693,7 +695,7 @@ CS_debug_set( i4  offset, i4  lsbuf, char *sbuf, i4  size, PTR object  )
 # if 0
 	char	buffer[1048];
 	CS_fmt_scb(an_scb, sizeof(buffer), buffer);
-	CS_dump_stack(an_scb, 0, output_fcn, FALSE);
+	CS_dump_stack(an_scb, 0, NULL, output_fcn, FALSE);
 # endif
     }
     return( stat );

@@ -493,6 +493,8 @@
 **          As cs_diag() for Evidence Set port.
 **	18-May-2010 (drivi01)
 **	    Add CScas macro that calls InterlockedCompareExchange.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **
 ******************************************************************************/
 
@@ -517,6 +519,7 @@ typedef struct _CS_SEMAPHORE	CS_SEMAPHORE;
 typedef struct _CS_CONDITION	CS_CONDITION;
 typedef struct _CS_SEM_STATS    CS_SEM_STATS;
 typedef struct _CS_CPID  CS_CPID;
+typedef struct _CS_INFO_CB	CS_INFO_CB;
 
 /******************************************************************************
 **
@@ -767,26 +770,26 @@ typedef struct _CS_CB
     i4      cs_ascnt;           /* nbr of active sessions */
     i4      cs_stksize;         /* size of stack in bytes */
     bool    cs_stkcache;        /* enable stack caching w/threads */ 
-    STATUS  (*cs_scballoc)();   /* Routine to allocate SCB's */
-    STATUS  (*cs_scbdealloc)(); /* Routine to dealloc  SCB's */
-    STATUS	(*cs_saddr)();		/* Routine to await session requests */
-    STATUS	(*cs_reject)();		/* how to reject connections */
-    STATUS	(*cs_disconnect)();	/* how to dis- connections */
-    STATUS	(*cs_read)();		/* Routine to do reads */
-    STATUS	(*cs_write)();		/* Routine to do writes */
-    STATUS  (*cs_process)();    /* Routine to do major processing */
-    STATUS	(*cs_attn)();		/* Routine to process attn calls */
-    VOID	(*cs_elog)();       /* Routine to log errors */
-    STATUS	(*cs_startup)();	/* startup the server */
-    STATUS	(*cs_shutdown)();	/* shutdown the server */
-    STATUS	(*cs_format)();		/* format scb's */
-    STATUS	(*cs_facility)();	/* return current facility */
-    STATUS	(*cs_diag)();	/* DIAG STUFF EXDUMP */
-    VOID            (*cs_scbattach)();  /* Attach thread control block to MO */
-    VOID            (*cs_scbdetach)();  /* Detach thread control block */
-    i4          (*cs_get_rcp_pid)();    /* return RCP's pid */
+    STATUS	(*cs_scballoc)(CS_SCB **, void *, i4);	/* Routine to allocate SCB's */
+    STATUS	(*cs_scbdealloc)(CS_SCB *); /* Routine to dealloc  SCB's */
+    STATUS	(*cs_saddr)(void *, i4); /* Routine to await session requests */
+    STATUS	(*cs_reject)(void *, STATUS); /* how to reject connections */
+    VOID	(*cs_disconnect)(CS_SCB *); /* how to dis- connections */
+    STATUS	(*cs_read)(CS_SCB *, i4);	/* Routine to do reads */
+    STATUS	(*cs_write)(CS_SCB *, i4);	/* Routine to do writes */
+    STATUS	(*cs_process)(i4, CS_SCB *, i4 *); /* Routine to do major processing */
+    STATUS	(*cs_attn)(i4, CS_SCB *); /* Routine to process attn calls */
+    VOID	(*cs_elog)(i4, CL_ERR_DESC *, i4, ...);	/* Routine to log errors */
+    STATUS	(*cs_startup)(CS_INFO_CB *);	/* startup the server */
+    STATUS	(*cs_shutdown)(void);	/* shutdown the server */
+    STATUS	(*cs_format)(CS_SCB *,char *,i4,i4);	/* format scb's */
+    STATUS	(*cs_diag)(void *);	/* Diagnostics for server */
+    STATUS	(*cs_facility)(CS_SCB *); /* return current facility */
+    i4		(*cs_get_rcp_pid)(void); /* return RCP's pid */
+    VOID	(*cs_scbattach)(CS_SCB *); /* Attach thread control block to MO */
+    VOID	(*cs_scbdetach)(CS_SCB *); /* Detach thread control block */
+    char	*(*cs_format_lkkey)(struct _LK_LOCK_KEY *,char *); /*Format an LK_LOCK_KEY for display */
 #define          CS_NOCHANGE     -1	/* no change to this parm */
-    char	*(*cs_format_lkkey)();  /*Format an LK_LOCK_KEY for display */
 } CS_CB;
 
 /******************************************************************************
@@ -1247,7 +1250,7 @@ typedef struct _CS_THREAD_STATS_CB
 ******************************************************************************/
 
 FUNC_EXTERN STATUS iimksec(SECURITY_ATTRIBUTES *sa);
-FUNC_EXTERN i4 CS_checktime(VOID);
+FUNC_EXTERN void CS_swuser(void);
 
 
 /******************************************************************************

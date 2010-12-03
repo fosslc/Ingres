@@ -25,6 +25,7 @@
 #include    <cssminfo.h>
 #include    <csinternal.h>
 #include    <cslocal.h>
+#include    <exinternal.h>
 
 /* For ME_getkey, probably should be in me.h or mecl.h */
 #include    <meprivate.h>
@@ -248,6 +249,8 @@
 **	    Include cslocal.h, meprivate.h for routine declarations.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	14-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 
@@ -266,10 +269,6 @@ GLOBALDEF	CS_SMCNTRL  *Cs_sm_cb ZERO_FILL; /* system control segment */
 GLOBALDEF	CS_SERV_INFO	*Cs_svinfo ZERO_FILL;
 
 i4		cs_servernum = -1;
-
-# ifdef hp3_us5
-# define        CTRL_MAP_ADDR 0x00e00000
-# endif
 
 
 /*{
@@ -366,18 +365,12 @@ i4		cs_servernum = -1;
 **	    shared memory can't be created.
 */
 STATUS
-CS_create_sys_segment(num_of_servers, num_of_wakeups, err_code)
-i4		num_of_servers;
-i4		num_of_wakeups;
-CL_ERR_DESC	*err_code;
+CS_create_sys_segment(i4 num_of_servers, i4 num_of_wakeups, CL_ERR_DESC *err_code)
 {
     SIZE_TYPE		size;
     STATUS		status;
     PTR			address;
     SIZE_TYPE		alloc_pages;
-    char		*string;
-    char		*addr_string;
-    STATUS		cv_status = OK;
     i4			meflags;
 
     /* the system shared memory control block looks as follows:
@@ -403,13 +396,8 @@ CL_ERR_DESC	*err_code;
     ** Create shared segment for sysseg.
     ** Use SYSSEG.MEM as shared memory key.
     */
-# ifdef CTRL_MAP_ADDR
-    meflags = ME_MZERO_MASK|ME_SSHARED_MASK|ME_CREATE_MASK|ME_ADDR_SPEC|ME_VERBOSE_MASK;
-    address = (PTR) CTRL_MAP_ADDR;
-# else
     meflags = ME_MZERO_MASK|ME_SSHARED_MASK|ME_CREATE_MASK|ME_VERBOSE_MASK;
     address = (PTR) 0;
-# endif
 
     if (CXnuma_user_rad())
 	meflags |= ME_LOCAL_RAD;
@@ -425,11 +413,7 @@ CL_ERR_DESC	*err_code;
 	/* initialize the shared memory data base */
 	Cs_sm_cb = (CS_SMCNTRL *) address;
 	
-# ifdef CTRL_MAP_ADDR
-	Cs_sm_cb->css_css_desc.cssm_addr = (PTR) CTRL_MAP_ADDR;
-# else
 	Cs_sm_cb->css_css_desc.cssm_addr = (PTR) 0;
-# endif
 	Cs_sm_cb->css_css_desc.cssm_size = size;
 	Cs_sm_cb->css_css_desc.cssm_id = ME_getkey("sysseg.mem");
 	Cs_sm_cb->css_numservers = num_of_servers;
@@ -547,25 +531,17 @@ CL_ERR_DESC	*err_code;
 **		solution to Golden Gate's issue.
 */
 STATUS
-CS_map_sys_segment(err_code)
-CL_ERR_DESC	*err_code;
+CS_map_sys_segment(CL_ERR_DESC *err_code)
 {
     STATUS	status = OK;
     PTR		address;
     SIZE_TYPE	alloc_pages;
 
-# ifdef CTRL_MAP_ADDR
-    /* map segment into CTRL_MAP_ADDR */
-    address = (PTR) CTRL_MAP_ADDR;
-    status = MEget_pages(ME_SSHARED_MASK|ME_ADDR_SPEC, 0, "sysseg.mem",
-                         &address, &alloc_pages, err_code);
-# else
     /* map segment into first available address and then initialize it */
     /* Use "sysseg.mem" as shared memory key. */
     address = 0;
     status = MEget_pages(ME_SSHARED_MASK, 0, "sysseg.mem", &address,
                          &alloc_pages, err_code);
-# endif	/* CTRL_MAP_ADDR */
 
     if (status)
     {
@@ -636,8 +612,7 @@ CL_ERR_DESC	*err_code;
 **          First Version
 */
 VOID
-CS_get_cb_dbg(address)
-PTR	*address;
+CS_get_cb_dbg(PTR *address)
 {
     *address = (PTR) Cs_sm_cb; 
 }
@@ -698,11 +673,8 @@ PTR	*address;
 **	    Call MEdetach with the right thing (addr not pointer to addr).
 */
 STATUS
-CS_alloc_serv_segment(size, server_seg_num, address, err_code)
-SIZE_TYPE	size;
-u_i4		*server_seg_num;
-PTR		*address;
-CL_ERR_DESC	*err_code;
+CS_alloc_serv_segment(SIZE_TYPE size, u_i4 *server_seg_num,
+	PTR *address, CL_ERR_DESC *err_code)
 {
     STATUS		status = OK;
     CS_SERV_INFO	*serv_info;
@@ -784,9 +756,8 @@ CL_ERR_DESC	*err_code;
     return(status);
 }
 
-STATUS
-CS_set_server_connect(listen_id)
-char	*listen_id;
+void
+CS_set_server_connect(char *listen_id)
 {
     i4		i;
 
@@ -795,12 +766,10 @@ char	*listen_id;
     STncpy( Cs_svinfo->csi_connect_id, listen_id,
 	(sizeof(Cs_svinfo->csi_connect_id) - 1) );
     Cs_svinfo->csi_connect_id[ sizeof(Cs_svinfo->csi_connect_id) - 1 ] = EOS;
-    return(OK);
 }
 
 STATUS
-CS_find_server_slot(slotno)
-i4	*slotno;
+CS_find_server_slot(i4 *slotno)
 {
     STATUS		status = OK;
     CS_SERV_INFO	*serv_info;
@@ -894,8 +863,7 @@ CS_rel_critical_sems(void)
 **	    Install the server event handler for pseudo-servers here.
 */
 STATUS
-CS_init_pseudo_server(server_seg_num)
-u_i4	*server_seg_num;
+CS_init_pseudo_server(u_i4 *server_seg_num)
 {
     STATUS		status = OK;
     CS_SERV_INFO	*serv_info;
@@ -932,7 +900,7 @@ u_i4	*server_seg_num;
 	    CS_ACLR(&Cs_svinfo->csi_subwake[i]);
 	}
 
-	status = CSinstall_server_event(&slcb, 0, 0, CSresume);
+	status = CSinstall_server_event(&slcb, 0, 0, CSev_resume);
 
 	/* FIX ME - bunch of other stuff */
     }
@@ -941,8 +909,7 @@ u_i4	*server_seg_num;
 }
 
 bool
-CS_is_server(num)
-i4	num;
+CS_is_server(i4 num)
 {
     return(num >= 0 && num < Cs_sm_cb->css_numservers &&
 	   Cs_sm_cb->css_servinfo[num].csi_in_use &&
@@ -988,10 +955,7 @@ i4	num;
 **          Added calls to protect page allocator.
 */
 STATUS
-CS_map_serv_segment(serv_seg_num, address, err_code)
-u_i4	   serv_seg_num;
-PTR	   	   *address;
-CL_ERR_DESC	   *err_code;
+CS_map_serv_segment(u_i4 serv_seg_num, PTR *address, CL_ERR_DESC *err_code)
 {
     STATUS	status = OK;
     char	segname[48];
@@ -1069,9 +1033,7 @@ CL_ERR_DESC	   *err_code;
 **	    Changed MEsmdestroy to take character memory key, not LOCATION ptr.
 */
 STATUS
-CS_destroy_serv_segment(serv_seg_num, err_code)
-u_i4	   serv_seg_num;
-CL_ERR_DESC	   *err_code;
+CS_destroy_serv_segment(u_i4 serv_seg_num, CL_ERR_DESC *err_code)
 {
     STATUS	status = OK;
     char	segname[48];
@@ -1148,7 +1110,7 @@ CL_ERR_DESC	   *err_code;
 **	    Hybrid add-on symbol changed, fix here.
 */
 STATUS 
-CS_des_installation()
+CS_des_installation(void)
 {
     STATUS	status;
     LOCATION	loc;
@@ -1247,17 +1209,17 @@ CS_des_installation()
 **	    Pass new argument to CS_cleanup_wakeup_events to indicate that we
 **		already hold the system segment spinlock.
 */
-CS_check_dead()
+void
+CS_check_dead(void)
 {
     CS_SERV_INFO        *svinfo;
     i4             nservs;
     CS_SMCNTRL          *sysseg;
     i4                  i;
     CL_ERR_DESC         err_code;
-    CSEV_SVCB           *addr;
     union semun         arg;
 
-    CS_get_cb_dbg(&sysseg);
+    CS_get_cb_dbg((PTR *) &sysseg);
 
     CS_getspin(&Cs_sm_cb->css_spinlock);
 

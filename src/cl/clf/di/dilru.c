@@ -15,6 +15,7 @@
 #include   <tr.h>
 #include   <cs.h>
 #include   <st.h>
+#include   <pm.h>
 #include   <fdset.h>
 #include   <csev.h>
 #include   <errno.h>
@@ -442,9 +443,9 @@
 **	08-jul-2009 (smeke01) b120853
 **	    Make sure that with DI_thread_affinity DI_FILE_DESCs get 
 **	    closed tidily.
-**	    
-[@history_template@]...
-**/
+**	15-Nov-2010 (kschendel) SIR 124685
+**	    Delete unused variables.
+*/
 
 
 /*
@@ -1223,16 +1224,12 @@ DIlru_init(
 {
     DI_HASH_TABLE_CB	*local_htb;
     i4			bufsize;
-    i4			i;
     fd_set		fdmask;
     char		*str;  /* no auto char type in AIX */
     ME_SEG_INFO		*seginfo;
-    DI_SLAVE_CB		*disl;
     STATUS		status = OK;
     bool		have_sem = FALSE;
     STATUS		intern_status = OK, send_status = OK, me_status = OK;
-    DI_OP       	di_op;
-    char		sem_name[CS_SEM_NAME_LEN];
 
     FD_ZERO(&fdmask);
 
@@ -1772,7 +1769,6 @@ DIlru_open(
 {
     DI_FILE_DESC	*di_file = (DI_FILE_DESC*)NULL;
     bool		first_open_flag = TRUE;
-    bool		have_sem       = FALSE;
     bool		reserve_ev_flag = FALSE;
     bool		slave_found;
     i4			i, j, k;
@@ -2130,7 +2126,6 @@ DIlru_open(
     */
     {
 	CL_ERR_DESC     lerr_code;
-	STATUS		lstatus;
 
         if ( reserve_ev_flag)
 	    (VOID ) DIlru_release(op, &lerr_code);
@@ -2272,7 +2267,6 @@ DI_lru_inproc_open(
 			intern_status = OK, 
 			ret_status = OK;
     int			open_flag;
-    i4			have_sem = FALSE;
 
     /* size includes null and connecting slash */
 
@@ -3901,7 +3895,6 @@ DI_lru_allocate_more_slots(
     STATUS	*intern_status )
 {
 
-    QUEUE		*p;
     STATUS		me_status, status = OK;
     DI_FILE_DESC	*di_file;
     i4			i, k;

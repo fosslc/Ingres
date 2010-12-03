@@ -71,6 +71,8 @@
 **	01-dec-2000	(kinte01)
 **		Bug 103393 - removed nat, longnat, u_nat, & u_longnat
 **		from VMS CL as the use is no longer allowed
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Delete CS_SYSTEM ref, get from csinternal.
 **
 ****************************************************************************/
 
@@ -91,13 +93,11 @@
 # include "cssampler.h"
 
 GLOBALREF CSSAMPLERBLKPTR CsSamplerBlkPtr;
-GLOBALREF CS_SYSTEM	  Cs_srv_block;
 
 FUNC_EXTERN VOID CSms_thread_nap();
 
 /* Forward References */
-VOID
-AddMutex( CS_SEMAPHORE	*CsSem,
+static VOID AddMutex( CS_SEMAPHORE	*CsSem,
 	  i4		thread_type );
 
 static	CS_SCB	samp_scb;
@@ -307,7 +307,7 @@ CS_sampler(void)
 ****************************************************************************/
 
 u_i4
-ElfHash(const unsigned char *name)
+CSsamp_elf_hash(const unsigned char *name)
 {
     u_i4	h = 0,
     		g;
@@ -323,7 +323,7 @@ ElfHash(const unsigned char *name)
 }
 
 
-VOID
+static VOID
 AddMutex( CS_SEMAPHORE *CsSem,
 	  i4		thread_type )
 {
@@ -336,7 +336,7 @@ AddMutex( CS_SEMAPHORE *CsSem,
 
     if (CsSem->cs_sem_name[0] != '\0')
     {	/* A "named" semaphore */
-    	hashnum = ElfHash((const unsigned char *)CsSem->cs_sem_name) % MAXMUTEXES;
+    	hashnum = CSsamp_elf_hash((const unsigned char *)CsSem->cs_sem_name) % MAXMUTEXES;
 	hashname = CsSem->cs_sem_name;
     }
     else

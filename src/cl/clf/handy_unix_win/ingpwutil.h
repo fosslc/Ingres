@@ -14,6 +14,8 @@
 **	28-Aug-09 (gordy)
 **	    Increase max length of usernames and passwords to 256.
 **	    Increase line length to 1024.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototypes for getUserAndPasswd and getDebugFile.
 */
 
 /*
@@ -38,8 +40,14 @@
 
 extern int      iscan(char *input, char *username, char *password);
 extern int      mklogfile( FILE **fp, char *ptr);
-extern void	handler();
+extern void	handler(int arg);
 
+extern int getUserAndPasswd(
+	char *user,
+	char *passwd,
+	FILE *fp);
+extern int getDebugFile(
+	FILE **fp);
 /*
 ** Debug macro tha accepts variable number of arguments.
 **

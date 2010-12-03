@@ -728,6 +728,8 @@ typedef struct _DMC_CB
 **	    DMC_C_PAGETYPE_V7
 **	13-Apr-2010 (toumi01) SIR 122403
 **	    Add DMC_C_CRYPT_MAXKEYS for data at rest encryption.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for controlling the defaulting of the collation type
 */
 typedef struct _DMC_CHAR_ENTRY
 {
@@ -1016,6 +1018,8 @@ typedef struct _DMC_CHAR_ENTRY
 #define			DMC_C_PAGETYPE_V6    129L /* page type V6 */
 #define			DMC_C_PAGETYPE_V7    130L /* page type V7 */
 #define			DMC_C_CRYPT_MAXKEYS  131L /* max shmem encrypt keys */
+#define			DMC_C_DEF_COLL	     132L /* Default collation */
+#define			DMC_C_DEF_UNI_COLL   133L /* Default Unicode collation */
     i4         char_value;             /* Value of characteristic. */
 #define                 DMC_C_ON            1L
 #define                 DMC_C_OFF           0L

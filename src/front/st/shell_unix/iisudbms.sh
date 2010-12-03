@@ -695,6 +695,8 @@
 ##	    On upgrade always upgrade demodb if existent.
 ##	12-Oct-2010 (frima01) BUG 124591
 ##	    Ensure 8k page cache is enabled for demodb.
+##	19-Nov-2010 (kiria01) SIR 124690
+##	    Default to UCS_BASIC collation if UTF8 chosen
 ##	    
 #----------------------------------------------------------------------------
 . iisysdep
@@ -3113,6 +3115,9 @@ if $WRITE_RESPONSE ; then
    SETUP=defaults
 else
    $DOIT ingsetenv II_CHARSET$II_INSTALLATION $VALUE
+   if [ "$VALUE" = "UTF8" ];then
+      $DOIT iisetres ii.$CONFIG_HOST.dbms."*".default_collation UCS_BASIC
+   fi
 fi
 
 if $WRITE_RESPONSE ; then 

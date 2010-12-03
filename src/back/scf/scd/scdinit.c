@@ -685,6 +685,8 @@ NO_OPTIM=dr6_us5
 **	    Delete sca.h include. Function prototypes moved to
 **	    scf.h for exposure to DMF.
 **	    Deleted scd_mo_init() prototype, now in scd.h
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Refine CS prototypes.
 */
 
 /*
@@ -2066,6 +2068,8 @@ scd_initiate( CS_INFO_CB  *csib )
     psq_cb.psq_create_compression = DMU_COMP_OFF;
     psq_cb.psq_result_struct = DB_HEAP_STORE;
     psq_cb.psq_result_compression = FALSE;
+    psq_cb.psq_def_coll = DB_UNSET_COLL;
+    psq_cb.psq_def_unicode_coll = DB_UNSET_COLL;
 
     /* server_class gets passed to PSF so it can output it in SC930 trace */
     psq_cb.psq_server_class = Sc_main_cb->sc_server_class;

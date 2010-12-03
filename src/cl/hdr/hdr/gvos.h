@@ -14,6 +14,8 @@
 **
 **	11-apr-2002 (abbjo03)
 **	    Created.
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 **/
 
 /*
@@ -31,5 +33,6 @@ typedef struct
 ** Function prototypes
 */
 FUNC_EXTERN STATUS GVverifyOSversion(GV_OSVERSIONINFO *version);
+FUNC_EXTERN bool   GVosvers(char *OSVersionString);
 
 #endif

@@ -46,6 +46,8 @@
 **      platforms.
 **	28-feb-08 (smeke01) b120003
 **	    Added prototype for LOtoes.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 */
 
 /*
@@ -99,241 +101,177 @@
                                                 
 
 FUNC_EXTERN STATUS  LOaddpath(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *head,
 	    LOCATION	    *tail, 
 	    LOCATION	    *result
-#endif
 );
 
 FUNC_EXTERN STATUS  LOchange(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOclear(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOcompose(
-#ifdef CL_PROTOTYPED
 	    char	    *dev,
 	    char	    *path,
 	    char	    *fprefix,
 	    char	    *fsuffix,
 	    char	    *version,
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN VOID   LOcopy(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *srcloc, 
 	    char	    *destlocbuf, 
 	    LOCATION	    *destloc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOcreate(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *dirloc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOdelete(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOdetail(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc, 
 	    char	    dev[], 
 	    char	    path[], 
 	    char	    fprefix[], 
 	    char	    fsuffic[], 
 	    char	    version[]
-#endif
 );
 
 FUNC_EXTERN STATUS  LOendlist(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOexist(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOfaddpath(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *head, 
 	    char	    *tail, 
 	    LOCATION	    *result
-#endif
 );
 
 FUNC_EXTERN STATUS  LOfroms(
-#ifdef CL_PROTOTYPED
 	    LOCTYPE	    what, 
 	    char	    buf[], 
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOfstfile(
-#ifdef CL_PROTOTYPED
 	    char	    *filename, 
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOgt(
-#ifdef CL_PROTOTYPED
 	    char	    buf[], 
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOfakepwd(
-#ifdef CL_PROTOTYPED
 	    char	    buf[], 
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOgtfile(
-#ifdef CL_PROTOTYPED
             LOCATION	    *loc,
             LOCATION        *fileloc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOinfo(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc, 
 	    i4		    *flags, 
 	    LOINFORMATION   *locinfo
-#endif
 );
 
 FUNC_EXTERN STATUS  LOingdir(
-#ifdef CL_PROTOTYPED
 	    char	    *dbname, 
 	    char	    *what, 
 	    char	    *dirname
-#endif
 );
 
 FUNC_EXTERN STATUS  LOingpath(
-#ifdef CL_PROTOTYPED
 	    char	    *area, 
 	    char	    *dbname, 
 	    char	    *what, 
 	    LOCATION	    *fullpath
-#endif
 );
 
 FUNC_EXTERN STATUS  LOmkingpath(
-#ifdef CL_PROTOTYPED
 	    char	    *area, 
 	    char	    *what, 
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOisdir(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *dirloc, 
 	    i2		    *flag
-#endif
 );
 
 FUNC_EXTERN bool    LOisfull(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOlast(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc, 
 	    SYSTIME	    *t
-#endif
 );
 
 FUNC_EXTERN STATUS  LOlist(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *inputloc, 
 	    LOCATION	    *outputloc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOpurge(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc, 
 	    i4		    keep
-#endif
 );
 
 FUNC_EXTERN STATUS  LOrename(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *oldfname, 
 	    LOCATION	    *newfname
-#endif
 );
 
 #ifdef NT_GENERIC
 FUNC_EXTERN STATUS  LOsetperms(
-#ifdef CL_PROTOTYPED
 	    char	*path, 
 	    i4		perms
-#endif
 );
 #endif  /* NT_GENERIC */
 
 FUNC_EXTERN STATUS  LOsize(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc, 
 	    OFFSET_TYPE	    *loc_size
-#endif
 );
 
 FUNC_EXTERN STATUS  LOstfile(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *filename, 
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN VOID  LOtos(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc, 
 	    char	    **string
-#endif
 );
 
 FUNC_EXTERN VOID  LOtoes(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc, 
 	    char	    *psChar,
 	    char	    *pszIn
-#endif
 );
 
 FUNC_EXTERN STATUS  LOuniq(
-#ifdef CL_PROTOTYPED
 	    char	    *pat, 
 	    char	    *suffix, 
 	    LOCATION	    *path
-#endif
 );
 
 FUNC_EXTERN bool    LOisvalid(
@@ -341,39 +279,29 @@ FUNC_EXTERN bool    LOisvalid(
         STATUS* status);
 
 FUNC_EXTERN STATUS  LOwcard(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc,
 	    char	    *fprefix,
 	    char	    *fsuffix,
 	    char	    *version,
 	    LO_DIR_CONTEXT  *lc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOwend(
-#ifdef CL_PROTOTYPED
 	    LO_DIR_CONTEXT  *lc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOwhat(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *loc, 
 	    LOCTYPE	    *flag
-#endif
 );
 
 FUNC_EXTERN STATUS  LOwnext(
-#ifdef CL_PROTOTYPED
 	    LO_DIR_CONTEXT  *lc, 
 	    LOCATION	    *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOerrno(
-#ifdef CL_PROTOTYPED
 	    i4              errnum 
-#endif
 );
 
 #endif /* LO_INCLUDE */

@@ -67,6 +67,8 @@ GV_M_BLDLVL|GV_M_BYTE|GV_M_HW|GV_M_OS|GV_M_BLDINC
 ** History:
 **      26-Jan-2004 (fanra01)
 **          Created.
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 */
 typedef struct _ing_ver ING_VERSION;
 
@@ -85,10 +87,24 @@ struct _ing_ver
 FUNC_EXTERN STATUS GVmo_init( VOID );
 FUNC_EXTERN VOID GVmo_term( VOID );
 FUNC_EXTERN STATUS GVver( i4 flags, ING_VERSION* vout );
-FUNC_EXTERN int GVvista();
+FUNC_EXTERN int GVvista(VOID);
 FUNC_EXTERN VOID GVshobj(char **shPrefix);
+FUNC_EXTERN STATUS GVdecode(i4 enc, char* str);
 
-FUNC_EXTERN void GVcnf_term();
-FUNC_EXTERN STATUS GVcnf_init();
+FUNC_EXTERN VOID GVcnf_term(VOID);
+FUNC_EXTERN STATUS GVcnf_init(VOID);
+
+FUNC_EXTERN STATUS GVgetverstr(i4, i4, PTR, i4, char *);
+FUNC_EXTERN STATUS GVgetenvstr(i4, i4, PTR, i4, char *);
+FUNC_EXTERN STATUS GVgetversion(i4, i4, PTR, i4, char *);
+FUNC_EXTERN STATUS GVgetpatchlvl(i4, i4, PTR, i4, char *);
+FUNC_EXTERN STATUS GVgettcpportaddr(i4, i4, PTR, i4, char *);
+FUNC_EXTERN STATUS GVgetinstance(i4, i4, PTR, i4, char *);
+FUNC_EXTERN STATUS GVgetlanportaddr(i4, i4, PTR, i4, char *);
+FUNC_EXTERN STATUS GVgetconformance(i4, i4, PTR, i4, char *);
+FUNC_EXTERN STATUS GVgetlanguage(i4, i4, PTR, i4, char *);
+FUNC_EXTERN STATUS GVgetcharset(i4, i4, PTR, i4, char *);
+FUNC_EXTERN STATUS GVgetsystempath(i4, i4, PTR, i4, char *);
+FUNC_EXTERN STATUS GVgetnetportaddr(i4, i4, PTR, i4, char *);
 
 #endif /* GV_included */

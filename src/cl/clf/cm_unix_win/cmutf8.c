@@ -75,6 +75,8 @@ GLOBALREF CM_UTF8CASE *CM_UTF8CaseTab;
 **          Fixed compiler warnings. Moved CM_WC_WIDTH_INTERVAL combining
 **          from CM_mk_wcwidth, and made a static constant to prevent
 **          setup/initialisation each time function called.
+**      29-Nov-2010 (frima01) SIR 124685
+**          Add static declaration to internal functions.
 */
 
 /* Name: cmupct - calculates the position count of the
@@ -141,7 +143,7 @@ cmu_getutf8property(u_char *key, i4 keycnt)
 **	20-may-2007 (gupsh01)
 **	    Created.
 */
-u_i2
+static u_i2
 cmu_getutf8casecnt(u_char *key, i4 keycnt)
 {
     u_i2 index;
@@ -503,7 +505,7 @@ static bool isLegalUTF8(const UTF8 *source, int length) {
     return TRUE;
 }
 
-ConversionResult
+static ConversionResult
 CM_ConvertUTF8toUTF32(
 	const UTF8** sourceStart, const UTF8* sourceEnd, 
 	UTF32** targetStart, UTF32* targetEnd, i4 flags) 
@@ -612,7 +614,7 @@ CM_UTF8toUTF32 (u_char *instr, i4 incnt, u_i2 *outval)
 	return (OK);
 }
 
-ConversionResult
+static ConversionResult
 CM_ConvertUTF32toUTF8 (
         const UTF32** sourceStart, const UTF32* sourceEnd,
         UTF8** targetStart, UTF8* targetEnd, i2 flags, i2 *rescnt) 
@@ -701,7 +703,7 @@ typedef enum {
         lenientConversion
 } ConversionFlags;
 
-ConversionResult 
+static ConversionResult 
 CM_ConvertUTF32toUTF16 (
 	const UTF32** sourceStart, 
 	const UTF32* sourceEnd, 
@@ -844,7 +846,7 @@ CM_UTF32toUTF16 (i4 inval, u_i2 *outbuf, u_i2 *outend, i4 *outlen)
 	}
 }
 
-ConversionResult 
+static ConversionResult 
 CM_ConvertUTF16toUTF32 (
 	const UTF16** sourceStart, const UTF16* sourceEnd, 
 	UTF32** targetStart, UTF32* targetEnd, ConversionFlags flags) 
@@ -901,7 +903,7 @@ if (result == sourceIllegal) {
     return result;
 }
 
-ConversionResult 
+static ConversionResult 
 CM_ConvertUTF16toUTF8 (
 	const UTF16** sourceStart, const UTF16* sourceEnd, 
 	UTF8** targetStart, UTF8* targetEnd, ConversionFlags flags) 
@@ -981,7 +983,7 @@ CM_isLegalUTF8Sequence(const UTF8 *source, const UTF8 *sourceEnd)
     return isLegalUTF8(source, length);
 }
 
-ConversionResult 
+static ConversionResult 
 CM_ConvertUTF8toUTF16 (
 	const UTF8** sourceStart, const UTF8* sourceEnd, 
 	UTF16** targetStart, UTF16* targetEnd, ConversionFlags flags) 

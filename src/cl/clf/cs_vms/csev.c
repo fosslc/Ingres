@@ -21,6 +21,7 @@ NO_OPTIM = dr6_us5 i64_aix
 # include   <exhdef>
 # include   <csinternal.h>
 # include   <cssminfo.h>
+# include   <exinternal.h>
 # include   <lo.h>
 # include   <nm.h>
 # include   <me.h>
@@ -311,12 +312,14 @@ NO_OPTIM = dr6_us5 i64_aix
 **     However the file was branched from Unix to VMS
 **     In order to keep the two in step this will ultimately be merged back into
 **     the Unix branch.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype/include fixes.  csev is mostly a no-op on VMS, but
+**	    no harm in trying to keep is close to unix, just in case...
 **/
 
 /* externs */
 GLOBALREF	CS_SMCNTRL	*Cs_sm_cb;
 GLOBALREF	CS_SERV_INFO	*Cs_svinfo;
-GLOBALREF	CS_SYSTEM	Cs_srv_block;
 #ifndef VMS
 GLOBALREF	CSSL_CB		*Di_slave;
 #endif
@@ -333,13 +336,10 @@ i4		CScmdprocpid ZERO_FILL;
 # endif /* JASMINE */
 CSEV_CB		*CSwaiting ZERO_FILL;
 
-FUNC_EXTERN	VOID	CS_event_shutdown();
-#ifndef OS_THREADS_USED
-FUNC_EXTERN	VOID	iiCLintrp();
-#endif
-
-FUNC_EXTERN     VOID    CSsigchld();
 FUNC_EXTERN	i4	CXnuma_cluster_rad(void);
+
+static STATUS CSawait_event(i4 *timeout, CSEV_CB *evcb);
+static void CS_handle_group(CSSL_CB *slcb, i4 *numevents);
 
 static		i4	minfree = 0;
 static		i4 maxused = 0;
@@ -347,7 +347,7 @@ static		i4 maxused = 0;
 
 
 /*{
-1** Name: CS_event_init - Initialize the event system.
+** Name: CS_event_init - Initialize the event system.
 **
 ** Description:
 **    Perform all necessary initialization. These 
@@ -414,9 +414,7 @@ static		i4 maxused = 0;
 **	    Cleaned up code for Open Source.
 */
 STATUS
-CS_event_init(nusers, nslaves)
-i4	nusers;
-i4	nslaves;
+CS_event_init(i4 nusers, i4 nslaves)
 {
 	int		pid;
 	i4		status;
@@ -718,14 +716,8 @@ CS_event_shutdown()
 **	    server, fix it.
 */
 STATUS
-CSslave_init(slave_cb, usercode, nexec, wrksize, nwrk, evcomp, fdmask)
-CSSL_CB	**slave_cb;
-i4	usercode;
-i4	nexec;
-i4	wrksize;
-i4	nwrk;
-STATUS	(*evcomp)();
-fd_set	fdmask;
+CSslave_init(CSSL_CB **slave_cb, i4 usercode, i4 nexec, i4 wrksize,
+	i4 nwrk, STATUS (*evcomp)(CSEV_CB *), fd_set fdmask)
 {
     register CSEV_SVCB	*svcb;
     register CSSL_CB	*slcb;
@@ -1300,9 +1292,7 @@ register CSEV_CB	*evcb;
 **	    neglect the signal.
 */
 STATUS
-CS_find_events(reset_wakeme, num_of_events)
-i4	*reset_wakeme;
-i4	*num_of_events;
+CS_find_events(i4 *reset_wakeme, i4 *num_of_events)
 {
     static	i4	 counter = 0;
     static	i4	 threshhold = -1;
@@ -1351,10 +1341,11 @@ i4	*num_of_events;
        * Note that the "tmp" param passed in is junk and is not expected
        * to be used.  It was only meant to satisfy the optimizer.
        */
-      CSEV_CB tmp;  
-      CS_ACLR(&Cs_svinfo->csi_nullev);
-      (*Cs_svinfo->csi_events.evcomp)(tmp); 
-      ++*num_of_events;
+	CSEV_CB tmp;
+	tmp.sid = 0;
+	CS_ACLR(&Cs_svinfo->csi_nullev);
+	(*Cs_svinfo->csi_events.evcomp)(&tmp);
+	++*num_of_events;
     }
     
     if (svcb = (CSEV_SVCB *)CSev_base)
@@ -1413,9 +1404,8 @@ i4	*num_of_events;
     return(OK);
 }
 
-CS_handle_group(slcb, numevents)
-register CSSL_CB	*slcb;
-i4	*numevents;
+static void
+CS_handle_group(CSSL_CB *slcb, i4 *numevents)
 {
     register CSEV_CB	*evcb;
     register char	*ev_base;
@@ -1506,12 +1496,24 @@ i4	*numevents;
 **          Created.
 */
 VOID
-CSdef_resume(evcb)
-CSEV_CB	*evcb;
+CSdef_resume(CSEV_CB *evcb)
 {
 	evcb->flags |= EV_DRES;
 }
 
+/* Event completion routine that calls CSresume.  Who knows if this actually
+** gets called any more, but pseudo server init in csshmem sets this as a
+** completion routine.  (It used to set CSresume directly!  which can't
+** possibly work, since CSresume expects a sid.)
+*/
+
+STATUS
+CSev_resume(CSEV_CB *evcb)
+{
+    CSresume(evcb->sid);
+    return (OK);
+}
+
 /*{
 ** Name: CSawait_event()	- Wait syncronously for a specific event.
 **
@@ -1551,10 +1553,8 @@ CSEV_CB	*evcb;
 **      03-feb-88 (anton)
 **          Created.
 */
-STATUS
-CSawait_event(timeout, evcb)
-i4	*timeout;
-register CSEV_CB	*evcb;
+static STATUS
+CSawait_event(i4 *timeout, CSEV_CB *evcb)
 {
     i4		nevents;
     STATUS	status;
@@ -1617,11 +1617,8 @@ register CSEV_CB	*evcb;
 **	    Changed CS_getspin to SHM_GETSPIN and CS_relspin to CS_relspin.
 */
 STATUS
-CSinstall_server_event(slave_cb, num_events, size_events, evcomp)
-CSSL_CB	**slave_cb;
-i4	num_events;
-i4	size_events;
-STATUS	(*evcomp)();
+CSinstall_server_event(CSSL_CB **slave_cb, i4 num_events, i4 size_events,
+	STATUS (*evcomp)(CSEV_CB *))
 {
     register CSSL_CB	*slcb;
     register CSEV_CB	*evcb;
@@ -1683,39 +1680,6 @@ STATUS	(*evcomp)();
     
     CS_relspin(&Cs_sm_cb->css_spinlock);
     return(status);
-}
-
-/*{
-** Name: CSget_serverid() - return a number identifing this server
-**
-** Description:
-**	Returns an identifier of this server that can be used for
-**	server-server event processing.  The number is only unique to
-**	an installation.
-**
-** Inputs:
-**
-** Outputs:
-**      servid			server id
-**
-**	Returns:
-**	    E_DB_OK
-**
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-**      24-mar-88 (anton)
-**          Created.
-*/
-STATUS
-CSget_serverid(servid)
-i4	*servid;
-{
-    return(CS_find_server_slot(servid));
 }
 
 /*

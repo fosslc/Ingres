@@ -8,14 +8,11 @@
 # include   <systypes.h>
 # include   <errno.h>
 # include   <cs.h>
-#ifndef VMS
-# include   <csev.h>
-# include   <cssminfo.h>
-#endif
 # include   <di.h>
 # include   <me.h>
 # include   <tr.h>
 #ifndef VMS
+# include   <csev.h>
 # include   <dislave.h>
 # include   "dilocal.h"
 # include   "dilru.h"
@@ -28,10 +25,6 @@
 
 #ifdef usl_us5
 #define IOV_MAX 16
-#endif
-
-#ifdef dgi_us5
-#define IOV_MAX MAXIOVCNT
 #endif
 
 # ifdef OSX
@@ -97,6 +90,10 @@
 **	    Make io-sem a SYNCH.
 **      01-nov-2010 (joea)
 **          Merge with VMS version.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete dg ports.
 */
 /* Globals */
 GLOBALREF	i4	Di_gather_io;	/* GLOBALDEF in dilru.c */
@@ -104,7 +101,7 @@ GLOBALREF	i4	Di_gather_io;	/* GLOBALDEF in dilru.c */
 #ifndef VMS
 static DI_TGIO 	*GWthreads = (DI_TGIO *)NULL;
 
-static i4	 check_list();
+static i4	 check_list(void);
 static STATUS	 do_writev( DI_TGIO *tgio, CL_ERR_DESC *err );
 static VOID	 gio_sort( DI_GIO *gio_array[], i4 lo, i4 hi );
 static STATUS    force_list( CL_ERR_DESC *err_code );
@@ -201,7 +198,6 @@ DIgather_write( i4 op, char *gio_p, DI_IO *f, i4 *n, i4 page, char *buf,
     DI_GIO		*gio = (DI_GIO *)gio_p;
     i4			num_of_pages;
     i4			last_page_to_write;
-    CL_ERR_DESC		lerr_code;
 
     if ( GWSemsInit == FALSE )
     {
@@ -380,11 +376,9 @@ static STATUS
 gather_list( DI_GIO *gio, i4 *uqueued, CL_ERR_DESC *err_code)
 {
     DI_GIO	*qgio;			/* a GIO on the queue already */
-    DI_OP	*diop;
     DI_TGIO     *tgio;
     STATUS 	status = OK;
     CS_SCB	*scb;
-    i4		i;
 
     CSget_scb(&scb);
 
@@ -956,7 +950,7 @@ force_list( CL_ERR_DESC *err_code )
 **	    Created.
 */
 static i4
-check_list()
+check_list(void)
 {
     DI_TGIO	*tgio;
     CS_SCB	*scb;

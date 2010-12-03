@@ -95,6 +95,8 @@
 **	    option flag to enable it.
 **	    Add PCE option flag to tell protocol driver to skip callback
 **	    if request completed immediately.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 */
 
 
@@ -284,9 +286,7 @@ struct _GCC_P_PLIST
     GCC_PCE	    *pce;		/* Protocol control entry */
 
     VOID            (*compl_exit)( 
-# ifdef CL_PROTOTYPED
 				    PTR compl_id 
-# endif 
 );
 
     PTR             compl_id;           /* Argument to completion routine */
@@ -434,10 +434,8 @@ struct _GCC_PCE
 				GCC_OPEN. */
 
     STATUS		(*pce_protocol_rtne)( 
-# ifdef CL_PROTOTYPED
 				i4 func_code,
 				GCC_P_PLIST *parms 
-# endif
 );
 				/* Protocol driver entry point. */
 

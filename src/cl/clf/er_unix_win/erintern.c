@@ -140,6 +140,8 @@ NO_OPTIM = su4_u42 dr6_us5
 **          Will be revisited and submitted at a later date. 
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 */
 
 /*
@@ -173,8 +175,10 @@ GLOBALREF ERMULTI	ERmulti[];
 GLOBALREF ER_LANGT_DEF	ER_langt[];
 
 /* Global references */
-FUNC_EXTERN bool	cer_istest();
 
+static STATUS cer_ckerr(LOCATION *dirloc, LOCATION *fileloc, STATUS status);
+
+
 /*{
 ** Name:	cer_get    - set string corresponding to ER_MSGID to buffer
 **
@@ -217,11 +221,7 @@ FUNC_EXTERN bool	cer_istest();
 **	01-Oct-1986 (kobayashi) - first written
 */
 STATUS
-cer_get(id,buf,bufsize,langcode)
-ER_MSGID id;
-char **buf;
-i4  bufsize;
-i4  langcode;
+cer_get(ER_MSGID id, char **buf, i4 bufsize, i4 langcode)
 {
     i4  fors;		/* flag to show fast or slow */
     ER_CLASS class_no;	/* class number */
@@ -374,7 +374,6 @@ i4  langcode;
 **
 ** Inputs:
 **	i4 language		language to search
-**	i4 fors		flag of fast or slow
 **
 ** Outputs:
 **	none
@@ -391,9 +390,7 @@ i4  langcode;
 **	01-Oct-1986 (kobayashi) - first written
 */
 i4
-cer_fndindex(langcode,fors)
-i4  langcode;
-i4  fors;
+cer_fndindex(i4 langcode)
 {
     i4  i;
 
@@ -482,9 +479,7 @@ i4  fors;
 **		Documented return status, moved index/-1 to `Outputs'.
 */
 STATUS
-cer_nxtindex(langcode,index)
-i4  langcode;
-i4  *index;
+cer_nxtindex(i4 langcode, i4 *index)
 {
     i4  i;
     char nm[ER_MAX_LANGSTR];
@@ -591,11 +586,7 @@ i4  *index;
 **		Add support for test files.
 */
 STATUS
-cer_finit(langcode,msgid,erindex,err_code)
-i4  langcode;
-ER_MSGID	msgid;
-i4  erindex;
-CL_ERR_DESC *err_code;
+cer_finit(i4 langcode, ER_MSGID msgid, i4 erindex, CL_ERR_DESC *err_code)
 {
     ER_CLASS	classsize;
     ER_CLASS	class_no;
@@ -634,7 +625,7 @@ CL_ERR_DESC *err_code;
     **	about size of class table
     */
 
-    if ((status = cer_getdata(&classsize,sizeof(classsize), (i4) 1,
+    if ((status = cer_getdata((char *) &classsize,sizeof(classsize), (i4) 1,
 	&(ERmulti[erindex].ERfile[ER_FASTSIDE]),err_code)) != OK)
     {
 	cer_close(&(ERmulti[erindex].ERfile[ER_FASTSIDE]));
@@ -714,11 +705,7 @@ CL_ERR_DESC *err_code;
 **		Add support for test files.
 */
 STATUS
-cer_sinit(langcode,msgid,erindex,err_code)
-i4  langcode;
-ER_MSGID msgid;
-i4  erindex;
-CL_ERR_DESC  *err_code;
+cer_sinit(i4 langcode, ER_MSGID msgid, i4 erindex, CL_ERR_DESC *err_code)
 {
     STATUS status;
     LOCATION loc;
@@ -797,19 +784,14 @@ CL_ERR_DESC  *err_code;
 **	30-Nov-1988 (billc) - first written
 */
 STATUS
-cer_fopen(msgid, filetype, locp, erindex, errcode)
-    ER_MSGID msgid;
-    i4  filetype;
-    LOCATION *locp;
-    i4  erindex;
-    CL_ERR_DESC  *errcode;
+cer_fopen(ER_MSGID msgid, i4 filetype,
+	LOCATION *locp, i4 erindex, CL_ERR_DESC *errcode)
 {
 	char fbuf[MAX_LOC];
 	ERFILE *erfile;
 	STATUS status;
 	LOCATION floc;
 	char locbuf[MAX_LOC];
-	STATUS cer_ckerr();
 
 	/* don't change the directory LOCATION */
 	LOcopy(locp, locbuf, &floc);
@@ -843,11 +825,8 @@ cer_fopen(msgid, filetype, locp, erindex, errcode)
 ** Name: cer_ckerr  - check error condition on open failure.
 */
 
-STATUS
-cer_ckerr(dirloc, fileloc, status)
-	LOCATION *dirloc;
-	LOCATION *fileloc;
-	STATUS status;
+static STATUS
+cer_ckerr(LOCATION *dirloc, LOCATION *fileloc, STATUS status)
 {
 	if (LOexist(dirloc) != OK)
 		return ER_DIRERR;
@@ -893,12 +872,7 @@ cer_ckerr(dirloc, fileloc, status)
 **	    Fix unsafe env variable handling.
 */
 STATUS
-cer_init(langcode,erindex,loc,loc_buf,fors)
-i4  langcode;
-i4  erindex;
-LOCATION *loc;
-char *loc_buf;
-i4  fors;
+cer_init(i4 langcode, i4 erindex, LOCATION *loc, char *loc_buf, i4 fors)
 {
     char nm[ER_MAX_LANGSTR];
     LOCATION tmploc;
@@ -971,10 +945,7 @@ i4  fors;
 **	01-Oct-1986 (kobayashi) - first written
 */
 char *
-cer_fstr(class_no,mess_no,erindex)
-ER_CLASS class_no;
-i4  mess_no;
-i4  erindex;
+cer_fstr(ER_CLASS class_no, i4 mess_no, i4 erindex)
 {
     ER_CLASS_TABLE *ERclass = ERmulti[erindex].class;
     STATUS status;
@@ -1054,9 +1025,7 @@ i4  erindex;
 **			
 */
 STATUS
-cer_read(class_no,erindex)
-ER_CLASS class_no;
-i4  erindex;
+cer_read(ER_CLASS class_no, i4 erindex)
 {
     ERCONTROL	cont_r;
     unsigned char 	*messpointer;
@@ -1072,7 +1041,8 @@ i4  erindex;
     */
 
     if (cer_dataset(sizeof(cont_r) * (class_no) + sizeof(ER_CLASS),
-    sizeof(cont_r),&cont_r,&(ERmulti[erindex].ERfile[ER_FASTSIDE])) != OK)
+		sizeof(cont_r), (char *) &cont_r,
+		&(ERmulti[erindex].ERfile[ER_FASTSIDE])) != OK)
     {
 	/* It is fail to read data from file */
         return(ER_BADREAD);
@@ -1203,9 +1173,7 @@ i4  erindex;
 **		Rewritten.
 */
 bool
-cer_isopen(erindex,fors)
-i4	erindex;
-i4	fors;
+cer_isopen(i4 erindex, i4 fors)
 {
     ERFILE *file;
 
@@ -1271,14 +1239,8 @@ i4	fors;
 **          updates to the current seek position. Refer to cer_getdata().
 */
 STATUS
-cer_sstr(msgid, sqlstate, buf, bufsize, erindex, err_code, getorlookup)
-ER_MSGID    msgid;
-char	    *sqlstate;
-char	    *buf;
-i4	    bufsize;
-i4	    erindex;
-CL_ERR_DESC *err_code;
-i4        getorlookup;
+cer_sstr(ER_MSGID msgid, char *sqlstate, char *buf,
+	i4 bufsize, i4 erindex, CL_ERR_DESC *err_code, i4 getorlookup)
 {
     i4	*srch;
     i4	total;
@@ -1314,7 +1276,7 @@ i4        getorlookup;
 # ifdef OS_THREADS_USED
     CS_synch_lock(&er_slowget_mutex);
 # endif /* OS_THREADS_USED */
-    if ((status = cer_getdata(&index_page,sizeof(index_page), (i4) 1,
+    if ((status = cer_getdata((char *) &index_page,sizeof(index_page), (i4) 1,
 	&(ERmulti[erindex].ERfile[ER_SLOWSIDE]),err_code)) != OK)
     {
 	cer_tclose(&(ERmulti[erindex].ERfile[ER_SLOWSIDE]));
@@ -1389,7 +1351,7 @@ i4        getorlookup;
 # ifdef OS_THREADS_USED
         CS_synch_lock(&er_slowget_mutex);
 # endif /* OS_THREADS_USED */
-	if ((status = cer_getdata(&index_page,sizeof(index_page),
+	if ((status = cer_getdata((char *) &index_page,sizeof(index_page),
 		SRECFACTOR*bnum + 1,
 		&(ERmulti[erindex].ERfile[ER_SLOWSIDE]),err_code)) != OK)
 	{
@@ -1517,8 +1479,7 @@ i4        getorlookup;
 **		Written.
 */
 VOID
-cer_tclose(fileptr)
-ERFILE	*fileptr;
+cer_tclose(ERFILE *fileptr)
 {
 	if (cer_istest())
 	{
@@ -1557,11 +1518,7 @@ ERFILE	*fileptr;
 **	    pass buffer to NMgetpart() for reentrancy
 */
 VOID
-cer_tfile(id, fors, fname, testing)
-ER_MSGID	id;
-i4		fors;
-char		*fname;
-bool		testing;
+cer_tfile(ER_MSGID id, i4 fors, char *fname, bool testing)
 {
 	char		numbuf[20];
 	ER_CLASS	class_no;

@@ -30,46 +30,43 @@
 **	    replace nat and longnat with i4
 **	19-Aug-2009 (kschendel) 121804
 **	    Allow repeated inclusion (eg by front headers).
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 FUNC_EXTERN STATUS  ERclose(
-#ifdef CL_PROTOTYPED
 	    void
-#endif
 );
 
 FUNC_EXTERN char *  ERget(
-#ifdef CL_PROTOTYPED
 	    ER_MSGID	    id
-#endif
 );
 
 FUNC_EXTERN VOID    ERinit(
-#ifdef CL_PROTOTYPED
 	    i4		    flags,
 	    STATUS	    (*p_sem_func)(),
 	    STATUS	    (*v_sem_func)(),
 	    STATUS	    (*i_sem_func)(),
 	    VOID	    (*n_sem_func)()
-#endif
 );
 
 FUNC_EXTERN STATUS  ERlangcode(
-#ifdef CL_PROTOTYPED
 	    char	    *language,
 	    i4	    	    *code
-#endif
 );
 
 FUNC_EXTERN STATUS  ERlangstr(
-#ifdef CL_PROTOTYPED
 	    i4		    code,
 	    char	    *str
-#endif
+);
+
+FUNC_EXTERN STATUS  ERmsg_hdr(
+	    char	    *svr_id,
+	    SCALARP	    session_id,
+	    char	    *msg_header
 );
 
 FUNC_EXTERN STATUS  ERslookup(
-#ifdef CL_PROTOTYPED
 	    i4	    msg_number,
 	    CL_ERR_DESC	    *clerror,
 	    i4		    flags,
@@ -81,11 +78,9 @@ FUNC_EXTERN STATUS  ERslookup(
 	    CL_ERR_DESC	    *err_code,
 	    i4		    num_param,
 	    ER_ARGUMENT	    *param
-#endif
 );
 
 FUNC_EXTERN STATUS  ERlookup(
-#ifdef CL_PROTOTYPED
 	    i4	    msg_number,
 	    CL_ERR_DESC	    *clerror,
 	    i4		    flags,
@@ -97,37 +92,28 @@ FUNC_EXTERN STATUS  ERlookup(
 	    CL_ERR_DESC	    *err_code,
 	    i4		    num_param,
 	    ER_ARGUMENT	    *param
-#endif
 );
 
 FUNC_EXTERN STATUS  ERrelease(
-#ifdef CL_PROTOTYPED
 	    ER_CLASS	    class_no
-#endif
 );
 
 FUNC_EXTERN STATUS  ERreport(
-#ifdef CL_PROTOTYPED
 	    STATUS	    err_msg,
 	    char	    *err_buf
-#endif
 );
 
 FUNC_EXTERN STATUS  ERsend(
-#ifdef CL_PROTOTYPED
 	    i4		    flag,
 	    char	    *message, 
 	    i4		    msg_length, 
 	    CL_SYS_ERR	    *err_code
-#endif
 );
 
 FUNC_EXTERN STATUS ERlog(
-#ifdef CL_PROTOTYPED
 	    char            *message,
 	    i4              msg_length,
 	    CL_SYS_ERR      *err_code
-#endif
 );
 
 FUNC_EXTERN VOID ERoptlog( 

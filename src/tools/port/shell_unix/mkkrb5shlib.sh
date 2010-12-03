@@ -138,6 +138,8 @@
 #          suffix is so on i64.hpu
 #	18-Jun-2009 (kschendel) SIR 122138
 #	    Hybrid mechanisms changed, fix here.
+#	23-Nov-2010 (kschendel)
+#	    Drop a few more obsolete ports
 
 #  Get shared libraries info.
 . shlibinfo
@@ -313,8 +315,6 @@ trap 'cd $workdir; rm -rf $workdir/*; exit 6' 1 2 3 15
     hp2_us5 |\
       *_lnx |\
     int_rpl |\
-    rmx_us5 |\
-    sui_us5 |\
     sgi_us5 |\
     a64_sol |\
       *_osx |\

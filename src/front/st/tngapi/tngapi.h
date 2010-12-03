@@ -98,6 +98,8 @@
 ##      12-Dec-2006 (hweho01)
 ##          Added hardware code for Unix, update version number for releases 301,
 ##          302 and 303. 
+**	1-Dec-2010 (kschendel)
+**	    Fix compiler warning, probably pointlessly.
 **/
 # ifndef __TNGAPI_INCLUDED
 # define __TNGAPI_INCLUDED
@@ -267,7 +269,6 @@ extern "C" {
 **        24-Sep-2004 (fanra01)
 **            Commented.
 */
-typedef struct _svrinfo IISVRINFO;
 
 typedef struct _svrinfo
 {
@@ -281,7 +282,7 @@ typedef struct _svrinfo
 # define II_INGRES                0x0004
 # define II_COMSVR                0x0008
 # define II_ICESVR                0x0010
-};
+} IISVRINFO;
 
 extern
 int II_IngresVersion( void );

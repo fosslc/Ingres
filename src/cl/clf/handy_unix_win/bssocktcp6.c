@@ -16,12 +16,13 @@
 
 # include	<bsi.h>
 # include	"bssockio.h"
+# include	"handylocal.h"
 
 /*
 **  Forward and/or External function references.
 */
 VOID iisock_unlisten( BS_PARMS *bsp );
-static VOID tcp6_switch_to_old_driver();
+static VOID tcp6_switch_to_old_driver(void);
 GLOBALREF     BS_DRIVER BS_socktcp;
 
 static	i4	tcpip_version = -1;
@@ -129,6 +130,8 @@ static	bool	IPv6_listen_or_connect_done = FALSE;
 **	    a previously good open socket whose fd happens to be zero.
 **	    This was causing IIGCC network port to get closed by registry
 **	    (Ingres discovery) listen port.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of handylocal.h
 */
 
 
@@ -702,7 +705,6 @@ BS_PARMS	*bsp;
 ** Exported driver specification.
 */
 
-extern	STATUS	BS_tcp_port();
 extern  VOID	iisock_unlisten(BS_PARMS *bsp);
 extern  VOID	iisock_send();
 extern  VOID	iisock_receive();

@@ -22,6 +22,8 @@
 **	    replace nat and longnat with i4
 **      05-Sep-2000 (hanch04)
 **          replace nat and longnat with i4
+**	1-Dec-2010 (kschendel)
+**	    Compiler warning fix.
 */
 
 #include <compat.h>
@@ -118,7 +120,7 @@ Disp_Line_no_refresh(WINDOW *mainW, bool batch_mode, i4  *scr_line, char *linept
     {
 	i4  c_col = FIRST_MAIN_COL;
 	char *cp = NULL ;
-	char c = NULL ;
+	char c = EOS ;
 
 	cp = lineptr;
  	if (row)

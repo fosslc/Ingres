@@ -19,6 +19,8 @@ static char sccsid[] = "@(#)tac.c	1.4 6/5/86";
  * 07-Aug-2009 (drivi01)
  *    Added pragma to disable warning 4996 about deprecated
  *    POSIX functions b/c it's a bug.
+** 1-Dec-2010 (kschendel)
+**    Shush some compiler warnings.
  */
 /* Turn off POSIX warning for this file until Microsoft fixes this bug */
 #ifdef NT_GENERIC
@@ -27,10 +29,15 @@ static char sccsid[] = "@(#)tac.c	1.4 6/5/86";
 
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include <signal.h>
 #ifdef NT_GENERIC
 #define SIGHUP 1
+#endif
+#ifdef UNIX
+#include <unistd.h>
 #endif
 
 /*
@@ -56,9 +63,8 @@ int bufsize;
 int targlen;
 int numerr;
 
-int cleanup();
+void cleanup(int);
 extern off_t lseek();
-extern char *strncpy(), *strcpy(), *malloc(), *realloc(), *mktemp();
 
 main(argc, argv)
     int argc;
@@ -102,13 +108,13 @@ main(argc, argv)
 tacstdin()
 {
 
-    int (*sigint)(), (*sighup)(), (*sigterm)();
+    void (*sigint)(int), (*sighup)(int), (*sigterm)(int);
 
-    if ((sigint = (int (*)())signal(SIGINT, SIG_IGN)) != (int (*)())SIG_IGN)
+    if ((sigint = signal(SIGINT, SIG_IGN)) != SIG_IGN)
 	(void) signal(SIGINT, cleanup);
-    if ((sighup = (int (*)())signal(SIGHUP, SIG_IGN)) != (int (*)())SIG_IGN)
+    if ((sighup = signal(SIGHUP, SIG_IGN)) != SIG_IGN)
 	(void) signal(SIGHUP, cleanup);
-    if ((sigterm = (int (*)())signal(SIGTERM, SIG_IGN)) != (int (*)())SIG_IGN)
+    if ((sigterm = signal(SIGTERM, SIG_IGN)) != SIG_IGN)
 	(void) signal(SIGTERM, cleanup);
 
     savestdin();
@@ -132,17 +138,17 @@ savestdin()
     tfile = mktemp(workplate);
     if ((fd = creat(tfile, 0600)) < 0) {
 	prterr(tfile);
-	cleanup();
+	cleanup(0);
     }
     while ((n = read(0, buf, readsize)) > 0)
 	if (write(fd, buf, n) != n) {
 	    prterr(tfile);
-	    cleanup();
+	    cleanup(0);
 	}
     (void) close(fd);
     if (n < 0) {
 	prterr("stdin read");
-	cleanup();
+	cleanup(0);
     }
 }
 
@@ -282,7 +288,7 @@ prterr(s)
     perror(s);
 }
 
-cleanup()
+void cleanup(int notused)
 {
 
     (void) unlink(tfile);

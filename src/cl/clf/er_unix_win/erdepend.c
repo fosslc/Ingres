@@ -15,59 +15,6 @@
 #include	<errno.h>
 
 
-/*}
-** Name: DESCRIPTOR - A VMS string descriptor.
-**
-** Description:
-**      A structure describing a variable length item in a VMS system
-**	service call.
-**
-** History:
-**     02-oct-1985 (derek)
-**          Created new for 5.0.
-**	15-jul-93 (ed)
-**	    adding <gl.h> after <compat.h>
-**	14-may-95 (emmag)
-**	    errno is a reserved in desktop compilers.
-**	19-apr-95 (canor01)
-**	    added <errno.h>
-**	03-sep-98 (toumi01)
-**	    Conditional const declaration of sys_errlist for Linux
-**	    systems using libc6 (else we get a compile error).
-**	15-apr-1999 (popri01)
-**	    For Unixware 7 (usl_us5), the C run-time variables
-**	    sys_errlist and sys_nerr are not available in a dynamic
-**	    load environment. Use the strerror function instead.
-**	06-oct-99 (toumi01)
-**	    Change Linux config string from lnx_us5 to int_lnx.
-**	21-jan-1999 (hanch04)
-**	    replace nat and longnat with i4
-**	14-jun-00 (hanje04)
-**	    Added ibm_lnx to conditional declaration of sys_errlist
-**	31-aug-2000 (hanch04)
-**	    cross change to main
-**	    replace nat and longnat with i4
-**	14-Mar-2001 (wansh01)
-**	    For dgi_us5, the C run-time variables
-**	    sys_errlist and sys_nerr are not available in a dynamic
-**	    load environment. Use the strerror function instead.
-**	07-Sep-2000 (hanje04)
-**	    Added axp_lnx (Alpha Linux) to conditional const declaration
-**	    for Linux and libc6.
-**	27-aug-2001 (somsa01)
-**	    Corrected last cross-integration.
-**	04-Dec-2001 (hanje04)
-**	    Removed declaration of sys_errlist and sys_nerr as they have been
-**	    replaced by strerror.
-**	07-sep-2005 (abbjo03)
-**	    Replace xxx_FILE constants by SI_xxx.
-*/
-typedef struct _DESCRIPTOR
-{
-    int             desc_length;        /* Length of the item. */
-    char            *desc_value;        /* Pointer to item. */
-}   DESCRIPTOR;
-
 /**
 ** Name:    ERdepend.c - The group of internal used machin dependent 
 **			    routines in ER.
@@ -98,6 +45,10 @@ typedef struct _DESCRIPTOR
 **	30-nov-98 (stephenb)
 **	    Replace direct error string comparison with strerror, it doesn't
 **	    work under Solaris 7
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.  Move DESCRIPTOR definition to erloc.h.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 **/
 
 #define IOBLOCK	512
@@ -125,8 +76,7 @@ typedef struct _DESCRIPTOR
 **	16-Oct-1986 (kobayashi) - first written.
 */
 STATUS
-cer_close(file)
-ERFILE	*file;
+cer_close(ERFILE *file)
 {
     i4		st = OK;
 
@@ -176,10 +126,7 @@ ERFILE	*file;
 **
 */
 STATUS
-cer_open(loc,file,err_code)
-LOCATION *loc;
-ERFILE *file;
-CL_ERR_DESC  *err_code;
+cer_open(LOCATION *loc, ERFILE *file, CL_ERR_DESC *err_code)
 {
     i4  status;
 
@@ -223,12 +170,7 @@ CL_ERR_DESC  *err_code;
 #define		SI_P_START	0
 
 STATUS
-cer_getdata(pbuf,size,bkt,file,err_code)
-char *pbuf;
-i4   size;
-i4  bkt;
-ERFILE *file;
-CL_ERR_DESC *err_code;
+cer_getdata(char *pbuf, i4 size, i4 bkt, ERFILE *file, CL_ERR_DESC *err_code)
 {
     i4  status;
     i4	rcount;
@@ -291,11 +233,7 @@ CL_ERR_DESC *err_code;
 **
 */
 STATUS
-cer_dataset(offset,size,parea,file)
-i4 offset;
-i4  size;
-char *parea;
-ERFILE *file;
+cer_dataset(i4 offset, i4 size, char *parea, ERFILE *file)
 {
     i4 status;
     i4 rcount;
@@ -369,11 +307,7 @@ ERFILE *file;
 **
 */
 STATUS
-cer_sysgetmsg(serr, length, msg_desc, err)
-CL_ERR_DESC	*serr;
-i4		*length;
-DESCRIPTOR	*msg_desc;
-CL_ERR_DESC	*err;
+cer_sysgetmsg(CL_ERR_DESC *serr, i4 *length, DESCRIPTOR *msg_desc, CL_ERR_DESC *err)
 
 # ifdef NT_GENERIC
 {
@@ -431,7 +365,7 @@ DWORD i;
     if (serr->errnum < 0)
 	return (ER_BADPARAM);
     
-#if defined( usl_us5) || defined(dgi_us5) 
+#if defined( usl_us5)
     msgp = strerror(serr->errnum);
 #else
     msgp = strerror(serr->errnum) ? strerror(serr->errnum) :

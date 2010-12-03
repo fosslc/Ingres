@@ -16,12 +16,14 @@
 #           Add int.rpl for Intel Rpath Linux build.
 #       31-Dec-2009 (horda03)
 #            Correct VMS library dependancies.
+#	23-Nov-2010 (kschendel)
+#	    Drop obsolete nooptims.
 
 SubDir ING_SRC back dmf lg ;
 
 IISUBSYS back dmf lg ;
 
-IINOOPTIM lgwrite.c : dgi_us5 int_lnx int_rpl ris_u64 i64_aix ;
+IINOOPTIM lgwrite.c : int_lnx int_rpl ;
 IINOOPTIM lgend.c : r64_us5 rs4_us5 ;
 IINOOPTIM lgbegin.c : rs4_us5 r64_us5 ;
 

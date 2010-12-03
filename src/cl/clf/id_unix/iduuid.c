@@ -16,21 +16,6 @@
 # include       <tm.h>
 # include  	<cm.h>
 # include  	<cs.h>
-#ifdef sqs_ptx
-#include <stdio.h>
-#endif /* sqs_ptx */
-
-#if defined(rmx_us5) || defined(nc4_us5)
-# include <sys/sockio.h>
-# include <stropts.h>
-# include <net/if.h>
-# include <fcntl.h>
-#endif
-
-#if defined(dgi_us5) 
-#include <sys/file.h>
-#include <netinet/dg_inet_info.h>
-#endif
 
 
 
@@ -262,30 +247,18 @@
 **          CS_cp_synch_init and this caused cross-process mutex hangs.
 **          Changed the definition but CS_cp_synch_init requires a status
 **          parameter
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports, obsolete long-long workarounds (use i8).
 */
-
-/* UnDefine TYPE_LONGLONG_OK for platforms that */
-/* don't have longlong C variable types        */
-#if !defined(rmx_us5) && !defined(sos_us5)
-#define TYPE_LONGLONG_OK
-#endif
 
 # define NODESIZE 6 /* 6 bytes in address */
 
-#if defined(TYPE_LONGLONG_OK)
-# define HNANOPERSEC ((longlong)10000000)
+# define HNANOPERSEC 10000000LL
 
-# define PRE1970DAYS 141427  /* from 15-oct-1582 to 1-jan-1970 */
-# define PRE1970MINS ((longlong)(PRE1970DAYS * 24 * 60))
-# define PRE1970SECS ((longlong)(PRE1970MINS * 60))
-# define PRE1970HNANO ((longlong)(PRE1970SECS * HNANOPERSEC))
-#else
-typedef u_i4 S64[4];
-static void add64(S64 a, S64 b, S64 ans);
-static void copy64(S64 a, S64 ans);
-static void mul64(S64 a, S64 b, S64 ans);
-static void ItoS64( u_i4 in, S64 ans);
-#endif /* TYPE_LONGLONG_OK */
+# define PRE1970DAYS 141427LL  /* from 15-oct-1582 to 1-jan-1970 */
+# define PRE1970MINS (PRE1970DAYS * 24LL * 60LL)
+# define PRE1970SECS (PRE1970MINS * 60LL)
+# define PRE1970HNANO (PRE1970SECS * HNANOPERSEC)
 
 # define IDUUID_NO_INIT		0
 # define IDUUID_OK		1
@@ -422,6 +395,7 @@ IDuuid_time()
 {
     UUID_TIME time_hnano;
     HRSYSTIME cur;
+    i8 hnanosec;
 
 
     /* Need to protect getting of time to nearest 100 nanosecs
@@ -461,17 +435,13 @@ IDuuid_time()
 
     ID_UUID_SEM_UNLOCK(ID_uuid_sem_ptr);
 
-#if defined(TYPE_LONGLONG_OK)
-    {
-    longlong hnanosec;
-
     /* 
     ** use seconds and microseconds from cur
     ** use just the hundred-nanosecond interval from cur_nano
     ** this yields 100-nano intervals since 1-jan-1970
     */
-    hnanosec = (longlong) cur.tv_sec * (HNANOPERSEC) +
-                    (longlong) cur.tv_nsec / 100;
+    hnanosec = (i8) cur.tv_sec * (HNANOPERSEC) +
+                    (i8) cur.tv_nsec / 100;
 
     /* now get the intervals since 15-oct-1582 */
     hnanosec += PRE1970HNANO;
@@ -485,44 +455,6 @@ IDuuid_time()
     time_hnano.I1.c[5] = (hnanosec >> 16) & 0xff;
     time_hnano.I1.c[6] = (hnanosec >> 8) & 0xff;
     time_hnano.I1.c[7] = hnanosec & 0xff;
-    }
-
-#else
-    {
-    S64 hnanosec, op1, op2, ans;
-
-    /* pre-1970 nanoseconds constant */
-    /*  hnanosec = 141427 * 24 * 60 * 60 * 10,000,000 */
-    /*  nnanosec = 122,192,928,000,000,000 */
-    /*  hnanosec = 0x01b21dd213814000 */
-    hnanosec[3] = 0x01b2;
-    hnanosec[2] = 0x1dd2;
-    hnanosec[1] = 0x1381;
-    hnanosec[0] = 0x4000;
-
-    /*   hnanosec += cur.tv_sec * 10,000,000   */
-    ItoS64(cur.tv_sec,op1);
-    ItoS64(10000000,op2);
-    mul64(op1,op2,ans);
-    add64(ans,hnanosec,op1);
-    copy64(op1,hnanosec);
-
-    /*   hnanosec += tv_nsec / 100  */
-    ItoS64(cur.tv_nsec / 100,op1);
-    add64(op1,hnanosec,ans);
-    copy64(ans,hnanosec);
-
-    /* Store time in Big Endian order for all platforms */
-    time_hnano.I1.c[0] = (hnanosec[3] >> 8) & 0xff;
-    time_hnano.I1.c[1] = hnanosec[3] & 0xff;
-    time_hnano.I1.c[2] = (hnanosec[2] >> 8) & 0xff;
-    time_hnano.I1.c[3] = hnanosec[2] & 0xff;
-    time_hnano.I1.c[4] = (hnanosec[1] >> 8) & 0xff;
-    time_hnano.I1.c[5] = hnanosec[1] & 0xff;
-    time_hnano.I1.c[6] = (hnanosec[0] >> 8) & 0xff;
-    time_hnano.I1.c[7] = hnanosec[0] & 0xff;
-    }
-#endif /* TYPE_LONGLONG_OK */
 
     return (time_hnano);
 }
@@ -597,40 +529,6 @@ IDuuid_sequence()
     return (seq);
 }
 
-#if defined(rmx_us5) || defined(nc4_us5)
-/*
-** Name: IDstroictl
-** 
-** Description:
-**	Support routine for rmx_us5 IDuuid_node routine.
-*/
-static STATUS
-IDstrioctl(i4 so, i4 cmd, char *buffer, i4 bufsize, i4 *buflen)
-{
-    struct strioctl ic;
-    i4     rc;
-
-    ic.ic_cmd = cmd;
-    ic.ic_timout = 0;
-    switch (cmd)
-    {
-    case SIOCGIFCONF:
-        /* Fit as many structures as possible in the buffer */
-        ic.ic_len = ( bufsize / sizeof(struct ifreq) ) * sizeof(struct ifreq);
-        break;
-    case SIOCGIFFLAGS:
-    case SIOCGENADDR:
-        ic.ic_len = sizeof(struct ifreq);
-        break;
-    default:
-        ic.ic_len = 1;
-    }
-    ic.ic_dp = buffer;
-    rc = ioctl(so, I_STR, &ic);
-    *buflen = ic.ic_len;
-    return rc;
-}
-#endif
 
 /*
 ** Name: IDuuid_node
@@ -658,7 +556,7 @@ static
 STATUS
 IDuuid_node(u_char *nodeid)
 {
-#if defined(sparc_sol) || defined(sui_us5) || defined(a64_sol)
+#if defined(sparc_sol) || defined(a64_sol)
 
   /* we'll use arp command */
 # define have_uuid_node_code
@@ -723,59 +621,6 @@ badreturn:
     return (status);
 
 # endif /* MACADDR_FROM_ARP */
-
-# if defined(sqs_ptx)
-# define have_uuid_node_code
-
-# define NOHOSTID       0
-# define HOSTID_ETHER   2
-# define HOSTID_TOKEN   3
-static char ethstat[32] = "/usr/bin/ethstat -a ";
-static char trstat[32]  = "/usr/bin/trstat -a ";
-char ethbuf[128];
-STATUS	status;
-
-FILE *f;
-char *e;
-i2  id_type = NOHOSTID;
-
-f = popen(ethstat, "r");
-if (f)
-    {
-    if (fgets(ethbuf, sizeof(ethbuf), f) )
-        {
-        for (e = ethbuf; *e && *e != ':'; e++);
-	if ( sscanf(e-2, "%2x:%2x:%2x:%2x:%2x:%2x",&nodeid[0],&nodeid[1],
-            &nodeid[2],&nodeid[3],&nodeid[4],&nodeid[5]) == 6)
-	    id_type = HOSTID_ETHER;
-        }
-    pclose(f);
-    }
-
-if (id_type == NOHOSTID)
-    {   /* didn't get a valid hostid from ethstat, try trstat */
-    f = popen(trstat, "r");
-    if (f)
-        {
-        if (fgets(ethbuf, sizeof(ethbuf), f) )
-            {
-            for (e = ethbuf; *e && *e != ':'; e++);
-	    if ( sscanf(e-2, "%2x:%2x:%2x:%2x:%2x:%2x",&nodeid[0],&nodeid[1],
-                 &nodeid[2],&nodeid[3],&nodeid[4],&nodeid[5]) == 6)
-                 id_type = HOSTID_TOKEN;
-            }
-        pclose(f);
-        }
-    }
-
-if (id_type == NOHOSTID)
-    status = FAIL;
-else
-    status = OK;
-
-return (status);
-
-# endif /* MACADDR_FROM_ETHSTAT */
 
 #if defined(any_aix)
 # define have_uuid_node_code
@@ -1061,81 +906,6 @@ int i;
   return(OK);
 #endif    /* MACADDR for sgi_us5 */  
 
-#if defined(rmx_us5) || defined(nc4_us5)
-# define have_uuid_node_code
-
-    i4     ifcnt, so, buflen;
-    char   buffer[1024];
-    struct ifreq *ifr;
-
-    if ((so = open("/dev/ip", O_RDONLY)) == -1)
-        return(FAIL);
-
-    if (IDstrioctl(so, SIOCGIFCONF, buffer, sizeof(buffer), &buflen) == -1)
-        return(FAIL);
-
-    ifr = (struct ifreq *) buffer;
-    ifcnt = buflen / sizeof(struct ifreq);
-
-    for ( ;ifcnt--; ifr++)
-    {
-        if (IDstrioctl(so, SIOCGIFFLAGS, (char *) ifr, sizeof(buffer), &buflen) == -1)
-            return(FAIL);
-        if ((ifr->ifr_flags & (IFF_UP|IFF_LOOPBACK)) == IFF_UP)
-        {
-            if (IDstrioctl(so, SIOCGENADDR, (char *) ifr, sizeof(buffer), &buflen) == -1)
-                return(FAIL);
-            MEcopy(ifr->ifr_enaddr, sizeof(ifr->ifr_enaddr), nodeid) ;
-        }
-    }
-    if (so != -1)
-    close(so);
-
-    return (OK);
-
-#endif /* MACADDR for rmx_us5 */
-
-#if defined(dgi_us5) 
-# define have_uuid_node_code
-    i4 i, status=FAIL;
-    i4 stream_fd = -1;
-    char * stream_dev = "/dev/udp";
-    struct dg_inet_info dg_inet_info;
-    struct dg_inet_if_entry dg_inet_if_entry;
-
-
-    stream_fd = open (stream_dev,O_RDWR);
-    if (stream_fd >= 0)
-    {
-        dg_inet_info.key = 0;
-        dg_inet_info.version = DG_INET_INFO_VERSION;
-        dg_inet_info.selector = DG_INET_IF_ENTRY;
-
-        do
-        {
-            dg_inet_info.buff_len = sizeof (dg_inet_if_entry);
-            dg_inet_info.buff_ptr = (caddr_t)&dg_inet_if_entry;
-
-            if (ioctl (stream_fd,SIOCGINFO,&dg_inet_info) == -1)
-                break;
-
-            if (dg_inet_info.buff_len) 
-            {
-                if (strstr (dg_inet_if_entry.ifName,"loop")) continue;
-                if (dg_inet_if_entry.ifHwAddrLen != 6) continue;
-      
-                  for (i = 0; i < 6; i++)
-                    nodeid[i] = dg_inet_if_entry.ifHwAddr[i];
-                status=OK;
-                break;
-            }
-        }
-        while (dg_inet_info.buff_len);
-	close(stream_fd);
-    }
-
-    return(status);
-#endif 
 
 #if defined(axp_osf)
 # define have_uuid_node_code
@@ -1193,40 +963,6 @@ STATUS      status;
     return( status );
 
 # endif /* MACADDR for axp_osf */
-
-
-
-#if defined(sos_us5)
-# define have_uuid_node_code
-
- FILE *pipepointer;                          /* pointer to a pipe    */
- char commandbuf[1024];                      /* ifconfig command     */
- char *e;                                    /* pointer ether string */
- i4 temp[6];                                 /* holds ether string   */
- i4 i;                                       /* loop control         */
-
- pipepointer = popen("/etc/ifconfig -a 2> /dev/null", "r");
- if(pipepointer)
-   {
-   while (fgets(commandbuf, sizeof(commandbuf), pipepointer) != NULL)
-     {
-     if (strstr(commandbuf, "ether"))
-        {
-        for (e = commandbuf; *e && *e != ':'; e++)
-        sscanf (e-2,"%2x:%2x:%2x:%2x:%2x:%2x",&temp[0],&temp[1],\
-               &temp[2],&temp[3],&temp[4],&temp[5]);
-        }
-     }
-     for (i=0;i<6;i++){
-         nodeid[i] = temp[i];
-         }
-     pclose(pipepointer);
-   }
-   else
-      return (FAIL);
-
-   return (OK);
-#endif /* sos_us5 */
 
 
 # ifndef have_uuid_node_code
@@ -1505,68 +1241,3 @@ IDuuid_compare( UUID *uuid1, UUID *uuid2 )
     return ( res < 0 ? -1 : 1 );
 }
 # endif /* !defined(IDuuid_compare) */
-
-#if !defined(TYPE_LONGLONG_OK)
-static void ItoS64( u_i4 in, S64 ans)
-{
-   i4 i;
-   for (i=0; i < 2; i++)
-   {
-      ans[i] = in & 0xffff;
-      in >>= 16;
-   }
-   ans[2]=ans[3]=0;
-}
-
-static void add64(S64 a, S64 b, S64 ans)
-{
-   u_i4 intermed;
-   u_i4 carry;
-   i4 i;
-   carry = 0;
-   for (i=0; i < 4; i++)
-   {
-      intermed = a[i]+b[i] + carry;
-      if (intermed > 65535L)
-         carry = 1;
-      else
-         carry = 0;
-      ans[i] = (u_i4)intermed & 0xffff;
-   }
-}
-
-static void copy64(S64 a, S64 ans)
-{
-   i4 i;
-   for (i=0; i < 4; i++)
-      ans[i] = a[i];
-}
-
-static void mul64(S64 a, S64 b, S64 ans)
-{
-   u_i4 temp[7];
-   u_i4 intermed;
-   i4 i,j,k;
-
-   for (i=0; i < 8; i++)
-      temp[i] = 0;
-
-   for (i=0; i < 4; i++)
-      for (j=0; j < 4; j++)
-      {
-         intermed = a[i] * b[j];
-
-         temp[i+j] += intermed & 0xffff;
-         temp[i+j+1] += intermed >> 16;
-         for(k=i+j;k < 7;k++)
-         {
-             if(temp[k] > 65535L)
-                 temp[k] = temp[k] & 0xffff, temp[k+1]++;
-         }
-      }
-
-   for (i=0; i < 4 ; i++)
-      ans[i] = temp[i];
-
-}
-#endif /* TYPE_LONGLONG_OK */

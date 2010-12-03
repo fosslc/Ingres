@@ -4,6 +4,7 @@
 
 # include <compat.h>
 # include <st.h>
+# include <gvcl.h>
 # include <gvos.h>
 
 # ifdef NT_GENERIC

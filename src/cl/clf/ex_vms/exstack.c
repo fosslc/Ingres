@@ -2,14 +2,14 @@
 ** Copyright (c) 1984, 2009 Ingres Corporation
 */
 # include	<compat.h>
+# include   <clconfig.h>
 # include	<gl.h>
 #ifdef OS_THREADS_USED
 # include   <me.h>
-# include   <clconfig.h>
 # include   <meprivate.h>
 #endif
 # include	<ex.h>
-# include	"exi.h"
+# include	<exinternal.h>
 
 /*
 ** exstack.c -- EX Local Stack Handling Routines.
@@ -97,6 +97,8 @@
 **	    Made changes so we conform to coding standard.
 **	05-jun-2009 (joea)
 **	    Conditionally reinstate previous Alpha vms version.
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 /* Forward declarations */
@@ -108,12 +110,12 @@ static  EX_CONTEXT	*ex_sptr;
 
 #ifdef OS_THREADS_USED
 
-FUNC_EXTERN VOID        i_EX_t_setcontext();
-FUNC_EXTERN EX_CONTEXT  **i_EX_t_getcontext();
+static VOID        i_EX_t_setcontext(EX_CONTEXT *);
+static EX_CONTEXT  **i_EX_t_getcontext(void);
 
 static ME_TLS_KEY   EXcontextkey = 0;
-static  VOID         (*i_EXsetcontext)() = i_EX_t_setcontext;
-static  EX_CONTEXT  **(*i_EXgetcontext)() = i_EX_t_getcontext;
+static  VOID         (*i_EXsetcontext)(EX_CONTEXT *) = i_EX_t_setcontext;
+static  EX_CONTEXT  **(*i_EXgetcontext)(void) = i_EX_t_getcontext;
 
 # else /* OS_THREADS_USED */
 
@@ -261,8 +263,8 @@ i_EXnext( EX_CONTEXT *context )
 **      Return **EX_CONTEXT instead of *EX_CONTEXT.
 */
 
-EX_CONTEXT **
-i_EX_t_getcontext()
+static EX_CONTEXT **
+i_EX_t_getcontext(void)
 {
     EX_CONTEXT **ex_psptr;
     STATUS     status;
@@ -299,9 +301,8 @@ i_EX_t_getcontext()
 **      does not yet exist, obviating ME_tls_get() call.
 */
 
-VOID
-i_EX_t_setcontext( context )
-EX_CONTEXT  *context;
+static VOID
+i_EX_t_setcontext( EX_CONTEXT *context )
 {
     EX_CONTEXT **ex_psptr;
     STATUS     status;

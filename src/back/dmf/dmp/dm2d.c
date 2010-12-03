@@ -792,6 +792,8 @@ NO_OPTIM=dr6_us5 pym_us5
 **          When a DB was opened during Incremental Rollforward, the access_mode
 **          is forced to READONLY. Need to identify this situation so that multiple sessions
 **          can open the DB READONLY.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Correct type of attflag
 */
 
 /*
@@ -946,7 +948,7 @@ typedef struct _DMP_ATTRIBUTE_V8	/* Ingres 2006r3 DB_MAXNAME 32 */
      i2              attfmt;                /* Attribute type. */
      i2              attfmp;		    /* Precision for unsigned integer.*/
      u_i2	     attver_altcol;         /* version row altered */
-     u_i2	     attcollID;		    /* explicitly declared Collation */
+     i2		     attcollID;		    /* explicitly declared Collation */
      char	     attfree[16];	    /*   F R E E   S P A C E   */
 } DMP_ATTRIBUTE_V8;
 

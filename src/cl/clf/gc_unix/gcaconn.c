@@ -1,13 +1,10 @@
 /*
 **Copyright (c) 2006, 2009 Ingres Corporation
-** NO_OPTIM=rmx_us5 rux_us5
 */
 
 #include    <bzarch.h>
-#if !defined(dg8_us5) && !defined(dgi_us5)
 #include    <systypes.h>
 #include    <pwd.h>
-#endif
 
 #include    <compat.h>
 #include    <clconfig.h>
@@ -27,25 +24,6 @@
 #include    <errno.h>
 #include    <diracc.h>
 #include    <handy.h>
-
-#if defined(dg8_us5) || defined(dgi_us5)
-#include    <pwd.h>
-#endif
-
-# ifdef xCL_SUNOS_CMW
-# define SunOS_CMW
-# undef ulong
-# include <cmw/tnet_attrs.h>
-# include <cmw/sctnattrs.h>
-# include <sys/label.h>
-# endif
-
-# if defined(hp8_bls)
-# include <sys/sctnmasks.h>
-# include <m6attrs.h>
-# include <sys/sctnerrno.h>
-# include <mandatory.h>
-# endif /* hp8_bls */
 
 #include    <bsi.h>
 
@@ -348,22 +326,11 @@ VOID GC_set_blocking( bool blocking_on );
 **	    length names.
 **	15-nov-2010 (stephenb)
 **	    Proto GC_set_blocking().
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Drop obsolete ports, obsolete security label struct.
+**	    Stricter callback prototyping.
 **/
 
-/*
-** This structure is  used to store user name/label mappings from PM.
-** This assumes a small number of users/labels so uses a simple  linked
-** list currently. This is necessary since currently PMget can't be used
-** directly within the GCA listen completion routine.
-*/
-typedef struct _user_label  {
-	char *user_name;
-	char *security_label;
-	struct _user_label  *next;
-
-} USER_LABEL;
-
-static USER_LABEL	*ul_root = NULL;
 static uid_t		saved_euid = -1;
 
 /* Defines for Remote Access */
@@ -373,10 +340,10 @@ static uid_t		saved_euid = -1;
 #define		GC_RA_ENABLED           1
 #define		GC_RA_ALL               2
 
-static VOID	GC_listen_sm( SVC_PARMS *, STATUS );
+static VOID	GC_listen_sm( void *, STATUS );
 static VOID	GC_recvpeer_sm( PTR );
 static VOID	GC_request_bs( SVC_PARMS * );
-static VOID	GC_request_sm( SVC_PARMS * );
+static VOID	GC_request_sm( void *, i4 );
 static GCA_GCB	*GC_initlcb( VOID );
 static VOID	GC_whoami( VOID );
 static STATUS 	GC_check_uid( SVC_PARMS	*svc_parms );
@@ -539,7 +506,7 @@ GClisten( SVC_PARMS *svc_parms )
 	bsp.bcb = gcb->bcb;
 	bsp.lbcb = (PTR) listenbcb;
 	bsp.func = GC_listen_sm;
-	bsp.closure = (PTR)svc_parms;
+	bsp.closure = svc_parms;
 	bsp.syserr = svc_parms->sys_err;
 	bsp.timeout = svc_parms->time_out;
 	svc_parms->time_out = -1;	/* Don't timeout subsequent ops */
@@ -556,7 +523,7 @@ GClisten( SVC_PARMS *svc_parms )
 
 	/* if registration unncessary, continue directly */
 
-	(*bsp.func)( bsp.closure );
+	(*bsp.func)( bsp.closure, 0 );
 }
 
 /*
@@ -590,8 +557,9 @@ GClisten( SVC_PARMS *svc_parms )
 */
 
 static VOID
-GC_listen_sm( SVC_PARMS *svc_parms, STATUS timeout_status )
+GC_listen_sm( void *parm, STATUS timeout_status )
 {
+    SVC_PARMS	*svc_parms = (SVC_PARMS *) parm;
     GCA_GCB	*gcb = (GCA_GCB *)svc_parms->gc_cb;
     BS_PARMS	bsp;
 
@@ -611,6 +579,7 @@ GC_listen_sm( SVC_PARMS *svc_parms, STATUS timeout_status )
     /* 
     ** Pick up connection with BS accept 
     */
+    bsp.func = NULL;
     bsp.bcb = gcb->bcb;
     bsp.lbcb = (PTR) listenbcb;
     bsp.syserr = svc_parms->sys_err;
@@ -1013,7 +982,7 @@ GC_request_bs( SVC_PARMS *svc_parms )
 	bsp.bcb = gcb->bcb;
 	bsp.lbcb = (PTR) listenbcb;
 	bsp.func = GC_request_sm;
-	bsp.closure = (PTR)svc_parms;
+	bsp.closure = svc_parms;
 	bsp.syserr = svc_parms->sys_err;
 	bsp.timeout = svc_parms->time_out;
 	bsp.buf = svc_parms->partner_name;
@@ -1063,7 +1032,7 @@ GC_request_bs( SVC_PARMS *svc_parms )
 
 	/* if registration unncessary, continue directly */
 
-	(*bsp.func)( bsp.closure );
+	(*bsp.func)( bsp.closure, 0 );
 }
 
 /*
@@ -1089,8 +1058,9 @@ GC_request_bs( SVC_PARMS *svc_parms )
 */
 
 static VOID
-GC_request_sm( SVC_PARMS *svc_parms )
+GC_request_sm( void *parm, i4 notused )
 {
+    SVC_PARMS		*svc_parms = (SVC_PARMS *) parm;
     GCA_GCB		*gcb = (GCA_GCB *)svc_parms->gc_cb;
     BS_PARMS		bsp;
 
@@ -1431,9 +1401,7 @@ GC_check_uid( SVC_PARMS	*svc_parms )
 
 	/*
 	** Check if initialized.
-	** Default is OFF if not secure or ON if secure 
-	** For secure we check if port has labels, since we can't
-	** tell what higher level code may be doing
+	** Default is OFF
 	*/
 	check_uid=FALSE;
 	/* See if PM value overrides default */

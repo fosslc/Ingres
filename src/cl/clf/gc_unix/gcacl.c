@@ -12,6 +12,8 @@
 #include    <gc.h>
 #include    <tr.h>
 #include    <lo.h>
+#include    <ex.h>
+#include    <exinternal.h>
 
 #include    <bsi.h>
 
@@ -153,9 +155,10 @@
 **	15-Jun-2004 (schka24)
 **	    It doesn't make sense to set II_GC_PROT at the shell level
 **	    since everyone has to agree on it.  Use NMgtIngAt.
+**	14-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **	15-nov-2010 (stephenb)
 **	    Add proto for GC_get_driver.
-[@history_template@]...
 */
 
 
@@ -288,7 +291,6 @@ VOID	(*free)();
 	char		*mode = NULL;
 	CL_ERR_DESC 	desc;
 	TYPESIG		(*sigpipe)();
-	TYPESIG		i_EXcatch();
 
 	GCalloc = alloc;
 	GCfree = free;

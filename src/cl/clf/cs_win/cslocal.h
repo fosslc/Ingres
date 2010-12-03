@@ -29,6 +29,8 @@
 **          Added FUNC_EXTERN for CSMT_get_thread_stats().
 **	28-Jan-2010 (horda03) Bug 121811
 **          Enable Evidence Sets on Windows.
+**	16-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.  Prune out junk.
 **/
 
 /*
@@ -50,16 +52,12 @@
 
 /* csinterface.c */
 
-GLOBALREF CS_SYSTEM	      Cs_srv_block;
 GLOBALREF CS_SCB	      Cs_queue_hdrs[CS_LIM_PRIORITY];
-GLOBALREF CS_SCB	      Cs_known_list_hdr;
 GLOBALREF CS_SCB	      Cs_to_list_hdr;
 GLOBALREF CS_SCB	      Cs_wt_list_hdr;
 GLOBALREF CS_SCB	      Cs_as_list_hdr;
-/* GLOBALREF CS_STK_CB	      Cs_stk_list_hdr; */
 GLOBALREF CS_SCB	      Cs_idle_scb;
 GLOBALREF CS_SCB	      Cs_repent_scb;
-/* GLOBALREF CS_ADMIN_SCB	      Cs_admin_scb; */
 GLOBALREF i4 		      CSdebug;
 
 
@@ -71,32 +69,12 @@ GLOBALREF i4 		      Cs_incomp;
 
 FUNC_EXTERN CS_SCB *CS_find_scb( /* i4  sid */ );
 
-FUNC_EXTERN CS_SCB *CS_xchg_thread();
-FUNC_EXTERN STATUS CS_admin_task();
-FUNC_EXTERN STATUS CS_event_shutdown();
-FUNC_EXTERN STATUS CS_find_events();
-FUNC_EXTERN STATUS CS_parse_option();
-FUNC_EXTERN STATUS CS_set_server_connect();
-FUNC_EXTERN VOID   CS_setup();
+FUNC_EXTERN STATUS CS_admin_task(void);
+FUNC_EXTERN void CS_sampler(void);
+FUNC_EXTERN VOID   CS_setup(void *);
+FUNC_EXTERN VOID   CS_prf_setup(void *);
 FUNC_EXTERN STATUS CS_tas();
-FUNC_EXTERN STATUS cs_handler();
-FUNC_EXTERN VOID CS_dump_stack();
-FUNC_EXTERN VOID CS_eradicate();
-FUNC_EXTERN VOID CS_fmt_scb();
-FUNC_EXTERN VOID CS_mkframe();
-FUNC_EXTERN VOID CS_mo_init(void);
-FUNC_EXTERN VOID CS_move_async();
-FUNC_EXTERN STATUS CS_swuser();
-FUNC_EXTERN VOID CS_toq_scan();
 FUNC_EXTERN VOID CSdump_statistics();
-FUNC_EXTERN VOID CSsigchld();
-FUNC_EXTERN VOID iiCLintrp();
-FUNC_EXTERN VOID CSdiag_server_link();
-FUNC_EXTERN i4  CS_quantum();
-FUNC_EXTERN i4  CSsigterm();
-FUNC_EXTERN i4  CSslave_handler();
-FUNC_EXTERN VOID CS_breakpoint(); 
-FUNC_EXTERN STATUS CSMT_get_thread_stats();
 
 FACILITYREF ME_TLS_KEY          gc_compl_key;
 

@@ -215,6 +215,8 @@
 ##	    Bug 123648
 ##	    Path not always set when running mkvalidpw, use full path for
 ##	    ingprenv
+##	23-Nov-2010 (kschendel)
+##	    Drop a few more obsolete ports.
 ##
 #  PROGRAM = (PROG0PRFX)mkvalidpw
 #******************************************************************************
@@ -310,27 +312,7 @@ case "$VERS" in
                             DFLAG=-D_HPUX_SOURCE
                         fi
 			;;
-	sco_us5|sos_us5)
-                        # check if U.S. libcrypt is supplied (with decrypt)
-                        # otherwise, the supplement libcrypt must be there
-                        if [ -f /lib/libcrypt_d.a ]
-                        then
-                                LIBS="-lprot -lcrypt_d -lx"
-                        else
-                                LIBS="-lprot -lcrypt_i -lx"
-                        fi
-                        HAS_DEVSYS=false;;
-
-	ds3_ulx) 
-			# check if KERBEROS/BIND is installed
-			if [ -f /usr/lib/libckrb.a ]
-			then
-				DFLAG=-DKERBEROS_EXIST
-				LIBS="-lckrb -lkrb -lknet -ldes -lauth"
-			else
-				LIBS="-lknet -lauth"
-			fi;;
-	dr6_us5|usl_us5|sqs_ptx) LIBS=$LDLIBMACH ;;
+	usl_us5) LIBS=$LDLIBMACH ;;
 	*_lnx|int_rpl)	LIBS="-lcrypt"
 			if [ -f /etc/shadow ]
 			then

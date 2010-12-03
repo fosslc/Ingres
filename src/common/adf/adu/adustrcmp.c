@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2008 Ingres Corporation
+** Copyright (c) 1986, 2008, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -212,6 +212,9 @@
 **          A standard interface is expected by fcn lookup / execute
 **          operations. Force NFC normalization is now achieved by temporarily
 **          updating the adf_uninorm_flag in the ADF_CB.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. Don't allow UTF8 strings with it
+**	    to use UCS2 CEs for comparison related actions.
 **/
 
 
@@ -1063,8 +1066,9 @@ i4		*rcmp)
     i4		size2;
     ADULcstate	s1, s2;
 
-    /* Skim off c/text/char/varchar comparisons in UTF* server. */
+    /* Skim off c/text/char/varchar comparisons in UTF* server unless UCS_BASIC. */
     if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED &&
+	dv1->db_collID != DB_UCS_BASIC_COLL && dv2->db_collID != DB_UCS_BASIC_COLL &&
 	(dv1->db_datatype == DB_VCH_TYPE || dv1->db_datatype == DB_CHA_TYPE ||
 	 dv1->db_datatype == DB_TXT_TYPE || dv1->db_datatype == DB_CHR_TYPE) &&
 	(dv2->db_datatype == DB_VCH_TYPE || dv2->db_datatype == DB_CHA_TYPE ||
@@ -3492,13 +3496,15 @@ i4		*rcmp)
 **      12-May-2009 (hanal04) Bug 122031
 **          For UTF8 installations non-unicode character strings should be 
 **          coerced to unicode and passed to adu_ucollweight().
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Handle UCS_BASIC collation for UTF8 by not switching to UCS2.
 */
 
 DB_STATUS
 adu_collweight(
-ADF_CB		*adf_scb,
-DB_DATA_VALUE	*str_dv,
-DB_DATA_VALUE	*res_dv)
+	ADF_CB		*adf_scb,
+	DB_DATA_VALUE	*str_dv,
+	DB_DATA_VALUE	*res_dv)
 {
     DB_STATUS	    db_stat, stat = E_DB_OK;
     u_char	    *sptr, *endsptr;
@@ -3513,7 +3519,8 @@ DB_DATA_VALUE	*res_dv)
     if (db_stat = adu_lenaddr(adf_scb, str_dv, &slen, (char **) &sptr))
 	return (db_stat);
     
-    if(adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+    if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+	str_dv->db_collID != DB_UCS_BASIC_COLL)
     {
         for(;;)
         {
@@ -3554,27 +3561,24 @@ DB_DATA_VALUE	*res_dv)
             break;
         }
     }
+    else if (adf_scb->adf_collation)
+    {
+	/* Do it the other way. */
+    }
     else
     {
-        if (adf_scb->adf_collation)
-        {
-	    /* Do it the other way. */
-        }
-        else
-        {
-	    MEfill(slen, 0, 
-		    (char *) &((DB_TEXT_STRING *)res_dv->db_data)->db_t_text);
-	    MEcopy(sptr, slen, 
-		    (char *) &((DB_TEXT_STRING *)res_dv->db_data)->db_t_text);
-	    ((DB_TEXT_STRING *)res_dv->db_data)->db_t_count = slen;
-        }
+	if (slen > res_dv->db_length - DB_CNTSIZE)
+	    slen = res_dv->db_length - DB_CNTSIZE;
+	MEcopy(sptr, slen, 
+	    (char *) &((DB_TEXT_STRING *)res_dv->db_data)->db_t_text);
+	((DB_TEXT_STRING *)res_dv->db_data)->db_t_count = slen;
     }
 
     if(memexpanded)
         stat = MEfree (comp.db_data);
 #ifdef xDEBUG
-        if (stat)
-          TRdisplay ("adu_collweight - MEfree status = %d \n", stat);
+    if (stat)
+	TRdisplay ("adu_collweight - MEfree status = %d \n", stat);
 #endif
 
     return (db_stat);

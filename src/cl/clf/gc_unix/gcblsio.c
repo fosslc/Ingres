@@ -78,6 +78,8 @@
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
 **	15-nov-2010 (stephenb)
 **	    prototype all functions fully.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Minor added prototype cleanup.
 */
 
 /********************************************************************
@@ -235,9 +237,9 @@ SYSTIME etime;				/* time struct returned by TMet() */
 static int ppid;    	    		/* my process id */
 
 /* Callback functions */
-static VOID (*cmread) ();   	    	/* called when read completes */
-static VOID (*cmwrite) ();  	    	/* called when write completes */
-static PTR  cmclosure;	    	    	/* closure parm for read/write */
+static VOID (*cmread) (void *, i4);	/* called when read completes */
+static VOID (*cmwrite) (void *, i4);	/* called when write completes */
+static void *cmclosure;	    	    	/* closure parm for read/write */
 
 /* Forward References */
 FUNC_EXTERN VOID    comdone(void);
@@ -254,7 +256,7 @@ VOID		    setto( int );
 VOID		    siodone(void );
 int		    sioinit(void );
 VOID		    sioread(int );
-VOID		    sioreg( void (*)(), void (*)(), PTR);
+VOID		    sioreg( void (*)(), void (*)(), void *);
 
 /* Global variable references */
 GLOBALREF   int	    errno;
@@ -335,8 +337,8 @@ siodone(void )
 {
 
     /* unregister file descriptors */
-    (VOID)iiCLfdreg(comfd, FD_READ, (VOID (*)) 0, (PTR) 0, -1);
-    (VOID)iiCLfdreg(comfd, FD_WRITE, (VOID (*)) 0, (PTR) 0, -1);
+    (VOID)iiCLfdreg(comfd, FD_READ, NULL, NULL, -1);
+    (VOID)iiCLfdreg(comfd, FD_WRITE, NULL, NULL, -1);
     return;
 }
 
@@ -982,10 +984,8 @@ comxon(void)
 **		Initial coding.
 */
 VOID
-sioreg( cmrdfunc, cmwtfunc, cmclosparm)
-VOID		(*cmrdfunc)();
-VOID		(*cmwtfunc)();
-PTR 	    	cmclosparm;
+sioreg( void (*cmrdfunc)(void *, i4), void (*cmwtfunc)(void *, i4),
+	void * cmclosparm)
 {
     /* register functions */
     cmread = cmrdfunc;

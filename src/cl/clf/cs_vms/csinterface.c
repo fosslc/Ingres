@@ -4,6 +4,7 @@
 */
 
 #include    <compat.h>
+#include    <clconfig.h>
 #include    <gl.h>
 #include    <cs.h>
 #include    <er.h>
@@ -45,6 +46,7 @@
 #include    <csinternal.h>
 # include   "cslocal.h"
 #include    "cssampler.h"
+#include    <exinternal.h>
 
 #include    <astjacket.h>
 
@@ -712,6 +714,8 @@
 **          cs_scbdealloc and cs_reject before returning to the caller.
 **      12-aug-2010 (joea)
 **          Use VAXC$ESTABLISH to set up exception handlers.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 /*
@@ -725,20 +729,14 @@ FUNC_EXTERN void    CS_exit_handler();
 #ifdef ALPHA
 FUNC_EXTERN void    CS_cactus_save();
 #endif
-FUNC_EXTERN void    CS_move_async();
 #if defined(__STDARG_H__)
 FUNC_EXTERN i4  TRdisplay( char *, ... );
 #else
 FUNC_EXTERN STATUS  TRdisplay();
 #endif
-FUNC_EXTERN void i_EX_initfunc(
-    void (*setfunc)(EX_CONTEXT *),
-    EX_CONTEXT **(*getfunc)(void));	/* Init the EX facility */
 
-FUNC_EXTERN void CS_mo_init(void);
 FUNC_EXTERN void CS_rcv_request();
 FUNC_EXTERN void CS_scb_attach();
-FUNC_EXTERN void CS_change_priority();
 FUNC_EXTERN STATUS CS_alloc_stack();
 FUNC_EXTERN STATUS CS_cp_mbx_create();
 typedef void FP_Callback(CS_SCB **scb);
@@ -825,7 +823,7 @@ static    CS_FUNCTIONS        CS_functions                   ZERO_FILL;
 GLOBALDEF CS_FUNCTIONS        *Cs_fvp = &CS_functions;
 #endif /* OS_THREADS_USED */
 
-GLOBALDEF CS_SYSTEM           Cs_srv_block ZERO_FILL; /* Overall ctl struct */
+GLOBALDEF volatile CS_SYSTEM  Cs_srv_block ZERO_FILL; /* Overall ctl struct */
 GLOBALDEF CS_SEMAPHORE        Cs_known_list_sem              ZERO_FILL;
 GLOBALDEF CS_SCB	      Cs_queue_hdrs[CS_LIM_PRIORITY] ZERO_FILL;
 GLOBALDEF CS_SCB	      Cs_known_list_hdr		     ZERO_FILL;
@@ -835,11 +833,10 @@ GLOBALDEF CS_SCB	      Cs_as_list_hdr		     ZERO_FILL;
 GLOBALDEF CS_STK_CB	      Cs_stk_list_hdr		     ZERO_FILL;
 GLOBALDEF CS_SCB	      Cs_idle_scb		     ZERO_FILL;
 GLOBALDEF CS_SCB              Cs_repent_scb                  ZERO_FILL;
-GLOBALDEF CS_ADMIN_SCB	      Cs_admin_scb		     ZERO_FILL;
+GLOBALDEF volatile CS_ADMIN_SCB	Cs_admin_scb		     ZERO_FILL;
 GLOBALDEF CS_SYNCH	      Cs_utility_sem	             ZERO_FILL;
 GLOBALDEF PTR		      Cs_save_exsp		     ZERO_FILL;
 GLOBALDEF PTR		      Cs_old_last_chance;
-GLOBALREF void                (*Ex_print_stack)();
 static	short		      Cs_signal ZERO_FILL;
 
 GLOBALREF VOID                (*Ex_diag_link)();
@@ -1823,7 +1820,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
     Cs_known_list_hdr.cs_client_type = 0;
     Cs_known_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_known_list_hdr.cs_tag = CS_TAG;
-    Cs_known_list_hdr.cs_stk_area = 0;
+    Cs_known_list_hdr.cs_stk_area = NULL;
     Cs_known_list_hdr.cs_stk_size = 0;
     Cs_known_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_known_list_hdr.cs_priority = 0;
@@ -1837,7 +1834,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
     Cs_wt_list_hdr.cs_client_type = 0;
     Cs_wt_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_wt_list_hdr.cs_tag = CS_TAG;
-    Cs_wt_list_hdr.cs_stk_area = 0;
+    Cs_wt_list_hdr.cs_stk_area = NULL;
     Cs_wt_list_hdr.cs_stk_size = 0;
     Cs_wt_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_wt_list_hdr.cs_priority = 0;
@@ -1851,7 +1848,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
     Cs_to_list_hdr.cs_client_type = 0;
     Cs_to_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_to_list_hdr.cs_tag = CS_TAG;
-    Cs_to_list_hdr.cs_stk_area = 0;
+    Cs_to_list_hdr.cs_stk_area = NULL;
     Cs_to_list_hdr.cs_stk_size = 0;
     Cs_to_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_to_list_hdr.cs_priority = 0;
@@ -1865,7 +1862,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
     Cs_as_list_hdr.cs_client_type = 0;
     Cs_as_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_as_list_hdr.cs_tag = CS_TAG;
-    Cs_as_list_hdr.cs_stk_area = 0;
+    Cs_as_list_hdr.cs_stk_area = NULL;
     Cs_as_list_hdr.cs_stk_size = 0;
     Cs_as_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_as_list_hdr.cs_priority = 0;
@@ -1881,7 +1878,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
 	Cs_queue_hdrs[i].cs_client_type = 0;
 	Cs_queue_hdrs[i].cs_owner = (PTR)CS_IDENT;
 	Cs_queue_hdrs[i].cs_tag = CS_TAG;
-	Cs_queue_hdrs[i].cs_stk_area = 0;
+	Cs_queue_hdrs[i].cs_stk_area = NULL;
 	Cs_queue_hdrs[i].cs_stk_size = 0;
 	Cs_queue_hdrs[i].cs_state = CS_COMPUTABLE;
 	Cs_queue_hdrs[i].cs_priority = i;
@@ -1962,7 +1959,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
     idle_scb->cs_owner = (PTR)CS_IDENT;
     idle_scb->cs_tag = CS_TAG;
     idle_scb->cs_length = sizeof(CS_SCB);
-    idle_scb->cs_stk_area = 0;
+    idle_scb->cs_stk_area = NULL;
     idle_scb->cs_stk_size = 0;
     idle_scb->cs_state = CS_COMPUTABLE;
     idle_scb->cs_priority = CS_PIDLE;    /* idle = lowest priority */
@@ -2473,7 +2470,6 @@ IICSdispatch()
     };
     EX_CONTEXT		excontext;
     CS_INFO_CB		csib;
-    FUNC_EXTERN	STATUS	cs_handler();
     FUNC_EXTERN int	CS_last_chance();
     bool		recovery_server = FALSE;
 
@@ -2645,7 +2641,7 @@ IICSdispatch()
 		   Cs_admin_scb.csa_scb.cs_username );
 	    Cs_admin_scb.csa_scb.cs_next = &Cs_repent_scb;
 
-	    ret_val = CS_alloc_stack(&Cs_admin_scb, error);
+	    ret_val = CS_alloc_stack(&Cs_admin_scb.csa_scb, error);
 	    if (ret_val != OK)
 	    {
 		EXdelete();
@@ -6122,7 +6118,7 @@ CL_ERR_DESC     *error)
     scb->cs_priority = priority;
     scb->cs_self = (CS_SID)scb;
     scb->cs_mode = CS_INITIATE;
-    scb->cs_stk_area = 0;
+    scb->cs_stk_area = NULL;
     scb->cs_pid = Cs_srv_block.cs_pid;
     if ( thread_type & CS_CLEANUP_MASK )
         scb->cs_cs_mask |= CS_CLEANUP_MASK;

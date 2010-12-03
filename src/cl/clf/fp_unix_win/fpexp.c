@@ -13,6 +13,7 @@
 # include	<me.h>
 # include	<meprivate.h>
 # include	<fp.h>
+# include	<exinternal.h>
 
 # include	"fplocal.h"
 
@@ -43,7 +44,16 @@
 **          threading libraries.
 **	27-may-97 (mcgem01)
 **	    Clean up compiler warnings.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototype for expsig.
 **/
+
+TYPESIG expsig(
+        int signum,
+        EX_SIGCODE      SIGCODE(sigcode),
+        EX_SIGCONTEXT   SIGCONTEXT(sigcontext));
 
 /* Externs */
 

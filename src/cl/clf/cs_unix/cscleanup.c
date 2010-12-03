@@ -93,14 +93,14 @@ VOID shmclean( CS_SMCNTRL	*sysseg);
 **	19-sep-2002 (devjo01)
 **	    Provide handling for "-rad" command line option used to 
 **	    specify target RAD in NUMA environments.
+**	16-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
-/*
-PROGRAM = cscleanup
 
-NEEDLIBS = COMPATLIB MALLOCLIB
-*/
 static VOID checkServs( CS_SERV_INFO	*svinfo, i4 nservs);
+static void reportSM(CS_SM_DESC *shm);
+
 /*{
 ** Name: main() - report on an installation
 **
@@ -173,7 +173,7 @@ char	*argv[];
 	TRdisplay("Can't map system segement\n");
 	PCexit(1);
     }
-    CS_get_cb_dbg(&sysseg);
+    CS_get_cb_dbg((PTR *)&sysseg);
     TRdisplay("Installation version %d\n", sysseg->css_version);
     TRdisplay("Max number of servers %d\n", sysseg->css_numservers);
     TRdisplay("Description of shared memory for control system:\n");
@@ -200,15 +200,15 @@ char	*argv[];
 }
 
 # ifdef xCL_075_SYS_V_IPC_EXISTS
-reportSM(shm)
-CS_SM_DESC	*shm;
+static void
+reportSM(CS_SM_DESC *shm)
 {
     TRdisplay("key 0x%x: size %d attach %p\n", shm->cssm_id, shm->cssm_size,
 	      shm->cssm_addr);
 }
 # else
-reportSM(shm)
-CS_SM_DESC      *shm;
+static void
+reportSM(CS_SM_DESC *shm)
 {
     TRdisplay("size %d attach %p\n", shm->cssm_size, shm->cssm_addr);
 }
@@ -220,7 +220,6 @@ i4		nservs)
 {
     i4		i;
     CL_ERR_DESC	err_code;
-    CSEV_SVCB	*addr;
     union semun arg;
 
     for (i = 0; i < nservs; i++)

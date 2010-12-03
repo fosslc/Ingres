@@ -69,17 +69,11 @@
 # include	<PCerr.h>
 # include	<si.h>
 
+#include <stdio.h>
 
 STATUS
-PCfspawn(argc, argv, wait, c_stdin, c_stdout, pid)
-i4	argc;
-char	**argv;
-bool	wait;
-FILE	**c_stdin;		/* descriptor for slave's stdin */
-FILE	**c_stdout;		/* descriptor for slave's stdout */
-PID	*pid;			/* process id of slave, returned to caller */
+PCfspawn(i4 argc, char **argv, bool wait, FILE **c_stdin, FILE **c_stdout, PID *pid)
 {
-	FILE		*fdopen();
 
 	PIPE		t_stdin;
 	PIPE		t_stdout;

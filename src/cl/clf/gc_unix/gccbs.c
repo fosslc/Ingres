@@ -272,13 +272,15 @@
 **	    actual portnumber is increasing and printed correctly.
 **	15-nov-2010 (stephenb)
 **	    Correctly proto all functions.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Make sure callback prototype agrees everywhere.
 **
 */
 
 /*
 ** Forward functions
 */
-static	VOID	GCbssm(GCC_P_PLIST *);
+static	VOID	GCbssm(void *, i4);
 
 /*
 ** local variables
@@ -405,7 +407,7 @@ GCC_P_PLIST	    *parms;
 
     /* Start sm. */
 
-    GCbssm( parms );
+    GCbssm( parms, 0 );
     return OK;
 }
 
@@ -439,14 +441,14 @@ GCC_P_PLIST	    *parms;
 
     /* Start sm. */
 
-    GCbssm( parms );
+    GCbssm( parms, 0 );
     return OK;
 }
 
 static VOID
-GCbssm( parms )
-GCC_P_PLIST	*parms;
+GCbssm( void *parm, i4 notused )
 {
+    GCC_P_PLIST	*parms = (GCC_P_PLIST *) parm;
     char			*portname, *hostname;
     GC_PCB			*pcb = (GC_PCB *)parms->pcb;
     GC_DCB			*dcb = (GC_DCB *)parms->pce->pce_dcb;
@@ -472,7 +474,7 @@ GCC_P_PLIST	*parms;
     /* Copy some parameters */
 
     bsp.func = GCbssm;
-    bsp.closure = (PTR)parms;
+    bsp.closure = parms;
     bsp.timeout = -1;
     bsp.syserr = &parms->system_status;
     bsp.bcb = pcb ? pcb->bcb : NULL;

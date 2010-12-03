@@ -2213,6 +2213,8 @@ tokreturn:
 **	28-May-2010 (gupsh01)
 **	    For extra long strings, truncate to the maximum length
 **	    length allowed.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Fix uninit'd collID & prec
 */
 static i4 
 psl_quel_unorm(
@@ -2260,6 +2262,8 @@ i4	    token)
 	text = yacc_cb->yylval.psl_textype;
 	dv1.db_datatype = DB_VCH_TYPE;
 	dv1.db_length = text->db_t_count + DB_CNTSIZE;
+	dv1.db_collID = DB_UNSET_COLL;
+	dv1.db_prec = 0;
 	dv1.db_data = (PTR)text;
 	rdv.db_datatype = DB_VCH_TYPE;
 
@@ -2321,6 +2325,8 @@ i4	    token)
 	/* For NAME tokens, don't normalize the null, just add it back */
 	namelen = STlength(name);
 	dv1.db_length = namelen;
+	dv1.db_collID = DB_UNSET_COLL;
+	dv1.db_prec = 0;
 	dv1.db_data = (PTR)name;
 	rdv.db_datatype = DB_VCH_TYPE;
     }

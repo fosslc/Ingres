@@ -11,6 +11,8 @@
 **          Add int.rpl for Intel Rpath Linux build.
 **	23-Jun-2009 (kschendel) SIR 122138
 **	    Pass new hybrid symbols on hybrid capable platforms.
+**	23-Nov-2010 (kschendel)
+**	    Drop a few more obsolete ports.
 */
 #endif
 
@@ -23,28 +25,10 @@ LDFLAGS=-L/$(II_SYSTEM)/ingres/lib -lingres LDLIB
 LOADLIBES=-L/$(II_SYSTEM)/ingres/lib -lingres LDLIB
 #endif
 
-#ifdef ris_us5
-#define GOT_IT
-CCFLAGS=-Dris_us5 -D_ALL_SOURCE -qchars=signed
-CC=c89
-#endif
-
 #if defined(rs4_us5) || defined(r64_us5)
 #define GOT_IT
 CCFLAGS=-Drs4_us5 -DBUILD_ARCH32 -D_ALL_SOURCE -qchars=signed -O
 CC=c89
-#endif
-
-#ifdef ris_u64
-#define GOT_IT
-CCFLAGS=-Dris_u64 -D_ALL_SOURCE -q64 -qchars=signed -O
-CC=c89
-#endif
-
-#ifdef dg8_us5
-#define GOT_IT
-CCFLAGS=-O2
-CC=cc
 #endif
 
 #ifdef  hp8_us5
@@ -69,36 +53,12 @@ CC=c89
 LDFLAGS=-L/$(II_SYSTEM)/ingres/lib -lingres LDLIB
 #endif
 
-#ifdef su4_u42
-#define GOT_IT
-CCFLAGS=-O2
-CC=acc
-#endif
-
-#ifdef rmx_us5
-#define GOT_IT
-CCFLAGS=-Drmx_us5 -O -K signed
-CC=cc
-#endif
-
-#ifdef pym_us5
-#define GOT_IT
-CCFLAGS=-Dpym_us5 -O -K signed
-CC=cc
-#endif
-
 #ifdef sgi_us5
 #define GOT_IT
 #define GOT_LD
 CCFLAGS=-DBUILD_ARCH32 -mips3 -n32 -O -signed -Dsgi_us5
 CC=cc
 LDFLAGS=-L/$(II_SYSTEM)/ingres/lib -lingres -lsocket LDLIB
-#endif
-
-#ifdef sos_us5
-#define GOT_IT
-CCFLAGS=-Dsos_us5 -O
-CC=cc
 #endif
 
 #ifdef usl_us5
@@ -109,12 +69,6 @@ CC=cc
 LDFLAGS=-L/$(II_SYSTEM)/ingres/lib -lingres LDLIB
 #endif
 
-#ifdef sui_us5
-#define GOT_IT
-CCFLAGS=-Dsui_us5 -O
-CC=cc
-#endif
-
 #if defined(su4_us5) || defined(su9_us5)
 #define GOT_IT
 #define GOT_LD
@@ -122,24 +76,6 @@ CCFLAGS=-DBUILD_ARCH32 -Dsu4_us5 -O
 CC=cc
 LDLIBS=-L/$(II_SYSTEM)/ingres/lib -lingres LDLIB
 LDFLAGS=-L/$(II_SYSTEM)/ingres/lib -lingres LDLIB
-#endif
-
-#ifdef rmx_us5
-#define GOT_IT
-CCFLAGS=-Drmx_us5 -O -K signed
-CC=cc
-#endif
-
-#ifdef dgi_us5
-#define GOT_IT
-CCFLAGS=-Ddgi_us5 -O
-CC=cc
-#endif
-
-#ifdef dg8_us5
-#define GOT_IT
-CCFLAGS=-Ddg8_us5 -O
-CC=cc
 #endif
 
 #ifdef int_lnx

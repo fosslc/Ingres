@@ -18,6 +18,7 @@
 
 # include	<systypes.h>
 # include	<clsocket.h>
+# include	"handylocal.h"
 
 # ifdef xCL_006_FCNTL_H_EXISTS
 # include	<fcntl.h>
@@ -41,6 +42,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of handylocal.h for prototype.
 */
 
 

@@ -131,11 +131,15 @@
 **	    Replace mg5_osx with generic OSX
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototype for exp10sig.
 **/
 
 /* # defines */
 /* typedefs */
 /* forward references */
+TYPESIG exp10sig(i4 signal);
+
 /* externs */
 
 /* statics */
@@ -201,8 +205,8 @@ f8	x;
 {
 	f8	result;
 	STATUS  status;
-	TYPESIG	exp10sig();
-	TYPESIG	(*oldsig)();
+	TYPESIG	exp10sig(i4 signal);
+	TYPESIG	(*oldsig)(i4 sig);
 	jmp_buf *exp10jmp_ptr;
 #ifdef nc4_us5
 	i4	errno = NOERR;

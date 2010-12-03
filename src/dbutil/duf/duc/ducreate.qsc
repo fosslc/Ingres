@@ -424,6 +424,8 @@ EXEC SQL include SQLCA;
 **          mask.
 **     22-apr-2010 (stial01)
 **          Fix create/modify statement used for iigw07
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **
 NEEDLIBS =	DBUTILLIB SHEMBEDLIB COMPATLIB 
 
@@ -444,6 +446,11 @@ FUNC_EXTERN 	    DU_STATUS       duu_chkenv();
 FUNC_EXTERN 	    DU_STATUS       duc_grant_select_wgo_on_cats();
 FUNC_EXTERN DU_STATUS duc_modify_pagesize(i4 pagesize, bool star_flag,
 				 DU_ERROR *errcb);
+
+/* This one is in ui.qsh, but the jam rules don't know that dbutil
+** needs front/hdr/hdr.
+*/
+FUNC_EXTERN char *IIUIpassword(char *);
 
 char		    *cmdflagarg();
 STATUS    	    get_pm_params();
@@ -757,6 +764,8 @@ static STATUS duc_goodClientList();
 **         we exit.
 **      31-Aug-2010 (maspa05) bug 124328
 **         Added -P flag to pass DBMS password on the command line
+**	19-Nov-2010 (kiria01) SIR 124690
+**	   Default to UCS_BASIC collation for UTF8 catalogs.
 */
 
 main(argc, argv)
@@ -1162,6 +1171,9 @@ char	    *argv[];
                 EXEC SQL EXECUTE IMMEDIATE :sbuffer; 
               }
 	    }
+	    /* For UTF8 db, make catalog collation default to ucs_basic */
+	    if (CMischarset_utf8())
+		EXEC SQL SET SESSION COLLATION ucs_basic;
 
 	    /* Update iidatabase and config file with new access and service. */
 	    {

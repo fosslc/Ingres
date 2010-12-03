@@ -248,7 +248,14 @@ rdf_handler(EX_ARGS *args)
 **      11-Nov-2010 (hanal04) Bug 124718
 **          Mimic the RDF_RSEMAPHORE test when trying to acquire
 **          RDF_BLD_LDBDESC (RDD_SEMAPHORE) and RDF_DEF_DESC (RDF_DSEMAPHORE)
-**          to avoid requesting a semaphore we already own. 
+**          to avoid requesting a semaphore we already own.
+**      26-Nov-2010 (hanal04) Bug 124759 and 124718
+**          Remove previous fix for Bug 124718. This was not a root cause
+**          solution. Further investigation showed that rdd_defsearch()
+**          was not a legitimate double acquisition in the way that
+**          the GSEMAPHORE is treated. rdd_defsearch() was failing to
+**          release the RDF_DEF_DESC mutex because it was checking the wrong
+**          flag.
 [@history_template@]...
 */
 VOID
@@ -319,26 +326,18 @@ rdf_release(	RDF_GLOBAL         *global,
 	** master copy of LDBcache object has been reserved for update by
 	** this thread so release it 
 	*/
-        if(!(global->rdf_ddrequests.rdd_ddstatus & RDD_SEMAPHORE))
-        {
-	    op_status = rdd_setsem(global,RDF_BLD_LDBDESC); /* get semaphore
-			    ** prior to updating ULH object descriptor */
-	    if (op_status > run_status)
-	    {
-	        /* this error is more serrious than any previously 
-	        ** recorded, so save it 
-	        */
-	        run_status = op_status;
-	        STRUCT_ASSIGN_MACRO(global->rdfcb->rdf_error, error);
-	    }
-        }
+	op_status = rdd_setsem(global,RDF_BLD_LDBDESC); /* get semaphore
+				** prior to updating ULH object descriptor */
+	if (op_status > run_status)
+	{
+	    /* this error is more serrious than any previously 
+	    ** recorded, so save it 
+	    */
+	    run_status = op_status;
+	    STRUCT_ASSIGN_MACRO(global->rdfcb->rdf_error, error);
+	}
 	else
 	{
-            op_status = E_DB_OK;
-        }
-
-        if(DB_SUCCESS_MACRO(op_status))
-        {
 	    /* 
 	    ** only release object if we can get the semaphore.  If we
 	    ** fall out of retry loop, then we will unconditionally release
@@ -363,27 +362,19 @@ rdf_release(	RDF_GLOBAL         *global,
 	** master copy of Defaults object has been reserved for update by
 	** this thread so release it 
 	*/
-        if (!(global->rdf_resources & RDF_DSEMAPHORE))
-        {
-	    op_status = rdd_setsem(global, RDF_DEF_DESC); /* get semaphore
-			    ** prior to updating ULH object descriptor */
-	    if (op_status > run_status)
-	    {
-	        /* 
-	        ** this error is more serrious than any previously 
-	        ** recorded, so save it 
-	        */
-	        run_status = op_status;
-	        STRUCT_ASSIGN_MACRO(global->rdfcb->rdf_error, error);
-	    }
-        }
+	op_status = rdd_setsem(global, RDF_DEF_DESC); /* get semaphore
+				** prior to updating ULH object descriptor */
+	if (op_status > run_status)
+	{
+	    /* 
+	    ** this error is more serrious than any previously 
+	    ** recorded, so save it 
+	    */
+	    run_status = op_status;
+	    STRUCT_ASSIGN_MACRO(global->rdfcb->rdf_error, error);
+	}
 	else
 	{
-            op_status = E_DB_OK;
-        }
-
-        if (DB_SUCCESS_MACRO(op_status))
-        {
 	    /* 
 	    ** only release object if we can get the semaphore.  
 	    */

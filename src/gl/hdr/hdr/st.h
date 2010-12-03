@@ -61,6 +61,8 @@
 **          Will be revisited and submitted at a later date. 
 **      24-Nov-2009 (frima01) Bug 122490
 **          Added prototype for STxcompare to eliminate gcc 4.3 warnings.
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 [@history_template@]...
 **/
 
@@ -137,7 +139,8 @@ GLOBALREF       ST_FUNCTIONS    ST_fvp;
 
 #ifndef STinit
 #define STinit IISTinit
-FUNC_EXTERN void STinit(
+FUNC_EXTERN VOID STinit(
+	VOID
 );
 #endif
 
@@ -428,6 +431,12 @@ FUNC_EXTERN i4 STxcompare(
         bool    sb
 );
 #endif
+
+FUNC_EXTERN char * STrskip(
+	char    *addr,
+	char    ch,
+	size_t  len
+);
 
 
 # endif /* ! ST_HDR_INCLUDED */

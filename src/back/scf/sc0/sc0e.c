@@ -559,7 +559,12 @@ sc0e_uput(i4 err_code,
 **          Specificly it is possible for a raw databuffer to be presented which
 **          might have character sequences that could be mistaken for format
 **          specifiers. To make sure this is handled, we now pass via "%s".
-[@history_template@]...
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Drop the add-newline stuff from sc0e_tput, it was never called
+**	    that way, and with the prototype cleanups, we can now get NULL
+**	    to it.  The client side (almost???) always appends its own newline,
+**	    so no need to do it here anyway.
+**	    The whole newline handling for messages and tracing is a mess!
 */
 VOID
 sc0e_trace( char *fmt )
@@ -593,9 +598,7 @@ sc0e_tput( PTR arg1, i4 msg_length, char *msg_buffer )
     if (msg_length == 0)
 	return;
 
-    if (arg1 == (PTR)0)
-	mask = SCE_FORMAT_NEEDNUL | SCE_FORMAT_GCA;
-    else if (arg1 == (PTR)1)
+    if (arg1 == (PTR)0 || arg1 == (PTR)1)
 	mask = SCE_FORMAT_GCA;
     else
 	mask = *((i4 *) arg1);

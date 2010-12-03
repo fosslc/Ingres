@@ -19,11 +19,7 @@
 # endif /* need lwp.h */
 # ifdef POSIX_THREADS
 # include <mecl.h>
-# if defined(rux_us5)
-# include <dce/pthread.h>
-# else
 # include <pthread.h>
-# endif /* rux_us5 */
 # if defined(sgi_us5) || defined(LNX)
 # include <sched.h>
 # endif /* sgi_us5 Linux */
@@ -34,16 +30,6 @@
 # include <libkern/OSAtomic.h>
 # endif
 
-# ifdef OS_THREADS_USED
-#if defined(dg8_us5) || defined(dgi_us5)
-#include <unistd.h>
-#define PTHREAD_PROCESS_SHARED        _POSIX_THREADS_PROCESS_SHARED
-#define PTHREAD_SCOPE_PROCESS PTHREAD_SCOPE_LOCAL
-#define PTHREAD_SCOPE_SYSTEM  PTHREAD_SCOPE_GLOBAL
-static int pthread_create_detached = 1;
-#define PTHREAD_CREATE_DETACHED &pthread_create_detached
-#endif /* dg8_us5 || dgi_us5 */
-# endif /* OS_THREADS_USED */
 #if defined(xCL_SUSPEND_USING_SEM_OPS)
 #include <semaphore.h>
 #endif
@@ -997,6 +983,8 @@ static int pthread_create_detached = 1;
 **      30-sep-2010 (joea)
 **          Add defines for CSadjust_i8counter and CScas8 for VMS.  Add
 **          versions of CScas4/CScasptr for IA64 VMS.
+**	23-Nov-2010 (kschendel)
+**	    Drop a few more obsolete ports.
 */
 
 
@@ -1099,8 +1087,8 @@ typedef	int	CS_OS_PID;	/* safe dummy type for all the rest */
  
 # ifdef POSIX_THREADS
 #    define     CS_SYNCH                pthread_mutex_t
-#if defined(sparc_sol) || defined(axp_osf) || defined(dg8_us5) \
- || defined(dgi_us5) || defined(sgi_us5) || defined(any_hpux) \
+#if defined(sparc_sol) || defined(axp_osf) \
+ || defined(sgi_us5) || defined(any_hpux) \
  || defined(any_aix) || defined(LNX) \
  || defined(a64_sol) || defined(OSX) || defined(VMS)
 #    define     CS_synch_init(synchptr) pthread_mutex_init(synchptr,NULL)
@@ -1111,7 +1099,7 @@ typedef	int	CS_OS_PID;	/* safe dummy type for all the rest */
 #else
 #    define     CS_synch_init(synchptr) pthread_mutex_init(synchptr,&pthread_mutexattr_default)
 #endif /* DCE_THREADS */
-#endif /* sol axp_osf dg8_us5 dgi_us5 sgi_us5 hpux aix Linux */
+#endif /* sol axp_osf sgi_us5 hpux aix Linux */
 #    define     CS_synch_destroy(sptr)  pthread_mutex_destroy(sptr)
 #    define     CS_synch_lock(sptr)     pthread_mutex_lock(sptr)
 #    define     CS_synch_trylock(sptr)  pthread_mutex_trylock(sptr)
@@ -1561,8 +1549,6 @@ GLOBALREF CS_SYNCH        MEbrk_mutex;      /* Stop the brk from changing */
 #   define CS_thread_kill(tid,sig)      pthread_kill((pthread_t)tid,sig)
 # if defined(any_aix)
 #   define CS_thread_sigmask    sigthreadmask
-# elif defined(dg8_us5) || defined(dgi_us5)
-#   define CS_thread_sigmask    sigprocmask
 # elif defined(VMS)
 #   define CS_thread_sigmask(act, set, oset)
 # else
@@ -1578,19 +1564,7 @@ GLOBALREF CS_SYNCH        MEbrk_mutex;      /* Stop the brk from changing */
 */
 
 # if !defined(xCL_NO_STACK_CACHING)
-# if defined(rux_us5)
-#   define CS_get_stackinfo(sa,ss,st) { \
-        STATUS csgsi_status=OK;\
-        pthread_attr_t csgsi_attr;\
-	csgsi_status=pthread_attr_create(&csgsi_attr);\
-	*sa = (char *)csgsi_attr.field1;\
-	if (csgsi_status==OK)\
- 	*ss = pthread_attr_getstacksize(csgsi_attr);\
-	if (*ss) csgsi_status=OK;\
-	else     csgsi_status=errno;\
-	*st = csgsi_status;\
-				      }
-# elif defined(LNX)
+# if defined(LNX)
 #   define CS_get_stackinfo(sa,ss,st) { \
        STATUS csgsi_status=OK;\
         pthread_attr_t csgsi_attr;\
@@ -2045,18 +2019,15 @@ struct _CS_SCB
                                     /* csll.ris64.asm                  */
 # endif /* r64_us5 */
 
-# if defined(su4_u42) || defined(dr6_us5) || \
-     defined(sparc_sol) || defined(su4_cmw)
+# if defined(sparc_sol)
     long	cs_registers[1];	/* stack frame pointer */
     long	cs_pc;			/* PC */
     long	cs_exsp;		/* exception stack pointer */
 # define CS_SP 0
 # define cs_sp cs_registers[CS_SP]
-# endif /* su4_u42 dr6_us5 sparc */
+# endif /* sparc */
 
-# if defined(sco_us5) || defined(sqs_ptx) || defined(usl_us5) || \
-     defined(nc4_us5) || defined(dgi_us5) || defined(sos_us5) || \
-     defined(sui_us5) || defined(int_lnx) || defined(i64_lnx) || \
+# if defined(usl_us5) || defined(int_lnx) || defined(i64_lnx) || \
      defined(a64_lnx) || defined(int_rpl) || defined(int_osx)
     /*  We only need to save five registers on Symmetry:  %esi, %edi, 
         %ebx, esp, efp and all 387 floating registers are volatile
@@ -2067,7 +2038,7 @@ struct _CS_SCB
     long	cs_esi;			/* source index */
     long	cs_edi;			/* destination index */
     long	cs_exsp;		/* exception stack pointer */
-# endif /* sco_us5 usl_us5 dgi_us5 sui_us5 */
+# endif /* usl_us5 linux */
 
 # if defined(ibm_lnx)
   PTR		cs_exsp;		/* Exception stack pointer */
@@ -2093,8 +2064,7 @@ struct _CS_SCB
 # define cs_sp	cs_registers[CS_SP];
 # endif /* ibm_lnx */
 
-# if defined(ds3_ulx) || defined(rmx_us5) || defined(pym_us5) || \
-     defined(ts2_us5) || defined(sgi_us5) || defined(rux_us5)
+# if defined(sgi_us5)
     long	    cs_sp;		/* stack pointer : $29 = sp */
     long	    cs_pc;		/* return address: $31 = ra */
     PTR	    	    cs_exsp;		/* exception stack pointer  */
@@ -2120,7 +2090,7 @@ struct _CS_SCB
 #define			CS_F29	18	/*	$f29 */
 #define			CS_F30	19	/*	$f30 */
 #define			CS_F31	20	/*	$f31 */
-# endif /*ds3_ulx, rmx_us5, pym_us5, ts2_us5 */
+# endif /* sgi_us5 */
 
 # if defined(any_hpux)
     long        cs_exsp;          /* Exception stack pointer */
@@ -2149,35 +2119,6 @@ struct _CS_SCB
     } cs_mach;
 # define CS_check_stack(mach) ((mach)->hp.cs_jmp_buf[1] > (mach)->cs_stktop)
 # endif	/* hp-ux */
-
-/*
-** 680x0 with FPCP registers saved.
-** Note that the 6888[1/2] uses 96 bit IEEE extended precision.
-*/
-
-# ifdef dg8_us5
-
-	PTR	cs_exsptr;
-					/* The 88K has registers r0..r31.
-					 * r0 - always 0
-					 * r1 - return pc (use jmp r1 to return)
-					 * r2 .. r9 - parameter passing regs.
-						      don't have to be saved
-					 * r10.. r13- scratch
-					 * r14.. r25- used by calling proc.
-						      these must be saved.
-					 * r26.. r29- reserved. Advised that
-						      these should be saved.
-					 * r30 - frame pointer
-					 * r31 - stack pointer */ 
-	long	cs_registers[19]; 
-# define CS_SP  18
-# define CS_FP  17
-# define CS_PC  0
-# define CS_R14 1
-# define CS_R29 16
-
-# endif /* dg8_us5 */
 
 # if defined(axp_osf) || defined(axp_lnx)
     PTR	    	    cs_exsp;		/* exception stack pointer  */
@@ -2259,7 +2200,7 @@ struct _CS_SCB
 /*  -	-   -	-   -	-   -	-   -	-   -	-   -	-   -	-   */
     i4	    cs_client_type;	/* must be 0 in CL SCBs */
     SPBLK	    cs_spblk;		/* used within CS for known thread tree.  */
-    char	    *cs_stk_area;       /* Ptr to allocated stack base */
+    struct _CS_STK_CB *cs_stk_area;	/* Ptr to allocated stack base */
     i4              cs_stk_size;        /* Amt of space allocated there */
     i4              cs_state;           /* Thread state */
 #define CS_STATE_ENUMS /* enum cs_state_enums */\
@@ -2453,21 +2394,10 @@ FUNC_EXTERN STATUS CS_atomic_init(CS_AINCR *aincr);
 **	    ASET type on a64_lnx should just be int, not that it matters
 **	    all that much.  I suspect the same is true for other LP64's,
 **	    but we'll let the porting engineers figure that one out.
-[@history_template@]...
+**	11-Nov-2010 (kschendel)
+**	    Delete some obsolete conditionals.  I don't think too many people
+**	    are running new software on Pyramids any more.
 */
-# if defined(rmx_us5) || defined(pym_us5) || defined(rux_us5)
-#include <systypes.h>   /* otherwise, get problems with compat.h users */
-#include <ulocks.h>
-# define cs_aset_type
-typedef spinlock_t              CS_ASET;
-/* See pym_us5 section below for explanation of type */
-# endif /* rmx_us5, pym_us5 */
-
-#if defined(ts2_us5)
-#include <synch.h>
-#define cs_aset_type
-typedef spin_t		CS_ASET;
-#endif /* ts2_us5 */
 
 #if defined(sgi_us5)
 #include <abi_mutex.h>
@@ -2475,32 +2405,7 @@ typedef spin_t		CS_ASET;
 typedef abilock_t		CS_ASET;
 #endif /* sgi_us5 */
 
-# ifdef hp3_us5
-# define cs_aset_op
-# define        CS_ISSET(a)             (*(a) != 0)
-# define        CS_ACLR(a)              (*(a) = 0)
-FUNC_EXTERN i4 CS_tas(CS_ASET *);
-# define        CS_TAS(a)               (CS_tas(a))
-# define        CS_SPININIT(s)          (MEfill(sizeof(*s),'\0',(char *)s))
-# endif /* hp3_us5 */
-
-#if defined(ds3_ulx) || defined(dr6_us5)
-# define cs_aset_type
-typedef i4                      CS_ASET;        /* atomicly setable item */
-# endif /* ds3_ulx dr6_us5 */
-
-# if defined(nc4_us5)
-# define cs_aset_type
-typedef i2                      CS_ASET;        /* atomicly setable item */
-# endif /* nc4_us5 */
-
-# if defined(sqs_ptx)
-# define cs_aset_type
-typedef volatile char           CS_ASET;        /* atomicly setable item */
-# endif
-
-# if defined(su4_u42) || defined(sparc_sol) || defined(su4_cmw) || \
-     defined(a64_sol)
+# if defined(sparc_sol) || defined(a64_sol)
 # define cs_aset_type
 typedef long                    CS_ASET;        /* atomicly setable item */
 # endif
@@ -2516,20 +2421,15 @@ typedef long                    CS_ASET;        /* atomicly setable item */
 typedef volatile struct {int cs_space[4];} CS_ASET;
 # endif
 
-# if defined(ris_us5) || defined(ibm_lnx)
+# if defined(ibm_lnx)
 # define cs_aset_type
 typedef volatile i4                     CS_ASET;
-# endif /* ris_us5 */
+# endif /* ibm_lnx */
 
 # if defined(any_aix)
 # define cs_aset_type
 typedef int                    		CS_ASET;
 # endif /* aix */
-
-# ifdef dg8_us5 /* DG/UX */
-# define cs_aset_type
-typedef int                     CS_ASET;        /* atomicly setable item */
-# endif         /* dg8_us5 */
 
 # if defined(axp_osf) || defined(axp_lnx) || \
      defined(i64_lnx) || defined(ppc_lnx)
@@ -2560,61 +2460,6 @@ typedef char                    CS_ASET;        /* atomicly setable item */
 /*
 ** Atomic test & set operations
 */
-
-# if defined(rmx_us5) || defined(pym_us5) || defined(rux_us5)
-/* MIPS processor doesn't offer a test-and-set, so we must use library fn.
-** According to spinlock(3x) docn, spinlock fns are better performers than
-** the ABI _test_and_set fn. So we use the OS spinlock_t type for our TAS
-** target type (CS_ASET), with the cspinlock fn that just tries to set,
-** doesn't spin.
-** Note that our spinlock target type (CS_SPIN) is CS_ASET plus our
-** collision counter, so a superset of spinlock_t.
-** spinlock_t is struct {volatile int sl_lock; long sl_count;}
-**
-** CS_GETSPIN (and CS_SPIN) are only used for quick critical-sections,
-** so I specify a spincnt (to initspin) so spinlock() will yield after loops.
-** (If we loop there, some process must have unluckily been time-sliced.)
-** (If we loop there, some process must have unluckily been time-sliced.)
-** Mostly, our spinning is done manually with CS_TAS.
-**
-** ATOMIC_CLEAR and ATOMIC_SET aren't used outside here and CS_tas (if any),
-** so we don't export them.
-*/
-
-# define cs_aset_op
-# define CS_ISSET(a)    ((a)->sl_lock != 0)
-# define CS_ACLR(a)     (spinunlock(a))
-/* I'd like to make this "(a)->sl_lock=0", but this isn't reliable. Unknown why.
- */
-
-# define CS_TAS(a)      (cspinlock(a) ? 0 : 1)
-/* CS_TAS: cspinlock tries to set lock once, nonzero if fail (in use) */
-
-# define CS_SPININIT(s) (initspin(&((s)->cssp_bit), 50), (s)->cssp_collide=0)
-/* CS_SPININIT: clear lock (CS_ASET) & collision count. Most port do memzero,
-** but we want to supply an sl_count. Hopefully this isn't frequent, anyway.
-** The sl_count to initspin (2nd arg) is arbitrarily chosen.
-*/
-
-# define CS_relspin(s)   CS_ACLR(&(s)->cssp_bit)
-# define CS_getspin(s)  spinlock(&(s)->cssp_bit)
-# endif /* rmx_us5, pym_us5 */
-
-# if defined(ts2_us5)
-
-# define cs_aset_op
-# define CS_ISSET(a)		((a)->m_lmutex.lock != 0)
-# define CS_ACLR(a)		(_spin_unlock(a))
-
-# define CS_TAS(a)		(_spin_trylock(a) ? 0 : 1)
-/* CS_TAS: _spin_trylock tries to set lock once, nonzero if fail (in use) */
-
-# define CS_SPININIT(s)		(_spin_init(&((s)->cssp_bit), NULL), (s)->cssp_collide=0)
-/* CS_SPININIT: clear lock (CS_ASET) & collision count. */
-
-# define CS_relspin(s)		CS_ACLR(&(s)->cssp_bit)
-# define CS_getspin(s)		_spin_lock(&(s)->cssp_bit)
-# endif /* ts2_us5 */
 
 # if defined(sgi_us5)
 /* MIPS processor doesn't offer a test-and-set, so we must use library fn.
@@ -2651,28 +2496,7 @@ typedef char                    CS_ASET;        /* atomicly setable item */
 # endif /* sgi_us5 */
 
 
-# if defined(ds3_ulx)
-# define cs_aset_op
-# define ATOMIC_SET             0
-# define ATOMIC_CLEAR           1
-# define CS_ISSET(a)            (*(a) != 0)
-# define CS_ACLR(a)             (atomic_op(ATOMIC_CLEAR, (a)))
-# define CS_TAS(a)              (CS_tas(ATOMIC_SET, (a)) == 0)
-# define CS_tas                 atomic_op
-# define CS_SPININIT(s)         (MEfill(sizeof(*s),'\0',(char *)s))
-# define CS_relspin(s)          (CS_ACLR(&(s)->cssp_bit))
-
-# define CS_getspin(s)                  \
-    if (!CS_TAS(&(s)->cssp_bit))        \
-    {                                   \
-        (s)->cssp_collide++;            \
-        while (!CS_TAS(&(s)->cssp_bit)) \
-                ;                       \
-    }                                   \
-    else
-# endif	/* ds3_ulx */
-
-# if defined(sparc_sol) || defined(sui_us5) || defined(usl_us5)
+# if defined(sparc_sol) || defined(usl_us5)
 /* OS_THREADS_USED assumed: use CS_tas, but use system spinlock */
 # define cs_aset_op
 # define        CS_ISSET(a)             (*(a) != 0)
@@ -2690,10 +2514,9 @@ FUNC_EXTERN i4 CS_aclr(CS_ASET *);
 # endif /* OS_THREADS_USED */
 # endif /* sparc usl */
 
-# if defined(su4_u42) || defined(sqs_ptx) || \
-     ((defined(int_lnx) || defined(int_rpl)) && \
-     (!defined(LP64) && !defined(NO_INTERNAL_THREADS))) || \
-     defined(su4_cmw) || defined(sos_us5) || defined(ibm_lnx)
+# if ((defined(int_lnx) || defined(int_rpl)) && \
+      (!defined(LP64) && !defined(NO_INTERNAL_THREADS))) || defined(ibm_lnx)
+/* NOT the usual int-lnx case */
 # define cs_aset_op
 # define        CS_ISSET(a)             (*(a) != 0)
 # define        CS_ACLR(a)              (CS_relspin(a))
@@ -2704,6 +2527,7 @@ FUNC_EXTERN i4 CS_tas(CS_ASET *);
 
 # if (defined(int_lnx) && defined(NO_INTERNAL_THREADS)) || \
      (defined(int_rpl) && defined(NO_INTERNAL_THREADS))
+/* This IS the usual int-lnx case */
 # define cs_aset_op
 # define	CS_tas(a)		test_and_set_bit((int) 0, a)
 # define	CS_ISSET(a)		(*(a) != (CS_ASET)0)
@@ -2814,48 +2638,6 @@ FUNC_EXTERN i4 CS_tas(CS_ASET *);
     }
 # endif	/* hp-ux */
 
-# if defined(dr6_us5) || defined(nc4_us5) 
-# define cs_aset_op
-# define        CS_ACLR(a)              (*(a) = 0)
-# define	CS_ISSET(a)		(*(a) != 0)
-FUNC_EXTERN i4 CS_tas(CS_ASET *);
-# define        CS_TAS(a)		(CS_ISSET(a) ? 0 : (CS_tas(a)))
-# define	CS_SPININIT(s)		(MEfill(sizeof(*s),'\0',(char *)s))
-# define        CS_relspin(s)   	(CS_ACLR(&(s)->cssp_bit))
-# define CS_getspin(s)                   \
-    {                                    \
-    if (!CS_TAS(&(s)->cssp_bit))         \
-        {                                \
-        while (!CS_TAS(&(s)->cssp_bit))  \
-            ;                            \
-        (s)->cssp_collide++;             \
-        }                                \
-    }
-# endif /* dr6_us5 */
-
-# if defined(dgi_us5) 
-# define	CS_ACLR(a)	(*(a) = 0)
-#endif /* dgi_us5 */
-
-# ifdef ris_us5
-# define cs_aset_op
-# define 	CS_ACLR(a)	(*(a) = (CS_ASET)0)
-# define	CS_ISSET(a)	(*(a) != 0)
-# define        CS_TAS(csspbit) (CS_ISSET(csspbit) ? \
-                                      0 : (cs(csspbit, (CS_ASET)0, 1) == 0))
-# define	CS_SPININIT(s)	(MEfill(sizeof(*s),'\0',(char *)s))
-# define        CS_relspin(s)   (CS_ACLR(&(s)->cssp_bit))
-# define CS_getspin(s)                   \
-    {					 \
-    if (!CS_TAS(&(s)->cssp_bit))         \
-        {                                \
-        while (!CS_TAS(&(s)->cssp_bit))  \
-            ;                            \
-        (s)->cssp_collide++;             \
-        }				 \
-    }
-# endif
-
 # if defined(any_aix)         /* AIX 4.1 SMP */
 # define cs_aset_op
 
@@ -2950,16 +2732,6 @@ static __inline__ void CS_aclr( volatile CS_ASET * ptr )
 }
 
 # endif	/* a64_lnx */
-
-# ifdef dg8_us5
-# define cs_aset_op
-# define        CS_ISSET(a)             (CS_isset(a))
-FUNC_EXTERN i4 CS_aclr(CS_ASET *);
-# define        CS_ACLR(a)              (CS_aclr(a))
-FUNC_EXTERN i4 CS_tas(CS_ASET *);
-# define        CS_TAS(a)               (CS_tas(a))
-# define        CS_SPININIT(s)          (MEfill(sizeof(*s),'\0',(char *)s))
-#endif /* dg8_us5 */
 
 # if defined(axp_osf) || defined(axp_lnx)
 # define cs_aset_op
@@ -3349,9 +3121,9 @@ FUNC_EXTERN i4 CS_tas(CS_ASET *);
 */
 struct _CS_SEMAPHORE
 {
-#if defined(VMS) || defined(dgi_us5) || defined(dg8_us5)
+#if defined(VMS)
     QUEUE	    cs_sem_list;	/* known sem list - must be first */
-#endif /* VMS || dgi_us5 || dg8_us5 */
+#endif /* VMS */
 
     i2              cs_type;            /* semaphore type */
 #define                 CS_SEM_SINGLE   0   /* Normal Semaphore */

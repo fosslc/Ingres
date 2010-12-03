@@ -121,6 +121,8 @@ void psq_rngdmp(
 **	    "FIPS mode" no longer exists.  It was replaced some time ago by
 **	    several feature-specific flags (e.g. flatten_nosingleton and
 **	    direct_cursor_mode).  So I removed all FIPS_MODE flags.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
 */
 DB_STATUS
 psq_sesdump(
@@ -445,7 +447,8 @@ psq_sesdump(
     TRdisplay("\tpss_dba:\t%#s\n", sizeof (sess_cb->pss_dba),
 	&sess_cb->pss_dba);
     TRdisplay("\tpss_cstream:\t0x%p\n", sess_cb->pss_cstream);
-
+    TRdisplay("\tpss_def_coll:\t%d\n", sess_cb->pss_def_coll);
+    TRdisplay("\tpss_def_unicode_coll:\t%d\n", sess_cb->pss_def_unicode_coll);
     TRdisplay("\tpss_resrng:\n");
     psq_rngdmp(sess_cb->pss_resrng);
     TRdisplay("\n");

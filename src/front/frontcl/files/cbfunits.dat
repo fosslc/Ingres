@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2009 Ingres Corporation
+# Copyright (c) 2009, 2010 Ingres Corporation
 #
 # This file contains the units of measure displayed for resource names
 # in the forms-based configuration utility.
@@ -143,6 +143,8 @@ ii.*.*.*.psf_vch_prec:                  boolean
 *.*.*.*.ulm_chunk_size:			bytes
 *.*.dbms.*.ambig_replace_64compat:     boolean
 *.*.dbms.*.cache_lock:			boolean
+*.*.dbms.*.default_collation:		'collation'
+*.*.dbms.*.default_unicode_collation:		'collation'
 *.*.dbms.*.default_page_size:		bytes
 *.*.dbms.*.blob_etab_page_size:        bytes
 *.*.dbms.*.blob_etab_structure:        string

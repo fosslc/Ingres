@@ -143,6 +143,8 @@
 **          Replace READONLY/WSCREADONLY by const.
 **	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    Include scfint.h to get scf_init_dbg() prototype.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 
@@ -352,19 +354,19 @@ scf_init_dbg(void)
 	    scb->cs_scb.cs_thread_id = CS_get_thread_id();
 	    scb->cs_scb.cs_self = (CS_SID) scb;
 	    PCpid(&scb->cs_scb.cs_pid);
-	    CSMTset_scb(scb);
+	    CSMTset_scb(&scb->cs_scb);
 #if !defined(VMS)
 	    CSMT_get_wakeup_block(scb);
 #endif
 	}
 	else
 	{
-	    CSset_sid((CS_SCB *)scb);
+	    CSset_sid(&scb->cs_scb);
 	    scb->cs_scb.cs_self = (CS_SID) scb;
 	    scb->cs_scb.cs_state = CS_COMPUTABLE;
 	}
 # else /* OS_THREADS_USED */
-	CSset_sid((CS_SCB *)scb);
+	CSset_sid(&scb->cs_scb);
 	scb->cs_scb.cs_self = (CS_SID) scb;
 	scb->cs_scb.cs_state = CS_COMPUTABLE;
 # endif /* OS_THREADS_USED */

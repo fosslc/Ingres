@@ -301,6 +301,8 @@ DB_DATA_VALUE  *adc_dv;
 **          Argument is now a nat.  See adf.h for details.
 **	12-may-04 (inkdo01)
 **	    Added support for bigint.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Ensure whole DBV copied.
 */
 
 DB_STATUS
@@ -591,6 +593,7 @@ DB_DATA_VALUE	    *adc_dv)
 	      bit_dv.db_datatype = dt;
 	      bit_dv.db_length = len;
 	      bit_dv.db_prec = adc_dv->db_prec;
+	      bit_dv.db_collID = DB_NOCOLLATION;
 
 	      bit_dv.db_data = (PTR) Bit_min;
 	      db_stat = adc_compare(adf_scb, adc_dv, &bit_dv, &result);

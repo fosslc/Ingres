@@ -12,7 +12,8 @@
 # include	<ex.h>
 # include 	<er.h>
 # include 	<si.h>
-# include	"exi.h"
+# include 	<pc.h>
+# include	<exinternal.h>
 # include	"exerr.h"
 # include       <evset.h>
 
@@ -312,6 +313,10 @@
 **          Based on initial changes by utlia01 and monda07.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	23-Nov-2010 (kschendel)
+**	    Drop a couple more obsolete ports missed in the last edit.
 */
 
 /* Should be in stdlib.h, but easy / portable to define here: */
@@ -319,7 +324,7 @@
 extern char *getenv();
 
 
-# if defined(pyr_us5) || defined(sgi_us5)
+# if defined(sgi_us5)
 
 /*
 ** Even though the default signal behavior is bad, we can adjust the
@@ -381,7 +386,7 @@ extern char *getenv();
 #	endif
 # endif /* SIGVEC */
 
-# if !defined(usl_us5) && !defined(ts2_us5)
+# if !defined(usl_us5)
 # ifdef MAXSIG
 # undef MAXSIG
 # endif
@@ -389,9 +394,12 @@ extern char *getenv();
 				** catch, + 1; be sure it's always big
 				** enough!
 				*/
-# endif /* usl_us5 ts2_us5 */
+# endif /* usl_us5 */
  
+#ifdef sgi_us5
 void sgi_us5_adjust_pc(struct sigcontext *scp);
+#endif
+
 /*
 ** Keep track of what signal actions are already in place.
 ** If an exception occurs that we do not handle (no handler in
@@ -497,8 +505,6 @@ static bool	ex_initialized = FALSE;
 ** Forward reference
 */
 
-TYPESIG i_EXcatch();
-
 #ifdef sparc_sol
 static void su4_us5_adj_fpe(
     int                     signum,
@@ -570,10 +576,7 @@ static void su4_us5_adj_fpe(
 */
 
 TYPESIG
-(*EXsetsig( signum, handler ))()
-
-int signum;
-TYPESIG (*handler)();
+(*EXsetsig( int signum, TYPESIG (*handler)() ))()
 
 {
 # ifdef	xCL_011_USE_SIGVEC
@@ -584,10 +587,10 @@ TYPESIG (*handler)();
 
 # ifdef SV_ONSTACK
 #  if defined (xCL_077_BSD_MMAP) || defined (any_aix)
-#   if defined(su4_u42) || defined (any_aix)
+#   if defined (any_aix)
     if ((signum == SIGSEGV) || (signum == SIGBUS) || (signum == SIGILL))
 	new.sv_onstack |= SV_ONSTACK;
-#   endif /* su4_u42 */
+#   endif /* aix */
 #  endif /* ifdef xCL_077_BSD_MMAP */
 # endif /* SV_ONSTACK */
 
@@ -619,7 +622,7 @@ TYPESIG (*handler)();
     /*
     ** catch some signals on an alternate stack
     */
-#   if defined(sparc_sol) || defined(axp_osf) || defined(thr_hpux) || defined(dgi_us5) || \
+#   if defined(sparc_sol) || defined(axp_osf) || defined(thr_hpux) || \
         defined(any_aix)
     if ((signum == SIGSEGV) || (signum == SIGBUS) || (signum == SIGILL))
 	new.sa_flags |= SA_ONSTACK;
@@ -630,16 +633,12 @@ TYPESIG (*handler)();
 #  endif /* ifdef xCL_077_BSD_MMAP */
 # endif /* SA_ONSTACK */
 
-#if defined(rux_us5)
-    old.sa_handler=signal( signum, new.sa_handler );
-#else
     (void) sigaction( signum, &new, &old );
-#endif /* rux_us5*/
 # if defined(thr_hpux) || defined(LNX) || defined(OSX)
     return( old.sa_sigaction );
 # else
     return( old.sa_handler );
-# endif /* hpb_us5 */
+# endif
 # else
     return(signal(signum,handler));
 # endif	/* xCL_068_USE_SIGACTION */
@@ -674,7 +673,7 @@ TYPESIG (*handler)();
 */
 
 i4
-i_EXestablish()
+i_EXestablish(void)
 {
     char *segv_dump;	/* Don't-catch env var */
     i4	i;		/* array index */
@@ -806,44 +805,11 @@ i_EXestablish()
             case SIGINT:
             case SIGHUP:
             case SIGQUIT:
-#if defined(rux_us5)
-            case SIGVTALRM:
-#endif
                 (void) EXsetsig(s, SIG_IGN);
             }
         }
     }
     return( s );        /* we aren't void, so return something */
-}
-
-/*
-**      Name:
-**              i_EXsetsig
-**
-**      Function:
-**              Installs the EX signal handler i_EXcatch() for a signal.
-**
-**      Inputs:
-**              signum                  The signal of interest.
-**
-**      Returns:
-**              none.
-**
-**      Side Effects:
-**              Changes the process's signal state, saves the old handler
-**              in the global orig_handler[] table.
-**
-**	History:
-**
-**	16-may-90 (blaise)
-**	    Integrated changes from ug:
-**		Added function description above.
-*/
-
-i_EXsetsig(signum)
-int	signum;
-{
-    orig_handler[signum] = EXsetsig(signum, i_EXcatch);
 }
 
 /*
@@ -870,9 +836,8 @@ int	signum;
 **		Added function description above.
 */
 
-i_EXsetothersig(signum, func)
-int	signum;
-TYPESIG	(*func)();
+void
+i_EXsetothersig(int signum, TYPESIG (*func)())
 {
     orig_handler[signum] = EXsetsig(signum, func);
 }
@@ -899,6 +864,7 @@ TYPESIG	(*func)();
 **	    Created.
 */
 
+void
 i_EXrestoreorigsig(signum)
 int	signum;
 {
@@ -994,11 +960,7 @@ int	signum;
 
 /*ARGSUSED*/
 TYPESIG
-i_EXcatch(signum, code, scp)
-
-int signum;
-EX_SIGCODE SIGCODE(code);
-EX_SIGCONTEXT SIGCONTEXT(scp);
+i_EXcatch(int signum, EX_SIGCODE SIGCODE(code), EX_SIGCONTEXT SIGCONTEXT(scp))
 {
     EX e;
 # ifdef axp_osf
@@ -1013,22 +975,13 @@ EX_SIGCONTEXT SIGCONTEXT(scp);
     ** the original mask for us.
     */
 
-# if defined(ris_u64)
-    /* sc_mask is a sigset_t, which is a structure of two groups of 32-bit
-    ** integers for AIX 4.1.  we just need the lower 32 for this function.
-    */
-    (void)sigsetmask(scp->sc_mask.losigs);
-# else
     (void)sigsetmask(scp->sc_mask);
-# endif
-# else
-# if defined(xCL_068_USE_SIGACTION)
+# elif defined(xCL_068_USE_SIGACTION)
      /*
      ** restore original signal mask (see above comment for sigvec)
       */
-# if defined(sqs_ptx) || defined(axp_osf) || defined(sos_us5) || \
-     defined(any_hpux) || defined(LNX) || defined(any_aix) || \
-     defined (dgi_us5) || defined(OSX)
+# if defined(axp_osf) || defined(OSX) || \
+     defined(any_hpux) || defined(LNX) || defined(any_aix)
     {
          sigset_t mask;
 
@@ -1043,7 +996,7 @@ EX_SIGCONTEXT SIGCONTEXT(scp);
 
 # else
 
-#if !defined(sos_us5) && !defined(sgi_us5)
+#if !defined(sgi_us5)
     /* Fakes for passing to exception handlers */
     int code;
     int scp;
@@ -1057,7 +1010,6 @@ EX_SIGCONTEXT SIGCONTEXT(scp);
 # if !defined(sgi_us5)
     code = scp = signum;
 # endif
-# endif /* xCL_068_USE_SIGACTION */
 # endif	/* xCL_011_USE_SIGVEC */
 
 # ifdef axp_osf
@@ -1134,28 +1086,12 @@ EX_SIGCONTEXT SIGCONTEXT(scp);
         ** of the exceptions.
         */
 
-# if defined(rmx_us5) || defined(rux_us5)
-        /* scp->uc_mcontext.mc_pc += 4; */
-        scp->uc_mcontext.gpregs[CXT_EPC] += 4;
-        e = EXINTDIV;
-# endif /* rmx_us5 */
-
-
-# if defined(pyr_us5)
-        adjust_pc(scp);
-# endif
-
 # if defined(sgi_us5)
 	sgi_us5_adjust_pc(scp);
 # endif
 
 # if defined(sparc_sol)
 	su4_us5_adj_fpe(signum, code, scp);
-# endif
-
-# if defined(hp8_bls)
-        adjust_fpe(signum, code, scp);
-# define FPE_INTDIV_EXC 13   /* Should be defined for hp but isn't */
 # endif
 
 # ifdef	xCL_011_USE_SIGVEC
@@ -1231,17 +1167,6 @@ EX_SIGCONTEXT SIGCONTEXT(scp);
 # ifdef SIGTRAP
       case SIGTRAP:
 	    e = EXTRACE;
-# if defined(rmx_us5) || defined(rux_us5)
-        /* scp->uc_mcontext.mc_pc += 4; */
-        scp->uc_mcontext.gpregs[CXT_EPC] += 4;
-        e = EXINTDIV;
-# endif /* rmx_us5 */
-
-# ifdef ds3_ulx
-	    scp->sc_pc += 4;  /* advance the pc to next instruction
-				 (integer division takes 4 bytes.) */
-	    e = EXINTDIV;
-# endif
 # ifdef axp_osf
             e = EXINTDIV;
 # endif
@@ -1265,11 +1190,9 @@ EX_SIGCONTEXT SIGCONTEXT(scp);
       case SIGEMT:
 # endif
       case SIGILL:
-# ifndef ris_us5
 # ifdef SIGLOST
       case SIGLOST:
 # endif
-# endif /* ris_us5 */
 # ifdef SIGPROF
       case SIGPROF:
 # endif
@@ -1401,7 +1324,6 @@ EXsignal(EX ex, i4 N, ...)
 			**excp;
 	long		argarr[EXMAXARG];
 	EX_ARGS		exarg;
-	char		errmsg[ER_MAX_LEN];
 	STATUS		handle_ret;
 	i4		sig;
 
@@ -1617,28 +1539,22 @@ EXsignal(EX ex, i4 N, ...)
 	    }
 	}
 # endif
-# if defined(su4_u42) || defined(axp_osf)
+# if defined(axp_osf)
 	{
 	    struct sigstack exstack;
 
-# if defined(axp_osf)
 	    if (sigstack(&exstack, &exstack) == 0)
-# else
-	    if (sigstack((struct sigstack *)0, &exstack) == 0)
-# endif
 		if (exstack.ss_onstack)
 		{
-# if defined(axp_osf)
          sigset_t mask;
 
          sigemptyset(&mask);
          sigprocmask(SIG_UNBLOCK, &mask, (sigset_t *)0);
-# endif
 		    exstack.ss_onstack = 0;
 		    (void) sigstack(&exstack, (struct sigstack *)0);
 		}
 	}
-# endif /* su4_u42 axp_osf */
+# endif /* axp_osf */
 # endif /* ifdef xCL_077_BSD_MMAP */
 	i_EXreturn(env, EXDECLARE);
 
@@ -1680,57 +1596,6 @@ EXsignal(EX ex, i4 N, ...)
 **	    (function was created 12-jun-89 by arana)
 */
 
-# if defined(pyr_us5)
-# include <systypes.h>
-# include <disasm.h>
-
-VOID
-adjust_pc(scp)
-struct sigcontext *scp;
-{
-    char buf[MINDISZ];
-
-    /* disasm is a Pyramid library routine */
-    scp->sc_pc = disasm((unsigned long)scp->sc_pc, buf);
-}
-
-/* readinst -	Called by disasm.
-**		Returns the word at the address pointed to by addr.
-*/		
-unsigned long
-readinst(addr)
-unsigned long *addr;
-{
-    return(*addr);
-}
-
-/* constout -	Called by disasm.
-**		Converts a numeric value to a character string, placing
-**		it at the location pointed to by cp, and returning a
-**		pointer to the byte following the character string.
-*/		
-char *
-constout(val, cp)
-unsigned long	val;
-char		*cp;
-{
-    /* Don't need to convert the numeric value, so just return the pointer. */
-    return(cp);
-}
-
-/* dispout -	Called by disasm.
-**		Same as constout except the numeric value denotes a
-**		displacement.
-*/		
-char *
-dispout(val, cp)
-unsigned long	val;
-char		*cp;
-{
-    /* Don't need to convert the numeric value, so just return the pointer. */
-    return(cp);
-}
-# endif
 
 # if defined(sgi_us5)
 /* 
@@ -1757,27 +1622,6 @@ sgi_us5_adjust_pc(struct sigcontext *scp)
 }
 # endif /* sgi_us5 sgi_adjust_pc */
 
-# if defined(hp8_bls)
-adjust_fpe(sig, code, scp)
-/******************************************************************
-adjust_fpe fixes the float pt unit so we can return without repeating the trap
-   (In this case, we clear the "T-bit" of the floating pt unit)
-**************************************************************************/
-/* Note: when code == 13, then the trap was generated by an integer overflow*/
-/*       or by an integer divide by zero.                                   */
-    int sig, code;
-    struct sigcontext *scp;
-    {
-
-    /* if this is actually an integer trap, then skip the instruction*/
-    if (code == 13)
-        scp->sc_psw |= 0x200000;  /* set the "nullify" bit */
-    
-    /* otherwise, it is a floating pt exception.  Clear the T-bit */
-    else
-        scp->sc_sl.sl_ss.ss_frstat &= ~FP_TBIT;
-    }
-# endif /* hp8_bls */
 
 #ifdef sparc_sol
 /*{
@@ -1951,8 +1795,7 @@ STATUS
 EXaltstack(PTR ex_stack, i4  s_size)
 {
 # if defined(sparc_sol) || defined(thr_hpux) || defined(axp_osf) || \
-     defined(LNX) || defined (dgi_us5) || defined(OSX) || \
-     defined(any_aix)
+     defined(LNX) || defined(OSX) || defined(any_aix)
     stack_t nexstack;
 
     nexstack.ss_size = s_size;
@@ -1965,20 +1808,6 @@ EXaltstack(PTR ex_stack, i4  s_size)
 
     if (sigaltstack(&nexstack, (stack_t *)0) < 0)
 	return(FAIL);
-# endif /* su4_us5 */
-# if defined(su4_u42) 
-    struct sigstack nexstack;
-    int ststat;
-
-    /* 
-    **  stack grows down on su4_u42 and sigstack() requires the 
-    **  address at the end of the alloc'd area.  
-    */
-    nexstack.ss_sp = ex_stack + s_size - 8;
-    nexstack.ss_onstack = 0;
-
-    if (sigstack(&nexstack, (struct sigstack *)0) < 0)
-	return(FAIL);
-# endif /* su4_u42 */
+# endif /* altstack */
     return(OK);
 }

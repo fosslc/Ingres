@@ -8,6 +8,7 @@
 #include    <clconfig.h>
 #include    <systypes.h>
 #include    <clipc.h>
+#include    <er.h>
 #include    <me.h>
 #include    <cs.h>
 #include    <fdset.h>
@@ -16,12 +17,11 @@
 #include    <cv.h>
 #include    <nm.h>
 #include    <pc.h>
+#include    <pe.h>
 #include    <lo.h>
 #include    <tr.h>
-#include    <pc.h>
 #include    <cx.h>
 #include    <cssminfo.h>
-#include    <ercl.h>
 #include    <pm.h>
 
 /* for ME_getkey, probably ought to be in me */
@@ -127,21 +127,14 @@
 **          Compiler : AIX VisualAge C 6.006.
 **	24-Aug-2009 (kschendel) 121804
 **	    Need meprivate.h to satisfy gcc 4.3.
+**	14-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
-/*
-NO_OPTIM=ris_us5 i64_aix
-*/
-
 
-/*
-PROGRAM =	csinstall
-
-NEEDLIBS =	COMPATLIB MALLOCLIB
-*/
 
 # ifdef xCL_075_SYS_V_IPC_EXISTS
-static	VOID	remsem();
+static	VOID	remsem(char *);
 # endif
 
 /*{
@@ -273,7 +266,7 @@ char	*argv[];
 	    PCpid(&pid);
 	    if (CS_map_sys_segment(&err_code) == OK)
 	    {
-		CS_get_cb_dbg(&sysseg);
+		CS_get_cb_dbg((PTR *) &sysseg);
 		for (i = 0; i < sysseg->css_numservers; i++)
 		{
 		    if (sysseg->css_servinfo[i].csi_in_use != 0 &&
@@ -385,8 +378,7 @@ char	*argv[];
 
 # ifdef xCL_075_SYS_V_IPC_EXISTS
 static VOID
-remsem(segname)
-char 	*segname;
+remsem(char *segname)
 {
     int			id;
     union semun uarg;

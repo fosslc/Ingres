@@ -979,6 +979,15 @@
 ##	    versions (e.g. fc11). Remove redundant *_lnx block and add
 ##	    linux/types.h to list files to check for other platforms,
 ##	    which already contains sys/select.h
+##	17-Nov-2010 (kschendel) SIR 124685
+##	    Prefer sigaction to sigvec.  Pipe grep errors to dev-null when
+##	    looking for fd-set stuff.
+##	19-Nov-2010 (frima01) BUG 124750
+##	    Set gettimeofday arguments for i64.lnx.
+##	23-Nov-2010 (kschendel)
+##	    Drop a few more obsolete ports.  Fix test for TYPESIG on Solaris.
+##	1-Dec-2010 (bonro01) SIR 124685
+##	    Fix Solaris build problem introduced by change 508738.
 ##	    
 #	    
 #
@@ -1081,22 +1090,6 @@ Sigvec="any"
 	fi
 
 case $vers in
-ncr_*)		echo '# define xCL_019_TCPSOCKETS_EXIST'
-		;;
-btf_*)		echo '# define xCL_019_TCPSOCKETS_EXIST'
-		;;
-are_us5)	# networking disabled 'til they figure it out (daveb).
-		# echo '# define xCL_019_TCPSOCKETS_EXIST'
-		;;
-xm7_us5)	echo '# define xCL_019_TCPSOCKETS_EXIST'
-		;;
-sos_us5)	echo '# define xCL_065_SHADOW_PASSWD'
-		echo '# define xCL_092_CAREFUL_PUTC'
-                echo '# define xCL_005_GETTIMEOFDAY_EXISTS'
-                echo '# define xCL_GETTIMEOFDAY_TIMEONLY'
-		Select="poll"
-		Sigvec="sigaction"
-		;;
 r64_us5|\
 rs4_us5)	echo '# define xCL_065_SHADOW_PASSWD'
 		echo '# define xCL_088_FD_EXCEPT_LIST'
@@ -1104,46 +1097,7 @@ rs4_us5)	echo '# define xCL_065_SHADOW_PASSWD'
 		echo '# define xCL_GETTIMEOFDAY_TIME_AND_VOIDPTR'
 		# echo '# define xCL_TLI_OSLAN_EXISTS'
 		;;
-nc4_us5)  	echo '# define xCL_065_SHADOW_PASSWD'
-		echo '# define xCL_073_CAN_POLL_FIFOS'
-		Select="poll"
-		Sigvec="sigaction"
-		echo "# define xCL_076_USE_UNAME"
-		echo '# define xCL_004_GETDTABLESIZE_EXISTS'	# libnet.a
-		echo "# define xCL_033_SETPRIORITY_EXISTS"	# libucb.a
-		echo "# define xCL_044_SETREUID_EXISTS"		# libucb.a
-		echo "# define xCL_080_GETPAGESIZE_EXISTS"	# libucb.a
-		echo "# define xCL_GETTIMEOFDAY_TIMEONLY_V"
-		;;
-dr6_us5)	echo '# define xCL_065_SHADOW_PASSWD'
-		echo '# define xCL_073_CAN_POLL_FIFOS'
-		echo '# define xCL_TLI_OSLAN_EXISTS'
-		echo '# define xCL_TLI_X25_EXISTS'
-		Select="poll"
-		Sigvec="sigaction"
-		;;
-su4_u42)
-		echo '# define xCL_BLAST_EXISTS'
-		echo '# define xCL_SUN_LU62_EXISTS'
-		echo '# define xCL_TLI_SPX_EXISTS'
-		;;
-su4_cmw)
-		echo '# define xCL_BLAST_EXISTS'
-		echo '# define xCL_SUN_LU62_EXISTS'
-		echo '# define xCL_SUNOS_CMW'
-		echo '# define xCL_B1_SECURE'
-		;;
 
-dg8_us5 | dgi_us5)
-		echo '# define xCL_DG8_DIRECT_IO'
-		echo '# define xCL_TLI_SPX_EXISTS'
-		echo '# define xCL_005_GETTIMEOFDAY_EXISTS'
-		echo '# define xCL_GETTIMEOFDAY_TIME_AND_TZ'
-                echo '# define xCL_NEED_SEM_CLEANUP'
-                echo '# define xCL_093_MALLOC_OK'
-                echo '# define xCL_094_TLS_EXISTS'
-                Sigvec="sigaction"
-                ;;
 su9_us5|\
 su4_us5)        echo '# define xCL_065_SHADOW_PASSWD'
                 echo '# define xCL_073_CAN_POLL_FIFOS'
@@ -1178,14 +1132,6 @@ a64_sol)
 		echo "# define xCL_GETTIMEOFDAY_TIME_AND_VOIDPTR"
 	        echo "# define xCL_SYS_PAGE_MAP"
 		;;
-sui_us5)        echo '# define xCL_065_SHADOW_PASSWD'
-                echo '# define xCL_073_CAN_POLL_FIFOS'
-                echo '# define xCL_BLAST_EXISTS'
-                echo '# define xCL_NO_INADDR_ANY'
-		echo '# define xCL_OVERRIDE_IDIV_HARD'
-		echo '# define xCL_076_USE_UNAME'
-                Select=poll
-                ;;
 sgi_us5)
 		echo '# define xCL_GETTIMEOFDAY_TIME_AND_VOIDPTR'
 		echo "# define xCL_GETTIMEOFDAY_TIMEONLY_V"
@@ -1198,19 +1144,10 @@ hpb_us5|\
 hp8_us5)
 		Sigvec="sigaction"
 		;;
-hp8_bls)
-                echo '# define xCL_NO_INADDR_ANY'
-                echo '# define xCL_B1_SECURE'
-                ;;
 axp_osf)	echo "# define xCL_MLOCK_EXISTS"
                 echo "# define xCL_065_SHADOW_PASSWD"
                 echo "# define xCL_PRIORITY_ADJUST"
 		Sigvec="sigaction"
-		;;
-ts2_us5)	echo '# define xCL_065_SHADOW_PASSWD'
-		echo '# define xCL_005_GETTIMEOFDAY_EXISTS'
-		echo '# define xCL_TLI_UNIX_EXISTS'
-		echo '# define xCL_GETTIMEOFDAY_TIME_AND_TZ'
 		;;
 usl_us5)	echo '# define xCL_065_SHADOW_PASSWD'
 		echo '# define xCL_TLI_SPX_EXISTS'
@@ -1219,13 +1156,10 @@ usl_us5)	echo '# define xCL_065_SHADOW_PASSWD'
 		Select='poll'
 		Sigvec='sigaction'
 		;;
-rmx_us5)        echo '# define xCL_065_SHADOW_PASSWD'
-                ;;
-rux_us5)        echo '# define xCL_065_SHADOW_PASSWD'
-                echo "# define xCL_GETTIMEOFDAY_TIMEONLY_V"
-                ;;
  *_lnx|int_rpl)	echo '# define xCL_065_SHADOW_PASSWD'
 	        echo "# define xCL_SYS_PAGE_MAP"
+                echo "# define xCL_005_GETTIMEOFDAY_EXISTS"
+                echo "# define xCL_GETTIMEOFDAY_TIME_AND_VOIDPTR"
 		Select='poll'
 		Sigvec='sigaction'
 		;;
@@ -1242,88 +1176,11 @@ esac
 # 		reliable, or in dual universe situations where you
 #		know better.
 #
-#	Please, comment each "echo #define" line with the name of
-#	the library where the corresponding function can be found
-#
-#	This is a new requirement as of 12/20/89, so older entries
-#	are not yet commented.  Feel free to comment older entries
-#	when editing this file if you happen to know some of the
-#	corresponding library names.
 
-case $vers in
-dgc_us5)
-		echo '# define xCL_010_FSYNC_EXISTS'
-		echo '# define xCL_024_DIRFUNC_EXISTS'
-		;;
-apo_u42)
-		echo '# define xCL_011_USE_SIGVEC'
-		echo '# define xCL_013_CANT_KILL_SUID_CHILD'
-		echo '# define xCL_024_DIRFUNC_EXISTS'
-		;;
-cci_us5|icb_us5)
-		echo '# define xCL_010_FSYNC_EXISTS'
-		echo '# define xCL_024_DIRFUNC_EXISTS'
-		;;
-ica_us5)
-		echo '# define xCL_010_FSYNC_EXISTS'
-		echo '# define xCL_019_TCPSOCKETS_EXIST'
-		echo '# define xCL_024_DIRFUNC_EXISTS'
-		;;
-vax_ul5)
-		echo '# define xCL_010_FSYNC_EXISTS'
-		echo '# define xCL_011_USE_SIGVEC'
-		echo '# define xCL_013_CANT_KILL_SUID_CHILD'
-		echo '# define xCL_024_DIRFUNC_EXISTS'
-		;;
-mac_us5)
-		echo '# define xCL_010_FSYNC_EXISTS'
-		echo '# define xCL_024_DIRFUNC_EXISTS'
-		echo '# define xCL_011_USE_SIGVEC'
-		echo '# define xCL_013_CANT_KILL_SUID_CHILD'
-		;;
-sqt_us5)
-		echo '# define xCL_004_GETDTABLESIZE_EXISTS'
-		echo "# define xCL_008_MKDIR_EXISTS"
-		echo "# define xCL_009_RMDIR_EXISTS"
-		echo '# define xCL_010_FSYNC_EXISTS'
-		echo "# define xCL_011_USE_SIGVEC"
-		echo '# define xCL_012_DUP2_EXISTS'
-		echo '# define xCL_013_CANT_KILL_SUID_CHILD'
-		echo '# define xCL_019_TCPSOCKETS_EXIST'
-		echo '# define xCL_020_SELECT_EXISTS'
-		echo '# define xCL_024_DIRFUNC_EXISTS'
-		echo '# define xCL_029_EXECVP_EXISTS'
-		echo "# define xCL_030_SETITIMER_EXISTS"
-		echo '# define xCL_039_FTOK_EXISTS'
-		echo "# define xCL_062_SETDTABLESIZE"
-		echo "# define xCL_063_SQT_BMAP_CACHE"
-		echo "# define xCL_064_SQT_DIRECT_IO"
-		;;
-sqs_ptx)
-		echo '# define xCL_004_GETDTABLESIZE_EXISTS'
-		echo '# define xCL_008_MKDIR_EXISTS'
-		echo '# define xCL_009_RMDIR_EXISTS'
-		echo '# define xCL_012_DUP2_EXISTS'
-		echo '# define xCL_013_CANT_KILL_SUID_CHILD'
-                echo '# define xCL_019_TCPSOCKETS_EXIST'
-		echo '# define xCL_024_DIRFUNC_EXISTS'
-		echo '# define xCL_029_EXECVP_EXISTS'
-                echo "# define xCL_030_SETITIMER_EXISTS"
-		echo '# define xCL_039_FTOK_EXISTS'
-		echo '# define xCL_062_SETDTABLESIZE'
-		echo '# define xCL_064_SQT_DIRECT_IO'
-		echo '# define xCL_068_USE_SIGACTION'
-		echo '# define xCL_077_BSD_MMAP'
-		;;
-	#
-	# Please, see note above about commenting new special cases.
-	#
-*)	#
-	# normal case where trial compile/link will work
-	#
+# tf = filename for trial compile
 
-	tf=/tmp/secret$$
-	rm -f ${tf}*
+tf=/tmp/secret$$
+rm -f ${tf}*
 
 #
 #
@@ -1334,17 +1191,14 @@ sqs_ptx)
 # Test is hardwired for some platforms, those are excluded.
 
 case $vers in
-    dg8_us5 |\
-    dgi_us5 |\
     su4_us5 |\
     su9_us5 |\
     a64_sol |\
     r64_us5 |\
     rs4_us5 |\
     sgi_us5 |\
-    sos_us5 |\
-    ts2_us5 |\
     usl_us5 |\
+    i64_lnx |\
       *_osx)
 	    ## hardwired
 	    ;;
@@ -1389,7 +1243,7 @@ esac
 
 
 case "$vers" in
-axp_osf|su4_us5|su9_us5|dg8_us5|dgi_us5|sui_us5|ts2_us5)
+axp_osf|su4_us5|su9_us5)
 		echo "# define xCL_SHMDT_ONE_ARG"
 		;;
 *)
@@ -1505,7 +1359,7 @@ esac
 	rm -f ${tf}*
 
 
-	if [ $vers != "su4_us5" ] && [ $vers != "sui_us5" ] && [ $vers != "su9_us5" ] 
+	if [ $vers != "su4_us5" ] && [ $vers != "su9_us5" ] 
 	then
 	    echo 'main(){setreuid();}' >${tf}.c
 	    cc -o $tf ${tf}.c >/dev/null 2>&1 &&
@@ -1513,7 +1367,7 @@ esac
 	    rm -f ${tf}*
 	fi
 
-if [ $vers != 'ts2_us5' -a $vers != 'usl_us5' -a $vers != 'sgi_us5' -a $vers != 'axp_osf' ] ; then
+if [ $vers != 'usl_us5' -a $vers != 'sgi_us5' -a $vers != 'axp_osf' ] ; then
 	#
 	#  SGI vfork, probably in conjunction with some -D defines we
 	#  we shouldn't be using, will not admit to having any children.
@@ -1532,10 +1386,10 @@ if [ $vers != 'ts2_us5' -a $vers != 'usl_us5' -a $vers != 'sgi_us5' -a $vers != 
 	rm -f ${tf}*
 fi
 
-if [ $vers != "su4_us5" ] && [ $vers != "sui_us5" ] && [ $vers != "hp8_us5" ] \
-          && [ $vers != "hpb_us5" ] && [ $vers != "su9_us5" ] \
-          && [ $vers != "axp_osf" ] && [ $vers != "a64_sol" ] \
-	  && [ $vers != "hp2_us5" ] && [ $vers != "i64_hpu" ]
+if [ $vers != "su4_us5" -a $vers != "hp8_us5" \
+          -a $vers != "hpb_us5" -a $vers != "su9_us5"  \
+          -a $vers != "axp_osf" -a $vers != "a64_sol"  \
+	  -a $vers != "hp2_us5" -a $vers != "i64_hpu" ]
 then
 	echo 'main(){setpriority();}' >${tf}.c
 	cc -o $tf ${tf}.c >/dev/null 2>&1 &&
@@ -1551,24 +1405,24 @@ fi
 	fi
 
 	#
-	# Does sigvec exist?
-	#
-	if [ $vers != "rs4_us5" -a $vers != "r64_us5" -a "$Segvec" = 'any' ]
-	then
-	    echo 'main(){sigvec();}' >${tf}.c
-	    cc -o $tf ${tf}.c >/dev/null 2>&1 &&
-		Sigvec="sigvec"
-	    rm -f ${tf}*
-	fi
-
-	#
-	# By default, use sigaction only if sigvec is not available
+	# Prefer sigaction if it's available.
 	# These defines are mutually exclusive
 	#
 	if [ "$Sigvec" = 'any' ] ; then
 	    echo 'main(){sigaction();}' >${tf}.c
 	    cc -o $tf ${tf}.c >/dev/null 2>&1 &&
 		Sigvec="sigaction"
+	    rm -f ${tf}*
+	fi
+
+	#
+	# Use sigvec if it exists and no sigaction
+	#
+	if [ $vers != "rs4_us5" -a $vers != "r64_us5" -a "$Segvec" = 'any' ]
+	then
+	    echo 'main(){sigvec();}' >${tf}.c
+	    cc -o $tf ${tf}.c >/dev/null 2>&1 &&
+		Sigvec="sigvec"
 	    rm -f ${tf}*
 	fi
 
@@ -1594,7 +1448,7 @@ fi
 		echo '# define sigvec sigvector'
 	rm -f ${tf}*
 
-if [ $vers != "su4_us5" ] && [ $vers != "sui_us5" ] && [ $vers != "su9_us5" ]
+if [ $vers != "su4_us5" -a $vers != "su9_us5" ]
 then
 	echo 'main(){gethostname();}' >${tf}.c
 	cc -o $tf ${tf}.c >/dev/null 2>&1 ||
@@ -1624,7 +1478,7 @@ fi
 		echo '# define xCL_079_SYSCONF_EXISTS'
 	rm -f ${tf}*
 
-if [ $vers != "su4_us5" ] && [ $vers != "sui_us5" ] && [ $vers != "su9_us5" ]
+if [ $vers != "su4_us5" -a $vers != "su9_us5" ]
 then
 	echo 'main(){getpagesize();}' >${tf}.c
 	cc -o $tf ${tf}.c >/dev/null 2>&1 &&
@@ -1641,19 +1495,14 @@ fi
 	cc -o $tf ${tf}.c >/dev/null 2>&1 &&
 		echo '# define xCL_SETEUID_EXISTS'
 	rm -f ${tf}*
-	;;
-esac
 
 #
 # File inspection derived
 #
 
 case ${vers} in
-    sos_us5|\
     hp8_us5|\
     hpb_us5|\
-    rux_us5|\
-    rmx_us5|\
     hp2_us5|\
     i64_hpu|\
     int_rpl|\
@@ -1676,7 +1525,7 @@ case ${vers} in
 esac
 
 
-[ $vers != "hp8_us5" -a $vers != "hp8_bls" -a $vers != "dg8_us5" -a $vers != "dgi_us5" -a $vers != "sqs_ptx" -a $vers != "hpb_us5" -a $vers != "hp2_us5" -a $vers != "i64_hpu" ] &&
+[ $vers != "hp8_us5" -a $vers != "hpb_us5" -a $vers != "hp2_us5" -a $vers != "i64_hpu" ] &&
 		grep "union.*semun" /usr/include/sys/sem.h >/dev/null 2>&1 &&
 	echo "# define xCL_002_SEMUN_EXISTS"
 
@@ -1686,22 +1535,19 @@ esac
 [ -r /usr/include/sys/file.h ] &&
 	echo "# define xCL_007_FILE_H_EXISTS"
 
-    grep fd_set /usr/include/linux/types.h > /dev/null || \
+    grep fd_set /usr/include/linux/types.h > /dev/null 2>&1 || \
 	grep fd_set /usr/include/sys/types.h > /dev/null || \
         grep fd_set /usr/include/sys/select.h > /dev/null || \
         grep fd_set /usr/include/sys/time.h > /dev/null &&
 	echo "# define xCL_014_FD_SET_TYPE_EXISTS"
 
-if [ "$vers" != "ds3_ulx" ]
-then
-grep 'unsigned.*_ptr' /usr/include/stdio.h > /dev/null 2>&1 &&
+    grep 'unsigned.*_ptr' /usr/include/stdio.h > /dev/null 2>/dev/null &&
 	echo "# define xCL_017_UNSIGNED_IOBUF_PTR"
-fi
 
-if [ "$vers" = "int_lnx" ] || [ "$vers" = "ibm_lnx" ] || \
-   [ "$vers" = "i64_lnx" ] || [ "$vers" = "a64_lnx" ] || \
-   [ "$vers" = "axp_lnx" ] || [ "$vers" = "int_rpl" ] || \
-   [ "$vers" = "ppc_lnx" ]
+if [ "$vers" = "int_lnx" -o "$vers" = "ibm_lnx" -o \
+   "$vers" = "i64_lnx" -o "$vers" = "a64_lnx" -o \
+   "$vers" = "axp_lnx" -o "$vers" = "int_rpl" -o \
+   "$vers" = "ppc_lnx" ]
 then
         [ -r /usr/include/termio.h ] &&
                  echo "# define xCL_018_TERMIO_EXISTS"
@@ -1709,7 +1555,7 @@ elif [ "$vers" = "mg5_osx" -o "$vers" = "int_osx" -o "$vers" = 'ppc_osx' ]
 then
 	[ -r /usr/include/termios.h ] &&
 		echo "# define xCL_TERMIOS_EXISTS"
-elif [ "$vers" != hp8_us5 -a $vers != "hp8_bls" -a "$vers" != "hpb_us5"  -a "$vers" != "ds3_ulx" -a "$vers" != "hp2_us5" -a "$vers" != "i64_hpu" ]
+elif [ "$vers" != hp8_us5 -a "$vers" != "hpb_us5" -a "$vers" != "hp2_us5" -a "$vers" != "i64_hpu" ]
 then
 	[ -r /usr/include/sys/termio.h -a ! -r /usr/include/sys/sgtty.h ] &&
 		echo "# define xCL_018_TERMIO_EXISTS"
@@ -1718,20 +1564,14 @@ else
 		echo "# define xCL_018_TERMIO_EXISTS"
 fi
 
-if [ "$vers" != "sqs_ptx" ]
-then
     [ -r /usr/include/sys/time.h ] &&
 	echo "# define xCL_015_SYS_TIME_H_EXISTS"
-fi
 
-if [ "$vers" != "sqs_ptx" ]
-then
     [ -r /usr/include/netinet/in.h ] &&
         echo "# define xCL_019_TCPSOCKETS_EXIST"
     [ -r /usr/include/netinet/in.h ] &&
         grep 'sockaddr_in6' /usr/include/netinet/in*.h > /dev/null 2>&1 &&
 	        echo "# define xCL_TCPSOCKETS_IPV6_EXIST"
-fi
 
 [ -r /usr/include/sys/un.h ] &&
 	echo "# define xCL_066_UNIX_DOMAIN_SOCKETS"
@@ -1746,7 +1586,6 @@ fi
 [ -d /usr/include/sna ] &&
 	echo "# define xCL_HP_LU62_EXISTS"
 
-[ "$vers" != "dg8_us5"  -a $vers != "dgi_us5" ] &&
 [ -f /usr/include/dirent.h ] &&
 	echo "# define xCL_025_DIRENT_EXISTS"
 
@@ -1761,15 +1600,6 @@ fi
 # Matra (a/k/a Encore) xm7_us5
 [ -f /usr/include/sys/aux/auxdir.h ] &&
 	echo "# define xCL_028_SYS_AUX_AUXDIR_H_EXISTS"
-
-# AViiON DG/UX systems
-if [ "$vers" = "dg8_us5"  -o $vers = "dgi_us5" ]
-then
-        [ -f /usr/include/memory.h ] &&
-        echo "# define xCL_MEMORY_H_EXISTS"
-        [ -f /usr/include/string.h ] &&
-        echo "# define xCL_STRING_H_EXISTS"
-fi
 
 # AIX: (Goes with SELLIST)
 [ -f /usr/include/sys/select.h ] &&
@@ -1812,20 +1642,12 @@ fi
 
 
 # SYSV <unistd.h>
-case "$vers" in
-hp8_bls)		;;
-*)			[ -r /usr/include/unistd.h ] &&
-			echo "# define xCL_069_UNISTD_H_EXISTS"
-			;;
-esac
+    [ -r /usr/include/unistd.h ] &&
+	echo "# define xCL_069_UNISTD_H_EXISTS"
 
 # SYSV <limits.h>
-case "$vers" in
-dg8_us5|hp3_us5|dgi_us5)        ;;
-*)                      [ -r /usr/include/limits.h ] &&
-                        echo "# define xCL_070_LIMITS_H_EXISTS"
-                        ;;
-esac
+    [ -r /usr/include/limits.h ] &&
+	echo "# define xCL_070_LIMITS_H_EXISTS"
 
 # SYSV <ucontext.h>
 [ -r /usr/include/ucontext.h ] &&
@@ -1837,7 +1659,7 @@ esac
 
 # TLI_TCP library
 case "$vers" in
-sos_us5|dg8_us5|dgi_us5|rmx_us5|ts2_us5|i64_hpu|hp2_us5|hpb_us5|hp8_us5|rux_us5) ;;
+i64_hpu|hp2_us5|hpb_us5|hp8_us5) ;;
 *)	    [ -r /usr/lib/libnsl_s.a ] && echo "# define xCL_TLI_TCP_EXISTS"
 			;;
 esac
@@ -1859,7 +1681,8 @@ mathsigs
 # Some systems define *signal differently.
 
 case $vers in
-dg8_us5|dgi_us5|axp_osf)echo '# define TYPESIG void'
+axp_osf | *_lnx | int_rpl | su4_us5 | su9_us5 | a64_sol)
+		echo '# define TYPESIG void'
 		;;
 sgi_us5)        echo '# define TYPESIG __sigret_t'
 		;;
@@ -1874,21 +1697,11 @@ sgi_us5)        echo '# define TYPESIG __sigret_t'
 		;;
 esac	
 
-# only use sun's DBE enhancements on sun4 releases.
-case $vers in
-su4_u42|su4_cmw)
-		echo "# define xCL_081_SUN_FAST_OSYNC_EXISTS"
-		echo "# define xCL_083_USE_SUN_DBE_INCREASED_FDS"
-		;;
-esac	
-
 # SPARC platforms pass doubles (by value) as pairs of integers
 # (aligned as integers) even though doubles normally require 8-byte alignment.
 
 case $vers in
-su4_u42|su4_us5|su9_us5|su4_cmw) echo "# define xCL_085_PASS_DOUBLES_UNALIGNED"
-		;;
-dr6_us5) echo "# define xCL_085_PASS_DOUBLES_UNALIGNED"
+su4_us5|su9_us5) echo "# define xCL_085_PASS_DOUBLES_UNALIGNED"
 		;;
 esac	
 
@@ -1896,10 +1709,8 @@ esac
 # passed to setpgrp(2). The default code right now uses two args,
 # but we're making it easier to change it:
 case $vers in
-	hp8_bls|hp8_us5|hpb_us5|sqs_ptx|su9_us5|su4_us5|dr6_us5|usl_us5|\
-	dg8_us5|nc4_us5|dgi_us5|sos_us5|\
-	sui_us5|rmx_us5|ts2_us5|\
-	sgi_us5|rux_us5|*_lnx|int_rpl|\
+	hp8_us5|hpb_us5|su9_us5|su4_us5|usl_us5|\
+	sgi_us5|*_lnx|int_rpl|\
 	hp2_us5|i64_hpu|a64_sol)
 		echo "# define xCL_086_SETPGRP_0_ARGS"
 		;;
@@ -1938,8 +1749,6 @@ esac
 #
 if [ "$PRINTER_CMD" ]; then
 	echo '#define PRINTER_CMD "$PRINTER_CMD"'
-elif [ "$vers" = "nc4_us5" ]; then
-    echo '# define PRINTER_CMD "/bin/lp"'
 elif [ -f /usr/ucb/lpr ]; then
 	echo '# define PRINTER_CMD "/usr/ucb/lpr"'
 elif [ -f /usr/bin/lpr ]; then
@@ -1960,17 +1769,12 @@ fi
 #   Generate the define if the machine supports the "/proc" filesystem.  Assume
 #   if "/usr/include/sys/procfs.h" exists then the machine does support the 
 #   "/proc" filesystem.
-if [ "$vers" != "axp_osf" ] && [ "$vers" != "dr6_us5" ] && \
-   [ "$vers" != "usl_us5" ] && [ "$vers" != "dg8_us5" ] && \
-   [ "$vers" != "nc4_us5" ] && \
-   [ "$vers" != "dgi_us5" ] && [ "$vers" != "rmx_us5" ] && \
-   [ "$vers" != "sqs_ptx" ] && \
-   [ "$vers" != "ts2_us5" ] && [ "$vers" != "sgi_us5" ] && \
-   [ "$vers" != "int_lnx" ] && [ "$vers" != "rux_us5" ] && \
-   [ "$vers" != "ibm_lnx" ] && [ "$vers" != "axp_lnx" ] && \
-   [ "$vers" != "i64_lnx" ] && [ "$vers" != "a64_lnx" ] && \
-   [ "$vers" != "a64_sol" ] && [ "$vers" != "int_rpl" ] && \
-   [ "$vers" != "ppc_lnx" ]
+if [ "$vers" != "axp_osf" -a "$vers" != "int_lnx" -a \
+   "$vers" != "usl_us5" -a "$vers" != "sgi_us5" -a \
+   "$vers" != "ibm_lnx" -a "$vers" != "axp_lnx" -a \
+   "$vers" != "i64_lnx" -a "$vers" != "a64_lnx" -a \
+   "$vers" != "a64_sol" -a "$vers" != "int_rpl" -a \
+   "$vers" != "ppc_lnx" ]
 then
 	[ -r /usr/include/sys/procfs.h ] &&
 		echo "# define xCL_PROCFS_EXISTS"
@@ -1984,11 +1788,8 @@ fi
 #
 case $vers in
 a64_sol|\
-su4_u42|\
 su4_us5|\
-su9_us5|\
-su4_cmw|\
-sui_us5)	echo "# define xCL_091_BAD_STDIO_FD"
+su9_us5)	echo "# define xCL_091_BAD_STDIO_FD"
 		;;
       *)	stdlim
 		;;
@@ -2016,10 +1817,6 @@ esac
 # Solaris 2.6 supports POSIX Async I/O
 #
 case $vers in
-#dgi_us5)	echo "# define xCL_ASYNC_IO"
-#		;;
-#rs4_us5)	echo "# define xCL_ASYNC_IO"
-#		;;
 i64_hpu|\
 hpb_us5|\
 hp2_us5)	echo "# define xCL_ASYNC_IO"
@@ -2040,10 +1837,6 @@ esac
 case $vers in
 r64_us5|\
 rs4_us5)	echo "# define xCL_092_NO_RAW_FSYNC"
-		;;
-dg8_us5)	echo "# define xCL_092_NO_RAW_FSYNC"
-		;;
-dgi_us5)	echo "# define xCL_092_NO_RAW_FSYNC"
 		;;
 esac
 
@@ -2068,7 +1861,6 @@ esac
 # functions from the CL will be used unless xCL_094_TLS_EXISTS is defined.
 case $vers in
 su4_us5|\
-sui_us5|\
 su9_us5|\
 a64_sol)        echo "# define xCL_093_MALLOC_OK"
                 echo "# define xCL_094_TLS_EXISTS"
@@ -2078,8 +1870,6 @@ hpb_us5|\
 hp2_us5)        echo "# define xCL_093_MALLOC_OK"
                 ;;
 hp8_us5)        echo "# define xCL_093_MALLOC_OK"
-                ;;
-dgc_us5)        echo "# define xCL_093_MALLOC_OK"
                 ;;
 r64_us5|\
 rs4_us5)        echo "# define xCL_093_MALLOC_OK"
@@ -2091,16 +1881,7 @@ axp_osf)        echo "# define xCL_094_TLS_EXISTS"
 usl_us5)        echo "# define xCL_093_MALLOC_OK"
                 echo "# define xCL_094_TLS_EXISTS"
                 ;;
-rux_us5)        echo "# define xCL_093_MALLOC_OK"
-                echo "# define xCL_094_TLS_EXISTS"
-		;;
-ts2_us5)        echo "# define xCL_093_MALLOC_OK"
-                echo "# define xCL_094_TLS_EXISTS"
-                ;;
 sgi_us5)        echo "# define xCL_093_MALLOC_OK"
-                echo "# define xCL_094_TLS_EXISTS"
-                ;;
-dgi_us5)        echo "# define xCL_093_MALLOC_OK"
                 echo "# define xCL_094_TLS_EXISTS"
                 ;;
  *_lnx|int_rpl) echo "# define xCL_093_MALLOC_OK"
@@ -2116,7 +1897,7 @@ esac
 # use by standard i/o stream functions.
 #
 case $vers in
-su9_us5|su4_us5|dg8_us5|dgi_us5|r64_us5|rs4_us5|axp_osf|hpb_us5|sgi_us5|hp2_us5|i64_hpu|a64_sol)
+su9_us5|su4_us5|r64_us5|rs4_us5|axp_osf|hpb_us5|sgi_us5|hp2_us5|i64_hpu|a64_sol)
 		echo "# define xCL_RESERVE_STREAM_FDS"
 		;;
 esac

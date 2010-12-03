@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -2468,6 +2468,8 @@ adu_opz_skip(ADF_CB		*adf_scb,
 **  History:
 **      04-aug-2006 (stial01)
 **         Created.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
 */
 DB_STATUS
 adu_15lvch_position(ADF_CB        *scb,
@@ -2529,7 +2531,8 @@ adu_16lvch_position(ADF_CB        *scb,
     /* FIX ME position nvchr with alternate collations not supported */
     /* FIX ME db_collID is not init here */
     if (bdt2 == DB_LNVCHR_TYPE &&
-     (dv1->db_collID > DB_UNICODE_COLL || dv_lo->db_collID > DB_UNICODE_COLL))
+     (dv1->db_collID > DB_UNICODE_COLL && dv1->db_collID != DB_UCS_BASIC_COLL ||
+	dv_lo->db_collID > DB_UNICODE_COLL && dv_lo->db_collID != DB_UCS_BASIC_COLL))
     {
 	return(adu_error(scb, E_AD2085_LOCATE_NEEDS_STR, 0));
     }
@@ -2816,6 +2819,8 @@ adu_16lvch_position(ADF_CB        *scb,
 **  History:
 **      04-aug-2006 (stial01)
 **         Created.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
 */
 DB_STATUS
 adu_17lvch_position(ADF_CB        *scb,
@@ -2880,7 +2885,8 @@ adu_18lvch_position(ADF_CB        *scb,
     /* FIX ME position nvchr with alternate collations not supported */
     /* FIX ME db_collID is not init here */
     if (bdt1 == DB_LNVCHR_TYPE &&
-       (dv1->db_collID > DB_UNICODE_COLL || dv2->db_collID > DB_UNICODE_COLL))
+       (dv1->db_collID > DB_UNICODE_COLL && dv1->db_collID != DB_UCS_BASIC_COLL ||
+	dv2->db_collID > DB_UNICODE_COLL && dv2->db_collID != DB_UCS_BASIC_COLL))
     {
 	return(adu_error(scb, E_AD2085_LOCATE_NEEDS_STR, 0));
     }
@@ -3480,6 +3486,9 @@ DB_DATA_VALUE	   *locator_dv)
 **      18-Aug-2010 (hanal04) Bug 124271
 **         Correct setting of shd_l1_check. UTF-8 NVCH to VCH shows
 **         the old code was wrong.
+**	19-Nov-2010 (thaju02) Bug 124744
+**	   For UTF8, correct setting of shd_l1_check, if coerced data is
+**	   too big and must be split.
 */
 
 /*
@@ -3549,18 +3558,35 @@ adu_long_coerce_slave(ADF_CB	    *scb,
 	{
 	    register char *e = p + dv_out->db_length - DB_CNTSIZE;
 	    register i4 l;
+	    i4	byte_len = 0;
 	    do
 	    {
 		l = CMbytecnt(p);
 		p += l;
-		work->adw_shared.shd_l1_check++;
+		if (scb->adf_utf8_flag & AD_UTF8_ENABLED)
+		{
+		    byte_len += l;
+		    work->adw_shared.shd_l1_check += l;
+		}
+		else
+		    work->adw_shared.shd_l1_check++;
 	    } while (p < e);
 	    if (p > e)
 	    {
-		l -= p - e;
-		ctx->left += l;
-		ctx->chp -= l;
-		work->adw_shared.shd_l1_check--;
+		if (scb->adf_utf8_flag & AD_UTF8_ENABLED)
+		{
+		    work->adw_shared.shd_l1_check -= l;
+		    byte_len -= l;
+		    ctx->left = size - byte_len;
+		    ctx->chp = dv_out->db_data + DB_CNTSIZE + byte_len;
+		}
+		else
+		{
+		    l -= p - e;
+		    ctx->left += l;
+		    ctx->chp -= l;
+		    work->adw_shared.shd_l1_check--;
+		}
 	    }
 	}
 	else
@@ -3931,7 +3957,7 @@ adu_19lvch_chrlen(ADF_CB	*scb,
 	work_dv.db_data = (PTR)work;
 	work_dv.db_length = sizeof(ADP_LO_WKSP) + (2 * DB_MAXTUP);
 	work_dv.db_datatype = work_dv.db_prec = 0;
-	work_dv.db_collID = -1;
+	work_dv.db_collID = DB_NOCOLLATION;
 	
 	if ((inp_cpn->per_length0 != 0) || (inp_cpn->per_length1 != 0))
 	{

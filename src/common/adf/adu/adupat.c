@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2008 Ingres Corporation
+** Copyright (c) 2008, 2010 Ingres Corporation
 */
 
 /**
@@ -52,6 +52,10 @@
 **      21-Jun-2010 (horda03) b123926
 **          Because adu_unorm() and adu_utf8_unorm() are also called via 
 **          adu_lo_filter() change parameter order.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. This involves making finer
+**	    distinction with the datatypes and dispatching to two new pattern
+**	    engines: adu_pat_execute_utf8 & adu_pat_execute_uni.
 **/
 
 #include <compat.h>
@@ -66,6 +70,7 @@
 #include <adfint.h>
 #include <aduint.h>
 #include <nm.h>
+#include <aduucol.h>
 
 #include "adupatexec.h"
 
@@ -225,11 +230,13 @@ adu_like_all(
 	ADU_PATEXEC_FUNC *execute;
     } rtns[] = {
 	{adu_patcomp_like,     adu_pat_execute},
+	{adu_patcomp_like,     adu_pat_execute_utf8},
 	{adu_patcomp_like,     adu_pat_execute_col},
 	{adu_patcomp_like_uni, adu_pat_execute_uni},
+	{adu_patcomp_like_uni, adu_pat_execute_uniCE},
     };
     enum rtns_idx {
-	LIKE, LIKE_COLLATION, LIKE_UNICODE 
+	LIKE, LIKE_UTF8_UCS_BASIC, LIKE_COLLATION, LIKE_UCS_BASIC, LIKE_UNICODE_CE
     } form = LIKE;
     
     if (pat_dv->db_datatype == DB_PAT_TYPE)
@@ -335,13 +342,20 @@ adu_like_all(
     case DB_NCHR_TYPE:
     case DB_UTF8_TYPE:
     case DB_NQTXT_TYPE:
-	form = LIKE_UNICODE;
+	form = LIKE_UNICODE_CE;
+	if (src_dv->db_collID == DB_UCS_BASIC_COLL)
+	    form = LIKE_UCS_BASIC;
 	/* All handled directly by DA */
 	break;
     case DB_LVCH_TYPE:
     case DB_LCLOC_TYPE:
 	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
-	    form = LIKE_UNICODE;
+	{
+	    form = LIKE_UNICODE_CE;
+	    if (src_dv->db_collID == DB_UCS_BASIC_COLL)
+		form = LIKE_UTF8_UCS_BASIC;
+	}
+	/*FALLTHROUGH*/
     case DB_LBYTE_TYPE:
     case DB_GEOM_TYPE:
     case DB_POINT_TYPE:
@@ -364,13 +378,18 @@ adu_like_all(
     case DB_VCH_TYPE:
     case DB_TXT_TYPE:
     case DB_LTXT_TYPE:
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		src_dv->db_collID == DB_UCS_BASIC_COLL)
 	{
-	    form = LIKE_UNICODE;
+	    form = LIKE_UTF8_UCS_BASIC;
+	}
+	else if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	{
+	    form = LIKE_UNICODE_CE;
 	    dv_tmp1.db_datatype = DB_NVCHR_TYPE;
 	    dv_tmp1.db_length = src_dv->db_length * 4 + DB_CNTSIZE;
 	    dv_tmp1.db_prec = 0;
-	    dv_tmp1.db_collID = -1;
+	    dv_tmp1.db_collID = DB_UNSET_COLL;
 	    if (dv_tmp1.db_length < (i2)sizeof(tmp))
 		dv_tmp1.db_data = tmp;
 	    else
@@ -401,18 +420,20 @@ adu_like_all(
     case DB_NCHR_TYPE:
     case DB_UTF8_TYPE:
     case DB_NQTXT_TYPE:
-	if (form != LIKE_UNICODE)
+	if (form != LIKE_UCS_BASIC && form != LIKE_UNICODE_CE)
 	{
 	    DB_DATA_VALUE dv_tmp3;
-	    form = LIKE_UNICODE;
+	    form = LIKE_UNICODE_CE;
+	    if (pat_dv->db_collID == DB_UCS_BASIC_COLL)
+		form = LIKE_UCS_BASIC;
 	    dv_tmp1.db_datatype = DB_NVCHR_TYPE;
 	    dv_tmp1.db_length = src_dv->db_length * 3 + DB_CNTSIZE;
 	    dv_tmp1.db_prec = 0;
-	    dv_tmp1.db_collID = -1;
+	    dv_tmp1.db_collID = DB_UNSET_COLL;
 	    dv_tmp3.db_datatype = DB_NVCHR_TYPE;
 	    dv_tmp3.db_length = src_dv->db_length * 3 + DB_CNTSIZE;
 	    dv_tmp3.db_prec = 0;
-	    dv_tmp3.db_collID = -1;
+	    dv_tmp3.db_collID = DB_UNSET_COLL;
 	    if (dv_tmp1.db_length < (i2)sizeof(tmp))
 		dv_tmp1.db_data = tmp;
 	    else
@@ -465,17 +486,17 @@ adu_like_all(
     case DB_VCH_TYPE:
     case DB_TXT_TYPE:
     case DB_LTXT_TYPE:
-	if (form == LIKE_UNICODE)
+	if (form == LIKE_UCS_BASIC || form == LIKE_UNICODE_CE)
 	{
 	    DB_DATA_VALUE dv_tmp3;
 	    dv_tmp2.db_datatype = DB_NVCHR_TYPE;
 	    dv_tmp2.db_length = pat_dv->db_length * 4 + DB_CNTSIZE;
 	    dv_tmp2.db_prec = 0;
-	    dv_tmp2.db_collID = -1;
+	    dv_tmp2.db_collID = DB_UNSET_COLL;
 	    dv_tmp3.db_datatype = DB_NVCHR_TYPE;
 	    dv_tmp3.db_length = pat_dv->db_length * 3 + DB_CNTSIZE;
 	    dv_tmp3.db_prec = 0;
-	    dv_tmp3.db_collID = -1;
+	    dv_tmp3.db_collID = DB_UNSET_COLL;
 	    if (dv_tmp2.db_length < (i2)sizeof(tmp) && dv_tmp1.db_data != tmp)
 		dv_tmp2.db_data = tmp;
 	    else
@@ -516,8 +537,12 @@ adu_like_all(
 	}
 	break;
     case DB_PAT_TYPE:
-	if (patdata->patdata.flags2 & AD_PAT2_UNICODE)
-	    form = LIKE_UNICODE;
+	if (patdata->patdata.flags2 & AD_PAT2_UCS_BASIC)
+	    form = LIKE_UCS_BASIC;
+	else if (patdata->patdata.flags2 & AD_PAT2_UTF8_UCS_BASIC)
+	    form = LIKE_UTF8_UCS_BASIC;
+	else if (patdata->patdata.flags2 & AD_PAT2_UNICODE_CE)
+	    form = LIKE_UNICODE_CE;
 	else if (patdata->patdata.flags2 & AD_PAT2_COLLATE)
 	    form = LIKE_COLLATION;
 	break;
@@ -532,14 +557,18 @@ adu_like_all(
 	    form = LIKE_COLLATION;
 	    pat_flags |= (AD_PAT2_COLLATE<<16);
 	}
-	else if (form == LIKE_UNICODE)
-	    pat_flags |= (AD_PAT2_UNICODE<<16);
+	else if (form == LIKE_UCS_BASIC)
+	    pat_flags |= (AD_PAT2_UCS_BASIC<<16);
+	else if (form == LIKE_UTF8_UCS_BASIC)
+	    pat_flags |= (AD_PAT2_UTF8_UCS_BASIC<<16);
+	else if (form == LIKE_UNICODE_CE)
+	    pat_flags |= (AD_PAT2_UNICODE_CE<<16);
 
 	if (ADU_pat_legacy > 0 &&
 		    !long_seen &&
 		    (pat_flags & AD_PAT_FORM_MASK) == AD_PAT_FORM_LIKE)
 	{
-	    if (form == LIKE_UNICODE)
+	    if (form == LIKE_UCS_BASIC)
 		db_stat1 = adu_ulike(adf_scb, s1, p1,
 			(UCS2*)(esc_dv?esc_dv->db_data:0), &rcmp1);
 	    else
@@ -783,7 +812,9 @@ adu_like_comp(
     else if (ADU_pat_legacy == -2)
 	pat_flags |= AD_PAT_WO_CASE;
 
-    if (adf_scb->adf_collation)
+    if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	pat_flags |= (AD_PAT2_UTF8_UCS_BASIC<<16);
+    else if (adf_scb->adf_collation)
 	pat_flags |= (AD_PAT2_COLLATE<<16);
 
     /* Compile the input pattern into output parameter */
@@ -937,7 +968,10 @@ adu_like_comp_uni(
     else if (ADU_pat_legacy == -2)
 	pat_flags |= AD_PAT_WO_CASE;
 
-    pat_flags |= (AD_PAT2_UNICODE<<16);
+    if (pat_dv->db_collID == DB_UCS_BASIC_COLL)
+	pat_flags |= (AD_PAT2_UCS_BASIC<<16);
+    if (~pat_flags & (AD_PAT2_UCS_BASIC<<16))
+	pat_flags |= (AD_PAT2_UNICODE_CE<<16);
 
     /* Compile the input pattern into output parameter */
     db_stat = adu_patcomp_like_uni(adf_scb, pat_dv, esc_dv, pat_flags, sea_ctx);

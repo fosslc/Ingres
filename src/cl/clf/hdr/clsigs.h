@@ -91,6 +91,10 @@
 **	4-Jun-2010 (kschendel)
 **	    OSX wants sys/ucontext.h, ucontext.h spews warnings about
 **	    deprecated routines.
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Drop Sequent sigvec name workaround.  Drop some obsolete platforms.
+**	23-Nov-2010 (kschendel)
+**	    Drop a couple more obsolete ports missed in the last edit.
 */
 # ifndef CLCONFIG_H_INCLUDED
         # error "didn't include clconfig.h before clsigs.h"
@@ -101,10 +105,9 @@
 /*
 ** include <systypes.h> to prevent types problems with signals
 */
-#if defined(dr6_us5) || defined(hp3_us5) ||\
-    defined(any_aix) || defined(dg8_us5) || defined(dgi_us5)
+#if defined(any_aix)
 # include <systypes.h>
-#endif /* dr6_us5 aix hp3_us5 dg8_us5 dgi_us5 */
+#endif /* aix */
 
 /*
 ** include signal.h first. 
@@ -118,16 +121,10 @@
 ** signal handlers but are not available for all boxes with sigaction
 */
 # ifdef xCL_072_SIGINFO_H_EXISTS
-# if defined(rux_us5)
-# include <sys/sigaction.h>
-# endif
 # include <siginfo.h>
 # endif /* xCL_072_SIGINFO_H_EXISTS */
+
 # ifdef xCL_071_UCONTEXT_H_EXISTS
-# if defined(sos_us5)
-# include <signal.h>
-# include <sys/regset.h>
-# endif /* sos_us5 */
 #ifdef OSX
 # include <sys/ucontext.h>
 #else
@@ -153,10 +150,6 @@
 # define sigmask( m ) 	( 1 << ( (m) - 1 ) )
 # endif
 
-
-/* need to prepend name on sequent system 5 */
-
-# define	sigvec_func	sigvec
 
 /*
 ** setup the correct signal parameters
@@ -192,14 +185,13 @@
 **
 */
 
-#if defined(dg8_us5) || defined(dgi_us5) || defined(LNX) || \
-    defined(OSX)
+#if defined(LNX) || defined(OSX)
 # define gotit
 # define EX_SIGCODE siginfo_t
 # define EX_SIGCONTEXT ucontext_t
 # define SIGCODE(code) *code
 # define SIGCONTEXT(context) *context
-#endif /*dg8_us5 dgi_us5 */
+#endif /* linux, OS X */
 
 # ifdef axp_osf
 # define gotit

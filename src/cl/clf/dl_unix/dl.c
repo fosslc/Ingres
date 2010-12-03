@@ -19,9 +19,7 @@
 #include    "dlint.h"
 #include <errno.h>
 
-# ifndef DESKTOP
 # include       <sys/param.h>
-# endif /* DESKTOP */
 
 # ifdef xCL_070_LIMITS_H_EXISTS
 # include <limits.h>
@@ -151,6 +149,8 @@
 **	    Fix up function prototypes to quiet compiler warnings.
 **	20-Jun-2009 (kschendel) SIR 122138
 **	    Hybrid add-on symbol changed, fix here.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */
 
 /* External variables */
@@ -158,7 +158,7 @@
 # ifdef ARG_MAX
 #     define CMDLINSIZ    (ARG_MAX)
 # else
-# if defined(rmx_us5) || defined(pym_us5) || defined(sgi_us5)||defined(rux_us5)
+# if defined(sgi_us5)
 #     define NCARGS           51200 /* NB - this is maximum value of tunable */
 # elif defined(NT_GENERIC)
 #     define NCARGS           1024  /* NB - this is maximum value of tunable */
@@ -531,15 +531,8 @@ DLconstructxloc( char *dlmodname, LOCATION *tmplocp, char *ext,
 **  None
 */
 
-#ifdef CL_PROTOTYPED
 STATUS
 DLnameavail(char *dlmodname, CL_ERR_DESC *errp)
-#else	/* CL_PROTOTYPED */
-STATUS
-DLnameavail(dlmodname, errp)
-char *dlmodname;
-CL_ERR_DESC *errp;
-#endif	/* CL_PROTOTYPED */
 {
 #if !(DL_LOADING_WORKS || DL_UNLOADING_WORKS)
     SETCLERR(errp, DL_NOT_IMPLEMENTED, 0);
@@ -594,15 +587,8 @@ CL_ERR_DESC *errp;
 **  See	description. May or may	not free up malloc'ed memory.
 */
 
-#ifdef CL_PROTOTYPED
 STATUS
 DLdelete(char *dlmodname, CL_ERR_DESC *errp)
-#else	/* CL_PROTOTYPED */
-STATUS
-DLdelete(dlmodname, errp)
-char *dlmodname;
-CL_ERR_DESC *errp;
-#endif	/* CL_PROTOTYPED */
 {
 #if !(DL_LOADING_WORKS || DL_UNLOADING_WORKS)
     SETCLERR(errp, DL_NOT_IMPLEMENTED, 0);
@@ -618,16 +604,8 @@ CL_ERR_DESC *errp;
 #endif	/*  !(DL_LOADING_WORKS || DL_UNLOADING_WORKS) */
 }
 
-#ifdef CL_PROTOTYPED
 STATUS
 DLdelete_loc(char *dlmodname, LOCATION *loc, CL_ERR_DESC *errp)
-#else	/* CL_PROTOTYPED */
-STATUS
-DLdelete_loc(dlmodname, loc, errp)
-char *dlmodname;
-LOCATION *loc;
-CL_ERR_DESC *errp;
-#endif	/* CL_PROTOTYPED */
 {
     STATUS	ret;
     char	locbuf[MAX_LOC];
@@ -1046,18 +1024,9 @@ DLprepare_loc(char *vers, char *dlmodname, char *syms[],
 **	    The "addr" parameter should be a PTR*, not a PTR, to match
 **	    usage.
 */
-#ifdef CL_PROTOTYPED
 STATUS
 DLbind(PTR handle, char	*sym, PTR *addr,
     CL_ERR_DESC	*errp)
-#else	/* CL_PROTOTYPED */
-STATUS
-DLbind(handle, sym, addr, errp)
-PTR handle;
-char *sym;
-PTR *addr;
-CL_ERR_DESC *errp;
-#endif	/* CL_PROTOTYPED */
 {
 #if !DL_LOADING_WORKS
     SETCLERR(errp, DL_NOT_IMPLEMENTED, 0);
@@ -1122,15 +1091,8 @@ CL_ERR_DESC *errp;
 **  See	description. If	possible, will detach the DL module; will MEfree
 **  the	handle if possible.
 */
-#ifdef CL_PROTOTYPED
 STATUS
 DLunload(PTR handle, CL_ERR_DESC *errp)
-#else	/* CL_PROTOTYPED */
-STATUS
-DLunload(handle, errp)
-PTR handle;
-CL_ERR_DESC *errp;
-#endif	/* CL_PROTOTYPED */
 {
 #if !DL_UNLOADING_WORKS
     SETCLERR(errp, DL_NOT_IMPLEMENTED, 0);

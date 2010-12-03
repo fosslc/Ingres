@@ -1476,6 +1476,15 @@
 #	01-Nov-2010 (bonro01)
 #	    Add rule ADDDIRCCFLAGS and IISUBDIRCCFLAGS to allow
 #	    adding compiler flags to specific directory trees.
+#	24-Nov-2010 (bonro01)
+#	    Fix typo from Geospatial change which used the wrong
+#	    compile flags for Hybrid builds.
+#        1-DEC-2010 (hanal04) Bug b124731
+#           Add ARMERGELIB to the GeoSpatial dependency list to ensure
+#           geo libraries are copied/linked before building iimerge.
+#	19-Nov-2010 (frima01) BUG 124750
+#	    Move CCFLAGS in front of -c compile flag, neccessary for cross
+#	    compilation on i64.lnx.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -3950,8 +3959,10 @@ rule IINEEDLIBS
 		{
 			LINKLIBS on $(<) += $(LDLIBMACH) ;		    
 			#if WITH_GEO is defined we need to do some special handling of
-			#the linking of binaries that need ADFLIB, LIBINGRES or INGRESLIB
-			if $(WITH_GEO) && ( ADFLIB in $(>) || LIBINGRES in $(>) || INGRESLIB in $(>) )
+                        #the linking of binaries that need ADFLIB, LIBINGRES,
+			# INGRESLIB or ARMERGELIB
+                        if $(WITH_GEO) && ( ADFLIB in $(>) || LIBINGRES in $(>) || INGRESLIB in $(>) || ARMERGELIB in $(>) )
+
 			{
 				#if it requires a static link we must also link with C++
 				if $(<) in $(GEOLINKSTATIC)
@@ -3976,7 +3987,7 @@ rule IINEEDLIBS
 			}
 			if $(VERSHB)
 			{
-				LINKLIBS on $(SUFHB)/$(<) += $(LDLIBMACH) ;
+				LINKLIBS on $(SUFHB)/$(<) += $(LDLIBMACHHB) ;
 			}
 		}
 	}
@@ -9333,7 +9344,7 @@ if $(UNIX)
      {
 	actions Cc
 	{
-	$(CC) -c $(CUSTOMFLAG) $(CCFLAGS) $(OPTIM) -I$(HDRS) -o $(<:S=$(SUFFIX)) $(>)
+	$(CC) $(CCFLAGS) -c $(CUSTOMFLAG) $(OPTIM) -I$(HDRS) -o $(<:S=$(SUFFIX)) $(>)
         }
      }
      else
@@ -9344,7 +9355,7 @@ if $(UNIX)
 	{
 	    actions Cc
 	    {
-	    $(CC) -c $(CCFLAGS) $(OPTIM) -I$(HDRS) -o $(<) $(>) -aux-info $(>:S=.aux)
+	    $(CC) $(CCFLAGS) -c $(OPTIM) -I$(HDRS) -o $(<) $(>) -aux-info $(>:S=.aux)
 	    }
 	}
 	else
@@ -9352,13 +9363,13 @@ if $(UNIX)
 	    # The usual Cc action
 	    actions Cc
 	    {
-	    $(CC) -c $(CCFLAGS) $(OPTIM) -I$(HDRS) -o $(<) $(>)
+	    $(CC) $(CCFLAGS) -c $(OPTIM) -I$(HDRS) -o $(<) $(>)
 	    }
 	}
 
         actions C++
         {
-        $(C++) -c $(C++FLAGS) $(OPTIM) -I$(HDRS) -o $(<) $(>)
+        $(C++) $(C++FLAGS) -c $(OPTIM) -I$(HDRS) -o $(<) $(>)
         }
      }
 }

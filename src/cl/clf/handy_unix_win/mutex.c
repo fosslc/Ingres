@@ -81,6 +81,8 @@
 **	19-jan-2005 (devjo01)
 **	    Remove redundant init of ME_page_sem in gen_useCSsems.
 **	    Retain rename to minimize behavior change.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototypes.
 */
 
 #include   <compat.h>
@@ -92,15 +94,53 @@
 #include   <io.h>
 # endif /* NT_GENERIC */
 
-FUNC_EXTERN	STATUS	gen_Pdummy();
-FUNC_EXTERN	STATUS	gen_Vdummy();
-FUNC_EXTERN	STATUS	gen_Idummy();
-FUNC_EXTERN	STATUS	gen_Ndummy();
+
+/* TABLE OF CONTENTS */
+STATUS gen_Pdummy(
+	i4 exclusive,
+	CS_SEMAPHORE *sem);
+STATUS gen_Vdummy(
+	CS_SEMAPHORE *sem);
+STATUS gen_Idummy(
+	CS_SEMAPHORE *sem,
+	i4 type);
+VOID    gen_Ndummy(
+	CS_SEMAPHORE *sem,
+	char *name);
+static void genstr(
+	char *s);
+STATUS gen_Ptest(
+	i4 exclusive,
+	CS_SEMAPHORE *sem);
+STATUS gen_Vtest(
+	CS_SEMAPHORE *sem);
+STATUS gen_Itest(
+	CS_SEMAPHORE *sem,
+	i4 type);
+VOID gen_seminit(
+	STATUS (*psem)(i4 excl, CS_SEMAPHORE *sem),
+	STATUS (*vsem)(CS_SEMAPHORE *sem),
+	STATUS (*isem)(CS_SEMAPHORE *sem, i4 type),
+	VOID   (*nsem)(CS_SEMAPHORE *sem, char *string));
+STATUS iigen_Psem(
+	CS_SEMAPHORE *sem);
+STATUS iigen_Vsem(
+	CS_SEMAPHORE *sem);
+STATUS iigen_Isem(
+	CS_SEMAPHORE *sem);
+STATUS iigen_Nsem(
+	CS_SEMAPHORE *sem,
+	char *name);
+VOID iigen_useCSsems(
+	STATUS (*psem)(i4 excl, CS_SEMAPHORE *sem),
+	STATUS (*vsem)(CS_SEMAPHORE *sem),
+	STATUS (*isem)(CS_SEMAPHORE *sem, i4 type),
+	VOID   (*nsem)(CS_SEMAPHORE *sem, char *string));
 
 static	STATUS	(*genP_semaphore)() = gen_Pdummy;
 static	STATUS	(*genV_semaphore)() = gen_Vdummy;
 static	STATUS	(*genI_semaphore)() = gen_Idummy;
-static	STATUS	(*genN_semaphore)() = gen_Ndummy;
+static	VOID	(*genN_semaphore)() = gen_Ndummy;
 
 GLOBALREF	CS_SEMAPHORE	 CL_misc_sem;
 GLOBALREF	CS_SEMAPHORE	 CL_acct_sem;
@@ -143,12 +183,11 @@ i4		type;
 	return	OK;
 }
 
-STATUS
+VOID
 gen_Ndummy(sem, name)
 CS_SEMAPHORE	*sem;
 char		*name;
 {
-	return	OK;
 }
 
 static VOID
@@ -243,10 +282,10 @@ i4		type;
 */
 VOID
 gen_seminit(psem, vsem, isem, nsem)
-STATUS	(*psem)();
-STATUS	(*vsem)();
-STATUS	(*isem)();
-STATUS	(*nsem)();
+STATUS	(*psem)(i4 excl, CS_SEMAPHORE *sem);
+STATUS	(*vsem)(CS_SEMAPHORE *sem);
+STATUS	(*isem)(CS_SEMAPHORE *sem, i4 type);
+VOID	(*nsem)(CS_SEMAPHORE *sem, char *string);
 {
 
 	genP_semaphore = (psem) ? psem : gen_Pdummy;
@@ -435,7 +474,8 @@ char		*name;
 	}
 	else
 	{
-	    status = (*genN_semaphore) (sem, name);
+	    (*genN_semaphore) (sem, name);
+	    status = OK;
 	}
 
 	return( status );

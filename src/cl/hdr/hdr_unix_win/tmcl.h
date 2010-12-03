@@ -162,6 +162,8 @@
 **	    Replace mg5_osx with OSX and add support for Intel OSX.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 **/
 
 /* 
@@ -309,12 +311,15 @@ typedef struct _TM_STAMP
 */
 
 FUNC_EXTERN VOID    TMsubstr(
-#ifdef CL_PROTOTYPED
         TIMER       *outer,
         TIMER       *inner,
         TIMER       *result
-#endif
 );
+
+FUNC_EXTERN VOID    TMet(
+	SYSTIME *stime
+);
+
 /*
 ** Name: TMhrnow
 **
@@ -339,6 +344,8 @@ FUNC_EXTERN VOID    TMsubstr(
     defined(a64_sol) || defined (LNX)
 #define TMHRNOW_WRAPPED_CLOCKGETTIME
 #define HRSYSTIME struct timespec
+
+FUNC_EXTERN STATUS TMhrnow(HRSYSTIME *stime);
 
 #define		TMhrnow(hrtime)		clock_gettime( CLOCK_REALTIME, (hrtime) )
 #else

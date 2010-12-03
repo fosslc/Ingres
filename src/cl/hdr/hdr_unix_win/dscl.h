@@ -55,6 +55,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototype for DSdecode.
 */
 
 /*
@@ -281,6 +283,8 @@ typedef struct {
 # define	IS_RACC 4 
 
 FUNC_EXTERN i4 DSencode( SH_DESC *sh_desc, char *str, char ch );
+FUNC_EXTERN STATUS DSdecode(char *comline, SH_DESC *sh_desc, char ch);
+
 #endif	/* DS_H_def */
 
 /* ----------------------------------------------------------------------- */

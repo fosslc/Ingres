@@ -33,6 +33,8 @@
 **	Fixed offsets for CS__PC, CS__PV and CS__SP. A change to CS_SCB 
 **	struct caused these offsets to change, so SEGV occurred in 
 **	CS_swuser.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Moved inkernel and current to front of CS_SYSTEM, fix here.
 **
 */
 #if defined(axp_osf) || defined(axp_lnx)
@@ -95,8 +97,8 @@ main()
 ** can be re-determined by executing the C program included in the comment
 ** above
 */
-# define CS__CURRENT 312
-# define CS__INKERNEL 340
+# define CS__CURRENT 20
+# define CS__INKERNEL 16
 # define CS__EXSPTR 64
 # define CS__PC 72
 # define CS__PV 88

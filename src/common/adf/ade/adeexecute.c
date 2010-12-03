@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, 2008 Ingres Corporation
+** Copyright (c) 2004, 2008, 2010 Ingres Corporation
 */
 #include    <compat.h>
 #include    <gl.h>
@@ -1373,6 +1373,9 @@ i4                 *ade_needed;
 **	    Tighten the access to ADF_NVL_BIT.
 **       7-Sep-2010 (hanal04) Bug 124384
 **          Add missing break to NCHR ADE_LEN_UNKNOWN case.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. Don't allow UTF8 strings with it
+**	    to use UCS2 CEs for comparison related actions.
 */
 
 
@@ -2525,6 +2528,7 @@ if (f->ins_icode >= 0) adfi_counts[f->ins_icode]++;
 		    /* set datatype and prec for operand #i */
 		    dv[im1].db_datatype = oprP[i]->opr_dt;
 		    dv[im1].db_prec	= oprP[i]->opr_prec;
+		    dv[im1].db_collID	= oprP[i]->opr_collID;
 		    /* Also clear db_data as will be likely to be dereferenced
 		    ** otherwise by adi_0calclen */
 		    dv[im1].db_data	= NULL;
@@ -2949,7 +2953,9 @@ do_adccompare:
 		    u_char  *endtc1;
 		    u_char  *endtc2;
 
-		    if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+		   if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+				oprP[0]->opr_collID != DB_UCS_BASIC_COLL &&
+				oprP[1]->opr_collID != DB_UCS_BASIC_COLL)
 			goto utf8_compare;
 		    tc1 = (u_char *)data[0] + DB_CNTSIZE;
 		    tc2 = (u_char *)data[1] + DB_CNTSIZE;
@@ -2982,7 +2988,9 @@ do_adccompare:
 		    break;
 		}
 	      case DB_CHR_TYPE:
-		if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+		if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			oprP[0]->opr_collID != DB_UCS_BASIC_COLL &&
+			oprP[1]->opr_collID != DB_UCS_BASIC_COLL)
 		    goto utf8_compare;
 		if (adf_scb->adf_collation)
 		{
@@ -3051,7 +3059,9 @@ do_adccompare:
 		break;
 	      case DB_CHA_TYPE:
 	      case DB_VCH_TYPE:
-		if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+		if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			oprP[0]->opr_collID != DB_UCS_BASIC_COLL &&
+			oprP[1]->opr_collID != DB_UCS_BASIC_COLL)
 		    goto utf8_compare;
 		if (!(adf_scb->adf_collation || 
 				Adf_globs->Adi_status & ADI_DBLBYTE))
@@ -3067,9 +3077,7 @@ do_adccompare:
 	          {
 	              ln1 = *(u_i2*)c1;
 	              c1 += 2;
-		      if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
-			    (ln1 > adf_scb->adf_maxstring/2)) ||
-			  ln1 > adf_scb->adf_maxstring)
+		      if (ln1 > adf_scb->adf_maxstring)
 			  return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
 	          }
 	          else
@@ -3079,9 +3087,7 @@ do_adccompare:
 	          {
 	              ln2 = *(u_i2*)c2;
 	              c2 += 2;
-		      if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
-			    (ln2 > adf_scb->adf_maxstring/2)) ||
-			  ln2 > adf_scb->adf_maxstring)
+		      if (ln2 > adf_scb->adf_maxstring)
 			  return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
 	          }
 	          else
@@ -4646,7 +4652,10 @@ utf8_compare:
           case ADFI_234_CHAR_EQ_CHAR:
           case ADFI_235_VARCHAR_EQ_VARCHAR:
 	    if (!(adf_scb->adf_collation || pm_quel ||
-			Adf_globs->Adi_status & ADI_DBLBYTE))
+			Adf_globs->Adi_status & ADI_DBLBYTE ||
+			(adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			oprP[0]->opr_collID != DB_UCS_BASIC_COLL &&
+                        oprP[1]->opr_collID != DB_UCS_BASIC_COLL))
 	    {
 		/* Single byte, no alternate collation, no QUEL
 		** pattern matching allows use of fast path comparison. */
@@ -4719,7 +4728,9 @@ utf8_compare:
           case ADFI_237_VARCHAR_NE_VARCHAR:
 	    if (!(adf_scb->adf_collation || pm_quel ||
 			Adf_globs->Adi_status & ADI_DBLBYTE ||
-			adf_scb->adf_utf8_flag & AD_UTF8_ENABLED))
+			(adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			oprP[0]->opr_collID != DB_UCS_BASIC_COLL &&
+                        oprP[1]->opr_collID != DB_UCS_BASIC_COLL))
 	    {
 		/* Single byte, no alternate collation, no QUEL, no UTF8
 		** pattern matching allows use of fast path comparison. */
@@ -4750,7 +4761,9 @@ utf8_compare:
           case ADFI_245_VARCHAR_LT_VARCHAR:
 	    if (!(adf_scb->adf_collation || pm_quel ||
 			Adf_globs->Adi_status & ADI_DBLBYTE ||
-			adf_scb->adf_utf8_flag & AD_UTF8_ENABLED))
+			(adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			oprP[0]->opr_collID != DB_UCS_BASIC_COLL &&
+                        oprP[1]->opr_collID != DB_UCS_BASIC_COLL))
 	    {
 		/* Single byte, no alternate collation, no QUEL, no UTF8
 		** pattern matching allows use of fast path comparison. */
@@ -4781,7 +4794,9 @@ utf8_compare:
           case ADFI_239_VARCHAR_LE_VARCHAR:
 	    if (!(adf_scb->adf_collation || pm_quel ||
 			Adf_globs->Adi_status & ADI_DBLBYTE ||
-			adf_scb->adf_utf8_flag & AD_UTF8_ENABLED))
+			(adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			oprP[0]->opr_collID != DB_UCS_BASIC_COLL &&
+                        oprP[1]->opr_collID != DB_UCS_BASIC_COLL))
 	    {
 		/* Single byte, no alternate collation, no QUEL, no UTF8
 		** pattern matching allows use of fast path comparison. */
@@ -4812,7 +4827,9 @@ utf8_compare:
           case ADFI_241_VARCHAR_GT_VARCHAR:
 	    if (!(adf_scb->adf_collation || pm_quel ||
 			Adf_globs->Adi_status & ADI_DBLBYTE ||
-			adf_scb->adf_utf8_flag & AD_UTF8_ENABLED))
+			(adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			oprP[0]->opr_collID != DB_UCS_BASIC_COLL &&
+                        oprP[1]->opr_collID != DB_UCS_BASIC_COLL))
 	    {
 		/* Single byte, no alternate collation, no QUEL, no UTF8
 		** pattern matching allows use of fast path comparison. */
@@ -4843,7 +4860,9 @@ utf8_compare:
           case ADFI_243_VARCHAR_GE_VARCHAR:
 	    if (!(adf_scb->adf_collation || pm_quel ||
 			Adf_globs->Adi_status & ADI_DBLBYTE ||
-			adf_scb->adf_utf8_flag & AD_UTF8_ENABLED))
+			(adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			oprP[0]->opr_collID != DB_UCS_BASIC_COLL &&
+                        oprP[1]->opr_collID != DB_UCS_BASIC_COLL))
 	    {
 		/* Single byte, no alternate collation, no QUEL, no UTF8
 		** pattern matching allows use of fast path comparison. */
@@ -4880,9 +4899,7 @@ strCompare:
 	    {
 	        ln1 = *(u_i2*)c1;
 	        c1 += 2;
-		if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
-		     (ln1 > adf_scb->adf_maxstring/2)) ||
-		    ln1 > adf_scb->adf_maxstring)
+		if (ln1 > adf_scb->adf_maxstring)
 		    return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
 	    }
 	    else
@@ -4893,9 +4910,7 @@ strCompare:
 	    {
 	        ln2 = *(u_i2*)c2;
 	        c2 += 2;
-		if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
-		     (ln2 > adf_scb->adf_maxstring/2)) ||
-		    (ln2 > adf_scb->adf_maxstring))
+		if (ln2 > adf_scb->adf_maxstring)
 		    return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
 	    }
 	    else

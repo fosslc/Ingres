@@ -227,6 +227,10 @@ GLOBALREF SC_MAIN_CB          *Sc_main_cb; /* Central structure for SCF */
 **      26-Nov-2009 (hanal04) Bug 122938
 **          Different GCA protocol levels can handle different levels
 **          of decimal precision.
+**      30-Nov-2010 (hanal04) Bug 124758
+**          Different GCA protocol levels expect different object name
+**          lengths for example table and owner names in an SQL call to
+**          resolve_table(). 
 */
 i4
 ascs_initiate(SCD_SCB *scb )
@@ -1089,6 +1093,15 @@ ascs_initiate(SCD_SCB *scb )
             else
             {
                 adf_cb->adf_max_decprec = CL_MAX_DECPREC_31;
+            }
+
+            if (scb->scb_cscb.cscb_version >= GCA_PROTOCOL_LEVEL_68)
+            {
+                adf_cb->adf_max_namelen = DB_GW1_MAXNAME;
+            }
+            else
+            {
+                adf_cb->adf_max_namelen = DB_OLDMAXNAME_32;
             }
 
             if (date_alias_recd == FALSE)

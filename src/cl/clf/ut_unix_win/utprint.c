@@ -8,8 +8,8 @@
 # include	<nm.h>
 # include	<pc.h>
 # include	<si.h>
+# include	<ut.h>
 # include	"UTi.h"
-# include	"UTerr.h"
 
 # ifdef NT_GENERIC
 # define    UT_PRINT_BUF_SIZE   136
@@ -132,23 +132,26 @@
 **	    More of the same, printer-cmd param is untrusted.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of ut.h neccessary for UTprint.
+**	    Removed include of UTerr.h it redefines UT error codes
+**	    now available from utcl.h/ut.h.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Modernize declarations to mollify Sun compiler.
+**	    Kill some obsolete ports.
 */
 
 /* forward declarations */
-static  STATUS  invoke_shell();   	/* called to invoke a shell that
-					** invokes the printer
-					*/
+
+/* called to invoke a shell that invokes the printer */
+static STATUS invoke_shell(char *filename, CL_ERR_DESC *err_code);
+
 
 static  char    def_printer[]   =       PRINTER_CMD;
 
 STATUS
-UTprint(printer_cmd, filename, delete, copies, title, destination)
-char		*printer_cmd;
-LOCATION	*filename;
-bool		delete;
-i4		copies;
-char		*title;
-char		*destination;
+UTprint(char *printer_cmd, LOCATION *filename, bool delete,
+	i4 copies, char *title, char *destination)
 {
 # ifndef NT_GENERIC
 	char	user_print[MAX_LOC];	  /* stores name of printer to spawn */
@@ -188,7 +191,7 @@ char		*destination;
 			** Set up the number of copies.  Create string
 			** "-#n", where n = number of copies
 			*/
-#if defined(hp3_us5) || defined(any_hpux) || defined(sgi_us5)
+#if defined(any_hpux) || defined(sgi_us5)
                         STprintf (buf, " -n%d",copies);
 #else
 			STprintf (buf, " -#%d",copies);
@@ -196,7 +199,7 @@ char		*destination;
 
 			/* Set up job name.  Default is filename. */
 			if ((title != (char *)NULL) && (*title != '\0'))
-#if defined(hp3_us5) || defined(any_hpux) || defined(sgi_us5)
+#if defined(any_hpux) || defined(sgi_us5)
 				STprintf (buf2, " -t%s",title);
 #else
 				STprintf (buf2, " -J%s",title);
@@ -207,7 +210,7 @@ char		*destination;
 			/* Set up destination printer.  */
 			if ((destination != (char *)NULL) && 
 				(*destination != '\0'))
-#if defined(hp3_us5) || defined(any_hpux)
+#if defined(any_hpux)
 				STprintf (buf3, " -d%s",destination);
 #else
 				STprintf (buf3, " -P%s",destination);
@@ -287,9 +290,7 @@ char		*destination;
 */
 
 static STATUS
-invoke_shell(filename, err_code)
-char	    *filename;
-CL_ERR_DESC *err_code;
+invoke_shell(char *filename, CL_ERR_DESC *err_code)
 {
 	char	command[(5*MAX_LOC)/4];		/* stores the name of the 
 						** printer and file to be 

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2001, 2008 Ingres Corporation
+** Copyright (c) 2001, 2008, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -77,6 +77,9 @@
 **      21-Jun-2010 (horda03) b123926
 **          Because adu_unorm() and adu_utf8_unorm() are also called via 
 **          adu_lo_filter() change parameter order.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. Add a 'Basic' option to
+**	    allow the returning of the raw code points as the CE.
 */
 
 /* forward refs */
@@ -94,13 +97,14 @@ decompose(ADF_CB	*adf_scb,
 #define LikePat		0x0010
 #define FrenchCollation 0x0020
 #define QuelPat		0x0040
+#define Basic		0x0080
 
 static DB_STATUS MakeCE(
        ADF_CB	*adf_scb,
-       u_i2	*bst,
-       u_i2	*est,
-       u_i2	*esc,
-       u_i2	**listp,
+       UCS2	*bst,
+       UCS2	*est,
+       UCS2	*esc,
+       UCS2	**listp,
        i4	opts);
 
 /*{
@@ -457,8 +461,14 @@ aduucmp(
 **	collID	  - collation ID
 **
 ** Outputs:
-**	listp     - points to the produced list. The caller
-**		    is responsible for MEfree-ing the list.
+**	listp     - points to the produced list. The caller must pass either
+**		    a temporary buffer address of at least ADF_UNI_TMPLEN_UCS2
+**		    elements OR a pointer to a NULL. If NULL is passed or the
+**		    more space is required, memory will be alloctaed and it is
+**		    the responsiblity of the caller to MEfree the list if it
+**		    does not match the addess of any temporary that was passed.
+**		    Element [0] must be set to the number of elements written as
+**		    though it were an NVARCHAR data buffer.
 **
 ** Returns:
 **	DB_STATUS
@@ -478,20 +488,21 @@ adu_umakeskey(
        i2	collID)
 {
     i4		opts = Sortkeys;
-    ADUUCETAB   *cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
 
-    if (collID == DB_UNICODE_CASEINSENSITIVE_COLL)
-	opts |= CaseInsensitive;
-
-    if (cetable == NULL)
-       return (adu_error(adf_scb, E_AD5012_UCETAB_NOT_EXISTS, 0));
+    if (collID == DB_UCS_BASIC_COLL)
+	opts |= Basic;
     else
     {
-	if ((bst && cetable[*bst].flags & CE_COLLATEFRENCH) ||
-              (collID == DB_UNICODE_FRENCH_COLL))
-	  opts |= FrenchCollation;
-    }
+	ADUUCETAB *cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
+	if (cetable == NULL)
+	    return (adu_error(adf_scb, E_AD5012_UCETAB_NOT_EXISTS, 0));
+	if (collID == DB_UNICODE_CASEINSENSITIVE_COLL)
+	    opts |= CaseInsensitive;
 
+	else if ((bst && cetable[*bst].flags & CE_COLLATEFRENCH) ||
+		(collID == DB_UNICODE_FRENCH_COLL))
+	    opts |= FrenchCollation;
+    }
     return( MakeCE(adf_scb, bst, est, (u_i2*)0, listp, opts) );
 }
 
@@ -503,6 +514,10 @@ adu_umakeskey(
 ** Description:
 **	Makes a parsable CE list for a LIKE string.
 **
+**	NOTE:
+**	This has been obsoleted by the pattern compiler and
+**	executive - see adupatcomp.c and adupatexec.c
+**
 ** Inputs:
 **      adf_scb - Pointer to an ADF session control block
 **	bst	  - start of normalized string
@@ -510,8 +525,14 @@ adu_umakeskey(
 **	collID	  - collation ID of comaparand
 **
 ** Outputs:
-**	listp     - points to the produced list. The caller
-**		    is responsible for MEfree-ing the list.
+**	listp     - points to the produced list. The caller must pass either
+**		    a temporary buffer address of at least ADF_UNI_TMPLEN_UCS2
+**		    elements OR a pointer to a NULL. If NULL is passed or the
+**		    more space is required, memory will be alloctaed and it is
+**		    the responsiblity of the caller to MEfree the list if it
+**		    does not match the addess of any temporary that was passed.
+**		    Element [0] must be set to the number of elements written as
+**		    though it were an NVARCHAR data buffer.
 **
 ** Returns:
 **	DB_STATUS
@@ -533,15 +554,21 @@ adu_umakelces(
        i4	collID)
 {
     i4		opts = LikeCE;
-    ADUUCETAB   *cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
 
-    if (collID == DB_UNICODE_CASEINSENSITIVE_COLL)
-	opts |= CaseInsensitive;
+    if (collID == DB_UCS_BASIC_COLL)
+	opts |= Basic;
+    else
+    {
+	ADUUCETAB *cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
+	if (cetable == NULL)
+	    return (adu_error(adf_scb, E_AD5012_UCETAB_NOT_EXISTS, 0));
+	if (collID == DB_UNICODE_CASEINSENSITIVE_COLL)
+	    opts |= CaseInsensitive;
 
-    if ((bst && cetable[*bst].flags & CE_COLLATEFRENCH) ||
-         (collID == DB_UNICODE_FRENCH_COLL))
-	  opts |= FrenchCollation;
-
+	else if ((bst && cetable[*bst].flags & CE_COLLATEFRENCH) ||
+		(collID == DB_UNICODE_FRENCH_COLL))
+	    opts |= FrenchCollation;
+    }
     return( MakeCE(adf_scb, bst, est, (u_i2*)0, listp, opts) );
 }
 
@@ -553,6 +580,10 @@ adu_umakelces(
 ** Description:
 **	Makes a parsable CE list for a LIKE pattern.
 **
+**	NOTE:
+**	This has been obsoleted by the pattern compiler and
+**	executive - see adupatcomp.c and adupatexec.c
+**
 ** Inputs:
 **      adf_scb - Pointer to an ADF session control block
 **	bst	  - start of normalized string
@@ -561,8 +592,14 @@ adu_umakelces(
 **	collID	  - collation ID of comaparand
 **
 ** Outputs:
-**	listp     - points to the produced list. The caller
-**		    is responsible for MEfree-ing the list.
+**	listp     - points to the produced list. The caller must pass either
+**		    a temporary buffer address of at least ADF_UNI_TMPLEN_UCS2
+**		    elements OR a pointer to a NULL. If NULL is passed or the
+**		    more space is required, memory will be alloctaed and it is
+**		    the responsiblity of the caller to MEfree the list if it
+**		    does not match the addess of any temporary that was passed.
+**		    Element [0] must be set to the number of elements written as
+**		    though it were an NVARCHAR data buffer.
 **
 ** Returns:
 **	DB_STATUS
@@ -589,15 +626,21 @@ adu_umakelpat(
        i4	collID)
 {
     i4		opts = LikeCE | LikePat;
-    ADUUCETAB   *cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
 
-    if (collID == DB_UNICODE_CASEINSENSITIVE_COLL)
-	opts |= CaseInsensitive;
+    if (collID == DB_UCS_BASIC_COLL)
+	opts |= Basic;
+    else
+    {
+	ADUUCETAB *cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
+	if (cetable == NULL)
+	    return (adu_error(adf_scb, E_AD5012_UCETAB_NOT_EXISTS, 0));
+	if (collID == DB_UNICODE_CASEINSENSITIVE_COLL)
+	    opts |= CaseInsensitive;
 
-    if ((bst && cetable[*bst].flags & CE_COLLATEFRENCH) ||
-         (collID == DB_UNICODE_FRENCH_COLL))
-	  opts |= FrenchCollation;
-
+	else if ((bst && cetable[*bst].flags & CE_COLLATEFRENCH) ||
+		(collID == DB_UNICODE_FRENCH_COLL))
+	    opts |= FrenchCollation;
+    }
     return( MakeCE(adf_scb, bst, est, esc, listp, opts) );
 }
 
@@ -618,8 +661,14 @@ adu_umakelpat(
 **	collID	  - collation ID of comaparand
 **
 ** Outputs:
-**	listp     - points to the produced list. The caller
-**		    is responsible for MEfree-ing the list.
+**	listp     - points to the produced list. The caller must pass either
+**		    a temporary buffer address of at least ADF_UNI_TMPLEN_UCS2
+**		    elements OR a pointer to a NULL. If NULL is passed or the
+**		    more space is required, memory will be alloctaed and it is
+**		    the responsiblity of the caller to MEfree the list if it
+**		    does not match the addess of any temporary that was passed.
+**		    Element [0] must be set to the number of elements written as
+**		    though it were an NVARCHAR data buffer.
 **
 ** Returns:
 **	DB_STATUS
@@ -637,15 +686,21 @@ adu_umakeqpat(
        i4	collID)
 {
     i4		opts = LikeCE | LikePat | QuelPat;
-    ADUUCETAB   *cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
 
-    if (collID == DB_UNICODE_CASEINSENSITIVE_COLL)
-	opts |= CaseInsensitive;
+    if (collID == DB_UCS_BASIC_COLL)
+	opts |= Basic;
+    else
+    {
+	ADUUCETAB *cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
+	if (cetable == NULL)
+	    return (adu_error(adf_scb, E_AD5012_UCETAB_NOT_EXISTS, 0));
+	if (collID == DB_UNICODE_CASEINSENSITIVE_COLL)
+	    opts |= CaseInsensitive;
 
-    if ((bst && cetable[*bst].flags & CE_COLLATEFRENCH) ||
-         (collID == DB_UNICODE_FRENCH_COLL))
-	  opts |= FrenchCollation;
-
+	else if ((bst && cetable[*bst].flags & CE_COLLATEFRENCH) ||
+		(collID == DB_UNICODE_FRENCH_COLL))
+	    opts |= FrenchCollation;
+    }
     return( MakeCE(adf_scb, bst, est, esc, listp, opts) );
 }
 /*
@@ -740,6 +795,7 @@ MakeCEcaseFold(
 **
 **	opts	  - The type of list to produce:
 **
+**			Basic:	  Form a key from the raw code points.
 **			Sortkeys: Form a sort key from the
 **				  collation elements.
 **			LikeCE:   Form a collation element list
@@ -766,9 +822,14 @@ MakeCEcaseFold(
 **				  variable weighting.
 **			CaseInsensitive: Form case insensitive sort key.
 ** Outputs:
-**	listp     - points to the produced list. The caller
-**		    is responsible for MEfree-ing the list.
-**
+**	listp     - points to the produced list. The caller must pass either
+**		    a temporary buffer address of at least ADF_UNI_TMPLEN_UCS2
+**		    elements OR a pointer to a NULL. If NULL is passed or the
+**		    more space is required, memory will be alloctaed and it is
+**		    the responsiblity of the caller to MEfree the list if it
+**		    does not match the addess of any temporary that was passed.
+**		    Element [0] must be set to the number of elements written as
+**		    though it were an NVARCHAR data buffer.
 ** Returns:
 **	E_DB_OK
 **	E_DB_ERROR
@@ -858,10 +919,10 @@ MakeCEcaseFold(
 static DB_STATUS
 MakeCE(
        ADF_CB	*adf_scb,
-       u_i2	*bst,
-       u_i2	*est,
-       u_i2	*esc,
-       u_i2	**listp,
+       UCS2	*bst,
+       UCS2	*est,
+       UCS2	*esc,
+       UCS2	**listp,
        i4	opts)
 {
     ADUUCETAB   *cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
@@ -879,6 +940,17 @@ MakeCE(
     bool	caseFold = ((opts & CaseInsensitive) != 0);
     bool	french_coll = ((opts & FrenchCollation) != 0);
     bool	sk_mem_alloc = FALSE;
+
+    if (opts & Basic)
+    {
+	i4 count = est - bst;
+	if (!*listp || count > ADF_UNI_TMPLEN_UCS2-(i4)sizeof(UCS2))
+	    *listp = (UCS2*)MEreqmem(0, (count + 1)*sizeof(UCS2), FALSE, &status);
+
+	(*listp)[0] = count;
+	MEcopy(bst, count * sizeof(UCS2), &(*listp)[1]);
+	return E_DB_OK;
+    }
 
     if (cetable == (ADUUCETAB *) NULL)
 	return (adu_error(adf_scb, E_AD5082_NON_UNICODE_DB, 0));
@@ -909,7 +981,7 @@ MakeCE(
 	num_sch = 0;
 	skcount = num_ces * max_levels + (max_levels - 1) + 1;
 
-	if (skcount > ADF_UNI_TMPLEN_UCS2)
+	if (!*listp || skcount > ADF_UNI_TMPLEN_UCS2)
 	{
 		sk_mem = MEreqmem(0, skcount*sizeof(u_i2), TRUE, &status);
     		sk_mem_alloc = TRUE;
@@ -2218,8 +2290,8 @@ DB_STATUS	adu_ucollweightn(ADF_CB	*adf_scb,
 **	    eliminated from the head of every collation weight.
 **	14-Jan-08 (kiria01) b119738
 **	    Eliminated the unused pair of null bytes from collation data
-	    permanently along with the buffer corrections in adc_helem.c
-	    that relate to this.
+**	    permanently along with the buffer corrections in adc_helem.c
+**	    that relate to this.
 **	27-Oct-2009 (wanfr01) b122799
 **	    Use a local variable for unicode manipulation rather than
 **	    allocating a buffer every time
@@ -2228,7 +2300,6 @@ DB_STATUS	adu_ucollweight(ADF_CB	*adf_scb,
 			 DB_DATA_VALUE	*src_dv,
 			 DB_DATA_VALUE	*dst_dv)
 {
-    ADUUCETAB		*cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
     DB_STATUS		db_stat;
     i4			srclen, dstlen;
     u_i2		*bst, *est;
@@ -2237,10 +2308,6 @@ DB_STATUS	adu_ucollweight(ADF_CB	*adf_scb,
     u_i2		i;
     i4			opts = Sortkeys;
 
-    if (cetable == (ADUUCETAB *) NULL)
-        return (adu_error(adf_scb, E_AD5082_NON_UNICODE_DB, 0));
-                                /* better be Unicode enabled */
-  
    if ( src_dv->db_datatype != DB_NCHR_TYPE && 
 	src_dv->db_datatype != DB_NVCHR_TYPE )
        return (adu_error(adf_scb, E_AD5001_BAD_STRING_TYPE, 0));
@@ -2251,12 +2318,20 @@ DB_STATUS	adu_ucollweight(ADF_CB	*adf_scb,
 
     est = (u_i2 *) ((char *)bst + srclen);
 
-    if (src_dv->db_collID == DB_UNICODE_CASEINSENSITIVE_COLL)
-	opts |= CaseInsensitive;
+    if (src_dv->db_collID == DB_UCS_BASIC_COLL)
+	opts |= Basic;
+    else
+    {
+	ADUUCETAB *cetable = (ADUUCETAB *)adf_scb->adf_ucollation;
+	if (cetable == NULL)
+	    return (adu_error(adf_scb, E_AD5012_UCETAB_NOT_EXISTS, 0));
+	if (src_dv->db_collID == DB_UNICODE_CASEINSENSITIVE_COLL)
+	    opts |= CaseInsensitive;
 
-    if ((bst && cetable[*bst].flags & CE_COLLATEFRENCH) ||
-         (src_dv->db_collID == DB_UNICODE_FRENCH_COLL))
-	  opts |= FrenchCollation;
+	else if ((bst && cetable[*bst].flags & CE_COLLATEFRENCH) ||
+		(src_dv->db_collID == DB_UNICODE_FRENCH_COLL))
+	    opts |= FrenchCollation;
+    }
 
     db_stat = MakeCE(adf_scb, bst, est, (u_i2*)0, &dst, opts);
 

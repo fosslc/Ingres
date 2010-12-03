@@ -465,6 +465,8 @@
 **	    Bug 124611
 **	    Fix up find_symbols() for Linux to stop SEGVs when /proc isn't
 **	    mounted.
+**	22-Nov-2010 (kschendel) SIR 124685
+**	    Drop a few more ancient / obsolete ports
 **
 */
 
@@ -485,7 +487,7 @@
 # include	<nm.h>
 # include 	<unistd.h>
 
-#if defined(any_hpux) || defined (hp8_bls)
+#if defined(any_hpux)
 /* hp8 has a function called uchar() in  */
 /* /usr/include/sys/systmn.h */
 
@@ -519,41 +521,16 @@ GLOBALDEF STATUS exitvalue = OK;
 # undef	max
 # undef	min
 
-/* For dg8_us5 there are no shminfo and seminfo structures.  Therefore, we
-* define our own with only the fields that we need.  Later, we will use the
-* sysconf() call to fill those fields.
-*/
-
-#if defined(dg8_us5) || defined(dgi_us5)
-
-#include <unistd.h>
-
-struct shminfo
-{
-    unsigned long shmmax;
-    unsigned long shmmni;
-};
-
-struct seminfo
-{
-    unsigned long semmns;
-    unsigned long semmni;
-};
-
-#endif /* dg8_us5 dgi_us5 */
-
 # include   <sys/stat.h>
 # include   <sys/errno.h>
 # include 	<sys/time.h>
 
-# if defined(hp3_us5) || defined(any_hpux) || defined(hp8_bls) || \
-     defined(nc4_us5) || defined(rmx_us5) || defined(rux_us5) || \
-     defined(pym_us5) || defined(sqs_ptx) || defined(ts2_us5)
+# if defined(any_hpux)
 
 # include	<ulimit.h>
 # include	<unistd.h>
 
-# endif /* hp3_us5, hpux */
+# endif /* hpux */
 
 # if defined(sgi_us5)
 # include	<limits.h>
@@ -580,23 +557,17 @@ struct utsname  su4_uname;
 # include       <libelf.h>
 # endif
 
-# if !(defined(hp3_us5) || defined(sgi_us5))
+# if !defined(sgi_us5)
 # define KERNEL
 
 # include <sys/ipc.h>
 
-# endif /* hp3_us5 */
+# endif /* sgi_us5 */
 
 # include 	<sys/resource.h>
 # ifndef LNX
 # include	<nlist.h>
 # endif /* Linux */
-
-# if defined(ds3_ulx)
-
-# include	<sys/smp_lock.h>
-
-# endif /* ds3_ulx */
 
 # if defined(any_aix)
 # include   <sys/utsname.h>
@@ -631,40 +602,8 @@ static struct  _shminfoV5 {
 # define _KERNEL
 # endif /* usl_us5 */
 
-# ifdef ts2_us5
-/*
-**  For Tandem NonStop (ts2_us5), we can get the shminfo and seminfo structures
-**  from sys/shm.h and sys.sem.h, respectively, if we define _KERNEL first.
-**  However, rl.c then gets numerous syntax errors in sys/ksynch.h.  So instead
-**  we just insert the two structures here.
-*/
-struct		shminfo {
-	int	shmmax,		/* max shared memory segment size */
-		shmmin,		/* min shared memory segment size */
-		shmmni,		/* # of shared memory identifiers */
-		shmseg;		/* max attached shared memory     */
-				/* segments per process           */
-};
-/*
- * Semaphore information structure.
- * 	For SVR4.2, the semmap, semmnu, and semusz fields
- *	of the seminfo structure are not used.  This is
- *	because everything is dynamically allocated.
- */
-struct		seminfo {
-	int	semmap;		/* XXX # of entries in semaphore map */
-	int	semmni;		/* # of semaphore identifiers */
-	int	semmns;		/* # of semaphores in system */
-	int	semmnu;		/* XXX # of undeo structures in system */
-	int	semmsl;		/* max # of semaphores per id */
-	int	semopm;		/* max # of operations per semop call */
-	int	semume;		/* max # of undo entries per process */
-	int	semusz;		/* XXX size in bytes of undo structure */
-	int	semvmx;		/* semaphore maximum value */
-	int	semaem;		/* adust on exit max value */
-};
 
-# elif defined(sparc_sol)
+# if defined(sparc_sol)
 
 struct  shminfo8 {
         size_t  shmmax,         /* max shared memory segment size */
@@ -740,35 +679,28 @@ struct	seminfo {
 # else
 # include 	<sys/shm.h>
 # include 	<sys/sem.h>
-# endif /* ts2_us5 */
+# endif /* Solaris */
 
 # endif /* axp_osf */
 
-# if !(defined(ds3_ulx) || defined(hp3_us5) ||  defined(any_aix) || \
-	defined(any_hpux) || defined (sqs_ptx) || \
+# if !(defined(any_aix) || defined(any_hpux) || \
         defined(sgi_us5) || defined(usl_us5) || \
 	defined(LNX) || defined(OSX))
 
 # include 	<sys/systm.h>
 
-# endif /* ds3_ulx / hp3_us5 */
+# endif /* not aix, hpux, linux */
 
 # include	<fcntl.h>
 
-# if defined(hp3_us5) \
-	|| defined(ds3_ulx) || defined(any_aix) \
-	|| defined(dr6_us5) || defined(usl_us5) \
+# if defined(any_aix)  || defined(usl_us5) \
 	|| defined(axp_osf) || defined(sparc_sol) || defined(any_hpux) \
-	|| defined(hp8_bls) || defined(dg8_us5) \
-        || defined(nc4_us5) || defined(a64_sol) \
-        || defined(dgi_us5) || defined(sos_us5) || defined(pym_us5) \
-	|| defined(sqs_ptx) || defined(sui_us5) || defined(rmx_us5) \
-	|| defined(rux_us5) || defined(ts2_us5) 
+        || defined(a64_sol)
 
 static struct shminfo shminfo;
 static struct seminfo seminfo;
 
-# endif /* hp3_us5 / ds3_ulx / dr6_us5 ... */
+# endif
 
 # if defined(thr_hpux)
 struct _shminfo_64
@@ -844,12 +776,13 @@ static struct _seminfo seminfo;
 
 #endif
 
-# if defined(dr6_us5) || defined(usl_us5) || defined(sparc_sol) || \
-     defined(sos_us5) || defined(sui_us5)
+
+# if defined(usl_us5) || defined(sparc_sol)
 
 # include     <ulimit.h>
 
-# endif /* dr6_us5 / usl_us5 / sui_us5 */
+# endif
+
 
 # if defined(any_aix)
 /*
@@ -996,14 +929,11 @@ RLprocFileDescSoft( char *buf )
 	i4 tabsize;
 	struct rlimit res;
 
-# if defined( hp3_us5) || defined(any_hpux) || defined(hp8_bls) \
-        || defined(dg8_us5) || defined(dgi_us5) \
-	|| defined(rmx_us5) || defined(pym_us5) || defined(sqs_ptx) \
-	|| defined(ts2_us5) || defined(rux_us5)
+# if defined(any_hpux)
 
 	tabsize = (i4) sysconf( _SC_OPEN_MAX );
 
-# else /* hp3_us5 */
+# else /* hpux */
 
 # ifdef RLIMIT_NOFILE 
 
@@ -1022,34 +952,29 @@ RLprocFileDescSoft( char *buf )
 
 # endif /* RLIMIT_NOFILE */
 
-# if defined(dr6_us5) || defined(usl_us5) || defined(sparc_sol) || \
-     defined(nc4_us5) || defined(sui_us5)
+# if defined(usl_us5) || defined(sparc_sol)
 
         tabsize = (i4) ulimit( UL_GDESLIM, 0L );
 
-# else /* dr6_us5 || usl_us5 || sui_us5 */
+# else
 
 	tabsize = getdtablesize();
 
-# endif /* dr6_u5/usl_us5/sui_us5 */
+# endif /* sparc-sol */
 
-# endif /* hp3_us5 */
+# endif /* hpux */
 
-# if !(defined(hp3_us5) || defined(ds3_ulx) || \
-      defined(any_hpux) || defined(hp8_bls)  || \
-      defined(dg8_us5) || defined(nc4_us5) || defined(dgi_us5)  || \
-      defined(rmx_us5) || defined(pym_us5) || defined(ts2_us5)  || \
-      defined(rux_us5))
+# if !defined(any_hpux)
 
-# if defined(dr6_us5) || defined(usl_us5) || defined(sui_us5)
+# if defined(usl_us5)
 
         tabsize = (i4) ulimit( UL_GDESLIM, 0L );
 
-# else /* dr6_us5 / usl_us5 / sui_us5 */ 
+# else
 
 # ifdef _NFILE
 
-# if !defined(sparc_sol) && !defined(sos_us5) && !defined(sqs_ptx)
+# if !defined(sparc_sol)
 
 	tabsize = _NFILE;
 
@@ -1061,9 +986,9 @@ RLprocFileDescSoft( char *buf )
 
 # endif /* _NFILE */
 
-# endif /* dr6_us5 */
+# endif /* usl_us5 */
 
-# endif /* hp3_us5 / ds3_ulx / nc4_us5 */
+# endif /* not hpux */
 
 	STprintf( buf, ERx( "%d" ), tabsize ); 
 	return( OK );
@@ -1076,7 +1001,7 @@ static VOID
 GetHardLimit( i4  limit, char *buf )
 {
 
-# if defined(hp3_us5) || defined(any_hpux) || defined(hp8_bls)
+# if defined(any_hpux)
 
 	/*
         **  For the hp 9000/300 machines ulimit returns the limit
@@ -1089,7 +1014,7 @@ GetHardLimit( i4  limit, char *buf )
                 return;
         }
 
-# else /* hp3_us5 */
+# else
 
 	struct rlimit limits;
 
@@ -1100,7 +1025,7 @@ GetHardLimit( i4  limit, char *buf )
 	else
 		STprintf( buf, ERx( "%d" ), limits.rlim_max );
 
-# endif /* hp3_us5 */
+# endif /* hpux */
 }
 
 /*
@@ -1110,7 +1035,7 @@ static VOID
 GetSoftLimit( i4  limit, char *buf )
 {
 
-# if defined(hp3_us5) || defined(any_hpux) || defined(hp8_bls)
+# if defined(any_hpux)
 
 	/*
         **  For the hp 9000/300 machines ulimit returns the limit
@@ -1123,7 +1048,7 @@ GetSoftLimit( i4  limit, char *buf )
                 return;
         }
 
-# else /* hp3_us5 */
+# else
 
 	struct rlimit limits;
 
@@ -1134,7 +1059,7 @@ GetSoftLimit( i4  limit, char *buf )
 	else
 		STprintf( buf, ERx( "%d" ), limits.rlim_cur );
 
-# endif /* hp3_us5 */
+# endif /* hpux */
 }
 
 /*
@@ -1143,15 +1068,15 @@ GetSoftLimit( i4  limit, char *buf )
 static STATUS
 RLprocFileSizeHard( char *buf )
 {
-# if !defined(hp3_us5) && !defined(any_hpux) && !defined(hp8_bls)
+# if !defined(any_hpux)
 
 	GetHardLimit( (i4) RLIMIT_FSIZE , buf );
 
-# else /* hp3_us5 */
+# else
 
 	GetHardLimit( (i4) UL_GETFSIZE , buf );
 
-# endif /* hp3_us5 */
+# endif /* not hpux */
 
 	return( OK );
 }
@@ -1162,15 +1087,15 @@ RLprocFileSizeHard( char *buf )
 static STATUS
 RLprocFileSizeSoft( char *buf )
 {
-# if !defined(hp3_us5) && !defined(any_hpux) && !defined(hp8_bls)
+# if !defined(any_hpux)
 
 	GetSoftLimit( (i4) RLIMIT_FSIZE , buf );
 
-# else /* hp3_us5 */
+# else
 
 	GetSoftLimit( (i4) UL_GETFSIZE , buf );
 
-# endif /* hp3_us5 */
+# endif /* not hpux */
 
 	return( OK );
 }
@@ -1181,17 +1106,16 @@ RLprocFileSizeSoft( char *buf )
 static STATUS
 RLprocResSetHard( char *buf )
 {
-# if !defined(hp3_us5) && defined(RLIMIT_RSS) && !defined(any_hpux) && \
-     !defined(hp8_bls)
+# if !defined(any_hpux) && defined(RLIMIT_RSS)
 
 	GetHardLimit( (i4) RLIMIT_RSS , buf );
 	return( OK );
 
-# else /* hp3_us5 / RLIMIT_RSS */
+# else
 
 	return( FAIL );
 
-# endif /* hp3_us5 / RLIMIT_RSS */
+# endif /* RLIMIT_RSS, not hpux */
 }
 
 /*
@@ -1200,17 +1124,16 @@ RLprocResSetHard( char *buf )
 static STATUS
 RLprocResSetSoft( char *buf )
 {
-# if !defined(hp3_us5) && !defined(any_hpux) && defined(RLIMIT_RSS) && \
-     !defined(hp8_bls)
+# if !defined(any_hpux) && defined(RLIMIT_RSS)
 
 	GetSoftLimit( (i4) RLIMIT_RSS , buf );
 	return( OK );
 
-# else /* hp3_us5 / RLIMIT_RSS */
+# else
 
 	return( FAIL );
 
-# endif /* hp3_us5 / RLIMIT_RSS */
+# endif /* RLIMIT_RSS, not hpux */
 }
 
 /*
@@ -1220,16 +1143,16 @@ static STATUS
 RLprocCPUtimeHard( buf )
 char *buf;
 {
-# if !defined(hp3_us5) && !defined(any_hpux) && !defined(hp8_bls)
+# if !defined(any_hpux)
 
 	GetHardLimit( (i4) RLIMIT_CPU , buf );
 	return( OK );
 
-# else /* hp3_us5 */
+# else
 
 	return( FAIL );
 
-# endif /* hp3_us5 */
+# endif /* not hpux */
 }
 
 /*
@@ -1239,16 +1162,16 @@ static STATUS
 RLprocCPUtimeSoft( buf )
 char *buf;
 {
-# if !defined(hp3_us5)  && !defined(any_hpux) && !defined(hp8_bls)
+# if !defined(any_hpux)
 
 	GetSoftLimit( (i4) RLIMIT_CPU , buf );
 	return( OK );
 
-# else /* hp3_us5 */
+# else
 
 	return( FAIL );
 
-# endif /* hp3_us5 */
+# endif /* not hpux */
 }
 
 /*
@@ -1258,16 +1181,16 @@ static STATUS
 RLprocDataSegHard( buf )
 char *buf;
 {
-# if !defined(hp3_us5) && !defined(any_hpux) && !defined(hp8_bls)
+# if !defined(any_hpux)
 
 	GetHardLimit( (i4) RLIMIT_DATA , buf );
 	return( OK );
 
-# else /* hp3_us5 */
+# else
 
 	return( FAIL );
 
-# endif /* hp3_us5 */
+# endif /* not hpux */
 }
 
 /*
@@ -1277,16 +1200,16 @@ static STATUS
 RLprocDataSegSoft( buf )
 char *buf;
 {
-# if !defined(hp3_us5) && !defined(any_hpux) && !defined(hp8_bls)
+# if !defined(any_hpux)
 
 	GetSoftLimit( (i4) RLIMIT_DATA , buf );
 	return( OK );
 
-# else /* hp3_us5 */
+# else
 
 	return( FAIL );
 
-# endif /* hp3_us5 */
+# endif /* not hpux */
 }
 
 /*
@@ -1296,16 +1219,16 @@ static STATUS
 RLprocStackSegHard( buf )
 char *buf;
 {
-# if !defined(hp3_us5) && !defined(any_hpux) && !defined(hp8_bls)
+# if !defined(any_hpux)
 
 	GetHardLimit( (i4) RLIMIT_STACK , buf );
 	return( OK );
 
-# else /* hp3_us5 */
+# else
 
 	return( FAIL );
 
-# endif /* hp3_us5 */
+# endif /* not hpux */
 }
 
 /*
@@ -1315,57 +1238,23 @@ static STATUS
 RLprocStackSegSoft( buf )
 char *buf;
 {
-# if !defined(hp3_us5)  && !defined(any_hpux) && !defined(hp8_bls)
+# if !defined(any_hpux)
 
 	GetSoftLimit( (i4) RLIMIT_STACK , buf );
 	return( OK );
 
-# else /* hp3_us5 */
+# else
 
 	return( FAIL );
 
-# endif /* hp3_us5 */
+# endif /* not hpux */
 }
 
 /*
 ** The following data structure are used for reading kernel memory files. 
 */
 
-# if defined(dg8_us5) || defined(dgi_us5)
-static i4  kernel = -1;
-static bool kmem_no_read = FALSE;
-static STATUS
-open_kmem( i4  argc, char **argv)
-{
-}
-/* Use sysconf() to return the values to fill our seminfo and shminfo
- * structures.  sysconf returns a -1 on error.
-*/
-find_symbols()
-{
-    if ((shminfo.shmmax = sysconf(_SC_SHMMAXSZ)) == -1)
-    {
-        printf("Can't get system total shared memory.\n");
-        exit (1);
-    }
-    if ((shminfo.shmmni = sysconf(_SC_SHMSEGS)) == -1)
-    {
-        printf("Can't get maximum number of shared memory segments.\n");
-        exit (1);
-    }
-    if ((seminfo.semmns = sysconf(_SC_NMSYSSEM)) == -1)
-    {
-        printf("Can't get system total semaphores.\n");
-        exit (1);
-    }
-    if ((seminfo.semmni = sysconf(_SC_NSEMMAP)) == -1)
-    {
-        printf("Can't get number of semaphore sets.\n");
-        exit (1);
-    }
-}
-
-#elif defined(LNX)
+#if defined(LNX)
 
 #define VSIZE(x) sizeof(x)/sizeof(x[0]) /* size of vector (# elements) */
 static i4  kernel = -1; /* /dev/kmem file descriptor */
@@ -1636,35 +1525,29 @@ find_symbols()
 
 static i4  kernel = -1;
 static bool kmem_no_read = FALSE;
-# if defined(rux_us5)
-        static char *kernel_memory = "/dev/mem";
-# else
         static char *kernel_memory = "/dev/kmem";
-# endif
 
-# if defined(hp3_us5) || defined(any_hpux) || defined(hp8_bls)
+# if defined(any_hpux)
 
 static char *namelist = "/hp-ux";
 
-# elif defined(sos_us5) || defined(rmx_us5) ||  \
-     defined(pym_us5) || defined(sqs_ptx) || defined(ts2_us5) || \
-     defined(sgi_us5) || defined(rux_us5)
+# elif defined(sgi_us5)
 
 static char *namelist = "/unix";
 
-# elif defined(sparc_sol) || defined(sui_us5)
+# elif defined(sparc_sol)
 
 static char *namelist="/dev/ksyms";
 
-# elif defined(dr6_us5) || defined(usl_us5) || defined(nc4_us5)
+# elif defined(usl_us5)
 
 static char *namelist = "/stand/unix";
 
-# else /* dr6_us5 / nc4_us5 */
+# else
 
 static char *namelist = "/vmunix";
 
-# endif /* hp3_us5 */
+# endif
 
 /*
 ** Opens kernel memory files.
@@ -1696,7 +1579,7 @@ open_kmem( i4  argc, char **argv)
 ** Reads kernel memory files.
 */
 static VOID
-# if defined( axp_osf) || defined(rux_us5) 
+# if defined( axp_osf)
 locate_kmem( i4  size, unsigned long address, char *result )
 # elif defined(sparc_sol)
 locate_kmem( i4  size, size_t address, char *result )
@@ -1706,9 +1589,6 @@ locate_kmem( i4  size, uint64_t address, char *result )
 locate_kmem( i4  size, i4  address, char *result )
 # endif /* axp_osf */
 {
-#if defined(rux_us5)
-        address=address & 0x7fffffff;
-#endif
 	if( lseek( kernel, address, 0 ) != address )
 	{
 		SIfprintf( stderr, ERx( "can't access kernel address %8x\n" ),
@@ -1744,23 +1624,9 @@ locate_kmem64( i4  size, off64_t address, char *result )
 }
 # endif /* sgi_us5 */
 
-# if defined(ds3_ulx)
-
-static char *symbols[] = {
-	"_sminfo",
-	"_seminfo",
-	NULL
-};
-
-# else /* ds3_ulx */
-
 char *symbols[] = {
 
-# if defined(dr6_us5) || defined(usl_us5) || \
-     defined(sparc_sol) || defined(any_hpux) || defined(hp8_bls) || \
-     defined(nc4_us5) || defined(sos_us5) || defined(pym_us5) || \
-     defined(sqs_ptx) || defined(sui_us5) || defined(rmx_us5) || \
-     defined(ts2_us5) || defined(rux_us5)
+# if defined(usl_us5) || defined(sparc_sol) || defined(any_hpux)
 
 	"shminfo",
         "seminfo",
@@ -1770,21 +1636,16 @@ char *symbols[] = {
 	"shmmni",
 	"semmsl",
 	"semmni",
-# else /* ris_us5 / dr6_us5  */
+# else
 
 	"_shminfo",
 	"_seminfo",
 
-# endif /* ris_us5 / dr6_us5  */
+# endif
 
-	/*
-	"_physmem",
-	"_nswap",
-	*/
 	NULL
 };
 
-# endif /* ds3_ulx */
 
 /*
 ** Not sure about this one.
@@ -2005,8 +1866,8 @@ find_symbols( void )
 		(char *) &shminfo );
 	locate_kmem( sizeof( seminfo ), sym_table[ 1 ].n_value,
 		(char *) &seminfo );
-#endif
-#endif /* usl_us5 */
+#endif /* Solaris */
+#endif /* find-symbols ifdef */
 }
 
 #if defined(sgi_us5)
@@ -2047,7 +1908,7 @@ find_symbols64(void)
 }
 #endif /*sgi_us5 */
 
-#endif /* dg8_us5 dgi_us5 Linux */
+#endif /* giant kmem ifdef */
 
 /*
 ** Returns maximum shared memory segment size.
@@ -2171,8 +2032,7 @@ RLsysSemaphoresHard( char *buf )
         CVla8( aix_semmns, buf );
 	
 
-# elif defined(usl_us5) || defined(sgi_us5) || defined (axp_osf) || \
-       defined(sqs_ptx) 
+# elif defined(usl_us5) || defined(sgi_us5) || defined (axp_osf)
 
         STprintf( buf, ERx( "%d" ), seminfo.semmni * seminfo.semmsl );
 
@@ -2191,7 +2051,7 @@ RLsysSemaphoresHard( char *buf )
 
         CVla8( seminfo.semmns, buf );
 
-# else /* usl_us5 || sgi_us5 || axp_osf*/
+# else
 
 	STprintf( buf, "%d", seminfo.semmns );
 	
@@ -2289,13 +2149,11 @@ RLsysSemsPerIdHard( char *buf )
 
 # else
 
-#if defined(dg8_us5) || defined(dgi_us5) || defined(ts2_us5)
-        STprintf( buf, ERx( "%d" ), seminfo.semmns / seminfo.semmni );
-#elif defined(a64_sol) || defined(sparc_sol) || defined(LNX)
+#if defined(a64_sol) || defined(sparc_sol) || defined(LNX)
         CVla8( seminfo.semmsl, buf);
 #else
         STprintf( buf, ERx( "%d" ), seminfo.semmsl );
-#endif /* dg8_us5 dgi_us5 */
+#endif
 	return( OK );
 
 # endif
@@ -2394,8 +2252,7 @@ RLcheck( i4  id, char *buf, i4  argc, char **argv )
 		case RL_SYS_SEMAPHORES_HARD:
 		case RL_SYS_SEM_SETS_HARD:
 		case RL_SYS_SEMS_PER_ID_HARD:
-# if !defined(any_aix) && !defined(a64_sol) && !defined(dg8_us5) && \
-     !defined(dgi_us5)
+# if !defined(any_aix) && !defined(a64_sol)
 			/* The following doesn't work on AIX 3.1.
 			   nor AIX 4.x                         */
 			if( kernel < 0 && !kmem_no_read )

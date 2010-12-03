@@ -83,21 +83,9 @@
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**      29-Nov-2010 (frima01) SIR 124685
+**          Moved declaration of CIencrypt, CIexpand and CIshrink to cilocal.h.
 **/
-
-
-/*
-**	Forward function references.
-*/
-
-	VOID	CIencrypt();		/* actually encrypt or decrypt some information. */
-	VOID	CIexpand();		/* unpack bits to be crypted into an
-					** equal number of bytes, one bit per
-					** byte.
-					*/
-	VOID	CIshrink();		/* pack bits that have been crypted back
-					** into bytes.
-					*/
 
 
 /*

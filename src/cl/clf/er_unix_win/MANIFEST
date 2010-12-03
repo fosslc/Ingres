@@ -5,14 +5,15 @@
 #      Corrected the IINOOPTIM list.      
 # 20-apr-2006 (drivi01)
 #      Updated hardcoded slashes for windows to $(DFS).
+#	23-Nov-2010 (kschendel)
+#	    Delete obsolete nooptims.
 #       
 
 SubDir ING_SRC cl clf er_unix_win ;
 
 IISUBSYS cl clf er_unix_win ;
 
-IINOOPTIM erintern.c : su4_u42 dr6_us5 ;
-IINOOPTIM ercomp.c : rs4_us5 dg8_us5 i64_aix ;
+IINOOPTIM ercomp.c : rs4_us5 ;
 
 IIBINEXE eritest : eritest.c ;
 IINEEDLIBS eritest : COMPATLIB MALLOCLIB ;

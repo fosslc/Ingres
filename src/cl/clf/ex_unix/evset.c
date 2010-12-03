@@ -4,6 +4,7 @@
 #include <si.h>
 #include <lo.h>
 #include <me.h>
+#include <nm.h>
 #include <evset.h>
 
 #include <sys/stat.h>
@@ -62,7 +63,8 @@
 **	    Fix prototype of handle to match function.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for CVal definition.
-[@history_template@]...
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 /*[
@@ -104,7 +106,7 @@
 **                                   accessed via the EVSetListFile interface.
 */
 
-static STATUS handler();
+static STATUS handler(EX_ARGS *);
 
 /*{
 **  Name: EVSetCreate - Create a new evidence set
@@ -161,12 +163,8 @@ static STATUS handler();
 */
 
 STATUS
-EVSetCreate(id,description,version)
-i4  *id;
-PTR description;
-PTR version;
+EVSetCreate(i4 *id,PTR description,PTR version)
 {
-    STATUS status=OK;
     EX_CONTEXT ex;
     char evdir[EVSET_MAX_PATH];
     PTR pointer;
@@ -395,8 +393,7 @@ PTR version;
 */
 
 STATUS
-EVSetDelete(id)
-i4  id;
+EVSetDelete(i4 id)
 {
     char evdir[EVSET_MAX_PATH];
     PTR ii_exception;
@@ -473,15 +470,12 @@ i4  id;
 */
 
 STATUS
-EVSetExport(id,filename)
-i4  id;
-PTR filename;
+EVSetExport(i4 id,PTR filename)
 {
     FILE 	*pipe;
     FILE 	*export;
     char 	buffer[EVSET_MAX_PATH+30];
     PTR 	ii_exception;
-    struct stat my_stat;
     i4  	count;
     LOCATION	loc;
     i4		flagword;
@@ -587,9 +581,7 @@ PTR filename;
 */
 
 STATUS
-EVSetImport(filename,id)
-PTR filename;
-i4  *id;
+EVSetImport(PTR filename,i4 *id)
 {
     STATUS 	status;
     PTR  	ii_exception;
@@ -810,9 +802,7 @@ i4  *id;
 */
 
 STATUS
-EVSetList(id,details)
-i4  *id;
-EVSET_DETAILS *details;
+EVSetList(i4 *id,EVSET_DETAILS *details)
 {
     i4   	my_id=EVSET_MAX_ID+1;
     PTR  	ii_exception;
@@ -943,12 +933,7 @@ EVSET_DETAILS *details;
 */
 
 STATUS
-EVSetCreateFile(id,flags,description,filename,len)
-i4  id;
-i4  flags;
-PTR description;
-PTR filename;
-i4  len;
+EVSetCreateFile(i4 id,i4 flags,PTR description,PTR filename,i4 len)
 {
     EX_CONTEXT ex;
     PTR ii_exception;
@@ -1153,9 +1138,7 @@ i4  len;
 */
 
 STATUS
-EVSetDeleteFile(id,file)
-i4  id;
-i4  file;
+EVSetDeleteFile(i4 id,i4 file)
 {
     PTR  ii_exception;
     char evdir[EVSET_MAX_PATH-50];
@@ -1282,10 +1265,7 @@ i4  file;
 */
 
 STATUS
-EVSetFileList(id,file_next,details)
-i4  		id;
-i4  		*file_next;
-EVSET_ENTRY 	*details;
+EVSetFileList(i4 id,i4 *file_next,EVSET_ENTRY *details)
 {
     PTR  	ii_exception;
     char 	buffer[EVSET_MAX_PATH];
@@ -1372,11 +1352,7 @@ EVSET_ENTRY 	*details;
 */
 
 STATUS
-EVSetLookupVar(id,name,value,len)
-i4  id;
-PTR name;
-PTR value;
-i4  len;
+EVSetLookupVar(i4 id,PTR name,PTR value,i4 len)
 {
     PTR  	ii_exception;
     char 	buffer[EVSET_MAX_PATH];
@@ -1460,8 +1436,7 @@ i4  len;
 */
 
 static STATUS
-handler(ex_args)
-EX_ARGS *ex_args;
+handler(EX_ARGS *ex_args)
 {
     return(EXDECLARE);
 }

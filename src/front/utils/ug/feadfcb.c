@@ -100,6 +100,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**      30-Nov-2010 (hanal04) Bug 124758
+**         Add initialisation of adf_max_namelen to cb declaration.
 **/
 GLOBALREF DB_STATUS     (*IIugefa_err_function)();
 
@@ -288,6 +290,7 @@ static ADF_CB  cb = {
 	NULL,					/* adf_tzcb */
 	0,					/* adf_proto_level */
         CL_MAX_DECPREC,                         /* adf_max_decprec */
+        DB_GW1_MAXNAME,				/* adf_max_namelen */
 	0,					/* adf_lo_context */
 	ADF_IGN_STRTRUNC,			/* adf_strtrunc_opt */
 	TM_DEF_YEAR_CUTOFF,			/* adf_year_cutoff */

@@ -132,6 +132,10 @@ bool pst_is_const_bool(
 	bool *bval);
 void pst_not_bool(
 	PST_QNODE *node);
+DB_COLL_ID pst_apply_def_collID(
+	PSS_SESBLK *sess_cb,
+	DB_DT_ID dt,
+	DB_COLL_ID collID);
 
 /*
 ** Global Variable Definitions
@@ -1310,3 +1314,50 @@ pst_not_bool(PST_QNODE *node)
 	node->pst_sym.pst_value.pst_s_op.pst_fdesc = f;
     }
 } /* pst_not_bool */
+
+/*
+** Name: pst_apply_def_collID -- Apply collation ID defaults.
+**
+** Description:
+**	As its name suggests.
+**
+** Inputs:
+**	sess_cb		Session cb
+**	dt		datatype to consider
+**	collID		The collation ID.
+**
+** Outputs:
+**	None
+**	Returns potentially defaulted collation ID.
+**
+** History:
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Introduce to apply collation defaults.
+*/
+
+DB_COLL_ID
+pst_apply_def_collID(
+	PSS_SESBLK *sess_cb,
+	DB_DT_ID dt,
+	DB_COLL_ID collID)
+{
+    if (collID == DB_UNSET_COLL)
+    {
+	switch(abs(dt))
+	{
+	case DB_CHA_TYPE:
+	case DB_CHR_TYPE:
+	case DB_VCH_TYPE:
+	case DB_TXT_TYPE:
+	case DB_LVCH_TYPE:
+	    collID = sess_cb->pss_def_coll;
+	    break;
+	case DB_NCHR_TYPE:
+	case DB_NVCHR_TYPE:
+	case DB_LNVCHR_TYPE:
+	    collID = sess_cb->pss_def_unicode_coll;
+	    break;
+	}
+    }
+    return collID;
+}

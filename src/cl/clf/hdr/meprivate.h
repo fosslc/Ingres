@@ -285,6 +285,8 @@
 **	29-Mar-2010 (drivi01)
 **	    Update pages to be of type SIZE_TYPE for consistency with
 **          function definitions.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */
 
 # ifndef CLCONFIG_H_INCLUDED
@@ -292,35 +294,8 @@
 # endif
 
 
-#ifdef	sunos3_5
-#define	ME_SEG_IN_BREAK
-#define	USE_MEMSYSCALL
-#endif
-
-#if defined(sun_u42) || defined(sparc_sol) || defined(ds3_ulx) || defined(pyr_us5) || defined(xCL_075_SYS_V_IPC_EXISTS) || defined(sui_us5)
+#if defined(sparc_sol) || defined(xCL_075_SYS_V_IPC_EXISTS)
 #define SYS_V_SHMEM
-#endif
-
-#if defined(su4_u42) || defined(su4_cmw)
-#define MMAP 
-#undef SYS_V_SHMEM 
-#endif 
-
-#ifdef sqs_ptx
-#define ME_SEG_IN_BREAK
-#define MEFILL_WRAPPED_MEMSET
-#define MECOPY_WRAPPED_MEMCPY
-#define MECMP_WRAPPED_MEMCMP
-#define MMAP
-#undef  SYS_V_SHMEM
-#endif
-
-#ifdef dgi_us5
-#define MECOPY_WRAPPED_MEMCPY
-#endif
-
-#ifdef DESKTOP
-typedef long key_t;
 #endif
 
 # ifdef xCL_094_TLS_EXISTS
@@ -381,19 +356,10 @@ GLOBALREF ME_TLS_KEY TlsIdxSCB;
                                         else\
                                            *status=OK
 #else
-# if defined(dgi_us5) || defined(dg8_us5)
-#define ME_tls_createkey(key, status)   if ( pthread_key_create(\
-					    (pthread_key_t*)key,\
-					    (void(*)(void*))MEfree))\
-					   *status=errno;\
-					else\
-					   *status=OK
-#else
 #define ME_tls_createkey(key, status)   *status = \
                                            pthread_key_create(\
 					    (pthread_key_t*)key,\
 					    (void(*)(void*))MEfree)
-# endif /* dgi_us5 | dg8_us5 */
 # endif /* DCE_THREADS */
 #undef  ME_tls_set
 # if defined(DCE_THREADS)
@@ -404,18 +370,9 @@ GLOBALREF ME_TLS_KEY TlsIdxSCB;
                                         else\
                                            *status=OK;
 #else
-# if defined(dgi_us5) || defined(dg8_us5)
-#define ME_tls_set(key,value,status)    if (pthread_setspecific(\
-					     (pthread_key_t)key,\
-					      value))\
-					   *status=errno;\
-					else\
-					   *status=OK;
-# else
 #define ME_tls_set(key,value,status)    *status = \
                                            pthread_setspecific(\
 					     (pthread_key_t)key,value)
-# endif /* dgi_us5 | dg8_us5 */
 # endif /* DCE_THREADS */
 #undef  ME_tls_get
 # if defined(DCE_THREADS)
@@ -426,19 +383,10 @@ GLOBALREF ME_TLS_KEY TlsIdxSCB;
                                           else\
                                              *status=OK;}
 # else
-# if defined(dgi_us5) || defined(dg8_us5)
-#define ME_tls_get(key,value,status)    { if (pthread_getspecific(\
-					     (pthread_key_t)key,\
-					      (void**)value))\
-					     *status=errno;\
-					  else\
-					     *status=OK;}
-# else
 #define ME_tls_get(key,value,status)    {*((void**)(value))=\
 					   pthread_getspecific(\
 					          (pthread_key_t)key);\
 					 *status=OK;}
-# endif /* dgi_us5 | dg8_us5 */
 # endif /* DCE_THREADS */
 #undef  ME_tls_destroy
 #define ME_tls_destroy(key,status)      *status = 0
@@ -870,11 +818,9 @@ ME_tls_destroyall( STATUS *status );
 #endif
 
 FUNC_EXTERN STATUS MEshared_free(
-#ifdef CL_PROTOTYPED
 		PTR         *addr,
 		SIZE_TYPE         *pages,
 		CL_ERR_DESC *err_code
-#endif
 );
 
 # endif		/* ME_PRIVATE_INCLUDED */

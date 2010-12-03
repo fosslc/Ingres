@@ -100,6 +100,8 @@ static char *sccsid = "@(#)chtim.c	1.2 (Don Gworek) 8/10/85";
  *	08-Feb-2008 (hanje04)
  *	    SIR S119978
  *	    Add support for Intel OSX
+ *	23-Nov-2010 (kschendel)
+ *	    Drop obsolete ports.
  */
 
 # ifdef SYS5
@@ -128,8 +130,7 @@ int utimes();
 
 #include <generic.h>
 
-#if defined(ris_us5) || defined(rs4_us5) || defined(ris_u64) || \
-    defined(sos_us5) || defined(sqs_ptx) || defined(sgi_us5) || \
+#if defined(rs4_us5) || defined(sgi_us5) || \
     defined(i64_aix) || defined(LINUX) || defined(mg5_osx) || \
     defined(int_osx)
 #include <time.h>
@@ -335,7 +336,7 @@ char   *dir;
 
 print_time (label, t)
 char   *label;
-#if defined(axp_osf) || defined(ris_u64) || defined(axp_lnx) || \
+#if defined(axp_osf) || defined(axp_lnx) || \
     defined(i64_aix) || defined(a64_lnx)
 time_t  t;
 #else
@@ -480,7 +481,7 @@ usage () {
 
 int
 utimes( file, newtime )
-# if defined(dgi_us5) || defined(dg8_us5) || defined(int_lnx) || \
+# if defined(int_lnx) || \
      defined(ibm_lnx) || defined(axp_lnx) || defined(a64_lnx) || \
      defined(axp_osf) || defined(int_rpl)
 
@@ -488,18 +489,9 @@ const char *file;
 # else
 char *file;
 # endif
-# if defined(dgi_us5) || defined(dg8_us5)
-const struct timeval *newtime;
-# else
 struct timeval *newtime;
-# endif
 {
-#if DGUX
-    static struct utimbuf ztime;        /* guaranteed init'ed to zero */
-    struct utimbuf ntime = ztime;
-#else
     struct utimbuf ntime;
-#endif
 
     ntime.actime = newtime[0].tv_sec;
     ntime.modtime = newtime[0].tv_sec;

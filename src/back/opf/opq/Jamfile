@@ -5,13 +5,13 @@
 #          Jamfile was not in sync with the .lot files
 #       20-Oct-2009 (hweho01)
 #          Remove the IINOOPTIM entries that were generated incorrectly.
+#	23-Nov-2010 (kschendel)
+#	    Drop obsolete DG nooptims.
 
 
 SubDir ING_SRC back opf opq ;
 
 IISUBSYS back opf opq ;
-
-IINOOPTIM opqoptdb.sc : dgi_us5 ;
 
 IIBINEXE statdump : opqstatd.sc ;
 if ! $(VMS)

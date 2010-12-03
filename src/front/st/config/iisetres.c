@@ -81,6 +81,8 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**	1-Dec-2010 (kschendel)
+**	    Compiler warning fix.
 */
 
 /*
@@ -225,7 +227,7 @@ main( int argc, char **argv )
 	** Implementation of -p/+p flag which (un)protects parameter
 	** from automatic adjustments.
 	*/
-	if (*protecting != NULL)
+	if (protecting[0] != EOS)
 	{
 		
 		NMloc(ADMIN, FILENAME, ERx ( "protect.dat" ), &protect_file);

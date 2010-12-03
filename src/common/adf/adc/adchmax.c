@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -81,6 +81,9 @@
 **          	Add cases for DB_BOO_TYPE in adc_1hmax_rti and adc_2dhmax_rti.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. Don't allow UTF8 strings with it
+**	    to use UCS2 CEs for comparison related actions.
 **/
 
 
@@ -199,6 +202,8 @@
 **	18-jan-93 (rganski)
 **	    Initialized loc_hgdv.db_length before xDEBUG call to
 **	    adc_hg_dtln(), which now uses this length as an input parameter.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Ensure whole DBV copied.
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -290,11 +295,10 @@ DB_DATA_VALUE	    *adc_max_dvdhg;
 	}
 	else					/* nullable */
 	{
-	    DB_DATA_VALUE	tmp_dv;
+	    DB_DATA_VALUE tmp_dv = *adc_fromdv;
 
 	    tmp_dv.db_datatype = bdt;
-	    tmp_dv.db_prec     = adc_fromdv->db_prec;
-	    tmp_dv.db_length   = adc_fromdv->db_length - 1;
+	    tmp_dv.db_length--;
 
 	    db_stat = (*Adf_globs->Adi_dtptrs[mbdt]->
 			    adi_dt_com_vect.adp_dhmax_addr)
@@ -516,11 +520,10 @@ DB_DATA_VALUE	    *adc_max_dvhg;
 	}
 	else					/* nullable */
 	{
-	    DB_DATA_VALUE	tmp_dv;
+	    DB_DATA_VALUE tmp_dv = *adc_fromdv;
 
 	    tmp_dv.db_datatype = bdt;
-	    tmp_dv.db_prec     = adc_fromdv->db_prec;
-	    tmp_dv.db_length   = adc_fromdv->db_length - 1;
+	    tmp_dv.db_length--;
 
 	    db_stat = (*Adf_globs->Adi_dtptrs[mbdt]->
 			    adi_dt_com_vect.adp_hmax_addr)
@@ -647,7 +650,8 @@ DB_DATA_VALUE	    *adc_max_dvdhg)
     
       case DB_CHR_TYPE:
         cp = (u_char *) adc_max_dvdhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_max_dvdhg->db_length; i; i--)
 	    *cp++ = AD_CHR4_DHMAX_VAL;
@@ -655,7 +659,8 @@ DB_DATA_VALUE	    *adc_max_dvdhg)
 
       case DB_CHA_TYPE:
         cp = (u_char *) adc_max_dvdhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_max_dvdhg->db_length; i; i--)
 	    *cp++ = AD_CHA4_DHMAX_VAL;
@@ -718,7 +723,8 @@ DB_DATA_VALUE	    *adc_max_dvdhg)
 
       case DB_TXT_TYPE:
         cp = (u_char *) adc_max_dvdhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_max_dvdhg->db_length; i; i--)
 	    *cp++ = AD_TXT4_DHMAX_VAL;
@@ -726,7 +732,8 @@ DB_DATA_VALUE	    *adc_max_dvdhg)
 	
       case DB_VCH_TYPE:
         cp = (u_char *) adc_max_dvdhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_max_dvdhg->db_length; i; i--)
 	    *cp++ = AD_VCH4_DHMAX_VAL;
@@ -894,7 +901,8 @@ DB_DATA_VALUE	    *adc_max_dvhg)
     
       case DB_CHR_TYPE:
         cp = (u_char *) adc_max_dvhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_max_dvhg->db_length; i; i--)
 	    *cp++ = AD_CHR5_HMAX_VAL;
@@ -902,7 +910,8 @@ DB_DATA_VALUE	    *adc_max_dvhg)
 
       case DB_CHA_TYPE:
         cp = (u_char *) adc_max_dvhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_max_dvhg->db_length; i; i--)
 	    *cp++ = AD_CHA5_HMAX_VAL;
@@ -965,7 +974,8 @@ DB_DATA_VALUE	    *adc_max_dvhg)
 
       case DB_TXT_TYPE:
         cp = (u_char *) adc_max_dvhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_max_dvhg->db_length; i; i--)
 	    *cp++ = AD_TXT5_HMAX_VAL;
@@ -973,7 +983,8 @@ DB_DATA_VALUE	    *adc_max_dvhg)
 	
       case DB_VCH_TYPE:
         cp = (u_char *) adc_max_dvhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_max_dvhg->db_length; i; i--)
 	    *cp++ = AD_VCH5_HMAX_VAL;

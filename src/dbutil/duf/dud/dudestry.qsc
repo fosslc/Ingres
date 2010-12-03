@@ -162,6 +162,8 @@ EXEC SQL include SQLCA;
 **	    Include cv.h for function defintions
 **      31-Aug-2010 (maspa05) bug 124328
 **          Added support for -P flag to pass dbms password on command line
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 /*
@@ -188,6 +190,12 @@ VOID			dud_exit();	/* Destroydb exit handler */
 
 STATUS 			get_pm_params(DU_ENV          *dud_dbenv,
 				      DU_ERROR        *dud_errcb);
+
+/* This one is in ui.qsh, but the jam rules don't know that dbutil
+** needs front/hdr/hdr.
+*/
+FUNC_EXTERN char *IIUIpassword(char *);
+
 /*
 [@function_reference@]...
 */

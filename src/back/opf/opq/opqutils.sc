@@ -3956,6 +3956,8 @@ bool		statdump)
 **	28-may-02 (inkdo01)
 **	    Add indexes to potential relation count (since they're the target
 **	    of composite histograms).
+**	30-Nov-2010 (kschendel)
+**	    Exclude new spatial catalogs, they don't start with ii.
 */
 VOID
 opq_mxrel(
@@ -3967,7 +3969,7 @@ char	    *argv[])
 	i4	rel_cnt = 0;
 	char	*es_ownr;
 	char	*es_dba;
-	char	es_pattern[4];
+	char	*es_notin1, *es_notin2;
     exec sql end declare section;
     i4	    parmno;
     i4	    relc = 0;
@@ -3984,28 +3986,19 @@ char	    *argv[])
 	/* no relations have been specified on the command line. */
 	es_dba = (char *)&g->opq_dba;
 	es_ownr = (char *)&g->opq_owner;
-
-	if (g->opq_cats)
+	es_notin1 = es_notin2 = " ";
+	if (!g->opq_cats)
 	{
-	    es_pattern[0] = EOS; 
-	}
-	else
-	{
-	    if (g->opq_dbcaps.tblname_case == (i4)OPQ_LOWER)
-	    {
-		STcopy("ii%", es_pattern);
-	    }
-	    else
-	    {
-		STcopy("II%", es_pattern);
-	    }
+	    es_notin1 = "S";
+	    es_notin2 = "G";
+	    /* i.e. leaving only 'U' to be selected */
 	}
 
 	exec sql select count(*)
 	    into :rel_cnt
 	from iitables
   	where table_owner in (:es_ownr, :es_dba) and
-	      table_name  not like :es_pattern and
+	      system_use not in (:es_notin1, :es_notin2) and
   	      table_type  in ('T', 'I');
     }
 
@@ -4875,6 +4868,10 @@ OPQ_ALIST 	*attrp)
 **          Fix for Bug 123898 excluded all Gateway tables. Rework fix
 **          for Bug 123898 and 117368 to use different query text
 **          if we are a STAR DB and use a cursor instead of a SELECT loop.
+**	30-Nov-2010 (kschendel)
+**	    Exclude new spatial catalogs, they don't start with ii.
+**	    Fix remotecmdlock exclusion to work properly in an ANSI
+**	    (uppercase name) installation.
 */
 bool
 r_rel_list_from_rel_rel(
@@ -4894,7 +4891,6 @@ bool		statdump)
 	i4	es_pages;
 	i4	es_ovflow;
         i4      es_relwid;        /* schang: tuple width */
-	char	es_pattern[4];
 	char	es_tabtype[9];
 	char	es_tstat[8 + 1];
         char    stmtbuf[2048];
@@ -4913,21 +4909,6 @@ bool		statdump)
     es_ownname = (char *)&townname;
     es_relname = (char *)&trelname;
 
-    if (g->opq_cats)
-    {
-	es_pattern[0] = EOS; 
-    }
-    else
-    {
-	if (g->opq_dbcaps.tblname_case == (i4)OPQ_LOWER)
-	{
-	    STcopy("ii%", es_pattern);
-	}
-	else
-	{
-	    STcopy("II%", es_pattern);
-	}
-    }
 
     /* In STAR, for now, iistats and iihistograms are treated as user
     ** tables and do not get sent across privileged connection; all other
@@ -4954,10 +4935,15 @@ bool		statdump)
                               "t.number_pages, t.overflow_pages, ",
                               "t.row_width, t.table_type, t.table_stats ",
                               stmtbuf);
-        STpolycat(4, stmtbuf, "from iitables t where t.table_owner in (?, ?) ",
-                              "and t.table_name  not like ? and t.table_type ",
-                              "in ('T', 'I') and t.table_subtype <> 'I' and ",
+        STcat(stmtbuf, "from iitables t where t.table_owner in (?, ?) ");
+	if (!g->opq_cats)
+	{
+	    STcat(stmtbuf, "and t.system_use = 'U' ");
+	}
+        STpolycat(3, stmtbuf, "and t.table_type in ('T', 'I') ",
+			      "and t.table_subtype <> 'I' and ",
                               stmtbuf);
+	/* Not sure if all Star LDB's can do "lowercase()" ?? */
         STpolycat(4, stmtbuf, "(t.table_name <> 'remotecmdlock' or ",
                               "t.table_owner <> '$ingres') order by ",
                               "t.table_name",
@@ -4973,16 +4959,20 @@ bool		statdump)
                               "t.number_pages, t.overflow_pages, ",
                               "t.row_width, t.table_type, t.table_stats ",
                               stmtbuf);
-        STpolycat(4, stmtbuf, "from iitables t, iirelation i where ",
-                              "t.table_owner in (?, ?) and t.table_name ",
-                              "not like ? and t.table_type  in ('T', 'I') ",
+        STpolycat(3, stmtbuf, "from iitables t, iirelation i where ",
+                              "t.table_owner in (?, ?) ",
                               stmtbuf);
-        STpolycat(4, stmtbuf, "and t.table_reltid = i.reltid and ",
+	if (!g->opq_cats)
+	{
+	    STcat(stmtbuf, "and t.system_use = 'U' ");
+	}
+	STpolycat(5, stmtbuf, "and t.table_type in ('T', 'I') ",
+			      "and t.table_reltid = i.reltid and ",
                               "t.table_name = i.relid and i.relgwid <> ",
                               gwid,
                               stmtbuf);
-        STpolycat(4, stmtbuf, "and (t.table_name <> 'remotecmdlock' or ",
-                              "t.table_owner <> '$ingres') order by ",
+        STpolycat(4, stmtbuf, "and (lowercase(t.table_name) <> 'remotecmdlock' or ",
+                              "lowercase(t.table_owner) <> '$ingres') order by ",
                               "t.table_name",
                               stmtbuf);
 
@@ -4990,7 +4980,7 @@ bool		statdump)
 
     EXEC SQL prepare stmt from :stmtbuf;
     EXEC SQL declare cs cursor for stmt;
-    EXEC SQL open cs for readonly using :es_ownr, :es_dba, :es_pattern;
+    EXEC SQL open cs for readonly using :es_ownr, :es_dba;
 
     while(1)
     {

@@ -37,6 +37,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 **/
 
 
@@ -73,3 +75,8 @@ GLOBALREF TM_MONTHTAB 		TM_Monthtab[];	/* lookup table of months */
 
 GLOBALREF i4			TM_Dmsize[];	/* table of # days in months */
 
+FUNC_EXTERN STATUS TM_parse_timestamp(
+	char *input_string,
+	i4 *ret_seconds,
+	i4 *ret_usecs
+);

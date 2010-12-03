@@ -381,6 +381,8 @@
 **          multiple times.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Drop "ev calls", not needed.  Prototype fixups.
 **/
 
 
@@ -416,11 +418,7 @@
 */
 # define	CSEV_MSIZE(numblocks, sizeblocks)	((numblocks) * ((sizeblocks) + 1024l))
 
-#if defined(pym_us5)
-#define	NSVSEMS		25
-#else
 #define	NSVSEMS		30
-#endif
 
 /*
 **  For non-System V machines that use semaphores and iislaves,
@@ -442,7 +440,6 @@ typedef	struct	_CSEV_CB	CSEV_CB;
 #else
 typedef	VOLATILE struct	_CSEV_CB	CSEV_CB;
 #endif
-typedef	struct	_CSEV_CALLS	CSEV_CALLS;
 typedef	struct	_CSCP_SEM	CSCP_SEM;
 typedef struct	_CS_SPIN	CS_SPIN;
 
@@ -450,7 +447,13 @@ typedef struct	_CS_SPIN	CS_SPIN;
 **  Forward function declarations
 */
 
-FUNC_EXTERN VOID	CSdef_resume();
+FUNC_EXTERN VOID CSdef_resume(
+    CSEV_CB	   *evcb);
+
+FUNC_EXTERN STATUS CS_event_init(i4, i4);
+
+FUNC_EXTERN STATUS CSev_resume(
+    CSEV_CB	   *evcb);
 
 FUNC_EXTERN STATUS CSreserve_event(
     CSSL_CB        *slave_cb,
@@ -460,8 +463,13 @@ FUNC_EXTERN STATUS CScause_event(
     CSEV_CB        *evcb,
     i4      	   slavenum);
 
+FUNC_EXTERN STATUS CS_find_events(i4 *, i4 *);
+
 FUNC_EXTERN STATUS CSfree_event(
     CSEV_CB        *evcb);
+
+FUNC_EXTERN STATUS CSinstall_server_event(CSSL_CB **slave_cb,
+		 i4 num_events, i4 size_events, STATUS (*evcomp)(CSEV_CB *));
 
 FUNC_EXTERN STATUS CSslave_init(
     CSSL_CB 	   **slave_cb,
@@ -469,16 +477,31 @@ FUNC_EXTERN STATUS CSslave_init(
     i4      	   nexec,
     i4      	   wrksize,
     i4      	   nwrk,
-    STATUS  	   (*evcomp)(),
+    STATUS  	   (*evcomp)(CSEV_CB *),
     fd_set  	   fdmask);
 
 FUNC_EXTERN STATUS CS_set_wakeup_block(
     PID		   pid,
     CS_SID	   sid);
 
+FUNC_EXTERN void CS_clear_wakeup_block(
+    PID		pid,
+    CS_SID	sid);
+
 FUNC_EXTERN VOID CS_cleanup_wakeup_events(
     PID	   	   pid,
     i4		   spinlock_held);
+
+FUNC_EXTERN STATUS CS_cpres_event_handler(
+    CSEV_CB	*evcb);
+
+FUNC_EXTERN void CS_handle_wakeup_events(
+    PID		pid);
+
+FUNC_EXTERN void CS_ef_cancel(void);
+FUNC_EXTERN void CS_ef_set(i4);
+FUNC_EXTERN void CS_ef_wait(void);
+FUNC_EXTERN void CS_ef_wake(i4);
 
 #ifdef OS_THREADS_USED
 FUNC_EXTERN STATUS CSMT_get_wakeup_block(
@@ -516,7 +539,7 @@ struct	_CSSL_CB {
 # endif
 	int	slsembase;	/* base of semaphores for slaves */
 /* note: there may be 1 semaphore for a group or 1 semaphore per slave */
-	STATUS	(*evcomp)();	/* compleation routine */
+	STATUS	(*evcomp)(CSEV_CB *);	/* completion routine */
 	i4	evsize;		/* size of each event cb in bytes */
 	i4	nevents;	/* number of event cbs in this pool */
 	i4 events;    	/* offset to the pool array */
@@ -579,23 +602,6 @@ struct _CSEV_CB
 	i4	slave_type;	/* index into slave function table */
 	i4	datalen;	/* length of following data */
 	char	data[sizeof (i4)];	/* variable length data area */
-};
-
-/*}
-** Name: CSEV_CALLS	- array of slave functions
-**
-** Description:
-**	This defines an array of functions to be used in slave process.
-**
-** History:
-**      19-jan-88 (anton)
-**	    Created.
-*/
-
-struct	_CSEV_CALLS
-{
-	STATUS	(*evinit)();
-	STATUS	(*evhandle)();
 };
 
 /*}
@@ -672,6 +678,8 @@ struct	_CSEV_SVCB
 **	05-Feb-2008 (hanje04)
 **	    SIR OSXSI
 **	    Don't define CS_relspin() for OSX, defined in csnormal.h
+**	23-Nov-2010 (kschendel)
+**	    Drop a few more obsolete ports.
 */
 struct _CS_SPIN
 {
@@ -683,14 +691,10 @@ struct _CS_SPIN
 };
 
 /* CS_getspin is in assembler in csll.s */
-# if !defined(ds3_ulx) && !defined(su4_u42) && !defined(sqs_ptx) && \
-     !defined(sparc_sol) && \
-     !defined(any_hpux) && !defined(su4_cmw) && !defined(hp8_bls) && \
-     !defined(sos_us5) && !defined(rmx_us5) && !defined(pym_us5) && \
-     !defined(usl_us5) && !defined(ts2_us5) && !defined(sgi_us5) && \
-     !defined(sui_us5) && !defined(int_lnx) && !defined(rux_us5) && \
-     !defined(ibm_lnx) && !defined(a64_sol) && !defined(int_rpl) && \
-     !defined(OSX) && !defined(VMS)
+# if !defined(sparc_sol) && !defined(any_hpux) && \
+     !defined(usl_us5) && !defined(sgi_us5) && \
+     !defined(int_lnx) && !defined(ibm_lnx) && !defined(a64_sol) && \
+     !defined(int_rpl) && !defined(OSX) && !defined(VMS)
 #define	CS_relspin(s)	(CS_ACLR(&(s)->cssp_bit))
 # endif
 

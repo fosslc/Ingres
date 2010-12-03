@@ -4,6 +4,7 @@
 
 #include    <compat.h>
 #include    <gl.h>
+#include    <cv.h>
 
 /**
 ** Name: CVOL.C - convert octal string to long.
@@ -47,6 +48,8 @@
 **          Updated to meet jupiter coding standards.      
 **	15-jul-93 (ed)
 **	    adding <gl.h> after <compat.h>
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of cv.h with CVol prototype.
 **/
 
 /* # defines */

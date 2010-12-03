@@ -2,6 +2,7 @@
 ** Copyright (c) 1993, 2009 Ingres Corporation
 */
 # include	<compat.h>
+# include	<clconfig.h>
 # include	<excl.h>
 # include	<mhcl.h>
 # include	<ssdef.h>
@@ -18,7 +19,7 @@
 #endif
 # include	<lib$routines.h>
 # include	<starlet.h>
-# include       "exi.h"
+# include	<exinternal.h>
 
 #include <setjmp.h>
 
@@ -182,7 +183,7 @@ EXcatch(struct chf$signal_array *sigs, struct chf$mech_array *mechs)
 	EX_CONTEXT      *env = NULL;
         EX_CONTEXT      **excp;
 
-        extern STATUS cs_handler();
+        extern STATUS cs_handler(EX_ARGS *);
 
 #if defined(axm_vms)
 	uint64		invo_mask;			/* lib$put_invo_... */

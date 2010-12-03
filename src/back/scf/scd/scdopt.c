@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2005 Ingres Corporation
+**Copyright (c) 2005, 2010 Ingres Corporation
 **
 **
 NO_OPTIM=dr6_us5
@@ -378,6 +378,9 @@ NO_OPTIM=dr6_us5
 **	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    Delete sca.h include. Function prototypes moved to
 **	    scf.h for exposure to DMF.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for setting installation wide collation defaults
+**	    .default_collation & .default_unicode_collation.
 */
 
 /*
@@ -653,6 +656,8 @@ struct _SCD_OPT {
 #define		SCO_CRYPT_MAXKEYS	    218 /* max crypt shmem keys */
 #define		SCO_BATCH_COPY_OPTIM	    219
 #define		SCO_MONEY_COMPAT            220
+#define		SCO_DEFAULT_COLL	    221 /* Default collation */
+#define		SCO_DEFAULT_UNI_COLL        222 /* Default Unicode collation */
 static SCD_OPT scd_opttab[] =
 {
     /* echoing first so the rest get echoed */
@@ -894,8 +899,10 @@ static SCD_OPT scd_opttab[] =
     SCO_QEF_NO_DEPENDENCY_CHK,  't',    ' ',    "!.qef_no_dependency_chk",
     SCO_PAGETYPE_V6,		'z',	'3',	"!.pagetype_v6", /*default on*/
     SCO_PAGETYPE_V7,		'z',	'3',	"!.pagetype_v7", /*default on*/
-    SCO_BATCH_COPY_OPTIM,		'z',	' ',	"!.batch_copy_optim",
+    SCO_BATCH_COPY_OPTIM,	'z',	' ',	"!.batch_copy_optim",
     SCO_MONEY_COMPAT,   	't',	' ',	"!.money_compat",
+    SCO_DEFAULT_COLL,		'g',	' ',	"!.default_collation",
+    SCO_DEFAULT_UNI_COLL,	'g',	' ',	"!.default_unicode_collation",
     0, 0, 0, 0
 } ;
 
@@ -1424,6 +1431,42 @@ scd_options(
 		    }
 		    psq_cb->psq_result_struct = value;
 		    psq_cb->psq_result_compression = compressed;
+		    break;
+		}
+
+	    case SCO_DEFAULT_COLL:
+	    case SCO_DEFAULT_UNI_COLL:
+		{
+		    static const char *collname_array[] = {
+#			define _DEFINE(n,v,Ch,Un,t) t,
+#			define _DEFINEEND
+			DB_COLL_MACRO
+#			undef _DEFINEEND
+#			undef _DEFINE
+		    };
+		    DB_COLL_ID i = DB_NOCOLLATION+1;
+		    while (i < DB_COLL_LIMIT &&
+			    STbcompare(scd_svalue, 0, collname_array[i+1], 0, TRUE) != 0)
+			i++;
+		    if (i == DB_COLL_LIMIT)
+		    {
+			if (*scd_svalue && *scd_svalue != ' ')
+			    TRdisplay("scd_options: invalid default collation %s\n",
+					scd_svalue);
+			i = DB_UNSET_COLL;
+		    }
+		    if (scdopt->sco_index == SCO_DEFAULT_UNI_COLL)
+		    {
+			dca->char_id = DMC_C_DEF_UNI_COLL;
+			dca++->char_value = i;
+			psq_cb->psq_def_unicode_coll = i;
+		    }
+		    else
+		    {
+			dca->char_id = DMC_C_DEF_COLL;
+			dca++->char_value = i;
+			psq_cb->psq_def_coll = i;
+		    }
 		    break;
 		}
 

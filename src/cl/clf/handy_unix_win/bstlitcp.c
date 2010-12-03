@@ -12,6 +12,7 @@
 
 # include	<errno.h>
 # include	<bsi.h>
+# include	"handylocal.h"
 
 # ifdef xCL_TLI_TCP_EXISTS
 
@@ -157,9 +158,10 @@
 **          an installation uses TLI TCP for both local and remote connections.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of handylocal.h.
 */
 
-extern	STATUS	BS_tcp_port();
 
 #ifdef t15_us5
 #define TLI_TCP "/dev/inet/tcp"
@@ -455,5 +457,5 @@ BS_DRIVER BS_tlitcp = {
 } ;
 
 # else
-VOID xCL_042_TLI_DOES_NOT_EVEN_EXIST(){};
+static VOID xCL_042_TLI_DOES_NOT_EVEN_EXIST(void){}
 # endif /* xCL_TLI_TCP_EXISTS */

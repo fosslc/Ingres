@@ -63,6 +63,8 @@
 **	    Include systypes.h to resolve compile problems on HP-UX.
 **	20-Apr-04 (gordy)
 **	    Moved network definitions to cvgcccl.h.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Added CVexhandler.
 **/
 
 
@@ -70,6 +72,7 @@
 **  Forward and/or External function references.
 */
 # include <stdlib.h>
+#include <ex.h>
 
 
 /*
@@ -117,28 +120,30 @@
 
 
 FUNC_EXTERN VOID CVexp10(
-#ifdef CL_PROTOTYPED
 	i4              exp,
 	f8              *val
-#endif
 );
 
 FUNC_EXTERN STATUS CVfcvt(
-#ifdef CL_PROTOTYPED
 	f8      value,
 	char    *buffer,
 	i4      *digits,
 	i4      *exp,
 	i4      prec
-#endif
 );
 
 FUNC_EXTERN STATUS CVecvt(
-#ifdef CL_PROTOTYPED
 	f8      value,
 	char    *buffer,
 	i4      *digits,
 	i4      *exp
-#endif
 );
 
+/* This is internal to CV, but we don't have a cvlocal nor any burning
+** need for it other than this one prototype.
+** Just define it here.
+*/
+
+FUNC_EXTERN STATUS CVexhandler(
+	EX_ARGS	*
+);
