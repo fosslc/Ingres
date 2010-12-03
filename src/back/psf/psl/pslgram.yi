@@ -784,6 +784,10 @@
 **	    be different from sql!
 **	08-Nov-2010 (kiria01) SIR 124685
 **	    Rationalise function prototypes
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Map collID through from VAR nodes if appropriate. This mainly
+**	    affects system views that retain quel construction but play
+**	    with sql tables and views.
 */
 
 %{
@@ -2938,6 +2942,7 @@ updclause:	updword uplist
 		    (DB_ANYTYPE *) NULL, &newnode, &psq_cb->psq_error, (i4) 0);
 		if (DB_FAILURE_MACRO(status))
 		    return (status);
+		newnode->pst_sym.pst_dataval.db_collID = coldesc->att_collID;
 
 		rsdm->pst_right = newnode;
 	    }
@@ -9241,6 +9246,7 @@ tlelm:             NAME is afcn
 	    {
 		return (status);
 	    }
+	    varnode->pst_sym.pst_dataval.db_collID = (*attribute)->att_collID;
 
 	    /* Create the corresponding result domain node */
 	    status = pst_adresdom(var.pst_atname.db_att_name, rsdmnode,
@@ -10208,6 +10214,7 @@ aggtarg:	    afcn
 	{
 	    return (status);
 	}
+	varnode->pst_sym.pst_dataval.db_collID = (*attribute)->att_collID;
 	$$ = varnode;
     }
 ;
@@ -10298,6 +10305,7 @@ targdom:           afcn
 		return (status);
 	    }
 
+	    varnode->pst_sym.pst_dataval.db_collID = (*attribute)->att_collID;
 	    /* Create the corresponding result domain node */
 	    status = pst_node(cb, &cb->pss_ostream, rsdmnode, varnode,
 		PST_RESDOM, (PTR) &rsdom, sizeof(PST_RSDM_NODE),
@@ -10353,6 +10361,7 @@ attrib:            var PERIOD NAME
 	{
 	    return (status);
 	}
+	newnode->pst_sym.pst_dataval.db_collID = attribute->att_collID;
 
 	$$ = newnode;
     }
@@ -10388,6 +10397,7 @@ attrib:            var PERIOD NAME
 	{
 	    return (status);
 	}
+	newnode->pst_sym.pst_dataval.db_collID = attribute->att_collID;
 
 	$$ = newnode;
     }
@@ -10790,6 +10800,7 @@ attribfcn:         I2CONST
 		{
 		    return (status);
 		}
+		newnode->pst_sym.pst_dataval.db_collID = att_entry->att_collID;
 	    }
 	}
 
@@ -11297,17 +11308,19 @@ getfacil(
 ** History:
 **	25-feb-86 (jeff)
 **	    adapted from pre-Jupiter version
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Re-written not to use MEcopy as will break on more platforms.
 */
 char *
 sconvert(
 	DB_TEXT_STRING     *string)
 {
-    i4                  count;
-
-    count = string->db_t_count;
-    MEcopy((PTR) string->db_t_text, count, (PTR) string);
-    ((char *) string)[count] = '\0';
-    return ((char *) string);
+    register i4	count = string->db_t_count;
+    register i4	i;
+    for (i = 0; i < count; i++)
+	((char *)string)[i] = string->db_t_text[i];
+    ((char *)string)[count] = '\0';
+    return ((char *)string);
 }
 
 /*{

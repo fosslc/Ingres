@@ -987,6 +987,8 @@ DB_ERROR	*dberr)
 **	    If a readonly database, do not build the relations.
 **      15-jun-1999 (hweho01)
 **          Corrected argument mismatch in ule_format() call.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Apply collation defaults.
 */
 static DB_STATUS
 create_db(
@@ -1262,6 +1264,28 @@ DB_ERROR	*dberr)
 		db_atts[k].length = att->attfml;
 		db_atts[k].type = att->attfmt;
 		db_atts[k].precision = att->attfmp;
+		if (att->attcollID <= DB_NOCOLLATION)
+		switch (abs(att->attfmt))
+		{
+		case DB_CHA_TYPE:
+		case DB_CHR_TYPE:
+		case DB_VCH_TYPE:
+		case DB_TXT_TYPE:
+		case DB_LVCH_TYPE:
+		    att->attcollID = dmf_svcb->svcb_def_collID;
+		    /* If UTF8 DB make sure collID is UCS_BASIC
+		    ** unless overriden */
+		    if (att->attcollID == DB_UNSET_COLL && 
+				CMischarset_utf8())
+			att->attcollID = DB_UCS_BASIC_COLL;
+		    break;
+		case DB_NCHR_TYPE:
+		case DB_NVCHR_TYPE:
+		case DB_LNVCHR_TYPE:
+		    att->attcollID = dmf_svcb->svcb_def_uni_collID;
+		    break;
+		}
+		db_atts[k].collID = att->attcollID;
 		k++;
 	    }
 	}

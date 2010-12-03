@@ -391,7 +391,8 @@ NO_OPTIM=dr6_us5
 **          could lead to a LOG/LOCK hang.
 **	13-Apr-2010 (toumi01) 122403
 **	    Dmc_crypt shared memory segment for encryption keywords.
-[@history_template@]...
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for controlling the defaulting of the collation type
 */
 
 /*
@@ -937,6 +938,8 @@ DMC_CB    *dmc_cb)
     i4		c_pind_nbuffers = DM_DEFAULT_EXCH_NBUFF;
     i4		c_dop = SCB_DOP_DEFAULT;
     i4		c_pad_bytes = 0;
+    DB_COLL_ID	c_def_collID = DB_UNSET_COLL;
+    DB_COLL_ID	c_def_uni_collID = DB_UNSET_COLL;
     i4		c_crypt_maxkeys = 0;
     bool		gc_numticks_changed = FALSE;
     bool		gc_threshold_changed = FALSE;
@@ -1609,6 +1612,14 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
                     c_mwrite_blocks = chr[i].char_value;
                     continue;
 
+		case DMC_C_DEF_COLL:
+		    c_def_collID = chr[i].char_value;
+		    continue;
+
+		case DMC_C_DEF_UNI_COLL:
+		    c_def_uni_collID = chr[i].char_value;
+		    continue;
+
 		default:
 		    break;
 		}
@@ -1849,6 +1860,8 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 	svcb->svcb_st_ialloc = 0;
 
 	svcb->svcb_pad_bytes = c_pad_bytes;
+	svcb->svcb_def_collID = c_def_collID;
+	svcb->svcb_def_collID = c_def_collID;
 	dm0m_init();
 
 

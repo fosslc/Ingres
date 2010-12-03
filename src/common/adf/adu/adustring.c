@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2008, 2009 Ingres Corporation
+** Copyright (c) 1986, 2008, 2009, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -6707,6 +6707,8 @@ register DB_DATA_VALUE	*rdv)
 **	    Propagated from 3.0 to main.
 **	09-May-2007 (gupsh01)
 **	    Added support for UTF8 character sets.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
 */
 
 DB_STATUS
@@ -6767,7 +6769,8 @@ DB_DATA_VALUE       *rdv)
     /* FIX ME position nvchr with alternate collations not supported */
     /* FIX ME db_collID is not init here */
     if ((bdt1 == DB_NCHR_TYPE || bdt1 == DB_NVCHR_TYPE) &&
-    	(dv1->db_collID > DB_UNICODE_COLL || dv2->db_collID > DB_UNICODE_COLL))
+    	(dv1->db_collID > DB_UNICODE_COLL && dv1->db_collID != DB_UCS_BASIC_COLL ||
+	dv2->db_collID > DB_UNICODE_COLL && dv2->db_collID != DB_UCS_BASIC_COLL))
     {
 	return(adu_error(adf_scb, E_AD2085_LOCATE_NEEDS_STR, 0));
     }

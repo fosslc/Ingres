@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -85,6 +85,8 @@
 **          	Add cases for DB_BOO_TYPE in adc_1hmin_rti and adc_2dhmin_rti.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Ensure whole DBV copied.
 **/
 
 
@@ -293,11 +295,10 @@ DB_DATA_VALUE	    *adc_min_dvdhg;
 	}
 	else					/* nullable */
 	{
-	    DB_DATA_VALUE	tmp_dv;
+	    DB_DATA_VALUE tmp_dv = *adc_fromdv;
 
 	    tmp_dv.db_datatype = bdt;
-	    tmp_dv.db_prec     = adc_fromdv->db_prec;
-	    tmp_dv.db_length   = adc_fromdv->db_length - 1;
+	    tmp_dv.db_length--;
 
 	    db_stat = (*Adf_globs->Adi_dtptrs[mbdt]->
 			    adi_dt_com_vect.adp_dhmin_addr)
@@ -519,11 +520,10 @@ DB_DATA_VALUE	    *adc_min_dvhg;
 	}
 	else					/* nullable */
 	{
-	    DB_DATA_VALUE	tmp_dv;
+	    DB_DATA_VALUE tmp_dv = *adc_fromdv;
 
 	    tmp_dv.db_datatype = bdt;
-	    tmp_dv.db_prec     = adc_fromdv->db_prec;
-	    tmp_dv.db_length   = adc_fromdv->db_length - 1;
+	    tmp_dv.db_length--;
 
 	    db_stat = (*Adf_globs->Adi_dtptrs[mbdt]->
 			    adi_dt_com_vect.adp_hmin_addr)
@@ -630,6 +630,9 @@ DB_DATA_VALUE	    *adc_min_dvhg;
 **	    Timestamp histogram elements are only i4's.
 **	15-may-2007 (dougi)
 **	    Add support for UTF8-enabled server.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. Don't allow UTF8 strings with it
+**	    to use UCS2 CEs for comparison related actions.
 */
 
 DB_STATUS
@@ -648,7 +651,8 @@ DB_DATA_VALUE	    *adc_min_dvdhg)
     
       case DB_CHR_TYPE:
         cp = (u_char *) adc_min_dvdhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_min_dvdhg->db_length; i; i--)
 	    *cp++ = AD_CHR2_DHMIN_VAL;
@@ -656,7 +660,8 @@ DB_DATA_VALUE	    *adc_min_dvdhg)
 
       case DB_CHA_TYPE:
         cp = (u_char *) adc_min_dvdhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_min_dvdhg->db_length; i; i--)
 	    *cp++ = AD_CHA2_DHMIN_VAL;
@@ -719,7 +724,8 @@ DB_DATA_VALUE	    *adc_min_dvdhg)
 
       case DB_TXT_TYPE:
         cp = (u_char *) adc_min_dvdhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_min_dvdhg->db_length; i; i--)
 	    *cp++ = AD_TXT2_DHMIN_VAL;
@@ -727,7 +733,8 @@ DB_DATA_VALUE	    *adc_min_dvdhg)
 
       case DB_VCH_TYPE:
         cp = (u_char *) adc_min_dvdhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_min_dvdhg->db_length; i; i--)
 	    *cp++ = AD_VCH2_DHMIN_VAL;
@@ -894,7 +901,8 @@ DB_DATA_VALUE	    *adc_min_dvhg)
     
       case DB_CHR_TYPE:
         cp = (u_char *) adc_min_dvhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_min_dvhg->db_length; i; i--)
 	    *cp++ = AD_CHR3_HMIN_VAL;
@@ -902,7 +910,8 @@ DB_DATA_VALUE	    *adc_min_dvhg)
 
       case DB_CHA_TYPE:
         cp = (u_char *) adc_min_dvhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_min_dvhg->db_length; i; i--)
 	    *cp++ = AD_CHA3_HMIN_VAL;
@@ -965,7 +974,8 @@ DB_DATA_VALUE	    *adc_min_dvhg)
 
       case DB_TXT_TYPE:
         cp = (u_char *) adc_min_dvhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_min_dvhg->db_length; i; i--)
 	    *cp++ = AD_TXT3_HMIN_VAL;
@@ -973,7 +983,8 @@ DB_DATA_VALUE	    *adc_min_dvhg)
 	
       case DB_VCH_TYPE:
         cp = (u_char *) adc_min_dvhg->db_data;
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
 	    goto UTF8merge;
         for (i = adc_min_dvhg->db_length; i; i--)
 	    *cp++ = AD_VCH3_HMIN_VAL;

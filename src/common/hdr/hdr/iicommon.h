@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1993, 2001 Ingres Corporation
+** Copyright (c) 1993, 2001, 2010 Ingres Corporation
 */
 #ifndef    COMMON_INCLUDE
 #define                 COMMON_INCLUDE  0
@@ -515,19 +515,24 @@ typedef struct _DB_ERROR
 **	    Added DB_UNICODE_FRENCH_COLL for UTF8 project.
 **	11-May-2009 (kiria01) b122051
 **	    Converted to table macro
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. Added columns to the
+**	    table to more readily identify the two supported char
+**	    repetoires of LATIN1/ISO8BIT and UCS.
 */
-#define DB_COLL_MACRO \
-_DEFINE(DB_UNSET_COLL,		       -1, "unset")\
-_DEFINE(DB_NOCOLLATION,			0, "none")\
-_DEFINE(DB_UNICODE_COLL,		1, "unicode")\
-_DEFINE(DB_UNICODE_CASEINSENSITIVE_COLL,2, "unicode_case_insensitive")\
-_DEFINE(DB_SQLCHAR_COLL,		3, "sql_character")\
-_DEFINE(DB_MULTI_COLL,			4, "multi")\
-_DEFINE(DB_SPANISH_COLL,		5, "spanish")\
-_DEFINE(DB_UNICODE_FRENCH_COLL,		6, "unicode_french")\
+#define DB_COLL_MACRO		    /* LATIN1 UCS */\
+_DEFINE(DB_UNSET_COLL,		       -1, _, _, "unset")\
+_DEFINE(DB_NOCOLLATION,			0, _, _, "none")\
+_DEFINE(DB_UNICODE_COLL,		1, _, Y, "unicode")\
+_DEFINE(DB_UNICODE_CASEINSENSITIVE_COLL,2, _, Y, "unicode_case_insensitive")\
+_DEFINE(DB_SQLCHAR_COLL,		3, Y, Y, "sql_character")\
+_DEFINE(DB_MULTI_COLL,			4, Y, _, "multi")\
+_DEFINE(DB_SPANISH_COLL,		5, Y, _, "spanish")\
+_DEFINE(DB_UNICODE_FRENCH_COLL,		6, _, Y, "unicode_french")\
+_DEFINE(DB_UCS_BASIC_COLL,		7, _, Y, "ucs_basic")\
 _DEFINEEND
 
-#define _DEFINE(n,v,t) n=v,
+#define _DEFINE(n,v,Ch,Un,t) n=v,
 #define _DEFINEEND
 typedef enum _DB_COLL_ID { DB_COLL_MACRO DB_COLL_LIMIT } DB_COLL_ID;
 #undef _DEFINEEND
@@ -1253,7 +1258,7 @@ enum DB_SC_ID_enum {DB_SC_ID_MACRO DB_MAX_SCLASS };
 #  error "DB_SC_ID_MACRO values not contiguous or not increasing"
 # endif
 #undef _DEFINE
-#define _DEFINE(ty, v, dc, sc, q, qv, s, sv) DB_##ty##_TYPE=v,
+#define _DEFINE(ty, v, dc, sc, q, qv, s, sv) DB_N_##ty##_TYPE=-v,DB_##ty##_TYPE=v,
 enum DB_DT_ID_enum {DB_DT_ID_MACRO DB_MAX_TYPE, DB_NODT=DB_NODT_TYPE};
 #undef _DEFINE
 #define _DEFINE(ty, v, dc, sc, q, qv, s, sv) == v && v+1

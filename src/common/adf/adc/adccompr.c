@@ -100,6 +100,8 @@
 ** History:
 **  16-may-1996 (sher03)
 **      Initial creation.
+**  19-Nov-2010 (kiria01) SIR 124690
+**	Ensure whole DBV copied.
 */
 
 # ifdef ADF_BUILD_WITH_PROTOS
@@ -152,12 +154,10 @@ i4             *adc_outlen;
        }
        else                 /* nullable */
        {
-         DB_DATA_VALUE  tmp_dv;
+         DB_DATA_VALUE tmp_dv = *adc_dv;
 
          tmp_dv.db_datatype = bdt;
-         tmp_dv.db_data     = adc_dv->db_data;
-         tmp_dv.db_prec     = adc_dv->db_prec;
-         tmp_dv.db_length   = adc_dv->db_length - 1;
+         tmp_dv.db_length--;
 
          db_stat = (*Adf_globs->Adi_dtptrs[mbdt]->
                       adi_dt_com_vect.adp_compr_addr)

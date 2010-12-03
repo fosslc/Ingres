@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2009 Ingres Corporation
+** Copyright (c) 2009, 2010 Ingres Corporation
 **
 */
 
@@ -48,6 +48,8 @@
 **      21-Jun-2010 (horda03) b123926
 **          Because adu_unorm() and adu_utf8_unorm() are also called via 
 **          adu_lo_filter() change parameter order.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. 
 **/
 
 #include <compat.h>
@@ -62,6 +64,7 @@
 #include <adfint.h>
 #include <aduint.h>
 #include <nm.h>
+#include <aduucol.h>
 
 #include "adupatexec.h"
 
@@ -97,6 +100,13 @@
 ** record size fo the underlying blob.
 */
 u_i4 ADU_pat_seg_sz = 0;
+
+static void
+inline_patda_ucs2_lower_1(
+	ADUUCETAB *cetbl,
+	const UCS2 **p,
+	const UCS2 *e,
+	UCS2 **to);
 
 /*
 ** Name: adu_patda_init() - ADF function instance to initialise DA context
@@ -163,6 +173,7 @@ adu_patda_init(
 
     da_ctx->adf_scb = adf_scb;
     da_ctx->unicode = FALSE;
+    da_ctx->unicodeCE = FALSE;
     da_ctx->binary = FALSE;
     da_ctx->utf8 = FALSE;
     da_ctx->fast = FALSE;
@@ -171,8 +182,14 @@ adu_patda_init(
     da_ctx->gets = 0;
     da_ctx->seg_offset = 0;
 
-    if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+    if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+	~sea_ctx->patdata->patdata.flags2 & AD_PAT2_UTF8_UCS_BASIC)
+    {
+	/* If UTF8 & not UCS_BASIC, we will need to translate into
+	** UCS2 etc. later but not so for UCS_BASIC which will just get
+	** its own execution engine. */
 	da_ctx->utf8 = TRUE;
+    }
 
     /* Given src_dv determine the mode in which we will work */
     switch (abs(src_dv->db_datatype))
@@ -185,7 +202,10 @@ adu_patda_init(
 	/*FALLTHROUGH*/
     case DB_NCHR_TYPE:
 	/* these will need */
-        da_ctx->unicode = TRUE;
+        if (sea_ctx->patdata->patdata.flags2 & AD_PAT2_UCS_BASIC)
+	    da_ctx->unicode = TRUE;
+	else
+	    da_ctx->unicodeCE = TRUE;
 	da_ctx->utf8 = FALSE;
 	goto commonstr;
     case DB_VBYTE_TYPE:
@@ -228,7 +248,10 @@ commonstr:
 
     case DB_LNVCHR_TYPE:
     case DB_LNLOC_TYPE:
-        da_ctx->unicode = TRUE;
+        if (sea_ctx->patdata->patdata.flags2 & AD_PAT2_UCS_BASIC)
+	    da_ctx->unicode = TRUE;
+	else
+	    da_ctx->unicodeCE = TRUE;
 	/*FALLTHROUGH*/
     case DB_LBYTE_TYPE:
     case DB_GEOM_TYPE:
@@ -240,7 +263,7 @@ commonstr:
     case DB_MPOLY_TYPE:
     case DB_GEOMC_TYPE:
     case DB_LBLOC_TYPE:
-	da_ctx->binary = !da_ctx->unicode;
+	da_ctx->binary = !(da_ctx->unicode&da_ctx->unicodeCE);
 	da_ctx->utf8 = FALSE;
 	/*FALLTHROUGH*/
     case DB_LVCH_TYPE:
@@ -325,7 +348,7 @@ loc_common: da_ctx->cpn_dv.db_data = (PTR) &cpn;
     }
 
 
-    if (da_ctx->unicode)
+    if (da_ctx->unicodeCE)
 	/*
 	** Need memory for:
 	** norm_dv for normalised intermediate (2x)
@@ -341,6 +364,7 @@ loc_common: da_ctx->cpn_dv.db_data = (PTR) &cpn;
 	*/
 	seg_multr = 3 + 9;
     else if (sea_ctx->patdata->patdata.flags & (AD_PAT_WO_CASE|AD_PAT_BIGNORE))
+    {
 	/*
 	** Both need memory for:
 	** sea_ctx->buffer for lowercase/packed intermediate.
@@ -348,6 +372,9 @@ loc_common: da_ctx->cpn_dv.db_data = (PTR) &cpn;
 	** is no difference for equality.
 	*/
 	seg_multr = 1;
+	if (da_ctx->unicode)
+	    seg_multr++; /* In case lower casing inflates buffer */
+    }
     else
     {
 	/*
@@ -371,7 +398,7 @@ loc_common: da_ctx->cpn_dv.db_data = (PTR) &cpn;
 	{
 	    return adu_error(adf_scb, da_ctx->pop_cb.pop_error.err_code, 0);
 	}
-	if (da_ctx->utf8 || da_ctx->unicode)
+	if (da_ctx->utf8 || da_ctx->unicodeCE)
 	{
 	    da_ctx->norm_dv.db_data = p;
 	    da_ctx->norm_dv.db_datatype = DB_NVCHR_TYPE;
@@ -597,7 +624,7 @@ adu_patda_get(AD_PAT_DA_CTX *da_ctx)
 	    return E_DB_OK;
     }
 
-    if (da_ctx->utf8|da_ctx->unicode)
+    if (da_ctx->utf8|da_ctx->unicodeCE)
     {
 	const UCS2 *s;
 	/*
@@ -605,7 +632,7 @@ adu_patda_get(AD_PAT_DA_CTX *da_ctx)
 	** norm_dv for normalised intermediate (2x)
 	** sea_ctx->buffer for CE final (3x)
 	*/
-	if (da_ctx->unicode)
+	if (da_ctx->unicodeCE)
         {
             da_ctx->adf_scb->adf_uninorm_flag = AD_UNINORM_NFC;
 	    db_stat = adu_unorm(da_ctx->adf_scb, da_ctx->segment_dv, &da_ctx->norm_dv);
@@ -629,6 +656,79 @@ adu_patda_get(AD_PAT_DA_CTX *da_ctx)
 	adu_pat_MakeCEchar(da_ctx->adf_scb, &s, s+len/sizeof(UCS2),
 			    (UCS2**)&sea_ctx->bufend, pat_flags);
 	/* Leave bufend pointing correctly */
+    }
+    else if (da_ctx->unicode)
+    {
+	if (pat_flags & AD_PAT_WO_CASE)
+	{
+	    /*
+	    ** Date gotten in segment_dv - lowercase into data_dv
+	    ** data_dv for lowercase intermediate
+	    */
+	    const UCS2 *src, *end;
+	    /*
+	    ** Do we have a leftover part character? If so, prepend to the buffer.
+	    */
+	    src = (UCS2 *)sea_ctx->bufend;
+	    sea_ctx->bufend = sea_ctx->buffer;
+	    while (src < (UCS2 *)sea_ctx->buftrueend)
+		*(UCS2 *)sea_ctx->bufend++ = *src++;
+
+	    /* Get the buffer & length */
+	    if (db_stat = adu_lenaddr(da_ctx->adf_scb, da_ctx->segment_dv, &len, (char**)&src))
+		return (db_stat);
+	    /* Point to end of buffer */
+	    end = src + len/sizeof(UCS2);
+
+	    while (src < end)
+	    {
+		if ((~pat_flags & AD_PAT_BIGNORE) ||
+		    *src != U_BLANK && *src != U_NULL)
+		{
+		    inline_patda_ucs2_lower_1((ADUUCETAB *)da_ctx->adf_scb->adf_ucollation,
+			    &src, end, (UCS2**)&sea_ctx->bufend);
+		}
+		else
+		{
+		    da_ctx->eof_offset -= sizeof(UCS2);
+		    src++;
+		}
+	    }
+	    /* Leave bufend pointing correctly & set true end */
+	    sea_ctx->buftrueend = sea_ctx->bufend;
+	}
+	else if (pat_flags & AD_PAT_BIGNORE)
+	{
+	    UCS2 *src, *end;
+	    /*
+	    ** Do we have a leftover part character? If so, prepend to the buffer.
+	    */
+	    src = (UCS2*)sea_ctx->bufend;
+	    sea_ctx->bufend = sea_ctx->buffer;
+	    while (src < (UCS2*)sea_ctx->buftrueend)
+		*(UCS2*)sea_ctx->bufend++ = *src++;
+
+	    /*
+	    ** Data gotten in segment_dv - copy non-spaces into data_dv
+	    */
+	    if (db_stat = adu_lenaddr(da_ctx->adf_scb, da_ctx->segment_dv, &len, (char**)&src))
+		return (db_stat);
+	    end = src + len / sizeof(UCS2);
+	    while (src < end)
+	    {
+		if (*src != U_BLANK && *src != U_NULL)
+		{
+		    *(UCS2*)sea_ctx->bufend++ = *src++;
+		}
+		else
+		{
+		    da_ctx->eof_offset -= sizeof(UCS2);
+		    src++;
+		}
+	    }
+	    /* Leave bufend pointing correctly */
+	    sea_ctx->buftrueend = sea_ctx->bufend;
+	}
     }
     else if (pat_flags & AD_PAT_WO_CASE)
     {
@@ -660,6 +760,8 @@ adu_patda_get(AD_PAT_DA_CTX *da_ctx)
 		    CMtolower(src, sea_ctx->bufend);
 		    CMnext(sea_ctx->bufend);
 		}
+		else
+		    da_ctx->eof_offset--;
 		CMnext(src);
 	    }
 	}
@@ -740,4 +842,285 @@ adu_patda_get(AD_PAT_DA_CTX *da_ctx)
 	sea_ctx->bufend = sea_ctx->buffer + len;
     }
     return db_stat;
+}
+
+/*
+** Name: adu_patda_ucs2_lower_1() - Lower case one UCS2 char (including NFD)
+**	 inline_patda_ucs2_lower_1() - static for inlining
+**
+** Description:
+**      This function recombines any NFD/NFC character and writes out the
+**	lowercased value.
+**
+** Inputs:
+**	cetbl			ADUUCETAB address
+**	*p			Address of buffer to read
+**	e			Address of end of buffer
+**
+** Outputs:
+**	p			Address of pointer to advance
+**	*to			Address of buffer to update
+**	to			Address of pointer to advance
+**
+**	Returns:
+**	    void
+**
+**	Exceptions:
+**	    none
+**
+** History:
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
+*/
+void
+adu_patda_ucs2_lower_1(
+	ADUUCETAB *cetbl,
+	const UCS2 **p,
+	const UCS2 *e,
+	UCS2 **to)
+{
+    inline_patda_ucs2_lower_1(cetbl, p, e, to);
+}
+
+static void
+inline_patda_ucs2_lower_1(
+	ADUUCETAB *cetbl,
+	const UCS2 **p,
+	const UCS2 *e,
+	UCS2 **to)
+{
+    register const UCS2 *cp = *p;
+    UCS2 basechar = *cp++;
+ 
+    if (cetbl[basechar].comb_class == 0)
+    {
+	while (cp < e && cetbl[*cp].comb_class != 0)
+	{
+	    UCS2 combchar = cetbl[basechar].recomb_tab[(*cp >> 8)&0xFF][*cp & 0xFF];
+	    if (combchar == FAIL)
+		break;
+	    basechar = combchar;
+	    cp++;
+	}
+    }
+
+    if (basechar == U_CAPITAL_SIGMA)
+	*(*to)++ = U_SMALL_SIGMA;
+    else if (cetbl[basechar].flags & CE_HASCASE)
+    {
+	ADU_CASEMAP *casemap = cetbl[basechar].casemap;
+	i4 i;
+        for (i = 0; i < casemap->num_lvals; i++)
+	    *(*to)++ = casemap->csvals[i+casemap->num_uvals];
+    }
+    else
+	*(*to)++ = basechar;
+    *p = cp;
+}
+
+/*
+** Name: adu_patda_ucs2_upper_1() - Upper case one UCS2 char (including NFD)
+**
+** Description:
+**      This function recombines any NFD/NFC character and writes out the
+**	uppercased value.
+**
+** Inputs:
+**	cetbl			ADUUCETAB address
+**	*p			Address of buffer to read
+**	e			Address of end of buffer
+**
+** Outputs:
+**	p			Address of pointer to advance
+**	*to			Address of buffer to update
+**	to			Address of pointer to advance
+**
+**	Returns:
+**	    void
+**
+**	Exceptions:
+**	    none
+**
+** History:
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
+*/
+void
+adu_patda_ucs2_upper_1(
+	ADUUCETAB *cetbl,
+	const UCS2 **p,
+	const UCS2 *e,
+	UCS2 **to)
+{
+    register const UCS2 *cp = *p;
+    UCS2 basechar = *cp++;
+ 
+    if (cetbl[basechar].comb_class == 0)
+    {
+	while (cp < e && cetbl[*cp].comb_class != 0)
+	{
+	    UCS2 combchar = cetbl[basechar].recomb_tab[(*cp >> 8)&0xFF][*cp & 0xFF];
+	    if (combchar == FAIL)
+		break;
+	    basechar = combchar;
+	    cp++;
+	}
+    }
+
+    if (basechar == U_SMALL_SIGMA)
+	*(*to)++ = U_CAPITAL_SIGMA;
+    else if (cetbl[basechar].flags & CE_HASCASE)
+    {
+	ADU_CASEMAP *casemap = cetbl[basechar].casemap;
+	i4 i;
+        for (i = 0; i < casemap->num_uvals; i++)
+	    *(*to)++ = casemap->csvals[i+0];
+    }
+    else
+	*(*to)++ = basechar;
+    *p = cp;
+}
+
+/*
+** Name: adu_patda_ucs2_minmax_1() - Derive min & max case forms of 1 char.
+**
+** Description:
+**      This function recombines any NFD/NFC character and writes out the
+**	min and max codepoint values ranges for the given codepoint
+**
+** Inputs:
+**	cetbl			ADUUCETAB address
+**	*p			Address of buffer to read
+**	e			Address of end of buffer
+**
+** Outputs:
+**	p			Address of pointer to advance
+**	*to			Address of buffer to update
+**	to			Address of pointer to advance
+**
+**	Returns:
+**	    void
+**
+**	Exceptions:
+**	    none
+**
+** History:
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
+*/
+void
+adu_patda_ucs2_minmax_1(
+	ADUUCETAB *cetbl,
+	const UCS2 **p,
+	const UCS2 *e,
+	UCS2 **loto,
+	UCS2 **hito)
+{
+    register const UCS2 *cp = *p;
+    UCS2 basechar = *cp++;
+ 
+    if (cetbl[basechar].comb_class == 0)
+    {
+	while (cp < e && cetbl[*cp].comb_class != 0)
+	{
+	    UCS2 combchar = cetbl[basechar].recomb_tab[(*cp >> 8)&0xFF][*cp & 0xFF];
+	    if (combchar == FAIL)
+		break;
+	    basechar = combchar;
+	    cp++;
+	}
+    }
+
+    if (cetbl[basechar].flags & CE_HASCASE)
+    {
+	ADU_CASEMAP *casemap = cetbl[basechar].casemap;
+	i4 i, c = 0;
+	i4 l, ll;
+	i4 h, hl;
+	/* Init min & max to UPPER */
+	l = 0; ll = casemap->num_uvals;
+	h = 0; hl = casemap->num_uvals;
+	/* Point to LOWER */
+	c += casemap->num_uvals;
+	if (!ll)
+	{
+	    /* No UPPER, init to LOWER */
+	    l = h = c;
+	    ll = hl = casemap->num_lvals;
+	}
+	else if (casemap->num_lvals)
+	{
+	    for (i = 0; i < casemap->num_lvals || i < hl || i < ll; i++)
+	    {
+		if (i >= hl ||
+			i < casemap->num_lvals && casemap->csvals[c+i] > casemap->csvals[h+i])
+		{
+		    h = c;
+		    hl = casemap->num_lvals;
+		    break;
+		}
+		else if (i >= casemap->num_lvals ||
+			i < ll && casemap->csvals[c+i] < casemap->csvals[l+i])
+		{
+		    l = c;
+		    ll = casemap->num_lvals;
+		    break;
+		}
+	    }
+	}
+	c += casemap->num_lvals;
+	if (!ll)
+	{
+	    /* Still no UPPER or LOWER, use TITLE */
+	    l = h = c;
+	    ll = hl = casemap->num_tvals;
+	}
+	else if (casemap->num_tvals)
+	{
+	    for (i = 0; i < casemap->num_tvals || i < hl || i < ll; i++)
+	    {
+		if (i >= hl ||
+			i < casemap->num_tvals && casemap->csvals[c+i] > casemap->csvals[h+i])
+		{
+		    h = c;
+		    hl = casemap->num_tvals;
+		    break;
+		}
+		else if (i >= casemap->num_tvals ||
+			i < ll && casemap->csvals[c+i] < casemap->csvals[l+i])
+		{
+		    l = c;
+		    ll = casemap->num_tvals;
+		    break;
+		}
+	    }
+	}
+        for (i = 0; i < ll; i++)
+	{
+	    if (**loto > casemap->csvals[i+l])
+		*(*loto)++ = casemap->csvals[i+l];
+	    else
+		(*loto)++;
+	}
+        for (i = 0; i < hl; i++)
+	{
+	    if (**hito < casemap->csvals[i+h])
+		*(*hito)++ = casemap->csvals[i+h];
+	    else
+		(*hito)++;
+	}
+    }
+    else 
+    {
+	if (**loto > basechar)
+	    *(*loto)++ = basechar;
+	else
+	    (*loto)++;
+	if (**hito < basechar)
+	    *(*hito)++ = basechar;
+	else
+	    (*hito)++;
+    }
+
+    *p = cp;
 }

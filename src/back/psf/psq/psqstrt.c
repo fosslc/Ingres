@@ -199,6 +199,8 @@ i4 psq_startup(
 **	    Pass create-compression to server block
 **	14-Oct-2010 (kschendel) SIR 124544
 **	    Pass result_structure to server block
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for setting installation wide collation defaults.
 */
 DB_STATUS
 psq_startup(
@@ -374,6 +376,12 @@ psq_startup(
     Psf_srvblk->psf_create_compression = psq_cb->psq_create_compression;
     Psf_srvblk->psf_result_struct = psq_cb->psq_result_struct;
     Psf_srvblk->psf_result_compression = psq_cb->psq_result_compression;
+    Psf_srvblk->psf_def_coll = DB_UNSET_COLL;
+    Psf_srvblk->psf_def_unicode_coll = DB_UNSET_COLL;
+    if (psq_cb->psq_def_coll > DB_NOCOLLATION)
+	Psf_srvblk->psf_def_coll = psq_cb->psq_def_coll;
+    if (psq_cb->psq_def_unicode_coll > DB_NOCOLLATION)
+	Psf_srvblk->psf_def_unicode_coll = psq_cb->psq_def_unicode_coll;
     /*
     ** Return the size needed for the session control block.
     */

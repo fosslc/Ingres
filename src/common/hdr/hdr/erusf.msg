@@ -492,6 +492,9 @@ SQLSTATE_MAPPING_REQUIRED
 **	1-Nov-2010 (kschendel) more 124544
 **	    Drop 5977, obsolete quel message.  Drop a few other unused
 **	    messages about long-deleted features such as set cache.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation - E_US1918_6424_COLL_NOT_FOUND
+**	    should not be specific to CREATE/ALTER TABLE.
 */
 
 #define _US_CLASS   0
@@ -9449,17 +9452,18 @@ the error log (errlog.log) for more details. "
 **	statement is done and modify of the table is completed.
 */
 E_US1918_6424_COLL_NOT_FOUND:SS42505_OBJ_NOT_FOUND
-"CREATE/ALTER TABLE: Named collation '%0c' is not defined"
+"Named collation '%0c' is not defined"
 /*%
 ** Parameters:
 **	%0c - collation name
 **
 ** Explanation:
-**	The collation specified in a column definition in the
-**	 "CREATE/ALTER TABLE" statement does not exist.
+**	The collation specified in a column definition in a
+**	CREATE/ALTER TABLE statement or SET SESSION COLLATION does
+**	not exist.
 **
 ** System Status:
-**	The program continues, but the current "CREATE/ALTER TABLE" statement
+**	The program continues, but the current statement
 **	is aborted.
 **
 ** Recommendation:
@@ -9483,8 +9487,8 @@ E_US1919_6425_COLL_NOT_SUPPORTED:SS50000_MISC_ERRORS
 **
 ** Recommendation:
 **	Verify that the collation name was entered correctly; only 
-**	"sql_character", "unicode" and "unicode_case_insensitive" are
-**	supported for column level collations.
+**	"sql_character", "unicode" and "unicode_case_insensitive" and
+**	"ucs_basic" are supported for column level collations.
 */
 E_US191A_6426_COLL_TYPE_ERROR:SS50000_MISC_ERRORS
 "CREATE/ALTER TABLE: Named collation '%0c' can only be used with '%1c' types"

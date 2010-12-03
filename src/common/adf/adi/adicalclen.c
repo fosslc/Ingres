@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986 - 1999,2008 Ingres Corporation
+** Copyright (c) 1986 - 1999,2008,2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -179,6 +179,10 @@
 **      24-Jun-2010 (horda03) B123987
 **          For DATE->STRING if ADF_LONG_DATE_STRINGS specified, then return
 **          the longer length.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. Don't allow UTF8 strings with it
+**	    to use UCS2 CEs for comparison related actions. No need for reducing
+**	    length either due to not using UCS2 for CEs.
 **/
 
 /*
@@ -449,6 +453,7 @@ i4                 *adi_rlen;
 		  case DB_CHR_TYPE:
 		    *adi_rlen = (len1 * DB_MAXUTF8_EXP_FACTOR);
 		    if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			adi_dv1->db_collID != DB_UCS_BASIC_COLL &&
 		        (*adi_rlen > (adf_scb->adf_maxstring/2)))
 		      *adi_rlen = (adf_scb->adf_maxstring/2);
 		    else if (*adi_rlen > (adf_scb->adf_maxstring)) 
@@ -459,6 +464,7 @@ i4                 *adi_rlen;
 		    *adi_rlen = ((len1 - DB_CNTSIZE) * 
 				DB_MAXUTF8_EXP_FACTOR) + DB_CNTSIZE;
 		    if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			adi_dv1->db_collID != DB_UCS_BASIC_COLL &&
 		        (*adi_rlen > (adf_scb->adf_maxstring/2 + DB_CNTSIZE))) 
 		      *adi_rlen = (adf_scb->adf_maxstring/2 + DB_CNTSIZE);
 		    else if (*adi_rlen > (adf_scb->adf_maxstring + DB_CNTSIZE))
@@ -1316,6 +1322,7 @@ DB_DATA_VALUE      *adi_dvr;
 		  case DB_CHR_TYPE:
 		    rlen = (len[0] * DB_MAXUTF8_EXP_FACTOR);
 		    if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			adi_dv[0]->db_collID != DB_UCS_BASIC_COLL &&
 		        (rlen > (adf_scb->adf_maxstring/2)))
 		      rlen = adf_scb->adf_maxstring/2;
 		    else if (rlen > (adf_scb->adf_maxstring))
@@ -1326,6 +1333,7 @@ DB_DATA_VALUE      *adi_dvr;
 		    rlen = ((len[0] - DB_CNTSIZE) 
 				* DB_MAXUTF8_EXP_FACTOR) + DB_CNTSIZE;
 		    if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			adi_dv[0]->db_collID != DB_UCS_BASIC_COLL &&
 		        (rlen > (adf_scb->adf_maxstring/2 + DB_CNTSIZE)))
 		      rlen = (adf_scb->adf_maxstring/2 + DB_CNTSIZE);
 		    else if (rlen > (adf_scb->adf_maxstring + DB_CNTSIZE)) 
@@ -2554,12 +2562,15 @@ DB_DATA_VALUE      *adi_dvr;
 	    slen = (adi_dv[0]->db_datatype > 0) ? adi_dv[0]->db_length :
 		adi_dv[0]->db_length - 1;
 	    if (dt1 == DB_VCH_TYPE || dt1 == DB_TXT_TYPE ||
-			dt1 == DB_NVCHR_TYPE)
+		dt1 == DB_VBYTE_TYPE || dt1 == DB_NVCHR_TYPE)
 		slen -= DB_CNTSIZE;
 
             rprec = 0;
-            /* For UTF8 installs non-unicode types will be coerced and call adu_ucollweight() */
-	    if (dt1 == DB_NCHR_TYPE || dt1 == DB_NVCHR_TYPE || (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED))
+            /* For UTF8 installs non-unicode types will be coerced and call
+	    ** adu_ucollweight() unless DB_UCS_BASIC_COLL */
+	    if (adi_dv[0]->db_collID == DB_UCS_BASIC_COLL)
+		rlen = slen;
+	    else if (dt1 == DB_NCHR_TYPE || dt1 == DB_NVCHR_TYPE || (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED))
 	    {
 		if (adi_dv[0]->db_collID == DB_UNICODE_CASEINSENSITIVE_COLL)
 		    rlen = slen * (MAX_CE_LEVELS-2) * sizeof(u_i2);
@@ -2706,8 +2717,8 @@ DB_DATA_VALUE      *adi_dvr;
     ** b) One operand has collation specification and the other has not.
     */
     if (adi_numops == 2 &&
-        (!(adi_dv[0]->db_collID > DB_NOCOLLATION &&
-          adi_dv[1]->db_collID > DB_NOCOLLATION) ||
+        (adi_dv[0]->db_collID <= DB_NOCOLLATION ||
+          adi_dv[1]->db_collID <= DB_NOCOLLATION ||
           adi_dv[1]->db_collID == adi_dv[0]->db_collID
         )
        )

@@ -78,6 +78,8 @@
 **          Add cases for DB_BOO_TYPE in adc_1klen_rti and adc_2kcvt_rti.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Ensure whole DBV copied.
 **/
 
 
@@ -1304,6 +1306,7 @@ i4		    *adc_buflen)
 
 	str_dv.db_datatype = DB_CHA_TYPE;
 	str_dv.db_prec = 0;
+	str_dv.db_collID = 0;
 	*t++ = (qlang == DB_SQL ? '\'' :'\"');
 	str_dv.db_data = (PTR) t;
 
@@ -1328,6 +1331,7 @@ i4		    *adc_buflen)
 
 	str_dv.db_datatype = DB_CHA_TYPE;
 	str_dv.db_prec = 0;
+	str_dv.db_collID = 0;
 	*t++ = (qlang == DB_SQL ? '\'' :'\"');
 	str_dv.db_data = (PTR) t;
 

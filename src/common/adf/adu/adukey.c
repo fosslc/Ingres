@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -200,6 +200,8 @@
 **	    Ensure key build code can cope with a NULL buffer for
 **	    the key so that datatype specific checks can be made even
 **	    in the absence of a buffer.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
 **/
 
 
@@ -515,6 +517,18 @@ ADC_KEY_BLK	*adc_kblk)
 	db_stat = adu_error(adf_scb, E_AD9999_INTERNAL_ERROR, 0);
     }
 
+    if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+	adc_kblk->adc_kdv.db_collID != DB_UCS_BASIC_COLL)
+    {
+	/* On a UTF8 install let the UTF8 key building routine
+	** handle the key building unless no key available.
+	*/
+	if (adc_kblk->adc_kdv.db_data != NULL)
+	    db_stat = adu_utf8cbldkey( adf_scb, semantics, adc_kblk);
+
+	return db_stat;
+    }
+
     /*
     ** Check for the special case where the data value to build the key from is
     ** an unknown run-time parameter(*) (e.g. repeat queries) and the comparison
@@ -528,17 +542,6 @@ ADC_KEY_BLK	*adc_kblk)
     **            (adc_kblk->adc_kdv.db_data == NULL) then the data value to
     **            build the key from is an unknown run-time parameter
     */
-
-    if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
-    {
-	/* On a UTF8 install let the UTF8 key building routine
-	** handle the key building unless no key available.
-	*/
-	if (adc_kblk->adc_kdv.db_data != NULL)
-	    db_stat = adu_utf8cbldkey( adf_scb, semantics, adc_kblk);
-
-	return db_stat;
-    }
 
     if (dtp == DB_NCHR_TYPE ||
 	dtp == DB_NVCHR_TYPE)

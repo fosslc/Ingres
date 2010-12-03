@@ -571,6 +571,10 @@
 **	    bits moved to dmu indicators..
 **	08-Nov-2010 (kiria01) SIR 124685
 **	    Cleaning up prototypes.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for setting installation wide collation defaults
+**	    and TP PS130 to augment parser to apply default collations to
+**	    columns that didn't specify a collation.
 */
 
 /*
@@ -654,6 +658,7 @@
 */
 #define	    PSS_YACC_SHIFT_REDUCE_TRACE	    0	/* PS128 */
 #define	    PSS_PRINT_QRY_TRACE		    1	/* PS129 */
+#define	    PSS_DEF_COLL_ON_EXISTING	    2	/* PS130 */
 #define	    PSS_TBL_VIEW_GRANT_TRACE	    3	/* PS131 */
 #define	    PSS_REPEAT_QRY_SHARE_TRACE	    4	/* PS132 */
 #define	    PSS_DBPROC_GRNTBL_ACTIVE_TRACE  5	/* PS133 */
@@ -2758,6 +2763,10 @@ i4		    pss_flattening_flags;
 #define		PSS_BATCH_OPTIM_SET	1 /* use optimization (if possible ) */
 #define		PSS_BATCH_OPTIM_UNSET	2 /* do not use optimization */
     struct PST_STK1 *pss_stk_freelist;
+    DB_COLL_ID	pss_def_coll;		/* Default collation for CHAR, VARCHAR, C,
+					** TEXT and LONG VARCHAR */
+    DB_COLL_ID	pss_def_unicode_coll;	/* Default collation for NCHAR, NVARCHAR and
+					** LONG NVARCHAR */
 } PSS_SESBLK;	
 
 /*
@@ -2909,6 +2918,10 @@ typedef struct _PSF_SERVBLK
     bool	    psf_result_compression; /* result structure is compressed */
     bool	    psf_vch_prec;	/* varchar precedence */
     char           *psf_server_class;   /* server_class of server */
+    DB_COLL_ID	    psf_def_coll;	/* Default collation for CHAR, VARCHAR,
+					** C, TEXT and LONG VARCHAR */
+    DB_COLL_ID	    psf_def_unicode_coll; /* Default collation for NCHAR,
+					** NVARCHAR and LONG NVARCHAR */
 } PSF_SERVBLK;
 
 /* Macro to get pointer to session's PSS_SESBLK directly from SCF's SCB */
@@ -4141,9 +4154,9 @@ typedef struct _PSY_VIEWINFO
 
 /* used to keep track of "with null", "not default", "with system_maintained" */
 
-#define PSS_TYPE_NULL		    0x01
-#define PSS_TYPE_NDEFAULT	    0x02
-#define PSS_TYPE_SYS_MAINTAINED	    0x04
+#define PSS_TYPE_NULL		    0x0001
+#define PSS_TYPE_NDEFAULT	    0x0002
+#define PSS_TYPE_SYS_MAINTAINED	    0x0004
 
 /* additional types used to denote "not null", "with default", etc.
 **
@@ -4151,21 +4164,24 @@ typedef struct _PSY_VIEWINFO
 ** defaults in any order and we must prevent conflicting ones from being
 ** defined on the same column.
 */
-#define PSS_TYPE_NOT_NULL	    0x08    /* "not null"              */
-#define PSS_TYPE_NOT_SYS_MAINTAINED 0x10    /* "not system_maintained" */
-#define PSS_TYPE_DEFAULT	    0x20    /* ANY default--INGRES or user */
-#define PSS_TYPE_USER_DEFAULT	    0x40    /* user-defined default    */
+#define PSS_TYPE_NOT_NULL	    0x0008    /* "not null"              */
+#define PSS_TYPE_NOT_SYS_MAINTAINED 0x0010    /* "not system_maintained" */
+#define PSS_TYPE_DEFAULT	    0x0020    /* ANY default--INGRES or user */
+#define PSS_TYPE_USER_DEFAULT	    0x0040    /* user-defined default    */
 
 /* used for identity columns */
 
-#define	PSS_TYPE_GENALWAYS	    0x80    /* "generate always as identity" */
-#define	PSS_TYPE_GENDEFAULT	    0x100   /* "generate by default as identity" */
-#define	PSS_TYPE_NAMED_IDENT	    0x200   /* explicitly named identity seq */
+#define	PSS_TYPE_GENALWAYS	    0x0080    /* "generate always as identity" */
+#define	PSS_TYPE_GENDEFAULT	    0x0100   /* "generate by default as identity" */
+#define	PSS_TYPE_NAMED_IDENT	    0x0200   /* explicitly named identity seq */
+
+/* used for COLLATE */
+#define PSS_TYPE_COLLATE_SEEN	    0x0400
 
 /* used for encryption */
-#define PSS_ENCRYPT		    0x001
-#define PSS_ENCRYPT_SALT	    0x002
-#define PSS_ENCRYPT_CRC		    0x004
+#define PSS_ENCRYPT		    0x0800
+#define PSS_ENCRYPT_SALT	    0x1000
+#define PSS_ENCRYPT_CRC		    0x2000
 
 /*
 ** maximum number of concurrent indexes that can be built 
@@ -5593,6 +5609,7 @@ typedef struct PSS_YYVARS_ {
     PST_QNODE	    *tlist_stack[MAX_NESTING]; /* same depth as from list */
 
     bool            save_seq_ops[MAX_NESTING]; /* set of flags used for seq_op indicators */
+    DB_COLL_ID	    collID;
 }   PSS_YYVARS;
 
 
@@ -6674,7 +6691,8 @@ FUNC_EXTERN i4 psl_cdbp_typedesc(
 	i4 num_len_prec_vals,
 	i4 *len_prec,
 	i4 null_def,
-	PSQ_CB *psq_cb);
+	PSQ_CB *psq_cb,
+	DB_COLL_ID collID);
 FUNC_EXTERN i4 psl_send_setqry(
 	PSS_SESBLK *sess_cb,
 	char *str_2_send,
@@ -7353,6 +7371,10 @@ FUNC_EXTERN bool pst_is_const_bool(
 	bool *bval);
 FUNC_EXTERN void pst_not_bool(
 	PST_QNODE *node);
+FUNC_EXTERN DB_COLL_ID pst_apply_def_collID(
+	PSS_SESBLK *sess_cb,
+	DB_DT_ID dt,
+	DB_COLL_ID collID);
 /* pstnorml.c */
 FUNC_EXTERN i4 pst_node_size(
 	PST_SYMBOL *sym,

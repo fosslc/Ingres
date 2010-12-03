@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /*
@@ -205,6 +205,8 @@
 **          money string constants.
 **	15-Jul-2010 (smeke01) b123950
 **	    Add function adu_norm_date_hash.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation - add adu_patcomp_kbld_uniCE
 */
 
 
@@ -1061,6 +1063,7 @@ FUNC_EXTERN ADU_KEYBLD_FUNC adu_bitbldkey;  /* Create [V]BIT keys */
 
 FUNC_EXTERN ADU_KEYBLD_FUNC adu_patcomp_kbld;  /* Create 'HELEM' PAT keys */
 FUNC_EXTERN ADU_KEYBLD_FUNC adu_patcomp_kbld_uni;  /* Create 'HELEM' PAT keys */
+FUNC_EXTERN ADU_KEYBLD_FUNC adu_patcomp_kbld_uniCE;  /* Create 'HELEM' PAT keys */
 
 FUNC_EXTERN ADU_KEYBLD_FUNC adu_nvchbld_key; /* Routine to build a key for the
                                              ** nchar and nvarchar datatype.

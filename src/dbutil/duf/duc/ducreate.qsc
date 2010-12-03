@@ -757,6 +757,8 @@ static STATUS duc_goodClientList();
 **         we exit.
 **      31-Aug-2010 (maspa05) bug 124328
 **         Added -P flag to pass DBMS password on the command line
+**	19-Nov-2010 (kiria01) SIR 124690
+**	   Default to UCS_BASIC collation for UTF8 catalogs.
 */
 
 main(argc, argv)
@@ -1162,6 +1164,9 @@ char	    *argv[];
                 EXEC SQL EXECUTE IMMEDIATE :sbuffer; 
               }
 	    }
+	    /* For UTF8 db, make catalog collation default to ucs_basic */
+	    if (CMischarset_utf8())
+		EXEC SQL SET SESSION COLLATION ucs_basic;
 
 	    /* Update iidatabase and config file with new access and service. */
 	    {

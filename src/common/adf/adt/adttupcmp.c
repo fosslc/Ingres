@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -463,6 +463,9 @@ i4		    *adt_cmp_result)	/* Place to put cmp result. */
 **	    UTF8 comparison code utilizing unicode comparison.
 **	17-Aug-2007 (gupsh01)
 **	    Fix the UTF8 handling.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. Don't allow UTF8 strings with it
+**	    to use UCS2 CEs for comparison related actions.
 */
 i4
 adt_compare(
@@ -632,20 +635,19 @@ DB_STATUS	    *status)		/* Status from adc_compare */
     {
 	if ( atr_bdt == DB_CHA_TYPE )
 	{
-	    /* Try the turbo compare. */
-	    cur_cmp = MEcmp(d1, d2, atr_len);
+	    /* Try the turbo compare & return directly if equal. */
+	    if (!(cur_cmp = MEcmp(d1, d2, atr_len)))
+		return cur_cmp;
 
-	    /* If not equal and UTF8-enabled ... */
-	    if (cur_cmp && (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED))
+	    /* If not equal and UTF8-enabled but not UCS_BASIC collation */
+	    if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		    atr->collID != DB_UCS_BASIC_COLL)
 		return(adt_utf8comp(adf_scb, atr, atr_bdt, atr_len, 
 							d1, d2, status));
 
-	    /* If neither collation nor doublebyte or if byte-wise equal ... */
-	    if ( !(adf_scb->adf_collation || 
-		   Adf_globs->Adi_status & ADI_DBLBYTE) || cur_cmp == 0)
-	    {
+	    /* If neither collation nor doublebyte the result is known now */
+	    if (!(adf_scb->adf_collation || Adf_globs->Adi_status & ADI_DBLBYTE))
 		return(cur_cmp);
-	    }
 
 	    tc1    = (u_char *) d1;
 	    tc2    = (u_char *) d2;
@@ -671,7 +673,8 @@ DB_STATUS	    *status)		/* Status from adc_compare */
 	    
 		/* If not equal or lengths differ and UTF8-enabled ... */
 		if ((diff || cur_cmp) && 
-			(adf_scb->adf_utf8_flag & AD_UTF8_ENABLED))
+			(adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			atr->collID != DB_UCS_BASIC_COLL)
 		    return(adt_utf8comp(adf_scb, atr, atr_bdt, atr_len, 
 							d1, d2, status));
 
@@ -796,7 +799,8 @@ DB_STATUS	    *status)		/* Status from adc_compare */
 
     if ( atr_bdt == DB_CHR_TYPE )
     {
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		atr->collID != DB_UCS_BASIC_COLL)
 	    return(adt_utf8comp(adf_scb, atr, atr_bdt, atr_len, 
 							d1, d2, status));
 
@@ -810,7 +814,8 @@ DB_STATUS	    *status)		/* Status from adc_compare */
 
     if ( atr_bdt == DB_TXT_TYPE )
     {
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		atr->collID != DB_UCS_BASIC_COLL)
 	    return(adt_utf8comp(adf_scb, atr, atr_bdt, atr_len, 
 							d1, d2, status));
 
@@ -962,13 +967,18 @@ DB_STATUS	    *status)		/* Status from adc_compare */
 **	    Start with an aligned buffer to work with.
 **	12-jul-2008 (gupsh01)
 **	    Fix the size allocated for aligned buffer.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Streamlined code to not use temp buffer for varchar at all
+**	    and to reduce the memory used for text. Text handling
+**	    cannot be switched in the same way due to the text string
+**	    end having different semantics.
 */
 static i4
 adt_utf8comp(
 ADF_CB		    *adf_scb,
 DB_ATTS		    *atr,
-i4		    atr_bdt,
-i2		    atr_len,
+i4		    atr_bdt,		/* Now positive */
+i2		    atr_len,		/* Adjusted for NULL bit */
 char		    *d1,		/* Ptr to 1st value */
 char		    *d2,		/* Ptr to 2nd value */
 DB_STATUS	    *status)		/* Status from adc_compare */
@@ -977,79 +987,103 @@ DB_STATUS	    *status)		/* Status from adc_compare */
     i4			cur_cmp;	/* Result of latest attr cmp */
     DB_DATA_VALUE	dv1;
     DB_DATA_VALUE	dv2;
-    ALIGN_RESTRICT      temp_dv1[2048 / sizeof(ALIGN_RESTRICT)];
-    ALIGN_RESTRICT      temp_dv2[2048 / sizeof(ALIGN_RESTRICT)];
-    char		*dv1data = d1;
-    char		*dv2data = d2;
-    u_char		*tc1, *tc2, *dc1, *dc2;
-    bool		getdv1mem = FALSE;
-    bool		getdv2mem = FALSE;
-    i4			reqlen;
 
-    /* If varchar/text then use the aligned buffer */
-    if ((abs(atr_bdt) == DB_VCH_TYPE) ||
-        (abs(atr_bdt) == DB_TXT_TYPE))
+    /* Setup the common fields */
+    dv1.db_prec = dv2.db_prec = atr->precision;
+    dv1.db_collID = dv2.db_collID = atr->collID;
+
+    /* If text then use the aligned buffer */
+    if (atr_bdt == DB_TXT_TYPE)
     {
-        STATUS		stat;
-	/*
-        ** Check for alignment
-        */
-	reqlen = atr_len + DB_CNTSIZE + sizeof(ALIGN_RESTRICT);
-        if(ME_ALIGN_MACRO((PTR)d1, sizeof(ALIGN_RESTRICT)) !=d1)
+	char	temp_dv1[2048 + sizeof(ALIGN_RESTRICT)];
+	char	temp_dv2[2048 + sizeof(ALIGN_RESTRICT)];
+        STATUS	stat;
+	char	*alloc1 = NULL, *alloc2 = NULL;
+
+	dv1.db_datatype = dv2.db_datatype = (DB_DT_ID)atr_bdt;
+
+	/* Check for alignment */
+        if (ME_ALIGN_MACRO((PTR)d1, sizeof(ALIGN_RESTRICT)) != d1)
 	{
-	  if (reqlen > sizeof(temp_dv1))
-	  {
-	    dv1data = (char *)MEreqmem(0, reqlen, FALSE, &stat);
-	    if ((dv1data == NULL) || (stat != OK))
-	      return (adu_error(adf_scb, E_AD2042_MEMALLOC_FAIL, 2, 0, 
-			(i4) sizeof(stat), (i4 *)&stat));
-            getdv1mem = TRUE;
-	  }
-	  else
-	    dv1data = (char *)&temp_dv1[0];
-	  
-    	  I2ASSIGN_MACRO(((DB_TEXT_STRING *)d1)->db_t_count, 
-			 ((DB_TEXT_STRING *)dv1data)->db_t_count); 
-          tc1 = (u_char *)d1 + DB_CNTSIZE;
-	  dc1 = (u_char *)dv1data + DB_CNTSIZE; 
-	  MEcopy ( tc1, atr_len, dc1);
+	    STATUS stat;
+ 	    i2 len;
+   	    I2ASSIGN_MACRO(((DB_TEXT_STRING *)d1)->db_t_count, len);
+	    len += DB_CNTSIZE;
+	    dv1.db_data = (char *)temp_dv1;
+	    if (len > (i4)(sizeof(temp_dv1)-sizeof(ALIGN_RESTRICT)))
+	    {
+		dv1.db_data = alloc1 = (char *)MEreqmem(0,
+				len+sizeof(ALIGN_RESTRICT), FALSE, &stat);
+		if (dv1.db_data == NULL || stat != OK)
+		    return (adu_error(adf_scb, E_AD2042_MEMALLOC_FAIL, 2, 0, 
+				(i4)sizeof(stat), &stat));
+	    }
+	    dv1.db_data = ME_ALIGN_MACRO(dv1.db_data, sizeof(ALIGN_RESTRICT));
+	    dv1.db_length = len;
+	    MEcopy(d1, len, dv1.db_data);
+	}
+	else
+	{
+	    dv1.db_data = d1;
+	    dv1.db_length = atr_len;
 	}
 
-        if(ME_ALIGN_MACRO((PTR)d2, sizeof(ALIGN_RESTRICT)) !=d2)
+        if (ME_ALIGN_MACRO((PTR)d2, sizeof(ALIGN_RESTRICT)) != d2)
 	{
-	  if (reqlen > sizeof(temp_dv2))
-	  {
-	    dv2data = (char *)MEreqmem(0, reqlen , FALSE, &stat);
-	    if ((dv2data == NULL) || (stat != OK))
-	      return (adu_error(adf_scb, E_AD2042_MEMALLOC_FAIL, 2, 0, 
-			(i4) sizeof(stat), (i4 *)&stat));
-            getdv2mem = TRUE;
-	  }
-	  else
-	    dv2data = (char *)&temp_dv2[0];
-
-    	  I2ASSIGN_MACRO(((DB_TEXT_STRING *)d2)->db_t_count, 
-			 ((DB_TEXT_STRING *)dv2data)->db_t_count); 
-          tc2 = (u_char *)d2 + DB_CNTSIZE;
-	  dc2 = (u_char *)dv2data + DB_CNTSIZE; 
-	  MEcopy ( tc2, atr_len, dc2);
+	    STATUS stat;
+	    i2 len;
+    	    I2ASSIGN_MACRO(((DB_TEXT_STRING *)d2)->db_t_count, len);
+	    len += DB_CNTSIZE;
+	    dv2.db_data = temp_dv2;
+	    if (len > (i4)(sizeof(temp_dv1)-sizeof(ALIGN_RESTRICT)))
+	    {
+		dv2.db_data = alloc2 = (char *)MEreqmem(0,
+				len+sizeof(ALIGN_RESTRICT), FALSE, &stat);
+		if (dv2.db_data == NULL || stat != OK)
+		    return (adu_error(adf_scb, E_AD2042_MEMALLOC_FAIL, 2, 0, 
+				(i4)sizeof(stat), &stat));
+	    }
+	    dv2.db_data = ME_ALIGN_MACRO(dv2.db_data, sizeof(ALIGN_RESTRICT));
+	    dv2.db_length = len;
+	    MEcopy(d2, len, dv2.db_data);
 	}
+	else
+	{
+	    dv2.db_data = d2;
+	    dv2.db_length = atr_len;
+	}
+	*status = adu_nvchr_utf8comp(adf_scb, 0, &dv1, &dv2, &cur_cmp);
+
+	if (alloc1)
+	      MEfree (alloc1);
+	if (alloc2)
+	      MEfree (alloc2);
+    }
+    else
+    {
+	if (atr_bdt == DB_VCH_TYPE)
+	{
+	    /* Make VARCHAR into CHAR for the compare to remove need to
+	    ** handle further misaligned db_t_count instead of copying
+	    ** full buffer */
+	    i2 len;
+	    dv1.db_datatype = dv2.db_datatype = DB_CHA_TYPE;
+	    I2ASSIGN_MACRO(((DB_TEXT_STRING *)d1)->db_t_count, len);
+	    dv1.db_length = len;
+	    dv1.db_data = d1 + DB_CNTSIZE;
+	    I2ASSIGN_MACRO(((DB_TEXT_STRING *)d2)->db_t_count, len);
+	    dv2.db_length = len;
+	    dv2.db_data = d2 + DB_CNTSIZE;
+	}
+	else
+	{
+	    dv1.db_datatype = dv2.db_datatype = (DB_DT_ID)atr_bdt;
+	    dv1.db_length = dv2.db_length = atr_len;
+	    dv1.db_data = d1;
+	    dv2.db_data = d2;
+	}
+	*status = adu_nvchr_utf8comp(adf_scb, 0, &dv1, &dv2, &cur_cmp);
     }
 
-    /* Set up DB_DATA_VALUEs. */
-    dv1.db_datatype = dv2.db_datatype = (DB_DT_ID)atr_bdt;
-    dv1.db_prec = dv2.db_prec = atr->precision;
-    dv1.db_length = dv2.db_length = atr_len;
-    dv1.db_collID = dv2.db_collID = atr->collID;
-    dv1.db_data = dv1data;
-    dv2.db_data = dv2data;
-    *status = adu_nvchr_utf8comp(adf_scb, 0, &dv1, &dv2, &cur_cmp);
-
-    if (getdv1mem && dv1data)
-	  MEfree (dv1data);
-
-    if (getdv2mem && dv2data)
-	  MEfree (dv2data);
-
-    return(cur_cmp);
+    return cur_cmp;
 }

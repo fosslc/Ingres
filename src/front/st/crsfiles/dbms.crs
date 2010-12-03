@@ -1,5 +1,5 @@
 --
---  Copyright (c) 1992, 2008 Ingres Corporation 
+--  Copyright (c) 1992, 2008, 2010 Ingres Corporation 
 --
 --
 --  This file contains the configuration rules for the INGRES/DBMS.
@@ -634,6 +634,9 @@
 --#         string constants.
 --#     11-Nov-2010 (frima01)
 --#         Correct dbms stack size for LP64 builds.
+--#	19-Nov-2010 (kiria01) SIR 124690
+--#	    Add support for UCS_BASIC collation: add .default_collation
+--#	    and .default_unicode_collation
 
 -- location setup resources
 # ifdef UNIX 
@@ -795,8 +798,10 @@ ii.$.dbms.$.cursor_update_mode:	IF ( ii.$.fixed_prefs.iso_entry_sql-92 == ON )
 				ENDIF, VALID = { "DEFERRED", "DIRECT" };
 ii.$.dbms.$.database_limit: 	ii.$.dbms.$.connect_limit + 1, MIN = 10;
 ii.$.dbms.$.database_list:	"";	
+ii.$.dbms.$.default_collation:	"NONE", VALID = { "NONE", "UNICODE", "UNICODE_CASE_INSENSITIVE", "UNICODE_FRENCH", "UCS_BASIC" };
 ii.$.dbms.$.default_journaling:	ON;	
 ii.$.dbms.$.default_page_size:	8192, POWER2, MIN = 2048, MAX = 65536;
+ii.$.dbms.$.default_unicode_collation:	"NONE", VALID = { "NONE", "UNICODE", "UNICODE_CASE_INSENSITIVE", "UNICODE_FRENCH", "UCS_BASIC" };
 ii.$.dbms.$.define_address:	IF ( ii.$.dbms.$.name_service == OFF )
 					ON
 				ELSE

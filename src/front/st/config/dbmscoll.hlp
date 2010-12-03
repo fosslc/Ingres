@@ -1,0 +1,10 @@
+/#-- Copyright (c) 2010 Ingres Corporation
+ The resources default_collation and default_unicode_collation allow for the
+ controlling of what collation should be in effect as a systemwide default
+ when a user does not specify one. The CHAR, VARCHAR, LONG VARCHAR, C and
+ TEXT types are determined by default_collation and default_unicode_collation
+ controls NCHAR, NVARCHAR and LONG NVARCHAR.
+
+  
+
+

@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -2468,6 +2468,8 @@ adu_opz_skip(ADF_CB		*adf_scb,
 **  History:
 **      04-aug-2006 (stial01)
 **         Created.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
 */
 DB_STATUS
 adu_15lvch_position(ADF_CB        *scb,
@@ -2529,7 +2531,8 @@ adu_16lvch_position(ADF_CB        *scb,
     /* FIX ME position nvchr with alternate collations not supported */
     /* FIX ME db_collID is not init here */
     if (bdt2 == DB_LNVCHR_TYPE &&
-     (dv1->db_collID > DB_UNICODE_COLL || dv_lo->db_collID > DB_UNICODE_COLL))
+     (dv1->db_collID > DB_UNICODE_COLL && dv1->db_collID != DB_UCS_BASIC_COLL ||
+	dv_lo->db_collID > DB_UNICODE_COLL && dv_lo->db_collID != DB_UCS_BASIC_COLL))
     {
 	return(adu_error(scb, E_AD2085_LOCATE_NEEDS_STR, 0));
     }
@@ -2816,6 +2819,8 @@ adu_16lvch_position(ADF_CB        *scb,
 **  History:
 **      04-aug-2006 (stial01)
 **         Created.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
 */
 DB_STATUS
 adu_17lvch_position(ADF_CB        *scb,
@@ -2880,7 +2885,8 @@ adu_18lvch_position(ADF_CB        *scb,
     /* FIX ME position nvchr with alternate collations not supported */
     /* FIX ME db_collID is not init here */
     if (bdt1 == DB_LNVCHR_TYPE &&
-       (dv1->db_collID > DB_UNICODE_COLL || dv2->db_collID > DB_UNICODE_COLL))
+       (dv1->db_collID > DB_UNICODE_COLL && dv1->db_collID != DB_UCS_BASIC_COLL ||
+	dv2->db_collID > DB_UNICODE_COLL && dv2->db_collID != DB_UCS_BASIC_COLL))
     {
 	return(adu_error(scb, E_AD2085_LOCATE_NEEDS_STR, 0));
     }
@@ -3931,7 +3937,7 @@ adu_19lvch_chrlen(ADF_CB	*scb,
 	work_dv.db_data = (PTR)work;
 	work_dv.db_length = sizeof(ADP_LO_WKSP) + (2 * DB_MAXTUP);
 	work_dv.db_datatype = work_dv.db_prec = 0;
-	work_dv.db_collID = -1;
+	work_dv.db_collID = DB_NOCOLLATION;
 	
 	if ((inp_cpn->per_length0 != 0) || (inp_cpn->per_length1 != 0))
 	{

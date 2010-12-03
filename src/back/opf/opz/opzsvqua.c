@@ -202,6 +202,9 @@ opz_fclass(
 **	    Allow combinations of TSxx and TMxx to be directly compared, since
 **	    adf allows this without explicit coercion, and uses the same data
 **	    structure within these sets of data types.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add propagation of collID for UCS_BASIC support.
+**
 */
 VOID
 opz_savequal(
@@ -261,7 +264,7 @@ opz_savequal(
 					** description of conversion
 					*/
 	DB_DT_ID               result;  /* target type for function attr */
-
+	DB_COLL_ID		collID;
         eqnode = andnode->pst_left;
 	ltype = abs(eqnode->pst_left->pst_sym.pst_dataval.db_datatype);
 	rtype = abs(eqnode->pst_right->pst_sym.pst_dataval.db_datatype); /* the
@@ -441,6 +444,9 @@ opz_savequal(
                                             ** until it can be determined that
                                             ** this function attribute is
                                             ** useful (see opz_rdatetype) */
+	/* Any L and/or R collIDs will have been combined and set in place
+	** on the eqnode. It just needs propagating. */
+	funcattr->opz_dataval.db_collID = eqnode->pst_sym.pst_dataval.db_collID;
 	/* classify the function attribute operands */
 	funcattr->opz_left.opz_class = opz_fclass( 
 	    eqnode->pst_left->pst_sym.pst_type, 

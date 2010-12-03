@@ -134,13 +134,28 @@ static ADI_OP_ID revops[] = {ADI_NE_OP, -1, -1, -1, -1, -1, ADI_GT_OP,
 ** Note the array is -1 origin.
 */
 static char *collname_array[] = {
-#   define _DEFINE(n,v,t) t,
+#   define _DEFINE(n,v,Ch,Un,t) t,
 #   define _DEFINEEND
 	DB_COLL_MACRO
 #   undef _DEFINEEND
 #   undef _DEFINE
 };
-static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
+
+static const enum {
+    F_NON_UNICODE = 1,
+    F_UNICODE = 2,
+
+    F_Ch_ = 0,
+    F_Un_ = F_Ch_,
+    F_ChY = F_NON_UNICODE,
+    F_UnY = F_UNICODE
+} valid_coll[] = {
+#   define _DEFINE(n,v,Ch,Un,t) F_Ch##Ch | F_Un##Un,
+#   define _DEFINEEND
+	DB_COLL_MACRO
+#   undef _DEFINEEND
+#   undef _DEFINE
+};
 
 /*
 ** the following constants are used to distinguish between ANY, ALL, and SOME
@@ -3649,6 +3664,9 @@ static char	*type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
 **	    a DBproc context - including a DECLARE.
 **	08-Nov-2010 (kiria01) SIR 124685
 **	    Rationalise function prototypes
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Consolidate collID defaulting and the application
+**	    of the 'typedesc' null defaulting.
 */
 %{
 
@@ -3875,7 +3893,8 @@ i4 psl_cdbp_typedesc(
 	i4 num_len_prec_vals,
 	i4 *len_prec,
 	i4 null_def,
-	PSQ_CB *psq_cb);
+	PSQ_CB *psq_cb,
+	DB_COLL_ID collID);
 i4 psl_send_setqry(
 	PSS_SESBLK *sess_cb,
 	char *str_2_send,
@@ -4026,9 +4045,11 @@ static bool psl_seqop_search(
 static bool psl_validate_collation_name(
 	char *collname,
 	DB_COLL_ID *collID);
-static bool psl_validate_collation_mix(
-	i2 collID1,
-	i2 collID2);
+static bool psl_align_collation_mix(
+	PSS_SESBLK *sess_cb,
+	PST_QNODE *left,
+	PST_QNODE *right,
+	DB_ERROR *err_blk);
 i4 psl_collation_check(
 	PSQ_CB *psq_cb,
 	PSS_SESBLK *cb,
@@ -4132,285 +4153,6 @@ static i4 psls_2handle(
 	EX_ARGS *exargs);
 static i4 psls_1handle(
 	EX_ARGS *exargs);
-i4 pslsparse(
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls1iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls2iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls3iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls4iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls5iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls6iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls7iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls8iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls9iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls10iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls11iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls12iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls13iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls14iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls15iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls16iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls17iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls18iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls19iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls20iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls21iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls22iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls23iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls24iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls25iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls26iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls27iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls28iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls29iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls30iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls31iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls32iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls33iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls34iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls35iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls36iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls37iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls38iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls39iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls40iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls41iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls42iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls43iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls44iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls45iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
-i4 psls46iftn(
-	YACC_CB *yacc_cb,
-	i4 yyrule,
-	i4 *yystatusp,
-	PSS_SESBLK *cb,
-	PSQ_CB *psq_cb);
 /*
 **  Forward and/or External function references.
 */
@@ -4420,6 +4162,13 @@ GLOBALREF PSF_SERVBLK *Psf_srvblk;
 /*
 **  Defines of other constants.
 */
+/* dt_class - class lookup array keyed on datatype */
+#define _DEFINEEND
+#define _DEFINE(ty, v, dc, sc, q, qv, s, sv) DB_##dc##_CLASS,
+static const i4 dt_class[] = {DB_DT_ID_MACRO 0};
+#define DT_CLASS(v) (abs(v)>=DB_MAX_TYPE?DB_NONE_CLASS:dt_class[abs(v)])
+#undef _DEFINE
+#undef _DEFINEEND
 
 /* define flags known to psl_fatt() */	    
 					  /* only try to find attribute */
@@ -4545,6 +4294,8 @@ GLOBALREF PSF_SERVBLK *Psf_srvblk;
 %token		    CALLPROC CASCADE CLOSE CLUSTER
 
 %token		    CASE CACHE CAST COALESCE CYCLE
+
+%token		    COLLATION
 
 /*
 ** A colon character: :
@@ -5138,7 +4889,7 @@ GLOBALREF PSF_SERVBLK *Psf_srvblk;
 %type	<psl_inttype> timeofday distinct int2_int4 int2_int4_p
 %type	<psl_inttype> ras_ev_with comment_obj
 %type	<psl_inttype> on_or_off isolation_level access_mode
-%type	<psl_inttype> aseqopwd oseqopwd collate
+%type	<psl_inttype> aseqopwd oseqopwd collate opt_collate
 %type	<psl_strtype> strsetparam tname typedesc cdbp_label crname
 %type	<psl_strtype> strconst strconst_e cdbp_lhs_var name_or_sconst corr_name
 %type	<psl_strtype> corr_name1 dt_wquals prep_from
@@ -9452,26 +9203,7 @@ tbl_elem:           newcolname typedesc
 
 type_qual_list:      /* empty */
     {
-	/* nothing specified implies ->
-	** 	with null <no default> not system_maintained
-	** schang : RMS gateway dictates that nothing implies
-	**	    not null with default
-	**	PROBLEM : for other gateways that want to comply
-	**	    with INGRES rules, we have to defer the this flag
-	**	    setting actuntil we know what kind of gateway we
-	**	    are using.
-        ** schang :  the fips constraint project makes it possible to
-        **      use the following flag for RMS GW
-	*/
-	if (psq_cb->psq_mode == PSQ_REG_IMPORT)
-	    $$ = (PSS_TYPE_DEFAULT | PSS_TYPE_NOT_NULL);
-	else
-	    $$ = PSS_TYPE_NULL;   /* don't want PSS_TYPE_DEFAULT here
-                                  ** because WITH NULL implies a default of NULL
-                                  ** and the new PSS_TYPE_DEFAULT implies a
-                                  ** default of 0 or blank depending on
-                                  ** the datatype   (rjb  10/11/92)
-                                  */
+	$$ = 0;
     }
           |	    type_qual_list1
 ;
@@ -9533,6 +9265,13 @@ type_qual:	    default
 
 	$Ydone_identity = TRUE;
 	$Yinconstraint = FALSE;
+    }
+	  |	collate
+    {
+	if ($1 != DB_UNSET_COLL)
+	    $YcollID = $1;
+	$Yinconstraint = FALSE;
+	$$ = PSS_TYPE_COLLATE_SEEN;
     }
 ;
 
@@ -10790,7 +10529,7 @@ newcolname:	    col_spec
     }
 ;
 
-typedesc:          tname type_qual_list collate encrypt_spec
+typedesc:          tname type_qual_list encrypt_spec
     {
 	DB_STATUS		status;
 
@@ -10807,14 +10546,14 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	}
 
 	status = psl_ct14_typedesc(cb, $1, 0, (i4 *) NULL, $2, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, $3, $4);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, $YcollID, $3);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
 	}
 	$$ = $1;
     }
-	|         tname LPAREN intconst_e RPAREN type_qual_list collate encrypt_spec
+	|         tname LPAREN intconst_e RPAREN type_qual_list encrypt_spec
     {
 	DB_STATUS               status;
 	i4			len = $3;
@@ -10829,7 +10568,7 @@ typedesc:          tname type_qual_list collate encrypt_spec
 		return (E_DB_ERROR);
 	}
 	status = psl_ct14_typedesc(cb, $1, 1, &len, $5, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, $6, $7);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, $YcollID, $6);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -10853,7 +10592,7 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	parms[0] = $3;
 	parms[1] = $5;
 	status = psl_ct14_typedesc(cb, $1, 2, parms, $7, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, $8);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, DB_UNSET_COLL, $8);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -10907,7 +10646,7 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	}
 
 	status = psl_ct14_typedesc(cb, value, 0, (i4 *) NULL, $4, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, $5);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, DB_UNSET_COLL, $5);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -10940,7 +10679,7 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	}
 
 	status = psl_ct14_typedesc(cb, value, 0, (i4 *) NULL, $4, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, $5);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, DB_UNSET_COLL, $5);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -10974,7 +10713,7 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	}
 
 	status = psl_ct14_typedesc(cb, value, 1, &len, $7,
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, $8);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, DB_UNSET_COLL, $8);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -11007,7 +10746,7 @@ typedesc:          tname type_qual_list collate encrypt_spec
 	}
 
 	status = psl_ct14_typedesc(cb, value, 1, &len, $7, 
-			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, -1, $8);
+			$Ydefault_node, $Ydefault_text, $Yseqp, psq_cb, DB_UNSET_COLL, $8);
 	if (DB_FAILURE_MACRO(status))
 	{
 	    return(status);
@@ -11032,6 +10771,7 @@ dt_wquals	: WTIME
 
 tname:		NAME
     {
+	$YcollID = DB_UNSET_COLL;
 	$$ = $1;
     }
 	|	NAME NAME
@@ -11044,6 +10784,7 @@ tname:		NAME
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
+	$YcollID = DB_UNSET_COLL;
 	$$ = value;
     }
 	|	INTERVAL NAME
@@ -11056,6 +10797,7 @@ tname:		NAME
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
+	$YcollID = DB_UNSET_COLL;
 	$$ = value;
     }
 	|      NAME NAME NAME
@@ -11067,6 +10809,7 @@ tname:		NAME
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
+	$YcollID = DB_UNSET_COLL;
 	$$ = value;
     }
 	|      NAME NAME NAME NAME
@@ -11083,15 +10826,21 @@ tname:		NAME
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 
+	$YcollID = DB_UNSET_COLL;
 	$$ = value;
     }
 ;
 
-collate:		/* empty */
+opt_collate:		/* empty */
     {
-	$$ = -1;
+	$$ = DB_UNSET_COLL;
     }
-	    |	    COLLATE generic_ident
+	    |	    collate
+    {
+	$$ = $1;
+    }
+;
+collate:    COLLATE generic_ident
     {
 	DB_COLL_ID collID;
 
@@ -13463,7 +13212,7 @@ cdbp_typedesc:	    tname type_qual_list
 	DB_STATUS		    status;
 
 	status = psl_cdbp_typedesc(cb, $Ydbpinfo, $1, 0, (i4 *) NULL, $2,
-	    psq_cb);
+	    psq_cb, $YcollID);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -13472,7 +13221,7 @@ cdbp_typedesc:	    tname type_qual_list
 	DB_STATUS		    status;
 
 	status = psl_cdbp_typedesc(cb, $Ydbpinfo, $1, 1, (i4 *) &$3, $5,
-	    psq_cb);
+	    psq_cb, $YcollID);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -13484,7 +13233,7 @@ cdbp_typedesc:	    tname type_qual_list
 	parms[0] = $3;
 	parms[1] = $5;
 
-	status = psl_cdbp_typedesc(cb, $Ydbpinfo, $1, 2, parms, $7, psq_cb);
+	status = psl_cdbp_typedesc(cb, $Ydbpinfo, $1, 2, parms, $7, psq_cb, DB_UNSET_COLL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -13499,7 +13248,7 @@ cdbp_typedesc:	    tname type_qual_list
 	    return(status);
 
 	status = psl_cdbp_typedesc(cb, $Ydbpinfo, value, 0, (i4 *) NULL,
-	    $4, psq_cb);
+	    $4, psq_cb, DB_UNSET_COLL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -13514,7 +13263,7 @@ cdbp_typedesc:	    tname type_qual_list
 	    return(status);
 
 	status = psl_cdbp_typedesc(cb, $Ydbpinfo, value, 0, (i4 *) NULL,
-	    $4, psq_cb);
+	    $4, psq_cb, DB_UNSET_COLL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -13530,7 +13279,7 @@ cdbp_typedesc:	    tname type_qual_list
             return(status);
 
         status = psl_cdbp_typedesc(cb, $Ydbpinfo, value, 1, &len,
-            $7, psq_cb);
+            $7, psq_cb, DB_UNSET_COLL);
         if (DB_FAILURE_MACRO(status))
             return(status);
     }
@@ -13545,7 +13294,7 @@ cdbp_typedesc:	    tname type_qual_list
 	    return(status);
 
 	status = psl_cdbp_typedesc(cb, $Ydbpinfo, value, 1, (i4 *) &$3, $7,
-	    psq_cb);
+	    psq_cb, DB_UNSET_COLL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -29371,6 +29120,11 @@ subselect:	    select first_n distinct target_spec into_clause from
 	    /* Normalise for comparisons */
 	    if (status = pst_qtree_norm(&stk, &resdomnode->pst_right, psq_cb))
 		return status;
+	    resdomnode->pst_sym.pst_dataval.db_collID =
+	    resdomnode->pst_right->pst_sym.pst_dataval.db_collID =
+		pst_apply_def_collID(cb,
+			resdomnode->pst_right->pst_sym.pst_dataval.db_datatype,
+			resdomnode->pst_right->pst_sym.pst_dataval.db_collID);
 	}
 
 	/* other semantic checking. */
@@ -31997,7 +31751,7 @@ natural_join:	    from_list_item NATURAL join_type from_list_item
 			oper->pst_right = var2;
 			pst_node_flags |= PSS_TYPERES_ONLY;
 		    }
-			
+
 		    /* store join_id in the EQUAL node */
 		    op_node.pst_joinid = join_info->join_id;
 		    pst_node_flags |= PSS_JOINID_PRESET;
@@ -34204,8 +33958,7 @@ predicate:		select_expr comparison select_expr
 	}
 
 	/* Verify collation compatibility between 1st and 2nd/3rd exprs. */
-	if (!(psl_validate_collation_mix($1->pst_sym.pst_dataval.db_collID,
-	    $4->pst_sym.pst_dataval.db_collID)))
+	if (!psl_align_collation_mix(cb, $1, $4, &psq_cb->psq_error))
 	{
 	    /* Collation conflict. */
 	    i4	err_code;
@@ -34213,8 +33966,7 @@ predicate:		select_expr comparison select_expr
 		&psq_cb->psq_error, 0);
 	    return (E_DB_ERROR);
 	}
-	else if (!(psl_validate_collation_mix($1->pst_sym.pst_dataval.db_collID,
-	    $6->pst_sym.pst_dataval.db_collID)))
+	else if (!psl_align_collation_mix(cb, $1, $6, &psq_cb->psq_error))
 	{
 	    /* Collation conflict. */
 	    i4	err_code;
@@ -34769,8 +34521,7 @@ predicate:		select_expr comparison select_expr
 	     valnode = valnode->pss_next)
 	{
 	    /* First check for collation conflicts. */
-	    if (!(psl_validate_collation_mix($1->pst_sym.pst_dataval.db_collID,
-		valnode->pss_expr->pst_sym.pst_dataval.db_collID)))
+	    if (!psl_align_collation_mix(cb, $1, valnode->pss_expr, &psq_cb->psq_error))
 	    {
 		i4	err_code;
 		(VOID) psf_error(6427L, 0L, PSF_USERERR, &err_code, 
@@ -35164,9 +34915,10 @@ predicate:		select_expr comparison select_expr
 	    opid = ADI_LIKE_OP;
 	$4->pat_flags |= $2;
 
-	status = psl_simple_compare(cb, $1, $3, opid,
-	    $4->pat_flags, $4->esc, &treeinfo,
-	    (bool)$Yin_target_clause, psq_cb);
+	if (status = psl_simple_compare(cb, $1, $3, opid,
+		$4->pat_flags, $4->esc, &treeinfo,
+		(bool)$Yin_target_clause, psq_cb))
+	    return status;
 
 	/* Distributed form - don't expose to PATCOMP as
 	** Star has no way to format the constant pattern
@@ -35262,11 +35014,6 @@ arith_term:		arith_factor
 	opnode.pst_opno = $2;
 	opnode.pst_opmeta = PST_NOMETA;
 	opnode.pst_pat_flags = AD_PAT_DOESNT_APPLY;
-
-	if ($1->pst_sym.pst_type == PST_SUBSEL)
-	    opnode.pst_opmeta = PST_CARD_01L;
-	if ($3->pst_sym.pst_type == PST_SUBSEL)
-	    opnode.pst_opmeta = PST_CARD_01R;
 
 	status = pst_node(cb, &cb->pss_ostream, $1, $3,
 	    PST_BOP, (char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0, (i4) 0,
@@ -37247,11 +36994,10 @@ case_function:		CASE case_body END
 	if (status != E_DB_OK) return (status);
 
 	/* Set up "=" comparison between v1 (copy) and v2. */
-	status = psl_simple_compare(cb, srcecopy, $5,
+	if (status = psl_simple_compare(cb, srcecopy, $5,
 		ADI_EQ_OP, (u_i4)AD_PAT_DOESNT_APPLY, (UCS2)0, &treeinfo, 
-		(bool)$Yin_target_clause, psq_cb);
-
-	if (status != E_DB_OK) return (status);
+		(bool)$Yin_target_clause, psq_cb))
+	    return (status);
 
 	/* NULL constant node */
 	db_data.db_datatype = -DB_LTXT_TYPE;
@@ -38127,6 +37873,8 @@ cast_expr:		CAST LPAREN sel_expr_or_null as_or_comma cast_type RPAREN
 		return (status);
 	    }
 
+	    newnode->pst_sym.pst_dataval.db_collID = $Ydb_pdata.db_collID;
+
 	    /* We've parsed the datatype, tell typeres to leave it alone */
 	    newnode->pst_sym.pst_value.pst_s_op.pst_flags |= PST_CAST;
 
@@ -38150,7 +37898,7 @@ as_or_comma:		AS
 		|	COMMA
 ;
 
-cast_type:		tname collate
+cast_type:		tname opt_collate
     {
 	DB_STATUS	status;
 	i4		err_code;
@@ -38169,7 +37917,7 @@ cast_type:		tname collate
 	    return(E_DB_ERROR);
 	}
 
-	if ($2 >= 0)
+	if ($2 > DB_NOCOLLATION)
 	{
 	    status = psl_collation_check(psq_cb, cb, &$Ydb_pdata, $2);
 	    if (DB_FAILURE_MACRO(status))
@@ -38178,11 +37926,11 @@ cast_type:		tname collate
 	    }
 	}
 
-	$Ydb_pdata.db_collID = $2;
+	$Ydb_pdata.db_collID = pst_apply_def_collID(cb, $Ydb_pdata.db_datatype, $2);
 	$Ycast_length = 0;
 	$$ = &$Ydb_pdata;
     }
-		|	tname LPAREN intconst_e RPAREN collate
+		|	tname LPAREN intconst_e RPAREN opt_collate
     {
 	DB_STATUS	status;
 	i4		err_code;
@@ -38199,7 +37947,7 @@ cast_type:		tname collate
 	    return(E_DB_ERROR);
 	}
 
-	if ($5 >= 0)
+	if ($5 > DB_NOCOLLATION)
 	{
 	    status = psl_collation_check(psq_cb, cb, &$Ydb_pdata, $5);
 	    if (DB_FAILURE_MACRO(status))
@@ -38208,7 +37956,7 @@ cast_type:		tname collate
 	    }
 	}
 
-	$Ydb_pdata.db_collID = $5;
+	$Ydb_pdata.db_collID = pst_apply_def_collID(cb, $Ydb_pdata.db_datatype, $5);
 	/* Save user specified length qualifier. If .db_prec has been
 	** set from DECIMAL, FLOAT or one of the TIM/TIMESTAMPs then use it. */
 	$Ycast_length = $Ydb_pdata.db_prec
@@ -41851,6 +41599,38 @@ setsessopt:	ADD PRIVILEGES LPAREN usr_priv_list RPAREN
 	    (VOID) psf_error(5923L, 0L, PSF_USERERR, &err_code, 
 		    &psq_cb->psq_error, 0);
 	    return (E_DB_ERROR);
+	}
+    }
+	| COLLATION generic_ident
+    {
+	DB_COLL_ID collID;
+	if (!psl_validate_collation_name($2, &collID))
+	{
+	    /* report error in collation name. */
+	    i4	    err_code;
+
+	    (VOID) psf_error(6424L, 0L, PSF_USERERR,
+		&err_code, &psq_cb->psq_error, 1,
+		(i4) STtrmwhite($2), $2);
+	    return (E_DB_ERROR);
+	}
+	if (collID <= DB_NOCOLLATION)
+	    collID = DB_UNSET_COLL;
+	if (collID <= DB_NOCOLLATION ||
+	    (valid_coll[collID] & F_UNICODE) &&
+	    ((valid_coll[collID] & F_NON_UNICODE) ||
+		CMischarset_utf8()))
+	{
+	    cb->pss_def_unicode_coll = collID;
+	    cb->pss_def_coll = collID;
+	}
+	else if (valid_coll[collID] & F_UNICODE)
+	{
+	    cb->pss_def_unicode_coll = collID;
+	}
+	else if (valid_coll[collID] & F_NON_UNICODE)
+	{
+	    cb->pss_def_coll = collID;
 	}
     }
 	| access_mode
@@ -52725,6 +52505,15 @@ psl_simple_compare(
 	}
     }
 
+    if (operand1 &&
+	operand2 &&
+	!psl_align_collation_mix(sess_cb, operand1, operand2, &psq_cb->psq_error))
+    {
+	i4	err_code;
+	(VOID) psf_error(6427L, 0L, PSF_USERERR, &err_code, err_blk, 0);
+	return (E_DB_ERROR);
+    }
+
     status = pst_node(sess_cb, &sess_cb->pss_ostream, operand1, operand2,
 	(operand2 == (PST_QNODE *) NULL) ? PST_UOP : PST_BOP,
 	(char *) &opnode, sizeof(opnode), DB_NODT, (i2) 0, (i4) 0,
@@ -52733,15 +52522,6 @@ psl_simple_compare(
     if (DB_FAILURE_MACRO(status))
     {
 	return (status);
-    }
-
-    if (operand1 != (PST_QNODE *) NULL && operand2 != (PST_QNODE *) NULL &&
-	!(psl_validate_collation_mix(operand1->pst_sym.pst_dataval.db_collID,
-	operand2->pst_sym.pst_dataval.db_collID)))
-    {
-	i4	err_code;
-	(VOID) psf_error(6427L, 0L, PSF_USERERR, &err_code, err_blk, 0);
-	return (E_DB_ERROR);
     }
 
     (*treeinfo)->pss_mask = (i4) 0;
@@ -52939,6 +52719,13 @@ psl_subsel_compare(
     */
     if (expr != NULL)	    /* will be true except for the EXISTS predicate */
     {
+	if (!psl_align_collation_mix(sess_cb, expr, subsel, &psq_cb->psq_error))
+	{
+	    i4	err_code;
+	    (VOID) psf_error(6427L, 0L, PSF_USERERR, &err_code, &psq_cb->psq_error, 0);
+	    return (E_DB_ERROR);
+	}
+
 	status = pst_node(sess_cb, &sess_cb->pss_ostream,
 			expr, subsel,
 			PST_BOP,
@@ -53939,7 +53726,8 @@ psl_cdbp_typedesc(
 	i4		num_len_prec_vals,
 	i4		*len_prec,
 	i4		null_def,
-	PSQ_CB		*psq_cb)
+	PSQ_CB		*psq_cb,
+	DB_COLL_ID	collID)
 {
     ADF_CB		*adf_scb = (ADF_CB *) sess_cb->pss_adfcb;
     DB_STATUS		status;
@@ -53948,6 +53736,31 @@ psl_cdbp_typedesc(
     i4			adi_flags = 0;
     bool		ansidtchk = FALSE;
 
+    /* Any type_qual_list elements that might be present but not affecting
+    ** nullablity may have been specified on their own. We need to ignore
+    ** these so that we may apply the default nullability flags if needed.
+    ** This used to be done in the empty production in type_qual_list */
+    if ((null_def & ~(PSS_TYPE_COLLATE_SEEN)) == 0)
+    {
+	/* Nothing specified implies ->
+	** 	WITH NULL <no default> NOT SYSTEM_MAINTAINED */
+	null_def |= PSS_TYPE_NULL;
+	/* RMS gateway dictates that nothing implies
+	**	    NOT NULL WITH DEFAULT
+	** PROBLEM : for other gateways that want to comply
+	**	    with INGRES rules, we have to defer the this flag
+	**	    setting actuntil we know what kind of gateway we
+	**	    are using.
+	** NOTE: we don't want PSS_TYPE_DEFAULT here in the general
+	** case because WITH NULL implies a default of NULL and the
+	** PSS_TYPE_DEFAULT implies a default of 0 or blank depending
+	** on the datatype */
+	if (psq_cb->psq_mode == PSQ_REG_IMPORT)
+	    null_def |= PSS_TYPE_DEFAULT;
+    }
+
+    /* Remove any flags that don't affect nullability */
+    null_def &= ~(PSS_TYPE_COLLATE_SEEN);
     /*
     ** make sure that the nullability/defaultability specification, if 
     ** explicitly provided by the user, is valid.  It must be one of
@@ -54029,13 +53842,21 @@ psl_cdbp_typedesc(
 
         return(E_DB_ERROR);
     }
+    if (collID > DB_NOCOLLATION)
+    {
+	status = psl_collation_check(psq_cb, sess_cb, &dt_dv, collID);
+	if (status != E_DB_OK)
+	    return status;
+    }
 
     dbpinfo->pss_curvar->pss_dbdata.db_data     = (PTR) NULL;
     dbpinfo->pss_curvar->pss_dbdata.db_prec     = dt_dv.db_prec;
-    dbpinfo->pss_curvar->pss_dbdata.db_collID   = dt_dv.db_collID;
+    dbpinfo->pss_curvar->pss_dbdata.db_collID   =
+		pst_apply_def_collID(sess_cb, dt_dv.db_datatype, collID);
     dbpinfo->pss_curvar->pss_dbdata.db_length   = dt_dv.db_length;
     dbpinfo->pss_curvar->pss_dbdata.db_datatype = dt_dv.db_datatype;
     dbpinfo->pss_curvar->pss_default = 0;
+
 
     /* Set up defaultibility; this really indicates
     ** whether adc_getempty is to be called.
@@ -57569,7 +57390,7 @@ psl_validate_collation_name(
     i4		i;
 
     /* Loop over valid collation name array looking for match. */
-    for (i = DB_NOCOLLATION+1; i < DB_COLL_LIMIT; i++)
+    for (i = DB_NOCOLLATION; i < DB_COLL_LIMIT; i++)
     {
 	if (STbcompare(collname, 0, collname_array[i+1], 0, TRUE) == 0)
 	{
@@ -57582,8 +57403,8 @@ psl_validate_collation_name(
 }
 
 /*
-** Name: psl_validate_collation_mix - verify that binary operation 
-**	doesn't involve incompatible collations
+** Name: psl_align_collation_mix - verify that binary operation 
+**	doesn't involve incompatible collations and align where needed
 **
 ** Description:
 **	non-explicit collation and explicit collation are ok, as are
@@ -57591,8 +57412,9 @@ psl_validate_collation_name(
 **	the rest are verboten.
 **
 ** Input:
-**	collID1		operand1 collation ID
-**	collID2		operand2 collation ID
+**	sess_cb		session cb
+**	left		pointer to lhs operand pointer
+**	right		pointer to rhs operand pointer
 **
 ** Output:
 **
@@ -57608,21 +57430,88 @@ psl_validate_collation_name(
 **	    Written for column level collation support.
 */
 static bool
-psl_validate_collation_mix(
-	i2	collID1,
-	i2	collID2)
+psl_align_collation_mix(
+	PSS_SESBLK	*sess_cb,
+	PST_QNODE	*left,
+	PST_QNODE	*right,
+	DB_ERROR	*err_blk)
 
 {
+    DB_COLL_ID collIDl = left->pst_sym.pst_dataval.db_collID;
+    DB_COLL_ID collIDr = right->pst_sym.pst_dataval.db_collID;
 
+    if (ult_check_macro(&sess_cb->pss_trace, PSS_DEF_COLL_ON_EXISTING, NULL, NULL) &&
+	collIDl <= DB_NOCOLLATION && collIDr <= DB_NOCOLLATION &&
+	(sess_cb->pss_def_coll > DB_NOCOLLATION ||
+	sess_cb->pss_def_unicode_coll > DB_NOCOLLATION))
+    {
+	enum DB_DC_ID_enum l_dc = DT_CLASS(left->pst_sym.pst_dataval.db_datatype);
+	enum DB_DC_ID_enum r_dc = DT_CLASS(right->pst_sym.pst_dataval.db_datatype);
+	if (sess_cb->pss_def_coll > DB_NOCOLLATION &&
+	    (l_dc == DB_CHAR_CLASS || l_dc == DB_C_CLASS) &&
+	    (r_dc == DB_CHAR_CLASS || r_dc == DB_C_CLASS))
+	{
+	    left->pst_sym.pst_dataval.db_collID = sess_cb->pss_def_coll;
+	    right->pst_sym.pst_dataval.db_collID = sess_cb->pss_def_coll;
+	    return TRUE;
+	}
+	if (sess_cb->pss_def_unicode_coll > DB_NOCOLLATION)
+	{
+	    if (l_dc == DB_NCHAR_CLASS)
+		left->pst_sym.pst_dataval.db_collID = sess_cb->pss_def_unicode_coll;
+	    if (r_dc == DB_NCHAR_CLASS)
+		right->pst_sym.pst_dataval.db_collID = sess_cb->pss_def_unicode_coll;
+	    return TRUE;
+	}
+    }
     /* Not much to it - just check for mixed non-default collations. */
 
-    if (collID1 > 0 && collID2 > 0 && collID1 != collID2 && 
-	!((collID1 == DB_UNICODE_COLL ||
-	collID1 == DB_UNICODE_CASEINSENSITIVE_COLL) && 
-	(collID2 == DB_UNICODE_COLL || collID2 == DB_UNICODE_CASEINSENSITIVE_COLL)))
-	return(FALSE);
-
-    return(TRUE);
+    if (collIDl == collIDr)
+	return TRUE;
+    else if (collIDl > DB_NOCOLLATION && collIDr > DB_NOCOLLATION &&
+	    /* Both set - must match or be compatible */
+	    (collIDl != DB_UNICODE_COLL || collIDr != DB_UNICODE_CASEINSENSITIVE_COLL) &&
+	    (collIDr != DB_UNICODE_COLL || collIDl != DB_UNICODE_CASEINSENSITIVE_COLL))
+	return FALSE;
+    else if (collIDl > DB_NOCOLLATION)
+    {
+	/* Need to make the rhs match collation. If this cannot be done directly then
+	** an explicit cast may be needed */
+	i4 valid_fl = valid_coll[collIDl];
+	enum DB_DC_ID_enum r_dc = DT_CLASS(right->pst_sym.pst_dataval.db_datatype);
+	if ((r_dc == DB_CHAR_CLASS || r_dc == DB_C_CLASS) &&
+		    !CMischarset_utf8() && (valid_fl & F_NON_UNICODE) ||
+	    ((r_dc == DB_CHAR_CLASS || r_dc == DB_C_CLASS) &&
+		    CMischarset_utf8() ||
+	     r_dc == DB_NCHAR_CLASS) && (valid_fl & F_UNICODE))
+	{
+	    right->pst_sym.pst_dataval.db_collID = collIDl;
+	}
+	else
+	{
+	    left->pst_sym.pst_dataval.db_collID = DB_UNSET_COLL;
+	}
+    }
+    else if (collIDr > DB_NOCOLLATION)
+    {
+	/* Need to make the lhs match collation. If this cannot be done directly then
+	** an explicit cast may be needed */
+	i4 valid_fl = valid_coll[collIDr];
+	enum DB_DC_ID_enum l_dc = DT_CLASS(left->pst_sym.pst_dataval.db_datatype);
+	if ((l_dc == DB_CHAR_CLASS || l_dc == DB_C_CLASS) &&
+		    !CMischarset_utf8() && (valid_fl & F_NON_UNICODE) ||
+	    ((l_dc == DB_CHAR_CLASS || l_dc == DB_C_CLASS) &&
+		    CMischarset_utf8() ||
+	     l_dc == DB_NCHAR_CLASS) && (valid_fl & F_UNICODE))
+	{
+	    left->pst_sym.pst_dataval.db_collID = collIDr;
+	}
+	else
+	{
+	    right->pst_sym.pst_dataval.db_collID = DB_UNSET_COLL;
+	}
+    }
+    return TRUE;
 }
 
 /*
@@ -57668,28 +57557,31 @@ psl_collation_check(
     case DB_CHR_TYPE:
     case DB_VCH_TYPE:
     case DB_TXT_TYPE:
+    case DB_LVCH_TYPE:
 	if (!CMischarset_utf8())
 	{
-	    if (collID == DB_UNICODE_FRENCH_COLL ||
-		   collID <= DB_UNICODE_CASEINSENSITIVE_COLL)
+	    if ((valid_coll[collID+1] & F_NON_UNICODE) == 0)
 		invalid_col = TRUE;
 	    break;
 	}
 	/* UTF8 - FALLTHROUGH*/
     case DB_NCHR_TYPE:
     case DB_NVCHR_TYPE:
-	if (collID >= DB_MULTI_COLL && 
-		    collID != DB_UNICODE_FRENCH_COLL)
-	    invalid_col = TRUE; 
+    case DB_LNVCHR_TYPE:
+	if ((valid_coll[collID+1] & F_UNICODE) == 0)
+	    invalid_col = TRUE;
 	break;
+    default:
+	invalid_col = TRUE;
     }
 
     if (invalid_col)
     {
-	i2	tcode;
+	static char *type_array[] = {"NCHAR, NVARCHAR", "CHAR, VARCHAR, C, TXT"};
+	i2 tcode = 0;
 
-	tcode = (collID <= DB_UNICODE_CASEINSENSITIVE_COLL ||
-		 collID == DB_UNICODE_FRENCH_COLL) ? 0 : 1;
+	if ((valid_coll[collID+1] & F_UNICODE) == 0)
+	    tcode = 1;
 	(VOID) psf_error(6426L, 0L, PSF_USERERR,
 	    &err_code, &psq_cb->psq_error, 2,
 	    STlength(collname_array[collID+1]),
@@ -57698,8 +57590,8 @@ psl_collation_check(
 	return (E_DB_ERROR);
     }
 
-    if (collID >= DB_MULTI_COLL && 
-	collID != DB_UNICODE_FRENCH_COLL)
+    if (collID == DB_MULTI_COLL ||
+	collID == DB_SPANISH_COLL)
     {
 	(VOID) psf_error(6425L, 0L, PSF_USERERR,
 	    &err_code, &psq_cb->psq_error, 1,
@@ -58756,7 +58648,8 @@ psl_patcomp(
 	    break;
         
 	case DB_CHA_TYPE:
-	    if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	    if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		    l->pst_sym.pst_dataval.db_collID != DB_UCS_BASIC_COLL)
 		goto uses_utf8;
 	    /* CHAR LHS - cast to CHAR to keep trailing spaces in pat */
 	    castl = l; /* lhs needs no conversion */
@@ -58788,7 +58681,8 @@ psl_patcomp(
 	case DB_DEC_TYPE:
 	case DB_FLT_TYPE:
 	case DB_MNY_TYPE:
-	    if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	    if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED &&
+		    l->pst_sym.pst_dataval.db_collID != DB_UCS_BASIC_COLL)
 		goto uses_utf8;
 	    /* Cast to VARCHAR */
 	    /* C - type handling dealt with in pat_flags */
@@ -58948,6 +58842,8 @@ psl_patcomp(
 		if (DB_FAILURE_MACRO(status))
 		    return(status);
 	    }
+	    if (l->pst_sym.pst_dataval.db_collID > DB_NOCOLLATION)
+		castr->pst_sym.pst_dataval.db_collID = l->pst_sym.pst_dataval.db_collID;
 	    opnode.pst_opno = ADI_PATCOMP_OP;
 	    opnode.pst_opmeta = PST_NOMETA;
 	    opnode.pst_escape = 0;
@@ -59145,6 +59041,9 @@ psl_patcomp(
 **	24-Sep-2010 (kiria01) b124457
 **	    Don't just rely on length being specified by db_length of result
 **	    for strings but explicitly add second parameter to cast.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Only enforce the const check if forced to handled as such.
+**	    Otherwise, allow to effectively cast any expr to match given data val
 */
 
 DB_STATUS
@@ -59161,11 +59060,11 @@ psl_mk_const_similar(
     if (handled)
 	*handled = FALSE;
     
-    if ((*cst)->pst_sym.pst_type == PST_CONST &&
-	(!handled ||
+    if (!handled ||
+	    (*cst)->pst_sym.pst_type == PST_CONST &&
 	    (*cst)->pst_sym.pst_value.pst_s_cnst.pst_tparmtype == PST_USER &&
 	    (*cst)->pst_sym.pst_value.pst_s_cnst.pst_parm_no == 0 &&
-	    cdv.db_data))
+	    cdv.db_data)
     {
 	DB_DATA_VALUE ndv = *templ;
 	PST_OP_NODE op;
@@ -59188,6 +59087,8 @@ psl_mk_const_similar(
 	    ndv.db_length == cdv.db_length &&
 	    ndv.db_prec == cdv.db_prec)
 	{
+	    if (ndv.db_collID > DB_NOCOLLATION)
+		cdv.db_collID = ndv.db_collID;
 	    if (handled)
 		*handled = TRUE;
 	    return status;
@@ -59257,6 +59158,8 @@ psl_mk_const_similar(
 	    if (ndv.db_datatype == cdv.db_datatype &&
 		ndv.db_prec == cdv.db_prec)
 	    {
+		if (ndv.db_collID > DB_NOCOLLATION)
+		    cdv.db_collID = ndv.db_collID;
 		if (handled)
 		    *handled = TRUE;
 		return status;
@@ -59325,6 +59228,8 @@ psl_mk_const_similar(
 	    ** reqested type and now we need to redo the resolve
 	    ** for the new datatype.
 	    */
+	    if (ndv.db_collID > DB_NOCOLLATION)
+		res_node->pst_sym.pst_dataval.db_collID = ndv.db_collID;
 	    *cst = res_node;
 	    if (handled)
 		*handled = TRUE;

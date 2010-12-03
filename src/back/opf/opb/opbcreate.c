@@ -1146,7 +1146,8 @@ opb_ikey(
 **	    Adjust LIKE data based on summary info.
 **	02-Dec-2009 (kiria01) b122952
 **	    Look for sorted PST_INLISTSORT and use its tail end as high range.
-[@history_line@]...
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Support propagation of collID to keys
 */
 static VOID
 opb_keybuild(
@@ -1171,12 +1172,8 @@ opb_keybuild(
 
     adc_kblk.adc_opkey = opno;  /* save ADF comparison operator id */
 
-    adc_kblk.adc_lokey.db_datatype = adc_kblk.adc_hikey.db_datatype = 
-	keyhdr->opb_bfdt->db_datatype; /* initialize the key datatypes */
-    adc_kblk.adc_lokey.db_prec = adc_kblk.adc_hikey.db_prec =
-	keyhdr->opb_bfdt->db_prec; /* initialize the key precs */
-    adc_kblk.adc_lokey.db_length = adc_kblk.adc_hikey.db_length = 
-	keyhdr->opb_bfdt->db_length; /* initialize the key lengths */
+    adc_kblk.adc_lokey = *keyhdr->opb_bfdt; /* initialize the low */
+    adc_kblk.adc_hikey = *keyhdr->opb_bfdt; /* initialize the high */
     if (opqnodep->pst_sym.pst_value.pst_s_op.pst_pat_flags & AD_PAT_HAS_ESCAPE)
 	adc_kblk.adc_escape = opqnodep->pst_sym.pst_value.pst_s_op.pst_escape;
     adc_kblk.adc_pat_flags = opqnodep->pst_sym.pst_value.pst_s_op.pst_pat_flags;
@@ -1658,8 +1655,9 @@ opb_ckilist(
 **      var                             ptr to PST_VAR node of boolean factor
 **      op                              ptr to PST_OP operator node for
 **                                      boolean factor
-**      const                           ptr to tree containing constant nodes
-**                                      which will be used to create key
+**      constant                        ptr to tree containing constant nodes
+**                                      which will be used to create key.
+**					NOTE: this may be NULL
 **
 ** Outputs:
 **	Returns:
@@ -1675,7 +1673,8 @@ opb_ckilist(
 **          initial creation
 **	5-dec-02 (inkdo01)
 **	    Changes for range table expansion.
-[@history_line@]...
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Support propagation of collID to constants from column
 */
 static VOID
 opb_bfkey(
@@ -1698,6 +1697,12 @@ opb_bfkey(
                                         ** and find the equivalence class
                                         ** associated with the var node
                                         */
+    if (var->pst_sym.pst_dataval.db_collID > DB_NOCOLLATION &&
+		constant &&
+		constant->pst_sym.pst_dataval.db_collID <= DB_NOCOLLATION)
+	constant->pst_sym.pst_dataval.db_collID =
+		var->pst_sym.pst_dataval.db_collID;
+
     for( keyhdr = bfp->opb_keys; keyhdr; keyhdr = keyhdr->opb_next)
     {	/* Traverse the list of keyinfo ptrs and check whether this particular
 	** equivalence class has been processed with respect to this boolean

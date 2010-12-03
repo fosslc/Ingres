@@ -217,6 +217,9 @@
 **	    Add all other spatial types.
 **	27-Jul-2010 (troal01)
 **	    Add srid/geospatial support
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. Dispense with the hard coded
+**	    coll_names using instead the table macro.
 **/
 /* # define's */
 /* GLOBALDEF's */
@@ -234,8 +237,19 @@ GLOBALREF bool With_comments;
 GLOBALREF bool  Portable;
 GLOBALREF bool identity_columns;
 
-static char	*coll_names[] = {" ", "unicode", "unicode_case_insensitive", 
-	"sql_character", "multi", "spanish"};
+/*
+** List of valid collation names (and count thereof).
+** The actual definition of these is in iicommon.h.
+** Note the array is -1 origin.
+*/
+static char *coll_names[] = {
+#   define _DEFINE(n,v,Ch,Un,t) t,
+#   define _DEFINEEND
+	DB_COLL_MACRO
+#   undef _DEFINEEND
+#   undef _DEFINE
+};
+
 static		void writeidentity(XF_COLINFO *);
 /*{
 ** Name:	xftables - write create statements, if necessary,
@@ -652,10 +666,10 @@ writecreate(XF_TABINFO	*tp, i4 output_flags)
 	else writedefault(ap);
 
 	/* Check for collate clause. */
-	if (ap->collID > 0)
+	if (ap->collID > DB_NOCOLLATION)
 	{
 	    xfwrite(Xf_in, ERx(" collate "));
-	    xfwrite(Xf_in, coll_names[ap->collID]);
+	    xfwrite(Xf_in, coll_names[ap->collID+1]);
 	}
 
 	/*

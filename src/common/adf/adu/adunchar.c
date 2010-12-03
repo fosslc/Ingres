@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2001, 2008 Ingres Corporation
+** Copyright (c) 2001, 2008, 2010 Ingres Corporation
 */
 # include       <compat.h>
 # include       <gl.h>
@@ -275,6 +275,8 @@ ad0_nvchr_casemap(
 **	7-jan-2007 (dougi)
 **	    Slight adjustment to above change to compute string end's using
 **	    number of Unicode chars, not simply bytes.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
 */
 
 DB_STATUS
@@ -310,13 +312,15 @@ i4                  *rcmp)
 	return (adu_error(adf_scb, E_AD5081_UNICODE_FUNC_PARM, 0));
     }
 
-    /* If Collation ID is default, try the byte-by-byte compare to see
-    ** if values are equal. This is much faster than the use of collation
+    /* If Collation ID is default, or UCS_BASIC try the byte-by-byte compare
+    ** to see if values are equal. This is much faster than the use of collation
     ** weights. If an alternate collation is being used or if the values
     ** are not bytewise equal, we drop to logic to call aduucmp(). */
 
     if (vcdv1->db_collID <= DB_UNICODE_COLL &&
-	vcdv2->db_collID <= DB_UNICODE_COLL)
+	vcdv2->db_collID <= DB_UNICODE_COLL ||
+	vcdv1->db_collID == DB_UCS_BASIC_COLL &&
+	vcdv2->db_collID == DB_UCS_BASIC_COLL)
     {
 	if( db_stat = adc_1lenchk_rti(adf_scb, 0, vcdv1, &local_dv1)) 
 	    return (db_stat);
@@ -426,7 +430,8 @@ i4                  *rcmp)
 
 	/* If bytewise compare is equal, return. Otherwise drop to 
 	** collation weight driven compare. */
-	if ((*rcmp = end_result) == 0)
+	if ((*rcmp = end_result) == 0 ||
+		vcdv1->db_collID == DB_UCS_BASIC_COLL)
             return(E_DB_OK);
     }
 

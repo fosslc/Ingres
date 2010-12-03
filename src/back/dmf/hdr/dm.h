@@ -657,6 +657,11 @@
 **	    Change E_DM9580_CONFIG_DBSERVICE_ERROR to be a warning.
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Define new ATP control blobks for auditdb table info.
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Rework dm0m_check macro a bit to be more correct and to
+**	    not choke on void CS-breakpoint.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for controlling the defaulting of the collation type
 */
 
 /*
@@ -967,8 +972,9 @@ FUNC_EXTERN DB_STATUS dm0m_check(
 			i4		type_id);
 #else
 #define			dm0m_check(arg1, arg2) \
-	( (arg1 == NULL || ((DM_OBJECT*)arg1)->obj_type != (u_i2)arg2)\
-	    && !CS_breakpoint() )
+	( (arg1 == NULL || ((DM_OBJECT*)arg1)->obj_type != (u_i2)arg2) \
+	    ? (CS_breakpoint(), E_DB_ERROR) \
+	    : E_DB_OK )
 #endif /* xDEBUG */
 
 /*
@@ -1492,6 +1498,8 @@ BATCHMODE,IOMASTER,READAHEAD,MT,AFFINITY,NO_REP,ULOCKS"
     i4		    svcb_pools;	       /* How many are there, really */
     i4		    svcb_next_pool;    /* Next to allocate from */
     i4		    svcb_pad_bytes;    /* dm0m pad bytes */
+    DB_COLL_ID	    svcb_def_collID;	/* Default collation ID */
+    DB_COLL_ID	    svcb_def_uni_collID;/* Default Unicode collation ID */
     SIZE_TYPE	    svcb_st_ialloc;    /* Initial ST SCB pool size, or 0 */
     DM_MUTEX	    svcb_mem_mutex[SVCB_MAXPOOLS]; /* Multi-thread synchronization
 					    ** mutex for DM0M. */

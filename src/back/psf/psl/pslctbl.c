@@ -1609,7 +1609,8 @@ psl_ct2s_crt_tbl_as_select(
 	*/
     	if (newcolspec != (PST_QNODE *) NULL)
     	{
-	    for (node = newcolspec,count=0; node != (PST_QNODE *) NULL;
+	    for (node = newcolspec,count=0;
+		node && node->pst_sym.pst_type == PST_RESDOM;
 	     	node = node->pst_left, count++);
 
 	    ddl_info->qed_d3_col_count = --count;
@@ -3651,6 +3652,9 @@ psl_ct13_newcolname(
 **          picked up.
 **	22-Mar-2010 (toumi01) SIR 122403
 **	    Save encryption settings.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Consolidate collID defaulting and the application
+**	    of the 'typespec' null defaulting
 */
 DB_STATUS
 psl_ct14_typedesc(
@@ -3683,6 +3687,29 @@ psl_ct14_typedesc(
     bool		nulldefaultproblem = FALSE;
     bool		identity = FALSE;
 
+    /* Any type_qual_list elements that might be present but not affecting
+    ** nullablity may have been specified on their own. We need to ignore
+    ** these so that we may apply the default nullability flags if needed.
+    ** This used to be done in the empty production in type_qual_list */
+    if ((null_def & ~(PSS_TYPE_COLLATE_SEEN)) == 0)
+    {
+	/* Nothing specified implies ->
+	** 	WITH NULL <no default> NOT SYSTEM_MAINTAINED */
+	null_def |= PSS_TYPE_NULL;
+	/* RMS gateway dictates that nothing implies
+	**	    NOT NULL WITH DEFAULT
+	** PROBLEM : for other gateways that want to comply
+	**	    with INGRES rules, we have to defer the this flag
+	**	    setting actuntil we know what kind of gateway we
+	**	    are using.
+	** NOTE: we don't want PSS_TYPE_DEFAULT here in the general
+	** case because WITH NULL implies a default of NULL and the
+	** PSS_TYPE_DEFAULT implies a default of 0 or blank depending
+	** on the datatype */
+	if (psq_cb->psq_mode == PSQ_REG_IMPORT)
+	    null_def |= PSS_TYPE_DEFAULT;
+    }
+
     /* Moved consistency check for added columns from grammar to here.
     ** "system_maintained" is checked here, not null/default stuff is
     ** checked later. */
@@ -3696,6 +3723,7 @@ psl_ct14_typedesc(
 	     &err_code, &psq_cb->psq_error, 0);
 	return (E_DB_ERROR);
     }
+
     qeu_cb = (QEU_CB *) sess_cb->pss_object;
     dmu_cb = (DMU_CB *) qeu_cb->qeu_d_cb;
     attrs = (DMF_ATTR_ENTRY **) dmu_cb->dmu_attr_array.ptr_address;
@@ -3845,7 +3873,7 @@ psl_ct14_typedesc(
     cur_attr->attr_precision  = dt_dv.db_prec;
     cur_attr->attr_flags_mask = 0;
     cur_attr->attr_defaultTuple = (DB_IIDEFAULT *)NULL;
-    cur_attr->attr_collID = collationID;
+    cur_attr->attr_collID = pst_apply_def_collID(sess_cb, dtype, collationID);
 
     /*
      * Initialize attr_geomtype and attr_srid

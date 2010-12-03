@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -149,6 +149,9 @@
 **          adc_2lenchk_bool to use i1 as the underlying type.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. No need for the reduced length
+**	    as it doesn't use UCS2 for CEs.
 **/
 
 
@@ -635,6 +638,7 @@ DB_DATA_VALUE	*adc_rdv)
 	}
 	else if ( (adc_dv->db_length <= 0) || 
 		  ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		   adc_dv->db_collID != DB_UCS_BASIC_COLL &&
 		   (adc_dv->db_length > adf_scb->adf_maxstring/2)) || 
 		  (adc_dv->db_length > adf_scb->adf_maxstring) || 
 		  (adc_dv->db_length > DB_MAXSTRING) )
@@ -991,7 +995,8 @@ DB_DATA_VALUE	*adc_rdv)
       {
         i4 maxlen = adf_scb->adf_maxstring;
 
-        if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+        if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		   adc_dv->db_collID != DB_UCS_BASIC_COLL)
             maxlen = adf_scb->adf_maxstring/2;
 
 	/* Set result length whether check fails or not */

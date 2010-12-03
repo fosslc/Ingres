@@ -126,6 +126,8 @@
 **          Add cases for DB_BOO_TYPE in adc_1tmlen_rti and adc_2tmcvt_rti.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Ensure whole DBV copied.
 **/
 
 
@@ -301,12 +303,10 @@ i4		    *adc_worstwid;
     }
     else				/* nullable */
     {
-        DB_DATA_VALUE	    tmp_dv;
+        DB_DATA_VALUE tmp_dv = *adc_dv; 
 
-
-	tmp_dv.db_datatype  = bdt;
-	tmp_dv.db_prec	    = adc_dv->db_prec;
-	tmp_dv.db_length    = adc_dv->db_length - 1;
+	tmp_dv.db_datatype = bdt;
+	tmp_dv.db_length--;
 
     	db_stat = (*Adf_globs->Adi_dtptrs[mbdt]->adi_dt_com_vect.adp_tmlen_addr)
 			(adf_scb, &tmp_dv, adc_defwid, adc_worstwid);
@@ -546,9 +546,8 @@ i4		    *adc_outlen;
     }
     else				/* nullable, but not NULL */
     {
-	DB_DATA_VALUE	    tmp_dv;
+	DB_DATA_VALUE tmp_dv = *adc_dv;
 
-	STRUCT_ASSIGN_MACRO(*adc_dv, tmp_dv);
 	tmp_dv.db_datatype = bdt;
 	tmp_dv.db_length--;
 
@@ -1528,6 +1527,7 @@ i4		    *adc_outlen)
 	    else
 		local_dv.db_data = unicode_buffer;
 	    local_dv.db_prec = 0;
+	    local_dv.db_collID = DB_UNSET_COLL;
 	    local_dv.db_datatype = DB_VCH_TYPE;
 
 	    db_stat = adu_nvchr_coerce(adf_scb, adc_dv, &local_dv);
@@ -1708,6 +1708,8 @@ i4		    *adc_outlen)
 
 	  str_dv.db_data = adc_tmdv->db_data;
 	  str_dv.db_datatype = DB_CHA_TYPE;
+	  str_dv.db_prec = 0;
+	  str_dv.db_collID = DB_UNSET_COLL;
 	  *adc_outlen = str_dv.db_length = datelen;
 	  MEfill (datelen, NULLCHAR, (PTR) (str_dv.db_data));
 	  db_stat = adu_6datetostr(adf_scb, adc_dv, &str_dv);

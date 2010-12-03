@@ -3728,11 +3728,10 @@ pst_qnode_dot1(
 	    SIfprintf(fd, "n%p->n%p[weight=100,style=solid,label=right,tailport=se,headport=n]\n",
 		node, node->pst_right);
 	v = &node->pst_sym.pst_value;
-	SIfprintf(fd, "n%p[shape=%srecord,fillcolor=beige,style=filled,label="
-		    "\"{%s",
+	SIfprintf(fd, "n%p[shape=%srecord,fillcolor=beige,style=filled,label=\"{%s",
 		    node,
-		    ntype_array[node->pst_sym.pst_type],
-		    simple?"M":"");
+		    simple?"M":"",
+		    ntype_array[node->pst_sym.pst_type]);
 	if (!simple)
 	    SIfprintf(fd, "|%d,%d,%d,%d,%d|",
 		node->pst_sym.pst_dataval.db_datatype,

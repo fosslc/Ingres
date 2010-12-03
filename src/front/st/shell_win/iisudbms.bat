@@ -79,6 +79,8 @@ REM	    Quote pathnames to support embedded spaces. Log file size is in
 REM	    kbytes now.
 REM     30-apr-1998 (rigka01)
 REM         Add rmcmd to config.dat for use with VDBA
+REM	19-Nov-2010 (kiria01) SIR 124690
+REM	    Default to UCS_BASIC collation if UTF8 chosen
 REM
 
 
@@ -269,6 +271,9 @@ REM
 echo.
 echo II_CHARSET%II_INSTALLATION% configured as %II_CHARSET%. 
 ingsetenv II_CHARSET%II_INSTALLATION% %II_CHARSET%
+
+if NOT "%II_CHARSET%"=="UTF8" goto QUELSQL
+iisetres ii.%CONFIG_HOST%.dbms."*".default_collation UCS_BASIC
 goto QUELSQL
    
 
