@@ -274,6 +274,10 @@ static const u_i4 opmeta_unsupp[] = {
 **	27-Jul-2010 (kiria01) b124129)
 **	    Also catch sub-AGHEAD context where clause conjuctions to propagate
 **	    joinid if needed.
+**	25-Nov-2010 (kiria01) b124748
+**	    Correct the check for comparision BOPs as parent to a subselect. Dyadic
+**	    operators could fool the check resulting in passing to OPF things it could
+**	    not cope with.
 */
 
 static DB_STATUS
@@ -284,7 +288,6 @@ psl_flatten1(
 	PSQ_CB		*psq_cb,
 	PST_STK		*stk)
 {
-    ADI_OPINFO		opinfo;
     i4			whlist_count = 0;
     i4			qual_depth = cb->pss_qualdepth;
     bool		descend = TRUE;
@@ -382,14 +385,14 @@ psl_flatten1(
 	case PST_UOP:
 	case PST_COP:
 	case PST_MOP:
+	    /* Must be in a subselect - otherwise no correlation possible */
+	    if (psubsel)
 	    {
 		PST_QNODE *rt_node = pst_antecedant_by_4types(
 					stk, NULL, PST_SUBSEL, PST_AGHEAD, PST_RESDOM, PST_ROOT);
 		PST_QNODE *l = NULL, *r = NULL, *parent = NULL;
 		bool in_agg = FALSE; /* just local agg */
-		if (status = adi_op_info(cb->pss_adfcb,
-					node->pst_sym.pst_value.pst_s_op.pst_opno, &opinfo))
-		    break;
+
 		/* Having a comparison operator, we are in one of three cases:
 		**  1 - implicit join info for a containing SS. 
 		**  2 - join with a SSs target. Presently folded in OPF so do nothing
@@ -406,17 +409,40 @@ psl_flatten1(
 		    rt_node->pst_sym.pst_type == PST_RESDOM)
 		    break;
 		
+		/* Only interested in comparisons */
+		if (!node->pst_sym.pst_value.pst_s_op.pst_fdesc)
+		{
+		    ADI_OPINFO opinfo;
+		    if (status = adi_op_info(cb->pss_adfcb,
+					node->pst_sym.pst_value.pst_s_op.pst_opno, &opinfo))
+			break;
+		    if (opinfo.adi_optype != ADI_COMPARISON)
+			break;
+		}
+		else if (node->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fitype != ADI_COMPARISON)
+		    break;
+
 		/* If containing subsel's parent OP is a comparison BOP or EXISTS UOP then
 		** maybe leave sub-query intact for OPF */
 		in_agg = rt_node->pst_sym.pst_type == PST_AGHEAD;
 		if (subsel &&
 		    subsel->pst_sym.pst_type == PST_SUBSEL &&
-		    (parent = pst_parent_node(stk, subsel)))
+		    (parent = pst_parent_node(stk, subsel)) &&
+		    (parent->pst_sym.pst_type == PST_BOP ||
+			 parent->pst_sym.pst_type == PST_UOP))
 		{
-		    if ((parent->pst_sym.pst_type == PST_BOP ||
-			 parent->pst_sym.pst_type == PST_UOP && (
-			  parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_EXIST_OP ||
-			  parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_NXIST_OP)) &&
+		    ADI_OPINFO opinfo;
+		    if ((parent->pst_sym.pst_type == PST_UOP
+			    ? (parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_EXIST_OP ||
+				parent->pst_sym.pst_value.pst_s_op.pst_opno == ADI_NXIST_OP)
+			    : (parent->pst_sym.pst_type == PST_BOP && (
+				parent->pst_sym.pst_value.pst_s_op.pst_fdesc
+				? (parent->pst_sym.pst_value.pst_s_op.pst_fdesc
+					    ->adi_fitype == ADI_COMPARISON)
+				: (E_DB_OK == adi_op_info(cb->pss_adfcb,
+					    parent->pst_sym.pst_value.pst_s_op.pst_opno, &opinfo) &&
+					opinfo.adi_optype == ADI_COMPARISON)))
+			) &&
 			(in_agg ||
 			 (Psf_ssflatten &
 			    opmeta_unsupp[parent->pst_sym.pst_value.pst_s_op.pst_opmeta])))
@@ -435,14 +461,6 @@ psl_flatten1(
 		    }
 		}
 		rt_node->pst_sym.pst_value.pst_s_root.pst_mask1 |= PST_8FLATN_SUBSEL;
-
-		/* Only interested in comparisons */
-		if (opinfo.adi_optype != ADI_COMPARISON)
-		    break;
-
-		/* If not in a subselect - no correlation possible */
-		if (!psubsel)
-		    break;
 
 		if (node->pst_sym.pst_value.pst_s_op.pst_joinid != PST_NOJOIN ||
 		    (Psf_ssflatten &
@@ -605,43 +623,6 @@ psl_flatten1(
 				    yyvarsp->rng_vars, DB_INNER_JOIN);
 			}
 		    }
-		}
-	    }
-	    break;
-	case PST_AND:
-	case PST_OR:
-	    {
-		PST_QNODE *rt_node;
-		if (node->pst_sym.pst_value.pst_s_op.pst_joinid == PST_NOJOIN &&
-		    (rt_node = pst_antecedant_by_3types(
-				stk, NULL, PST_SUBSEL, PST_AGHEAD, PST_ROOT)) &&
-		    (BTtest(qual_depth, (PTR)in_WHERE) ||
-			rt_node->pst_sym.pst_type == PST_AGHEAD &&
-			(rt_node = pst_antecedant_by_2types(
-				stk, rt_node, PST_SUBSEL, PST_ROOT))))
-		{
-		    PST_J_ID joinid = rt_node->pst_sym.pst_value.pst_s_root.pst_ss_joinid;
-		    PST_QNODE *l = node->pst_left;
-		    PST_QNODE *r = node->pst_right;
-		    i4 op;
-		    if (l && ((op = l->pst_sym.pst_type) == PST_BOP ||
-			op == PST_UOP || op == PST_MOP || op == PST_COP ||
-			op == PST_AOP || op == PST_AND || op == PST_OR))
-		    {
-			if (r && ((op = r->pst_sym.pst_type) == PST_BOP ||
-			    op == PST_UOP || op == PST_MOP || op == PST_COP ||
-			    op == PST_AOP || op == PST_AND || op == PST_OR))
-			{
-			    if (l->pst_sym.pst_value.pst_s_op.pst_joinid ==
-				    r->pst_sym.pst_value.pst_s_op.pst_joinid)
-				joinid = l->pst_sym.pst_value.pst_s_op.pst_joinid;
-			    else
-				break; /* Leave as NOJOIN */
-			}
-			else
-			    joinid = l->pst_sym.pst_value.pst_s_op.pst_joinid;
-		    }
-		    node->pst_sym.pst_value.pst_s_op.pst_joinid = joinid;
 		}
 	    }
 	    break;
