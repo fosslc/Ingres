@@ -10,6 +10,8 @@
 #           Add WITH_GEO for platforms where spatial is not supported.
 #       30-Sep-2010 (troal01)
 #           Fixed a typo in set option WITH_GEO
+#	24-Nov-2010 (bonro01)
+#	    Remove temporary change and restore Hybrid build for a64_lnx
 
 
 #set: config32 int_lnx
@@ -19,7 +21,7 @@
 #set: option CAS_ENABLED
 #set: param ADI_MAX_OPERANDS 5
 #set: build 00
-
+#
 
 # Any jam definitions go here, e.g. VAR = value ;
 # Don't forget spaces around the = and before the ;
@@ -29,8 +31,7 @@ SVR_ARLIB = "TRUE" ;	#set: option SVR_AR
 
 # Hybridization...
 # a64_lnx normally builds reverse hybrid
-# Temporarily set to pure 64
-BUILD_ARCH = "64" ;	#set: arch 64
+BUILD_ARCH = "64+32" ;	#set: arch 64+32
 XERCES_ARCH ?= 64 ;
 
 PAX_CHECK = TRUE ;
