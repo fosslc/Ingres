@@ -1861,7 +1861,7 @@ DB_VPT_SIZEOF_TUPLE_HDR(TCB_PG_V4), DMPP_VPT_SIZEOF_TUPLE_HDR_MACRO(TCB_PG_V4));
 
 	svcb->svcb_pad_bytes = c_pad_bytes;
 	svcb->svcb_def_collID = c_def_collID;
-	svcb->svcb_def_collID = c_def_collID;
+	svcb->svcb_def_uni_collID = c_def_uni_collID;
 	dm0m_init();
 
 
