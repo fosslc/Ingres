@@ -979,6 +979,13 @@
 ##	    versions (e.g. fc11). Remove redundant *_lnx block and add
 ##	    linux/types.h to list files to check for other platforms,
 ##	    which already contains sys/select.h
+##	17-Nov-2010 (kschendel) SIR 124685
+##	    Prefer sigaction to sigvec.  Pipe grep errors to dev-null when
+##	    looking for fd-set stuff.
+##	19-Nov-2010 (frima01) BUG 124750
+##	    Set gettimeofday arguments for i64.lnx.
+##	1-Dec-2010 (bonro01) SIR 124685
+##	    Fix Solaris build problem introduced by change 508738.
 ##	    
 #	    
 #
@@ -1224,10 +1231,14 @@ rmx_us5)        echo '# define xCL_065_SHADOW_PASSWD'
 rux_us5)        echo '# define xCL_065_SHADOW_PASSWD'
                 echo "# define xCL_GETTIMEOFDAY_TIMEONLY_V"
                 ;;
- *_lnx|int_rpl)	echo '# define xCL_065_SHADOW_PASSWD'
+      i64_lnx)	echo '# define xCL_065_SHADOW_PASSWD'
 	        echo "# define xCL_SYS_PAGE_MAP"
 		Select='poll'
 		Sigvec='sigaction'
+                echo "# define xCL_005_GETTIMEOFDAY_EXISTS"
+                echo "# define xCL_GETTIMEOFDAY_TIME_AND_VOIDPTR"
+		;;
+ *_lnx|int_rpl)	echo '# define xCL_065_SHADOW_PASSWD'
 		;;
    *_osx)	echo "# define xCL_SYS_PAGE_MAP"
 	        echo "# define xCL_USE_ETIMEDOUT"
@@ -1345,6 +1356,7 @@ case $vers in
     sos_us5 |\
     ts2_us5 |\
     usl_us5 |\
+    i64_lnx |\
       *_osx)
 	    ## hardwired
 	    ;;
@@ -1551,24 +1563,24 @@ fi
 	fi
 
 	#
-	# Does sigvec exist?
-	#
-	if [ $vers != "rs4_us5" -a $vers != "r64_us5" -a "$Segvec" = 'any' ]
-	then
-	    echo 'main(){sigvec();}' >${tf}.c
-	    cc -o $tf ${tf}.c >/dev/null 2>&1 &&
-		Sigvec="sigvec"
-	    rm -f ${tf}*
-	fi
-
-	#
-	# By default, use sigaction only if sigvec is not available
+	# Prefer sigaction if it's available.
 	# These defines are mutually exclusive
 	#
 	if [ "$Sigvec" = 'any' ] ; then
 	    echo 'main(){sigaction();}' >${tf}.c
 	    cc -o $tf ${tf}.c >/dev/null 2>&1 &&
 		Sigvec="sigaction"
+	    rm -f ${tf}*
+	fi
+
+	#
+	# Use sigvec if it exists and no sigaction
+	#
+	if [ $vers != "rs4_us5" -a $vers != "r64_us5" -a "$Segvec" = 'any' ]
+	then
+	    echo 'main(){sigvec();}' >${tf}.c
+	    cc -o $tf ${tf}.c >/dev/null 2>&1 &&
+		Sigvec="sigvec"
 	    rm -f ${tf}*
 	fi
 
@@ -1686,7 +1698,7 @@ esac
 [ -r /usr/include/sys/file.h ] &&
 	echo "# define xCL_007_FILE_H_EXISTS"
 
-    grep fd_set /usr/include/linux/types.h > /dev/null || \
+    grep fd_set /usr/include/linux/types.h > /dev/null 2>&1 || \
 	grep fd_set /usr/include/sys/types.h > /dev/null || \
         grep fd_set /usr/include/sys/select.h > /dev/null || \
         grep fd_set /usr/include/sys/time.h > /dev/null &&
@@ -1859,7 +1871,8 @@ mathsigs
 # Some systems define *signal differently.
 
 case $vers in
-dg8_us5|dgi_us5|axp_osf)echo '# define TYPESIG void'
+dg8_us5|dgi_us5| axp_osf | *_lnx | int_rpl | sparc_sol | a64_sol)
+		echo '# define TYPESIG void'
 		;;
 sgi_us5)        echo '# define TYPESIG __sigret_t'
 		;;
