@@ -783,6 +783,10 @@
 ##      30-Nov-2010 (hanal04) Bug 124731
 ##          prefix was being treated as a command due to incorrect syntax.
 ##          Remove white space in assignments to resolve build failures.
+##	1-Dec-2010 (troal01) Bug 124731
+##	    Fix $prefix32/64 assignment for geospatial libraries in cases where
+##	    the build_arch is defined as 32 or 64 only. Also HB designations were
+##	    opposite of what they should've been.
 
 TMP=/tmp/libc.nm
 trap 'rm -f $TMP' 0 1 2 13 15
@@ -1627,13 +1631,13 @@ case $vers in
      *_lnx|\
     int_rpl)
 	    if [ "$conf_WITH_GEO" ] ; then
-	    	if [ "$build_arch" = '32+64' ] ; then
-	    		prefix32="-L$GEOSHB_LOC -L$PROJHB_LOC"
-	    		prefix64="-L$GEOS_LOC -L$PROJ_LOC"
-	    	elif [ "$build_arch" = '64+32' ] ; then
+	    	if [ "$build_arch" = '32' ] || [ "$build_arch" = '32+64' ] ; then
 	    		prefix32="-L$GEOS_LOC -L$PROJ_LOC"
 	    		prefix64="-L$GEOSHB_LOC -L$PROJHB_LOC"
-	    	else
+	    	elif [ "$build_arch" = '64' ] || [ "$build_arch" = '64+32' ] ; then
+	    		prefix32="-L$GEOSHB_LOC -L$PROJHB_LOC"
+	    		prefix64="-L$GEOS_LOC -L$PROJ_LOC"
+	     	else
 	    		prefix="-L$GEOS_LOC -L$PROJ_LOC"
 	    	fi
 	        GEOS_LD="-lgeos -lgeos_c -lproj"
