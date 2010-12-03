@@ -3486,6 +3486,9 @@ DB_DATA_VALUE	   *locator_dv)
 **      18-Aug-2010 (hanal04) Bug 124271
 **         Correct setting of shd_l1_check. UTF-8 NVCH to VCH shows
 **         the old code was wrong.
+**	19-Nov-2010 (thaju02) Bug 124744
+**	   For UTF8, correct setting of shd_l1_check, if coerced data is
+**	   too big and must be split.
 */
 
 /*
@@ -3555,18 +3558,35 @@ adu_long_coerce_slave(ADF_CB	    *scb,
 	{
 	    register char *e = p + dv_out->db_length - DB_CNTSIZE;
 	    register i4 l;
+	    i4	byte_len = 0;
 	    do
 	    {
 		l = CMbytecnt(p);
 		p += l;
-		work->adw_shared.shd_l1_check++;
+		if (scb->adf_utf8_flag & AD_UTF8_ENABLED)
+		{
+		    byte_len += l;
+		    work->adw_shared.shd_l1_check += l;
+		}
+		else
+		    work->adw_shared.shd_l1_check++;
 	    } while (p < e);
 	    if (p > e)
 	    {
-		l -= p - e;
-		ctx->left += l;
-		ctx->chp -= l;
-		work->adw_shared.shd_l1_check--;
+		if (scb->adf_utf8_flag & AD_UTF8_ENABLED)
+		{
+		    work->adw_shared.shd_l1_check -= l;
+		    byte_len -= l;
+		    ctx->left = size - byte_len;
+		    ctx->chp = dv_out->db_data + DB_CNTSIZE + byte_len;
+		}
+		else
+		{
+		    l -= p - e;
+		    ctx->left += l;
+		    ctx->chp -= l;
+		    work->adw_shared.shd_l1_check--;
+		}
 	    }
 	}
 	else
