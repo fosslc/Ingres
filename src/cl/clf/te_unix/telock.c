@@ -4,6 +4,7 @@
 
 # include	<compat.h>
 # include	<gl.h>
+# include	<te.h>
 
 
 /**
@@ -82,6 +83,8 @@
 **
 ** History:
 **	08-sep-87 (bab)	Described
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 */
 VOID
 TElock(lock, row, col)

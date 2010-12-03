@@ -179,6 +179,8 @@
 **	    Update includes for renamed header
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup. Add cast to silence sigaction type warning.
 */
 
 # include	<compat.h>
@@ -337,7 +339,7 @@ i4	seconds;
 # ifdef xCL_068_USE_SIGACTION
             if (firsttime)
             {
-                newaction.sa_handler = alarmhdlr;
+                newaction.sa_handler = (VOID *)alarmhdlr;
                 sigemptyset(&(newaction.sa_mask));
                 newaction.sa_flags = 0;
 

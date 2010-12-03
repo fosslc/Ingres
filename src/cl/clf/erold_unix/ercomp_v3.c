@@ -17,40 +17,249 @@
 #include <rmsdef.h>
 #endif
 /*
-**  Forward and/or External function references.
+**  Forward and/or function references.
 */
-FUNC_EXTERN 	VOID	check_arg();
-FUNC_EXTERN 	VOID	usage();
-FUNC_EXTERN 	VOID	sort_msg();
-FUNC_EXTERN 	STATUS	parser();
-FUNC_EXTERN	VOID	build_ge_list();
-FUNC_EXTERN	STATUS	validate_generr();
-FUNC_EXTERN 	STATUS  build_fast_index();
-FUNC_EXTERN 	STATUS	build_slow_index();
-FUNC_EXTERN 	STATUS	take();
-FUNC_EXTERN 	char	*scan();
-static	 	bool	get_next_rec();
-FUNC_EXTERN	bool	get_record();
-FUNC_EXTERN	bool	open_input_file();
-FUNC_EXTERN	VOID	delete_file();
-FUNC_EXTERN	VOID	put_record();
-FUNC_EXTERN	STATUS  convert_hex();
-FUNC_EXTERN	i4     convert_esc();
-FUNC_EXTERN	i4     write_fastrec();
-FUNC_EXTERN	i4	er__cmpids();	/* Compare two message ids */
-FUNC_EXTERN	i4	er__cntids();	/* Count message ids in input file */
-FUNC_EXTERN	STATUS	er__qsortids();	/* Quick sort copied from IIugqsort */
-FUNC_EXTERN	i4	er__bldracc();	/* Writes tmp racc file & msgid arr */ 
-FUNC_EXTERN	i4	er__wrtids();	/* Write msgs from file using array */
-FUNC_EXTERN	VOID	sctx_init();
-FUNC_EXTERN	VOID	shdr_hdl();
-FUNC_EXTERN	VOID	shdr_flush();
-FUNC_EXTERN	VOID	stxt_hdl();
-FUNC_EXTERN	VOID	stxt_flush();
-FUNC_EXTERN	VOID	scan_slow();
+/*}
+** Name: FILE_CONTEXT - Information needed to handle files.
+**
+** Description:
+**      This structure is used in calls to open, create, read, write, and
+**      close the files used by the ERCOMPILE program.
+**
+** History:
+**     03-oct-1985 (derek)
+**          Created new for 5.0.
+*/
 #ifdef  VMS
-FUNC_EXTERN 	VOID	create_output_file();
-FUNC_EXTERN 	VOID	close_file();
+typedef struct _FILE_CONTEXT
+{
+    struct FAB      fc_fab;             /* RMS FAB. */
+    struct RAB      fc_rab;		/* RMS RAB. */
+    i4		    *fc_result_size;	/* Location to store result size. */
+    i4		    *fc_line_number;	/* Location to store line number. */
+}   FILE_CONTEXT;
+#endif
+/*}
+** Name: FILE_CONTROL - Information needed to load files.
+**
+** Description:
+**      This structure is used in calls to load in run time.
+**
+** History:
+**     03-oct-1986 (kobayashi)
+**          Created new for 5.0.
+*/
+typedef struct _FILE_CONTROL
+{
+    i4			classsize;
+    ERCONTROL		control_record[CLASS_SIZE];
+}   FILE_CONTROL;
+
+/*
+** context information passed down to record handlers while handling
+** slow messages.  We make fp a pointer for the VMS definition so that
+** we can simply set up the address once, and pass ->fp to put_record
+** without an ifdef.
+**
+** dat array is coerced into a character buffer when used for message
+** text.
+*/
+typedef struct
+{
+#ifdef  VMS
+	FILE_CONTEXT *fp;
+#else
+	FILE *fp;
+#endif
+	i4 pages;		/* index page count */
+	i4 pbreak;		/* page break count on current page */
+	i4 mcount;		/* message count on current break */
+	char *textp;		/* text pointer */
+	INDEX_PAGE ip;		/* index page */
+
+	i4 dat[sizeof(INDEX_PAGE)/sizeof(i4)];
+} SLOW_CONTEXT;
+
+typedef struct	_MSGID_PAIR
+{
+    i4	msgid;			/* msg id  */
+    i4	offset;			/* msg location in file as an offset */
+    i4	msglen;			/* # bytes for all 3 lines of msg */
+}   MSGID_PAIR;
+
+static	VOID	check_arg(
+	i4	argc,
+	char	**argv,
+	char	slow[],
+	char	fast[],
+	char	generr[],
+	char	headersuffix[],
+	i4	*flag
+);
+static	VOID	usage(VOID);
+static	VOID	sort_msg(
+	char	*inf_name,
+	char	*outf_name,
+	i4	flag
+);
+static	STATUS	parser(
+	i4	argc,
+	char	**argv,
+	i4	*flag,
+	bool	*fnosort,
+	bool	*snosort,
+	char	headersuffix[],
+	char	*fastfile,
+	char	*slowfile,
+	char	*gefile
+);
+static	STATUS	build_fast_index(
+	char	*input_file_name,
+	char	*output_file_name,
+	i4	flag
+);
+static	STATUS	build_slow_index(
+	char	*infile,
+	char	*outfile,
+	i4	flag
+);
+static	STATUS	take(
+	char	buf[],
+	char	*start_char,
+	char	**end_char,
+	char	*wordbuf,
+	i4	*ln,
+	char **fn,
+	FILE *fp
+);
+static	char	*scan(
+	char	buf[],
+	char	*stp,
+	i4	*ln,
+	char	**fn,
+	FILE	*fp
+);
+static	bool	get_next_rec(
+	char	buf[],
+	char	**next_char,
+	i4	*ln,
+	char	**fn,
+	FILE	*fp
+);
+static	bool	get_record(
+	char	*record,
+	i4	*result_size,
+	i4	record_size,
+	FILE	*fp,
+	i4	*line_count
+);
+static	bool	open_input_file(
+	char	*file_name,
+	FILE	**fp
+);
+static	VOID	delete_file(
+	char	*file_name
+);
+static	VOID	put_record(
+#ifdef VMS
+	FILE_CONTEXT *file_context,
+#else
+	FILE	*fp,
+#endif
+	i4	record_number,
+	char	*record,
+	i4	record_size
+);
+static	STATUS	convert_hex(
+	char	record[],
+	i4	record_size,
+	i4	*number
+);
+static	i4	convert_esc(
+	char	*buf,
+	i4	length
+);
+static	i4	write_fastrec(
+#ifdef VMS
+	FILE_CONTEXT	*file_context,
+#else
+	FILE	*fp,
+#endif
+	char	*record,
+	i4	recordsize
+);
+static	i4	er__cmpids(	/* Compare two message ids */
+	MSGID_PAIR	*id1,
+	MSGID_PAIR	*id2
+);
+static	i4	er__cntids(	/* Count message ids in input file */
+	LOCATION	*inf_loc
+);
+static	STATUS	er__qsortids(	/* Quick sort copied from IIugqsort */
+	char	*arr,
+	i4	nel,
+	i4	size,
+	i4	(*compare)()
+);
+static	i4	er__bldracc(	/* Writes tmp racc file & msgid arr */
+	LOCATION	*inf_loc,
+	LOCATION	*raccf_loc,
+	MSGID_PAIR	*prptr
+);
+static	i4	er__wrtids(	/* Write msgs from file using array */
+	LOCATION	*raccf_loc,
+	LOCATION	*outf_loc,
+	MSGID_PAIR	*arr,
+	i4		nummsgs
+);
+FUNC_EXTERN	VOID	sctx_init(
+	char		*outfile,
+	SLOW_CONTEXT	*ctx
+);
+static	VOID	shdr_hdl(
+	MESSAGE_ENTRY	*mess,
+	bool		pb,
+	SLOW_CONTEXT	*ctx
+);
+FUNC_EXTERN	VOID	shdr_flush(
+	SLOW_CONTEXT *ctx
+);
+static	VOID	stxt_hdl(
+	MESSAGE_ENTRY	*mess,
+	bool		pb,
+	SLOW_CONTEXT	*ctx
+);
+FUNC_EXTERN	VOID	stxt_flush(
+	SLOW_CONTEXT	*ctx
+);
+FUNC_EXTERN	VOID	scan_slow(
+	char		*infile,
+	VOID		(*hdl)(),
+	SLOW_CONTEXT	*ctx
+);
+static	VOID	do_qs(
+	char *arr,
+	i4 nel
+);
+static	VOID	bubble(
+	register char	*arr,
+	i4		nel
+);
+static	VOID	build_ge_list(
+	char	*fn
+);
+static	STATUS	validate_generr(
+	char	*ge_code
+);
+#ifdef  VMS
+static	VOID	create_output_file(
+	FILE_CONTEXT	*file_context,
+	char		*file_name,
+	i4		record_size
+);
+static	VOID	close_file(
+	FILE_CONTEXT	*file_context
+);
 #endif
 
 /*
@@ -491,6 +700,8 @@ NEEDLIBS =	COMPATLIB MALLOCLIB
 **	    Compiler warning fixes.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	15-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 [@history_template@]...
 */
 
@@ -1591,7 +1802,7 @@ char *fn;
     Generr_codes = i;
 
     /* sort them by generic error */
-    er__qsortids(Generr_list, Generr_codes, GE_MAX_LEN, STcompare);
+    er__qsortids((char *)Generr_list, Generr_codes, GE_MAX_LEN, STcompare);
     
 #ifdef xDEBUG
     SIprintf("The %d generic codes read were:\n", Generr_codes);
@@ -1971,68 +2182,6 @@ FILE	*fp;
 #define	WRITE_SIZE	4096
 #endif
 
-/*}
-** Name: FILE_CONTEXT - Information needed to handle files.
-**
-** Description:
-**      This structure is used in calls to open, create, read, write, and 
-**      close the files used by the ERCOMPILE program.
-**
-** History:
-**     03-oct-1985 (derek)
-**          Created new for 5.0.
-*/
-#ifdef  VMS
-typedef struct _FILE_CONTEXT
-{
-    struct FAB      fc_fab;             /* RMS FAB. */
-    struct RAB      fc_rab;		/* RMS RAB. */
-    i4		    *fc_result_size;	/* Location to store result size. */
-    i4		    *fc_line_number;	/* Location to store line number. */
-}   FILE_CONTEXT;
-#endif
-/*}
-** Name: FILE_CONTROL - Information needed to load files.
-**
-** Description:
-**      This structure is used in calls to load in run time.
-**
-** History:
-**     03-oct-1986 (kobayashi)
-**          Created new for 5.0.
-*/
-typedef struct _FILE_CONTROL
-{
-    i4			classsize;
-    ERCONTROL		control_record[CLASS_SIZE];
-}   FILE_CONTROL;
-
-/*
-** context information passed down to record handlers while handling
-** slow messages.  We make fp a pointer for the VMS definition so that
-** we can simply set up the address once, and pass ->fp to put_record
-** without an ifdef.
-**
-** dat array is coerced into a character buffer when used for message
-** text.
-*/
-typedef struct
-{
-#ifdef  VMS
-	FILE_CONTEXT *fp;
-#else
-	FILE *fp;
-#endif
-	i4 pages;		/* index page count */
-	i4 pbreak;		/* page break count on current page */
-	i4 mcount;		/* message count on current break */
-	char *textp;		/* text pointer */
-	INDEX_PAGE ip;		/* index page */
-
-	i4 dat[sizeof(INDEX_PAGE)/sizeof(i4)];
-} SLOW_CONTEXT;
-
-
 /*{
 ** Name: build_fast_index - Build fast run time message file.
 **
@@ -2284,7 +2433,7 @@ i4		   flag;
     }
     /*	Write an empty index block. */
     MEfill(sizeof(file_control), 0, &file_control);
-    put_record(out_fp, 0, &file_control, sizeof(file_control));
+    put_record(out_fp, 0, (char *) &file_control, sizeof(file_control));
     /*  Open the input file. */
     if (open_input_file(input_file_name, &in_fp))
     {
@@ -2495,7 +2644,7 @@ SIprintf("Mesg no.: %d\n", mess_no);
 **	    VMS ifdef's bracket a few lines rather than different versions
 **	    of the entire routine.
 */
-i4
+STATUS
 build_slow_index(infile, outfile, flag)
 char	*infile;
 char	*outfile;
@@ -2517,9 +2666,9 @@ i4	flag;
 	** assuring that breaks occur the same places in both passes.
 	*/
 	sctx_init(outfile, &ctx);
-	scan_slow(infile, shdr_hdl, &ctx);
+	scan_slow(infile, (VOID *)shdr_hdl, &ctx);
 	shdr_flush(&ctx);
-	scan_slow(infile, stxt_hdl, &ctx);
+	scan_slow(infile, (VOID *)stxt_hdl, &ctx);
 	stxt_flush(&ctx);
 
 	if ( !(flag & SAON) )
@@ -3522,12 +3671,6 @@ exit:
 **		Changed sort_msg function to do its own quick sort
 **		instead of calling database sort
 */
-typedef struct 	_MSGID_PAIR
-{
-    i4	msgid;			/* msg id  */
-    i4		offset;			/* msg location in file as an offset */
-    i4	msglen;			/* # bytes for all 3 lines of msg */
-}   MSGID_PAIR;
 
 VOID
 sort_msg(inf_name, outf_name, flag)

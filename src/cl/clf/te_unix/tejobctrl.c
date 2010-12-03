@@ -60,6 +60,8 @@
 **	08-Oct-2002 (hanje04)
 **	    sigrelse is now defined for all versions of Linux currently built
 **	    on, so we'll use it.
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup. Add cast to silence sigaction type warning.
 **	
 */
 
@@ -68,6 +70,7 @@
 # include	<systypes.h>
 # include	<clconfig.h>
 # include	<clsigs.h>
+# include	<te.h>
 
 # if defined(SIGTSTP) && defined(xCL_011_USE_SIGVEC) || \
      defined(xCL_068_USE_SIGACTION)
@@ -215,7 +218,7 @@ i4	(*redraw)();
 	newvec.sv_onstack = 0;
 # else
 # ifdef xCL_068_USE_SIGACTION
-        newaction.sa_handler = TEjobhdlr;
+        newaction.sa_handler = (VOID*)TEjobhdlr;
         sigemptyset(&(newaction.sa_mask));
         newaction.sa_flags = 0;
 # endif /* xCL_068_USE_SIGACTION */

@@ -1,4 +1,5 @@
 
+# include	<te.h>
 # include	"telocal.h"
 
 /*
@@ -41,6 +42,8 @@
 **	14-Feb-2008 (hanje04)
 **	    SIR S119978
 **	    Update includes for renamed header
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 */
 
 bool

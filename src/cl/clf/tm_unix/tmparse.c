@@ -52,12 +52,23 @@
 **	    replace nat and longnat with i4
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for CVlower definition.
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 */
 /* # defines */
 /* typedefs */
 
 /* forward references */
-static STATUS TM_date_to_secs();
+static STATUS TM_date_to_secs(
+	i4 year,
+	i4 month,
+	i4 day,
+	i4 hour,
+	i4 mins,
+	i4 sec,
+	i4 usecs,
+	i4 *output_sec
+);
 
 /* externs */
 /* statics */

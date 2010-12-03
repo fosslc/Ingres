@@ -33,6 +33,8 @@
 **	    Compiler warning fixes.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	15-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 [@history_template@]...
 */
 
@@ -55,34 +57,163 @@
 #include <rmsdef.h>
 #endif
 /*
-**  Forward and/or External function references.
+**  Forward and/or function references.
 */
-FUNC_EXTERN 	VOID	check_arg();
-FUNC_EXTERN 	VOID	usage();
-FUNC_EXTERN 	VOID	sort_msg();
-FUNC_EXTERN 	STATUS	parser();
-FUNC_EXTERN	VOID	build_ge_list();
-FUNC_EXTERN	STATUS	validate_generr();
-FUNC_EXTERN 	STATUS  build_fast_index();
-FUNC_EXTERN 	STATUS	build_slow_index();
-FUNC_EXTERN 	STATUS	take();
-FUNC_EXTERN 	char	*scan();
-static  	bool	get_next_rec();
-FUNC_EXTERN	bool	get_record();
-FUNC_EXTERN	bool	open_input_file();
-FUNC_EXTERN	VOID	delete_file();
-FUNC_EXTERN	VOID	put_record();
-FUNC_EXTERN	STATUS  convert_hex();
-FUNC_EXTERN	i4     convert_esc();
-FUNC_EXTERN	i4     write_fastrec();
-FUNC_EXTERN	i4	er__cmpids();	/* Compare two message ids */
-FUNC_EXTERN	i4	er__cntids();	/* Count message ids in input file */
-FUNC_EXTERN	STATUS	er__qsortids();	/* Quick sort copied from IIugqsort */
-FUNC_EXTERN	i4	er__bldracc();	/* Writes tmp racc file & msgid arr */ 
-FUNC_EXTERN	i4	er__wrtids();	/* Write msgs from file using array */
+typedef struct	_MSGID_PAIR
+{
+    i4	msgid;			/* msg id  */
+    i4	offset;			/* msg location in file as an offset */
+    i4	msglen;			/* # bytes for all 3 lines of msg */
+}   MSGID_PAIR;
+
+static	VOID	check_arg(
+	i4	argc,
+	char	**argv,
+	char	slow[],
+	char	fast[],
+	char	generr[],
+	char	headersuffix[],
+	i4	*flag
+);
+static	VOID	usage(VOID);
+static	VOID	sort_msg(
+	char	*inf_name,
+	char	*outf_name,
+	i4	flag
+);
+static	STATUS	parser(
+	i4	argc,
+	char	**argv,
+	i4	*flag,
+	bool	*fnosort,
+	bool	*snosort,
+	char	headersuffix[],
+	char	*fastfile,
+	char	*slowfile,
+	char	*gefile
+);
+static	STATUS	build_fast_index(
+	char	*input_file_name,
+	char	*output_file_name,
+	i4	flag
+);
+static	STATUS	build_slow_index(
+	char	*infile,
+	char	*outfile,
+	i4	flag
+);
+static	STATUS	take(
+	char	buf[],
+	char	*start_char,
+	char	**end_char,
+	char	*wordbuf,
+	i4	*ln,
+	char **fn,
+	FILE *fp
+);
+static	char	*scan(
+	char	buf[],
+	char	*stp,
+	i4	*ln,
+	char	**fn,
+	FILE	*fp
+);
+static	bool	get_next_rec(
+	char	buf[],
+	char	**next_char,
+	i4	*ln,
+	char	**fn,
+	FILE	*fp
+);
+static	bool	get_record(
+	char	*record,
+	i4	*result_size,
+	i4	record_size,
+	FILE	*fp,
+	i4	*line_count
+);
+static	bool	open_input_file(
+	char	*file_name,
+	FILE	**fp
+);
+static	VOID	delete_file(
+	char	*file_name
+);
+static	VOID	put_record(
+#ifdef VMS
+	FILE_CONTEXT *file_context,
+#else
+	FILE	*fp,
+#endif
+	i4	record_number,
+	char	*record,
+	i4	record_size
+);
+static	STATUS	convert_hex(
+	char	record[],
+	i4	record_size,
+	i4	*number
+);
+static	i4	convert_esc(
+	char	*buf,
+	i4	length
+);
+static	i4	write_fastrec(
+#ifdef VMS
+	FILE_CONTEXT	*file_context,
+#else
+	FILE	*fp,
+#endif
+	char	*record,
+	i4	recordsize
+);
+static	i4	er__cmpids(	/* Compare two message ids */
+	MSGID_PAIR	*id1,
+	MSGID_PAIR	*id2
+);
+static	i4	er__cntids(	/* Count message ids in input file */
+	LOCATION	*inf_loc
+);
+static	STATUS	er__qsortids(	/* Quick sort copied from IIugqsort */
+	char	*arr,
+	i4	nel,
+	i4	size,
+	i4	(*compare)()
+);
+static	i4	er__bldracc(	/* Writes tmp racc file & msgid arr */
+	LOCATION	*inf_loc,
+	LOCATION	*raccf_loc,
+	MSGID_PAIR	*prptr
+);
+static	i4	er__wrtids(	/* Write msgs from file using array */
+	LOCATION	*raccf_loc,
+	LOCATION	*outf_loc,
+	MSGID_PAIR	*arr,
+	i4		nummsgs
+);
+static	VOID	do_qs(
+	char *arr,
+	i4 nel
+);
+static	VOID	bubble(
+	register char	*arr,
+	i4		nel
+);
+static	VOID	build_ge_list(
+	char	*fn
+);
+static	STATUS	validate_generr(
+	char	*ge_code
+);
 #ifdef  VMS
-FUNC_EXTERN 	VOID	create_output_file();
-FUNC_EXTERN 	VOID	close_file();
+static	VOID	create_output_file(
+	FILE_CONTEXT	*file_context,
+	char		*file_name,
+	i4		record_size
+);
+static	VOID	close_file(
+	FILE_CONTEXT	*file_context
+);
 #endif
 
 /*
@@ -1590,7 +1721,7 @@ char *fn;
     Generr_codes = i;
 
     /* sort them by generic error */
-    er__qsortids(Generr_list, Generr_codes, GE_MAX_LEN, STcompare);
+    er__qsortids((char *)Generr_list, Generr_codes, GE_MAX_LEN, STcompare);
     
 #ifdef xDEBUG
     SIprintf("The %d generic codes read were:\n", Generr_codes);
@@ -2068,7 +2199,7 @@ i4		   flag;
     create_output_file(&output_file_context, output_file_name, WRITE_SIZE);
     /*	Write an empty index block. */
     MEfill(sizeof(file_control), 0, &file_control);
-    put_record(&output_file_context, 0, &file_control, WRITE_SIZE);
+    put_record(&output_file_context, 0, (char *)&file_control, WRITE_SIZE);
     /*  Open the input file. */
     if (open_input_file(input_file_name, &in_fp))
     {
@@ -2215,7 +2346,7 @@ i4		   flag;
     file_control.control_record[class_no].tblsize = tblsize;
     file_control.classsize = class_no + 1;
     /*	Write the index block. */
-    put_record(&output_file_context, 0, &file_control, WRITE_SIZE);
+    put_record(&output_file_context, 0, (char *)&file_control, WRITE_SIZE);
     /*	Close the output file. */
     close_file(&output_file_context);
     if ( !(flag & SAON) )
@@ -2258,7 +2389,7 @@ i4		   flag;
     }
     /*	Write an empty index block. */
     MEfill(sizeof(file_control), 0, &file_control);
-    put_record(out_fp, 0, &file_control, sizeof(file_control));
+    put_record(out_fp, 0, (char *)&file_control, sizeof(file_control));
     /*  Open the input file. */
     if (open_input_file(input_file_name, &in_fp))
     {
@@ -2452,7 +2583,7 @@ SIprintf("Mesg no.: %d\n", mess_no);
 **	    generic error codes in slow messages.
 */
 #ifdef  VMS
-i4
+STATUS
 build_slow_index(infile, outfile, flag)
 char	*infile;
 char	*outfile;
@@ -2479,7 +2610,8 @@ i4	flag;
     create_output_file(&output_file_context, outfile, sizeof(index_page));
     /*	Write an empty index block. */
     MEfill(sizeof(index_page), 0, &index_page);
-    put_record(&output_file_context, 0, &index_page, sizeof(index_page));
+    put_record(&output_file_context, 0, (char *)&index_page,
+	sizeof(index_page));
     MEfill(sizeof(data_page), 0, data_page);
     /*	Process the list of files given. */
 	/*  Open the input file. */
@@ -2644,7 +2776,8 @@ i4	flag;
 	    sizeof(data_page));
     }
     /*	Write the index block. */
-    put_record(&output_file_context, 0, &index_page, sizeof(index_page));
+    put_record(&output_file_context, 0, (char *)&index_page,
+	sizeof(index_page));
     /*	Close the output file. */
     close_file(&output_file_context);
 
@@ -2653,7 +2786,7 @@ i4	flag;
     return (OK);
 }
 #else
-i4
+STATUS
 build_slow_index(infile, outfile, flag)
 char	*infile;
 char	*outfile;
@@ -3487,12 +3620,6 @@ exit:
 **		Changed sort_msg function to do its own quick sort
 **		instead of calling database sort
 */
-typedef struct 	_MSGID_PAIR
-{
-    i4	msgid;			/* msg id  */
-    i4		offset;			/* msg location in file as an offset */
-    i4	msglen;			/* # bytes for all 3 lines of msg */
-}   MSGID_PAIR;
 
 VOID
 sort_msg(inf_name, outf_name, flag)
@@ -3787,8 +3914,6 @@ static i4  Tempsize = 0;
 static i4  Eltsize;
 static char *Tempblock;
 static i4  (*Compfunc)();
-static	VOID	do_qs();
-static	VOID	bubble();
 
 
 /*{

@@ -34,6 +34,8 @@
 **	12-Feb-2008 (hanje04)
 **		SIR S119978
 **		Renamed from TE.h to telocal.h
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 **
 
 */
@@ -91,3 +93,5 @@
 # define	DE_B4800	10
 # define	DE_B9600	5
 # define	DE_B19200	2
+
+FUNC_EXTERN bool	TEisa(FILE *stream);
