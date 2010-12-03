@@ -35,6 +35,8 @@
 **		Added prototypes for TEsettmattr() and TEresettmattr()
 **	04-Nov-2010 (miket) SIR 124685
 **	    Prototype cleanup.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    TEjobcntrl funcs always return void, re-type here.
 **/
 
 FUNC_EXTERN STATUS TEclose(
@@ -61,8 +63,8 @@ FUNC_EXTERN VOID    TEinflush(
 );
 
 FUNC_EXTERN VOID    TEjobcntrl(
-	i4	    (*reset)(),
-	i4	    (*redraw)()
+	void	    (*reset)(void),
+	void	    (*redraw)(void)
 );
 
 FUNC_EXTERN VOID    TElock(

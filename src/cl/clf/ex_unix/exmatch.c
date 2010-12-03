@@ -5,8 +5,9 @@
 # include	<gl.h>
 # include	<systypes.h>
 # include	<stdarg.h>
+# include	<clconfig.h>
 # include	<ex.h>
-# include	"exi.h"
+# include	<exinternal.h>
 
 /*
 ** EXmatch
@@ -22,6 +23,8 @@
 **		GCC compiler on Linux no longer supports older va_start
 **		macro which only takes one argument. Re-implement function
 **		to use 2 arg va_start.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 /*VARARGS*/

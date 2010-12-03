@@ -5,7 +5,7 @@
 # include	<clconfig.h>
 # include	<meprivate.h>
 # include	<ex.h>
-# include	"exi.h"
+# include	<exinternal.h>
 
 /*
 NO_OPTIM = rs4_us5 ris_u64 i64_aix
@@ -115,27 +115,28 @@ NO_OPTIM = rs4_us5 ris_u64 i64_aix
 **	    from 6 to 2.
 **	16-aug-2001 (toumi01)
 **	    speculative i64_aix NO_OPTIM change for beta xlc_r - FIXME !!!
-**
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
-FUNC_EXTERN	VOID		i_EX_setcontext();
-FUNC_EXTERN	EX_CONTEXT	**i_EX_getcontext();
+static EX_CONTEXT ** i_EX_getcontext(void);
+static VOID i_EX_setcontext( EX_CONTEXT *context );
 
 EX_CONTEXT	*ex_sptr;
 
 # ifdef OS_THREADS_USED
 
-FUNC_EXTERN	VOID		i_EX_t_setcontext();
-FUNC_EXTERN	EX_CONTEXT	**i_EX_t_getcontext();
+static EX_CONTEXT ** i_EX_t_getcontext(void);
+static VOID i_EX_t_setcontext( EX_CONTEXT *context );
 
 static ME_TLS_KEY	EXcontextkey = 0;
-static	VOID		 (*i_EXsetcontext)() = i_EX_t_setcontext;
-static	EX_CONTEXT	**(*i_EXgetcontext)() = i_EX_t_getcontext;
+static	VOID		 (*i_EXsetcontext)(EX_CONTEXT *) = i_EX_t_setcontext;
+static	EX_CONTEXT	**(*i_EXgetcontext)(void) = i_EX_t_getcontext;
 
 # else /* OS_THREADS_USED */
 
-static	VOID		 (*i_EXsetcontext)() = i_EX_setcontext;
-static	EX_CONTEXT	**(*i_EXgetcontext)() = i_EX_getcontext;
+static	VOID		 (*i_EXsetcontext)(EX_CONTEXT *) = i_EX_setcontext;
+static	EX_CONTEXT	**(*i_EXgetcontext)(void) = i_EX_getcontext;
 
 # endif /* OS_THREADS_USED */
 
@@ -149,6 +150,9 @@ static	EX_CONTEXT	**(*i_EXgetcontext)() = i_EX_getcontext;
 **	pointer.  If NULL, systems defaults to the non-threaded functions
 **	i_EXsetcontext() and i_EXgetcontext().
 **
+**	Note that CSMT (os-threaded unix or vms) doesn't call this at all,
+**	and hence uses the statically initialized threaded functions.
+**
 ** HISTORY
 **	26-aug-89 (rexl)
 **	    written.
@@ -157,9 +161,7 @@ static	EX_CONTEXT	**(*i_EXgetcontext)() = i_EX_getcontext;
 */
 
 void
-i_EX_initfunc(setfunc, getfunc)
-VOID		 (*setfunc)();
-EX_CONTEXT	**(*getfunc)();
+i_EX_initfunc(void (*setfunc)(EX_CONTEXT *), EX_CONTEXT ** (*getfunc)(void))
 {
 
 	i_EXsetcontext = setfunc ? setfunc : i_EX_setcontext;
@@ -182,8 +184,8 @@ EX_CONTEXT	**(*getfunc)();
 **	    Return **EX_CONTEXT instead of *EX_CONTEXT.
 */
 
-EX_CONTEXT **
-i_EX_getcontext()
+static EX_CONTEXT **
+i_EX_getcontext(void)
 {
 	return( &ex_sptr );
 }
@@ -199,9 +201,8 @@ i_EX_getcontext()
 **	    written.
 */
 
-VOID
-i_EX_setcontext( context )
-EX_CONTEXT	*context;
+static VOID
+i_EX_setcontext( EX_CONTEXT *context )
 {
 	ex_sptr = context;
 	return;
@@ -221,7 +222,7 @@ EX_CONTEXT	*context;
 */
 
 EX_CONTEXT **
-i_EXtop()
+i_EXtop(void)
 {
 	return ((*i_EXgetcontext)());
 }
@@ -239,8 +240,7 @@ i_EXtop()
 **          Made context cast a PTR to be portable to axp_osf. 
 */
 void
-i_EXpush(context)
-EX_CONTEXT	*context;
+i_EXpush(EX_CONTEXT *context)
 {
 	EX_CONTEXT **ex_psptr;
 
@@ -248,7 +248,7 @@ EX_CONTEXT	*context;
 	** changing the setjmp return point.
 	*/
 
-	if ( ex_psptr = (*i_EXgetcontext)() )
+	if ( (ex_psptr = (*i_EXgetcontext)()) != NULL)
 	{
 	    if ( context->address_check != (PTR)*ex_psptr )
 	    {
@@ -273,16 +273,14 @@ EX_CONTEXT	*context;
 **	    i_EXpop() takes **EX_CONTEXT as parameter.
 */
 void
-i_EXpop(excp)
-EX_CONTEXT	**excp;
+i_EXpop(EX_CONTEXT **excp)
 {
 	*excp = (*excp)->prev_context;
 	return;
 }
 
-EX_CONTEXT	*
-i_EXnext(context)
-EX_CONTEXT	*context;
+EX_CONTEXT *
+i_EXnext(EX_CONTEXT *context)
 {
 	return(context->prev_context);
 }
@@ -303,8 +301,8 @@ EX_CONTEXT	*context;
 **	    Return **EX_CONTEXT instead of *EX_CONTEXT.
 */
 
-EX_CONTEXT **
-i_EX_t_getcontext()
+static EX_CONTEXT **
+i_EX_t_getcontext(void)
 {
     EX_CONTEXT **ex_psptr;
     STATUS     status;
@@ -341,9 +339,8 @@ i_EX_t_getcontext()
 **	    does not yet exist, obviating ME_tls_get() call.
 */
 
-VOID
-i_EX_t_setcontext( context )
-EX_CONTEXT	*context;
+static VOID
+i_EX_t_setcontext( EX_CONTEXT *context )
 {
     EX_CONTEXT **ex_psptr;
     STATUS     status;

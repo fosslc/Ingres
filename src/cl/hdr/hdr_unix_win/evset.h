@@ -17,6 +17,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 /*
@@ -60,31 +62,31 @@ typedef struct IIEVSET_ENTRY
 */
 
 FUNC_EXTERN STATUS
-EVSetCreate();
+EVSetCreate(i4 *, PTR, PTR);
 
 FUNC_EXTERN STATUS
-EVSetDelete();
+EVSetDelete(i4);
 
 FUNC_EXTERN STATUS
-EVSetExport();
+EVSetExport(i4, PTR);
 
 FUNC_EXTERN STATUS
-EVSetImport();
+EVSetImport(PTR, i4 *);
 
 FUNC_EXTERN STATUS
-EVSetList();
+EVSetList(i4 *, EVSET_DETAILS *);
 
 FUNC_EXTERN STATUS
-EVSetCreateFile();
+EVSetCreateFile(i4, i4, PTR, PTR, i4);
 
 FUNC_EXTERN STATUS
-EVSetDeleteFile();
+EVSetDeleteFile(i4, i4);
 
 FUNC_EXTERN STATUS
-EVSetFileList();
+EVSetFileList(i4, i4 *, EVSET_ENTRY *);
 
 FUNC_EXTERN STATUS
-EVSetLookupVar();
+EVSetLookupVar(i4, PTR, PTR, i4);
 
 /*
 ** STATUS values

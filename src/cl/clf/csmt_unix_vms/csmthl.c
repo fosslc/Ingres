@@ -22,14 +22,16 @@
 #include    <pc.h>
 #include    <lk.h>
 #include    <tr.h>
+#include    <pm.h>
+#include    <tm.h>
 #include    <csev.h>
 #include    <cssminfo.h>
 #include    <clpoll.h>
 #include    <csinternal.h>
 #include    <gcccl.h>
 #include    <meprivate.h>
+#include    <exinternal.h>
 #ifdef VMS
-#include    <exhdef.h>
 #include    <fcntl>
 #endif      /* VMS */
 #ifdef xCL_006_FCNTL_H_EXISTS
@@ -45,6 +47,7 @@
 #include    <pwd.h>
 #include    <diracc.h>
 #include    <handy.h>
+#include    <iinap.h>
 #include    "csmtlocal.h"
 #include    "csmtsampler.h"
 
@@ -618,14 +621,10 @@
 **     04-nov-2010 (joea)
 **         Change CSMT_rcv_request to static.  Add return types to the latter
 **         and to CSMT_del_thread.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	   Some include fixes for cs.
 **/
 
-/*
-** Typedef needed for CS_compress() and CS_del_thread()
-** must come before forward ref for CS_compress().
-** (sweeney)
-*/
-typedef u_short comp_t;
 
 #define PTHREAD_MAX_OBJNAM_LEN 31
 
@@ -633,8 +632,6 @@ typedef u_short comp_t;
 /*
 **  Forward and/or External function references.
 */
-
-FUNC_EXTERN comp_t  CS_compress();      /* needed for CS_del_thread(); */
 
 #ifdef xCS_WAIT_INFO_DUMP
 static VOID	    CS_display_sess_short();
@@ -644,7 +641,6 @@ static VOID	    CS_display_sess_short();
 ** Definition of all global variables used by this file.
 */
 
-GLOBALREF CS_SYSTEM           Cs_srv_block;
 GLOBALREF CS_SCB	      Cs_idle_scb;
 
 GLOBALREF	CS_SMCNTRL	*Cs_sm_cb;
@@ -652,7 +648,6 @@ GLOBALREF	CS_SERV_INFO	*Cs_svinfo;
 
 GLOBALDEF       CS_SEMAPHORE    CS_acct_sem;
 
-GLOBALREF i4		Cs_lastquant;
 GLOBALREF i4			Cs_nextpoll ;
 GLOBALREF i4			Cs_polldelay;
 
@@ -804,8 +799,6 @@ GLOBALREF CS_SEMAPHORE		Cs_known_list_sem;
 VOID
 CSMT_setup(void *parm)
 {
-    STATUS     (*rtn) ();
-    STATUS     cs_handler();
     STATUS     status;
     STATUS     thread_status = OK;	/* exit status of this thread */
     EX_CONTEXT excontext;
@@ -813,13 +806,11 @@ CSMT_setup(void *parm)
     CS_SCB     *pSCB;
     i4			nevents, msec;
     i4		tim, reset_wakeme;
-    i4		poll_ret;
     i4		qcnt;
     sigset_t		sigs;
     PTR                 ex_stack = NULL;
     SIZE_TYPE		npages;
     CL_ERR_DESC         err_code;
-    PTR			thr_stack;
     CS_STK_CB           *stkhdr = NULL;
 #ifdef LNX
     char                ex_altstack[CS_ALTSTK_SZ] __attribute__ \
@@ -874,7 +865,7 @@ CSMT_setup(void *parm)
     CS_synch_lock( &pSCB->cs_evcb->event_sem );
     CS_synch_unlock( &pSCB->cs_evcb->event_sem );
 # if !defined(xCL_NO_STACK_CACHING) && !defined(any_hpux)
-    stkhdr = (CS_STK_CB *) pSCB->cs_stk_area;
+    stkhdr = pSCB->cs_stk_area;
     if ( stkhdr != NULL )
     {
         CS_synch_lock( &CsStackSem );
@@ -902,7 +893,7 @@ CSMT_setup(void *parm)
                 stkhdr->cs_begin = stkptr - stkhdr->cs_size;
                 stkhdr->cs_end = stkptr;
  
-                pSCB->cs_stk_area = (char *) stkhdr;
+                pSCB->cs_stk_area = stkhdr;
 #ifdef ibm_lnx
                 pSCB->cs_registers[CS_SP] = 0;
 #else
@@ -1006,7 +997,6 @@ CSMT_setup(void *parm)
 	        case CS_INPUT:
 	        case CS_OUTPUT:
 	        case CS_READ:
-		    rtn = Cs_srv_block.cs_process;
 		    break;
 
 	        default:
@@ -1063,7 +1053,7 @@ CSMT_setup(void *parm)
 		CS_synch_unlock( &pSCB->cs_evcb->event_sem );
             }
 
-            status = (*rtn) (pSCB->cs_mode, pSCB, &pSCB->cs_nmode);
+            status = (*Cs_srv_block.cs_process) (pSCB->cs_mode, pSCB, &pSCB->cs_nmode);
 
             if (status)
                 pSCB->cs_nmode = CS_TERMINATE;
@@ -1269,7 +1259,7 @@ CSMT_setup(void *parm)
 	if ( Cs_srv_block.cs_stkcache == TRUE )
         {
             CS_synch_lock( &CsStackSem );
-            CS_deal_stack( stkhdr );
+            (void) CS_deal_stack( stkhdr );
             CS_synch_unlock( &CsStackSem );
         }
 	else
@@ -1624,12 +1614,12 @@ CSMT_del_thread(CS_SCB *scb)
         	unsigned short ac_gid;  /* Unused */
         	short   ac_tty;         /* Unused */
         	i4      ac_btime;       /* Session start time */
-        	comp_t  ac_utime;       /* Session CPU time (secs*60) */
-        	comp_t  ac_stime;       /* Unused */
-        	comp_t  ac_etime;       /* Session elapsed time (secs*60) */
-        	comp_t  ac_mem;         /* average memory usage (unused) */
-        	comp_t  ac_io;          /* I/O between FE and BE */
-        	comp_t  ac_rw;          /* I/O to disk by BE */
+        	u_i2	ac_utime;       /* Session CPU time (secs*60) */
+        	u_i2	ac_stime;       /* Unused */
+        	u_i2	ac_etime;       /* Session elapsed time (secs*60) */
+        	u_i2	ac_mem;         /* average memory usage (unused) */
+        	u_i2	ac_io;          /* I/O between FE and BE */
+        	u_i2	ac_rw;          /* I/O to disk by BE */
         	char    ac_comm[8];     /* "IIDBMS" */
 	    }			acc_rec;
 #endif
@@ -1707,12 +1697,12 @@ CSMT_del_thread(CS_SCB *scb)
 	    acc_rec.ac_gid		= 0;
 	    acc_rec.ac_tty		= 0;
 	    acc_rec.ac_btime	= scb->cs_connect;
-	    acc_rec.ac_utime        = CS_compress(((scb->cs_cputime*60)+50)/100);
+	    acc_rec.ac_utime    = CS_compress(((scb->cs_cputime*60)+50)/100);
 	    acc_rec.ac_stime	= 0;
 	    acc_rec.ac_etime	= CS_compress((TMsecs() - scb->cs_connect)*60);
-	    acc_rec.ac_mem		= 0;
-	    acc_rec.ac_io		= CS_compress(scb->cs_bior + scb->cs_biow);
-	    acc_rec.ac_rw		= CS_compress(scb->cs_dior + scb->cs_diow);
+	    acc_rec.ac_mem	= 0;
+	    acc_rec.ac_io	= CS_compress(scb->cs_bior + scb->cs_biow);
+	    acc_rec.ac_rw	= CS_compress(scb->cs_dior + scb->cs_diow);
 	    MEmove(	(u_i2)sizeof(scb->cs_username), scb->cs_username, EOS,
 		    (u_i2)sizeof(username), username);
 	    username[sizeof(username)-1] = EOS;
@@ -1932,6 +1922,8 @@ CSMT_admin_task()
 ** History:
 **	09-Feb-2009 (smeke01) b119586
 **	    Created.  
+**	18-Nov-2010 (kschendel)
+**	    -Wall pointed out array subscript error in an error path.
 */
 #if defined(LNX) || defined(sparc_sol)
 STATUS
@@ -2017,7 +2009,7 @@ CSMT_get_thread_stats(CS_THREAD_STATS_CB *pTSCB)
 
     if ((status = LOfroms(PATH & FILENAME, szPath, &loc)) != OK)
     {
-	szPath[CS_MAXPROCPATH + 1] = EOS;
+	szPath[CS_MAXPROCPATH] = EOS;
 	TRdisplay("%@ CSMT_get_thread_stats(): LOfroms() returned status:0x%0x for /proc path:%s\n", status, szPath);
 	return FAIL;
     }
@@ -2029,7 +2021,7 @@ CSMT_get_thread_stats(CS_THREAD_STATS_CB *pTSCB)
     }
 
 #if defined(LNX)
-    if ( (numread = SIfscanf(fp, "%*d %*s %*c %*d %*d %*d %*d %*d %*lu %*lu %*lu %*lu %*lu %lu %lu", &cutime, &cstime)) < 2 )
+    if ( (numread = SIfscanf(fp, "%*d %*s %*c %*d %*d %*d %*d %*d %*u %*u %*u %*u %*u %lu %lu", &cutime, &cstime)) < 2 )
     {
 	TRdisplay("%@ CSMT_get_thread_stats(): SIfscanf() should read 2 items from location %s, read only %d\n", loc.string, numread);
 	SIclose(fp);
@@ -2095,6 +2087,7 @@ CSMT_get_thread_stats(CS_THREAD_STATS_CB *pTSCB)
 ** Inputs:
 **	scb			The CS_SCB of the ticker task
 **				Note: the scb is mostly not filled in.
+**				We don't use it anyway.
 **
 ** Outputs:
 **	none
@@ -2111,7 +2104,6 @@ void
 CSMT_ticker(void *parm)
 {
 #if !defined(VMS)
-    CS_SCB *scb = (CS_SCB *) parm;
     SYSTIME t;
 
     while (Cs_srv_block.cs_state != CS_TERMINATING)

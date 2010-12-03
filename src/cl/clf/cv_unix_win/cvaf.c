@@ -1,7 +1,4 @@
 /*
-
-NO_OPTIM = usl_us5
-
 **Copyright (c) 2004 Ingres Corporation
 */
 
@@ -126,6 +123,8 @@ NO_OPTIM = usl_us5
 **	    normalize the decimal place.  Do power-of-10 shifting (CVexp10)
 **	    using the big power-of-10 table in MH instead of doing it
 **	    one place at a time.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    CVexhandler now in cv.h.
 **/
 
 
@@ -274,7 +273,6 @@ CVaf(char *str, char decchar, f8 *val)
 	char		dbuf[4];	/* In case str is readonly */
 # ifdef UNIX
 	bool		exception_raised;
-	extern	i4	CVexhandler();
 	EX_CONTEXT	context;
 	i4		*cv_errno_ptr = NULL;
 # ifdef OS_THREADS_USED

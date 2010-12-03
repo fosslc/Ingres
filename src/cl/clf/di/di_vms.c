@@ -247,13 +247,12 @@
 **	17-jul-2009 (joea)
 **	    Simplify the checking for completion in DI_qio.  Correct several
 **	    compiler warnings.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
+**	    Delete obsolete DIwrite_list, not used anywhere.
 **/                                                  
 
 
-FUNC_EXTERN i4 CSvms_uic(void);
-FUNC_EXTERN void CSnoresnow(char *descrip, int pos);
-
-
 /*
 **  Local Definitions.
 */
@@ -349,7 +348,7 @@ static i4	DI_qio(
                     i4   p6);
 static void	DI_resume(CS_SID *sid);
 
-static void     DI_check_init();
+static void     DI_check_init(void);
 
 /* OS and Internal threads require different handling for asynchronous calls */
 #ifdef OS_THREADS_USED
@@ -3085,57 +3084,6 @@ CL_ERR_DESC     *err_code)
 }
 
 /*
-** Name: DIwrite_list   - POSIX lio_listio external interface.
-**
-** Description:
-**      This routine is called by any thread that wants to write multiple pages
-**      The caller indicates via the op parameter whether the write request
-**      should be batched up or/and the batch list should be written to disc.
-**
-** Inputs:
-**      i4 op          - indicates what operation to perform:
-**                              DI_QUEUE_LISTIO - adds request to threads
-**                                                listio queue.
-**                              DI_FORCE_LISTIO - causes lio_listio() to be
-**                                                called using listio queue.
-**      DI_IO *f        - Pointer to the DI file context needed to do I/O.
-**      i4 *n          - Pointer to value indicating number of pages to
-**                        write.
-**      i4 page    - Value indicating page(s) to write.
-**      char *buf       - Pointer to page(s) to write.
-**      (evcomp)()      - Ptr to callers completion handler.
-**      PTR closure     - Ptr to closure details used by evcomp.
-**
-** Outputs:
-**      f               - Updates the file control block.
-**      n               - Pointer to value indicating number of pages written.
-**      err_code        - Pointer to a variable used to return operating 
-system
-**                        errors.
-**
-**      Returns:
-**          OK                          Function completed normally.
-**          non-OK status               Function completed abnormally
-**                                      with a DI error number.
-**
-**      Exceptions:
-**          none
-**
-** Side Effects:
-**      The completion handler (evcomp) will do unspecified work.
-**
-** History:
-**      01-mar-1995 (anb)
-**          Created.
-*/
-DIwrite_list( i4 op, DI_IO *f, i4 *n, i4 page, char *buf,
-              STATUS (*evcomp)(), PTR closure, CL_ERR_DESC *err_code)
-{
-    return( OK );
-}
-
-
-/*
 ** Name: getpath - Returns a device name and directory identifer.
 **
 ** Description:
@@ -3503,7 +3451,7 @@ struct FAB	*fab)
 
 /* horda03 - Added to track problems in DI due to Rogue Resumes */
 
-i4
+static i4
 DI_qio(
 char *descrip,
 II_VMS_CHANNEL channel,
@@ -3575,7 +3523,7 @@ DI_resume(CS_SID *sid)
 
 #ifdef DI_CHECK_RESUME
 static void
-DI_check_init()
+DI_check_init(void)
 {
    if (!CS_is_mt()) resume_fcn = rms_resume;
 

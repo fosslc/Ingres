@@ -349,7 +349,8 @@
 **	    files result in listing and exit without further prompting.
 **	14-July-2010 (bonro01)
 **	    Add Beta LICENSE to ingbuild.
-**	    
+**	23-Nov-2010 (kschendel)
+**	    Drop a couple obsolete platforms.
 */
 
 /*
@@ -1665,16 +1666,12 @@ assemble_archives()
 				if( stat( dest, &statbuf ) ) {
 				/* construct 'mkdir' command */
 				STprintf( cmd,
-# if defined(su4_u42)
-					ERx( ERx( "mkdir -p %s" ) ),
-# else
 			ERx( ERx( "umask 022 ; mkdir -m 755 -p %s" ) ),
-# endif
 					dest ); 
 
 				/* execute 'mkdir' command */
 				(void) ip_cmdline( cmd,
-					(ER_MSGID) NULL );
+					(ER_MSGID) 0 );
 				}
 
 				/* construct file path */
@@ -1715,7 +1712,7 @@ assemble_archives()
 
 				/* construct 'cp' command */
 				STprintf( cmd,
-#if defined(usl_us5) || defined(sos_us5) || defined(nc4_us5)
+#if defined(usl_us5)
 					ERx( ERx( "cp  %s %s" ) ),
 #else
 					ERx( ERx( "cp -p %s %s" ) ),
@@ -1887,7 +1884,7 @@ assemble_archives()
 		if( STcompare( pkg->feature, ERx( "install" ) ) != 0 )
 		{
                     /* compress may return rc=2; this is acceptable */
-		    status = ip_cmdline( cmd, (int)NULL );
+		    status = ip_cmdline( cmd, 0 );
 		    if( status == OK || status == 2 )
 		    {
 			status = OK;

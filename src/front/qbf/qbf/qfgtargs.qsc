@@ -140,6 +140,8 @@
 **          E_QF0181_InvalidName error on Linux. Star 13944983.
 **	26-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */
 
 static		bool	qbfname = FALSE;	/* -f flag */
@@ -173,13 +175,8 @@ MQQDEF	*qdef;
 					** owner.tablename work areas
 					*/
 	FE_RSLV_NAME    rslv_name;
-	#ifdef dgi_us5
-	   char    o_buf[(FE_UNRML_MAXNAME + 33)];
-	   char    t_buf[(FE_UNRML_MAXNAME + 33)];
-	#else
-	   char    o_buf[(FE_UNRML_MAXNAME + 1)];
-	   char	   t_buf[(FE_UNRML_MAXNAME + 1)];
-	#endif /* dgi_us5 */
+	char    o_buf[(FE_UNRML_MAXNAME + 1)];
+	char	   t_buf[(FE_UNRML_MAXNAME + 1)];
 
 
 	/*

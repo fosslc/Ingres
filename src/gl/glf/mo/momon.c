@@ -99,6 +99,8 @@ GLOBALREF MO_CLASS_DEF MO_mon_classes[];
 ** History:
 **	24-sep-92 (daveb)
 **	    documented
+**	1-Dec-2010 (kschendel)
+**	    Stop with the compiler warnings.
 */
 
 static MO_MON_BLOCK *
@@ -120,7 +122,7 @@ MO_igetmon( char *instance )
 
     MO_str_to_uns( instance, &mon_data_val );
 
-    return( MO_getmon( cp, (PTR)mon_data_val ) );
+    return( MO_getmon( cp, (PTR)((SCALARP)mon_data_val) ) );
 }
 
 

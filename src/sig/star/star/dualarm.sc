@@ -23,6 +23,8 @@
 **	    only the basic file type.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	1-Dec-2010 (kschendel)
+**	    Fix compiler warning.
 */
  
 /* The scheduler will be running as the ingres SYSTEM administrator but any
@@ -893,7 +895,7 @@ err_print(0, "Spawning %s%s\n", sargv[0], sargv[1]);
 			    status = PCnspawn(sargc, sargv, (i1)1, (char *) 0,
 				(char *) 0, &pid, proc_name);
 */
-status = PCcmdline((char *)0,"@ii_system:[ingres.utility]iirunscd dog");
+status = PCcmdline(NULL,"@ii_system:[ingres.utility]iirunscd dog");
 			    if (status != OK)
 			msg("Cannot spawn iialarmchk with id:%s\n",
 				alarm_checker_arr[i].id);
@@ -1217,7 +1219,7 @@ char	*test_id;
 	float	overdue;
 	float	toverdue;
 	float	fmin;
-	long	query_seq;
+	int	query_seq;
 	char	failure_action[2];
 	char	text_dml[2];
 	long	text_sequence;
@@ -2735,7 +2737,7 @@ wakeup()
 	STcopy("RUN ",wakeup_cmd);
     }
     STcat(wakeup_cmd,wakeup_name);
-    if (PCcmdline((char *)0, wakeup_cmd, 0, 0, &clerr) != OK)
+    if (PCcmdline(NULL, wakeup_cmd, 0, 0, &clerr) != OK)
     {
 	msg("Unable to create wakeup file.\n");
     }

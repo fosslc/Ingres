@@ -31,13 +31,8 @@
 */
 #undef OK
 
-#if defined(su4_us5) || defined(sui_us5)
 #include    	"/opt/SUNWconn/snap2p/p2p_lib/include/api_const.h"
 #include    	"/opt/SUNWconn/snap2p/p2p_lib/include/api.h"
-#else
-#include    	"/usr/sunlink/snap2p/p2p_lib/api_const.h"
-#include    	"/usr/sunlink/snap2p/p2p_lib/api.h"
-#endif /* su5_us5 sui_us5 */
 
 /* External variables */
 
@@ -49,8 +44,7 @@ static VOID GClu62sm();
 static VOID GClu62er();
 static STATUS GClu62name();
 static VOID GClu62reg();
-static VOID GClu62fdreg();
-static VOID GClu62read();
+static VOID GClu62read(void *, i4);
 static VOID GClu62timer();
 static VOID GClu62timeout();
 static VOID GClu62getcid();
@@ -137,6 +131,7 @@ typedef struct _GC_DCB
     	struct timeval  timtod;             /* snapshot of wallclock time */
 } GC_DCB;
 
+static VOID GClu62fdreg(GC_DCB *, void (*func)(void *, i4));
 
 static GC_PCB *GClu62lpcbs();
 static GC_PCB *GClu62newpcb();
@@ -458,6 +453,8 @@ i4 st[TSIZE];
 **	    replace nat and longnat with i4
 **      11-dec-2002 (loera01)  SIR 109237
 **          Set option flag in GCC_P_LIST to 0 (remote).
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Fix up prototypes a bit.
 */
 STATUS
 GClu62( func_code, parms )
@@ -2230,7 +2227,7 @@ GCC_P_PLIST *parms;
     	    	    !dcb->number_of_timers) 
 
     	    	    /* Unregister file descriptor */
-    	    	    (VOID) GClu62fdreg(dcb, (VOID (*)) 0);
+    	    	    (VOID) GClu62fdreg(dcb, NULL);
 		break;
 	    }
 	} /* end of for */
@@ -2282,9 +2279,7 @@ GCC_P_PLIST *parms;
 **	    Created.
 */
 static VOID
-GClu62fdreg(dcb, func)
-GC_DCB	    *dcb;
-VOID        (*func)();
+GClu62fdreg(GC_DCB *dcb, void (*func)(void *, i4))
 {
     i4 timer;
 
@@ -2334,11 +2329,11 @@ VOID        (*func)();
 	}
 
 	/* Register for read completion */
-    	(VOID)iiCLfdreg(dcb->gateway_fd, FD_READ, func,	(PTR) dcb, timer);
+    	(VOID)iiCLfdreg(dcb->gateway_fd, FD_READ, func,	dcb, timer);
     }
     else
 	/* Unregister */
-    	(VOID)iiCLfdreg(dcb->gateway_fd, FD_READ, func,	(PTR) NULL, -1);
+    	(VOID)iiCLfdreg(dcb->gateway_fd, FD_READ, func,	NULL, -1);
 }
 
 
@@ -2486,10 +2481,9 @@ GC_PCB	    *pcb;
 **  	    Rejigged to only process a single timer per pass.
 */
 static VOID
-GClu62read(dcb, error)
-GC_DCB 	*dcb;
-int error;
+GClu62read(void *parm, i4 error)
 {
+    GC_DCB 	*dcb = (GC_DCB *) parm;
     struct timeval	newtod;	    /* time of day */
     struct timezone 	newzone;    /* timezone */
     GC_PCB  	    *pcb;

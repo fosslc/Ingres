@@ -1,4 +1,5 @@
 class FPConstants
+  require 'etc'
 
   def FPConstants.emptyString
     ""
@@ -8,13 +9,21 @@ class FPConstants
   def FPConstants.borderColor
     "black"
   end
+
+  def FPConstants.defaultFontName
+    "Helvetica"
+  end
+
+  def FPConstants.defaultFontSize
+    8
+  end
   
   def FPConstants.defaultFont
-    "Tahoma 8 normal"
+    FPConstants.defaultFontName + " " + FPConstants.defaultFontSize.to_s() + " normal"
   end
 
   def FPConstants.defaultBoldFont
-    "Tahoma 8 bold"
+    FPConstants.defaultFontName + " " + FPConstants.defaultFontSize.to_s() + " bold"
   end
 
   def FPConstants.widgetActiveState
@@ -62,11 +71,12 @@ class FPConstants
   end
 
   def FPConstants.pixelsToCharWidth
-    18.0 / 109.0
+    FPConstants.charToPixelsHeight.to_f() / 109.0
   end
 
   def FPConstants.charToPixelsHeight
-    18
+    # I'm not sure what this is based on but am assuming (font size * 2) + 2
+    FPConstants.defaultFontSize * 2 + 2
   end
 
   def FPConstants.border
@@ -228,7 +238,8 @@ class FPConstants
   end
 
   def FPConstants.dbConnectionDefaultUser
-    FPConstants.emptyString
+      # Return the current OS user
+      Etc.getlogin
   end
 
   def FPConstants.dbConnectionDefaultPassword
@@ -240,7 +251,8 @@ class FPConstants
   end
 
   def FPConstants.dbConnectionDefaultProfileEmailAddress
-    FPConstants.emptyString
+    #FPConstants.emptyString
+    "test@ingres.com"
   end
 
   def FPConstants.defaultEmailAddressOption
@@ -251,6 +263,7 @@ class FPConstants
   def FPConstants.defaultDBConfigPath
     defaultDBConfigPath = ENV['TMP']
     defaultDBConfigPath = ENV['TEMP'] if !defaultDBConfigPath
+    defaultDBConfigPath = '.' if !defaultDBConfigPath
     defaultDBConfigPath
   end
 
@@ -276,3 +289,4 @@ class FPConstants
   end
 
 end
+#vim: sw=2 ts=2 expandtab

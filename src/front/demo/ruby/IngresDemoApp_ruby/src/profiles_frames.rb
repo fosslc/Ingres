@@ -79,7 +79,11 @@ class ProfilesFrames < FlightPlannerFrames
     setDefaultStates
     @personalDetailsFrame.raise
     defaultProfile = DatabaseConnection.instance.getDefaultProfile(true)              #ST070523
-    displayProfileDetails(defaultProfile.emailAddress)                                  #ST070523
+    if !defaultProfile.class == NilClass                                  #ST070523
+      displayProfileDetails(defaultProfile.emailAddress) 
+    else
+      displayProfileDetails() 
+    end
   end
 
   def setDefaultStates(state = FPConstants.widgetInactiveState)
@@ -159,7 +163,6 @@ class ProfilesFrames < FlightPlannerFrames
   end
 
   def showBottomFrame
-#    @tmpFrame.destroy if (@tmpFrame) #BPK070523
     @bottomFrame.show
   end
   

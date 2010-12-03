@@ -36,6 +36,8 @@
 **	    defined.  Sorry, Tom.
 **      06-aug-1999 (mcgem01)
 **          Replace nat and longnat with i4.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **
 ******************************************************************************/
 
@@ -86,7 +88,7 @@ cso_opttab[] = {
 **	fetches this only to set cs_isstar, used by CSinitiate() to 
 **	calculate the file descriptor fluff factors: STAR uses more of 'em.
 ******************************************************************************/
-VOID
+STATUS
 CSoptions( CS_SYSTEM *cssb )
 {
 	i4  echo = 1;
@@ -242,4 +244,5 @@ CSoptions( CS_SYSTEM *cssb )
 		break;
 	    }
 	}
+    return (OK);
 }

@@ -587,6 +587,8 @@
 #	30-Sep-2010 (troal01)
 #	    If conf_WITH_GEO is defined, we must link libq with the geospatial
 #		dependencies.
+#	23-Nov-2010 (kschendel)
+#	    Drop a few more obsolete ports.
 #
 
 if [ -n "$ING_VERS" ] ; then
@@ -800,16 +802,6 @@ trap 'cd $workdir; rm -rf $workdir/*; exit 6' 1 2 3 15
 [ `(PROG1PRFX)dsfree` -le 20000 ] && echo "** WARNING !! You may run out of diskspace **"
 
 #
-# AIX needs some special things to be done: create an export list, archive the
-# shared objects.
-[ "$config" = "ris_us5" ] &&
-mkexplist()
-{
-    ls -1 *.o | xargs -n50 /usr/ucb/nm -p |
-      awk ' $2=="D"||$2=="B" { print $3 } ' > expsym_list
-}
-#
-#
 # AIX 4.1 no longer supports the -p option.  The -B option is similar.
 #
 [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] &&
@@ -881,9 +873,6 @@ unwanted_os="gcccl.o gcapsub.o gcctcp.o gccdecnet.o gccptbl.o bsdnet.o \
 	svc_run.o svc_tcp.o rngutil.o meuse.o meconsist.o medump.o \
 	mebdump.o meberror.o mexdump.o fegeterr.o gcsunlu62.o gchplu62.o "
 
-[ "$config" = "rmx_us5" -o "$config" = "rux_us5" ] &&
-unwanted_os="$unwanted_os iiufutil.o"
-
 # unwanted dirs cs, dy, *50, di, ck, jf, sr for cl and gcc for libq.
 unwanted_dirs="cl/clf$tnoise/ck_unix_win cl/clf$tnoise/jf_unix_win cl/clf$tnoise/sr_unix_win \
 	common/cuf$tnoise/ccm"
@@ -936,84 +925,32 @@ then
     # On HP-UX, recompile cshl.c defining "HPUX_DO_NOT_INCLUDE"
     # then making the compat shared library, as well as including
     # "-lrt".
-    if [ "$ming_bld" ] ; then
-	if [ "$config" = "hpb_us5" -o "$config" = "hp8_us5" ] ; then
-	    tdir=`translate_dir "$ING_SRC/cl/clf$tnoise/cs_unix"`
-	    cd $tdir
-	    if $do_hyb
-	    then
-		ming64 "CCDEFS += \$(CCPICFLAG) -DHPUX_DO_NOT_INCLUDE" cshl.o
-		cp ${LPHB}/cshl.o $workdir/compat
-		ming64 -A cshl.o > /dev/null
-		rm -f ${LPHB}/cshl.o
-	    else
-		ming "CCDEFS += \$(CCPICFLAG) -DHPUX_DO_NOT_INCLUDE" cshl.o
-		cp cshl.o $workdir/compat
-		ming -A cshl.o > /dev/null
-		rm -f cshl.o
-	    fi
-	    cd $workdir/compat
+    if [ "$config" = "hpb_us5" -o "$config" = "hp8_us5" -o "$config" = 'hp2_us5' ] ; then
+	tdir=`translate_dir "$ING_SRC/cl/clf$tnoise/cs_unix"`
+	cd $tdir
+	if $do_hyb
+	then
+	    jam -a -sIIOPTIM=-DHPUX_DO_NOT_INCLUDE "<cl!clf!cs_unix>${LPHB}/cshl.o"
+	    cp ${LPHB}/cshl.o $workdir/compat
+	    rm -f ${LPHB}/cshl.o
+	else
+	    jam -a -sIIOPTIM=-DHPUX_DO_NOT_INCLUDE "<cl!clf!cs_unix>cshl.o"
+	    cp cshl.o $workdir/compat
+	    rm -f cshl.o
 	fi
-    else
-	if [ "$config" = "hpb_us5" -o "$config" = "hp8_us5" -o "$config" = 'hp2_us5' ] ; then
-	    tdir=`translate_dir "$ING_SRC/cl/clf$tnoise/cs_unix"`
-	    cd $tdir
-	    if $do_hyb
-	    then
-		jam -a -sIIOPTIM=-DHPUX_DO_NOT_INCLUDE "<cl!clf!cs_unix>${LPHB}/cshl.o"
-		cp ${LPHB}/cshl.o $workdir/compat
-		rm -f ${LPHB}/cshl.o
-	    else
-		jam -a -sIIOPTIM=-DHPUX_DO_NOT_INCLUDE "<cl!clf!cs_unix>cshl.o"
-		cp cshl.o $workdir/compat
-		rm -f cshl.o
-	    fi
-	    cd $workdir/compat
-	fi
+	cd $workdir/compat
     fi
 
     [ "$config" = "r64_us5" -o "$config" = "rs4_us5" ] && mkexplist
     rm -f $INGLIB/lib(PROG0PRFX)compat.$slvers.$SLSFX
     echo $shlink_cmd -o $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \*.o $shlink_opts 
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sos_us5)
-           $shlink_cmd -o $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)compat.1.so
-           ;;
-    sqs_ptx)
-           $shlink_cmd \
-            -Ur -Bstatic \
-            -o $INGLIB/libcompat.1.$SLSFX *.o \
-            -L/lib -lllrt -lm \
-            -Bdynamic \
-            -L/lib -lc -ldl -lseq -lsec \
-            -hlibcompat.1.so
-            ;;
-    rmx_us5)
-           $shlink_cmd -o $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX *.o $shlink_opts -lm -lc -lnsl -lsocket -lmproc -ldl -z defs
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX *.o -lc -
-lsocket -lm -z def \
-$shlink_opts \
-            -hlib(PROG0PRFX)compat.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX *.o \
             -lc -lnsl -lsocket \
             /usr/ccs/lib/libcrt.a \
             $shlink_opts -hlib(PROG0PRFX)compat.1.$SLSFX
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)compat.1.$SLSFX
-        ;;
-    ts2_us5)
-	cp /usr/lib/so_locations .
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX *.o $shlink_opts \
-	-no_unresolved -transitive_link -check_registry ./so_locations \
-	-soname lib(PROG0PRFX)compat.1.$SLSFX
-	;;
     *_lnx|int_rpl)
 	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)compat.${slvers}.$SLSFX *.o \
 		$shlink_opts -soname=lib(PROG0PRFX)compat.1.$SLSFX
@@ -1030,10 +967,6 @@ $shlink_opts \
         -lc -lpthread \
         $shlink_opts
 	;;
-    nc4_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX *.o \
-        $shlink_opts
-        ;;
     i64_hpu|\
     hp2_us5|\
     hpb_us5|\
@@ -1116,31 +1049,16 @@ then
     tdir=`translate_dir "$ING_SRC/back/ulf$tnoise/ult"`
     cd $tdir
 
-if [ "$ming_bld" ] ; then
-	if $do_hyb
-	then
-	    ming64 "CCDEFS += \$(CCPICFLAG)" ultrace.o
-	    cp ${LPHB}/ultrace.o $workdir/libq
-	    ming64 -A ultrace.o > /dev/null
-	    rm -f ${LPHB}/ultrace.o
-	else
-	    ming "CCDEFS += \$(CCPICFLAG)" ultrace.o
-	    cp ultrace.o $workdir/libq
-	    ming -A ultrace.o > /dev/null
-	    rm -f ultrace.o
-	fi
-else
-	if $do_hyb
-	then
-	    jam "<back!ulf!ult>${LPHB}/ultrace.o"
-	    cp ${LPHB}/ultrace.o $workdir/libq
-	    rm -f ${LPHB}/ultrace.o
-	else
-	    jam "<back!ulf!ult>ultrace.o"
-	    cp ultrace.o $workdir/libq
-	    rm -f ultrace.o
-	fi
-fi
+    if $do_hyb
+    then
+	jam "<back!ulf!ult>${LPHB}/ultrace.o"
+	cp ${LPHB}/ultrace.o $workdir/libq
+	rm -f ${LPHB}/ultrace.o
+    else
+	jam "<back!ulf!ult>ultrace.o"
+	cp ultrace.o $workdir/libq
+	rm -f ultrace.o
+    fi
 
     cd $workdir/libq
     [ "$config" = "r64_us5" -o "$config" = "rs4_us5" ] && mkexplist
@@ -1161,49 +1079,11 @@ fi
 	$INGLIB/libabfrt.a \
 	$shlink_opts 
 	;;
-    dgi_us5 | dg8_us5 )
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX $INGLIB/libabfrt.a \
-        $shlink_opts -hlib(PROG0PRFX)q.1.so
-        ;;
-    sos_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX $INGLIB/libabfrt.a \
-        $shlink_opts -hlib(PROG0PRFX)q.1.$SLSFX
-        ;;
     usl_us5 )
         $shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
         -l(PROG0PRFX)compat.1 -labfrt \
         /usr/ccs/lib/libcrt.a \
         $shlink_opts -hlib(PROG0PRFX)q.1.so
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts -hlib(PROG0PRFX)q.1.$SLSFX
-        ;;
-    rmx_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
-        -lm -lc -lnsl -lsocket -lmproc -ldl -z defs \
-        -L$INGLIB -labfrt -l(PROG0PRFX)compat.1
-        $shlink_opts
-        ;;
-    rux_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
-	$INGLIB/libabfrt.a \
-	$shlink_opts -hlib(PROG0PRFX)q.1.$SLSFX
-	;;
-    ts2_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
-	$INGLIB/libabfrt.a \
-	-soname lib(PROG0PRFX)q.1.$SLSFX \
-	$shlink_opts 
-	;;
-    ris_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
-        $INGLIB/libabfrt.a \
-       	$INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts
         ;;
     r64_us5|\
     rs4_us5)
@@ -1224,29 +1104,12 @@ fi
            cp $INGLIB/lib(PROG0PRFX)q.1.$SLSFX  $ING_BUILD/lib/lib(PROG0PRFX)q$BITSFX.1.$SLSFX 
         fi
         ;;
-    ris_u64)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o  \
-        $INGLIB/libc.a \
-        -L/lib $shlink_opts \
-        -L$INGLIB -labfrt -l(PROG0PRFX)compat.1
-        ;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
 	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
 	$shlink_opts 
 	;;
-    sqs_ptx)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)q.1.$SLSFX
-        ;;
-    nc4_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
-        -l(PROG0PRFX)compat.1 -L /usr/ccs/lib -lmw -labfrt \
-        -lnsl -lsocket -lld \
-        $shlink_opts -hlib(PROG0PRFX)q.1.$SLSFX
-        ;;
     *_lnx|int_rpl)
 	if [ "$conf_WITH_GEO" ] ; then
 		geo_libs=" -lgeos -lgeos_c -lproj "
@@ -1338,51 +1201,17 @@ then
 	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o  \
 	$shlink_opts 
 	;;
-    rmx_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o  \
-        -lm -lc -lnsl -lsocket -lmproc -ldl -z defs \
-        -L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 \
-        $shlink_opts
-        ;;
-    rux_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o  \
-	$shlink_opts -hlib(PROG0PRFX)frame.1.$SLSFX 
-	;;
-    ts2_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o  \
-	$shlink_opts -soname lib(PROG0PRFX)frame.1.$SLSFX
-	;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
 	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o \
 	-L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 \
 	$shlink_opts 
 	;;
-    nc4_us5 | sqs_ptx)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)frame.1.$SLSFX
-        ;;
-    dgi_us5 | dg8_us5 )
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o  \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $shlink_opts -hlib(PROG0PRFX)frame.1.so
-        ;;
     usl_us5 )
         $shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o  \
         -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 \
         $shlink_opts -hlib(PROG0PRFX)frame.1.so
-        ;;
-    sos_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o  \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $shlink_opts -hlib(PROG0PRFX)frame.1.$SLSFX
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o  \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $shlink_opts -hlib(PROG0PRFX)frame.1.$SLSFX
         ;;
     r64_us5|\
     rs4_us5)
@@ -1402,12 +1231,6 @@ then
 	   unlink $ING_BUILD/lib/lib(PROG0PRFX)frame$BITSFX.1.$SLSFX
            cp $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX $ING_BUILD/lib/lib(PROG0PRFX)frame$BITSFX.1.$SLSFX 
         fi
-        ;;
-    ris_u64)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o  \
-        $INGLIB/libc.a \
-        -L/lib $shlink_opts \
-        -L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1
         ;;
       *_lnx|int_rpl)
 	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.${slvers}.$SLSFX *.o  \
@@ -1490,54 +1313,16 @@ then
 	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o \
 	$shlink_opts 
 	;;
-    rmx_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o \
-        -lc -lnsl -lsocket -lmproc -ldl -z defs \
-        -L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 \
-        -l(PROG0PRFX)frame.1 \
-        $shlink_opts
-        ;;
-    rux_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o \
-	$shlink_opts -hlib(PROG0PRFX)interp.1.$SLSFX 
-	;;
-    ts2_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o \
-	$shlink_opts -soname lib(PROG0PRFX)interp.1.$SLSFX
-	;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
 	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o \
 	$shlink_opts 
 	;;
-    nc4_us5 | sqs_ptx)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)interp.1.$SLSFX
-        ;;
-    dgi_us5 | dg8_us5 )
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $shlink_opts -hlib(PROG0PRFX)interp.1.so
-        ;;
-    sos_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $shlink_opts -hlib(PROG0PRFX)interp.1.$SLSFX
-        ;;
     usl_us5 )
         $shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o \
         -l(PROG0PRFX)compat.1 -l(PROG0PRFX)frame.1 -l(PROG0PRFX)q.1 \
         $shlink_opts -hlib(PROG0PRFX)interp.1.so
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $shlink_opts -hlib(PROG0PRFX)interp.1.$SLSFX
         ;;
     r64_us5|\
     rs4_us5)
@@ -1558,12 +1343,6 @@ then
 	   unlink $ING_BUILD/lib/lib(PROG0PRFX)interp$BITSFX.1.$SLSFX
            cp $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX $ING_BUILD/lib/lib(PROG0PRFX)interp$BITSFX.1.$SLSFX 
         fi
-        ;;
-    ris_u64)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o  \
-        $INGLIB/libc.a \
-        -L/lib $shlink_opts \
-        -L$INGLIB/ -l(PROG0PRFX)compat.1 -l(PROG0PRFX)frame.1 -l(PROG0PRFX)q.1
         ;;
       *_lnx|int_rpl)
 	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.${slvers}.$SLSFX *.o \
@@ -1662,37 +1441,12 @@ then
         -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1
 	$shlink_opts 
 	;;
-    rmx_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o \
-        -lc -lnsl -lsocket -lmproc -ldl -z defs \
-        -L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 \
-        $shlink_opts
-        ;;
-    rux_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o \
-	$shlink_opts -hlib(PROG1PRFX)api.1.$SLSFX 
-	;;
-    ts2_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o \
-	$shlink_opts -soname lib(PROG1PRFX)api.1.$SLSFX
-	;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
 	$shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o \
 	$shlink_opts 
 	;;
-    nc4_us5 | sqs_ptx)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG1PRFX)api.1.$SLSFX
-        ;;
-    ris_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts
-        ;;
     r64_us5|\
     rs4_us5)
         $shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o  \
@@ -1712,31 +1466,10 @@ then
            cp $INGLIB/lib(PROG1PRFX)api.1.$SLSFX $ING_BUILD/lib/lib(PROG1PRFX)api$BITSFX.1.$SLSFX 
         fi
         ;;
-    ris_u64)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o  \
-        $INGLIB/libc.a \
-        -L/lib $shlink_opts \
-        -L$INGLIB -l(PROG0PRFX)q.1  -l(PROG0PRFX)compat.1
-        ;;
-    dgi_us5 | dg8_us5 )
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts -hlib(PROG1PRFX)api.1.so
-        ;;
-    sos_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts -hlib(PROG1PRFX)api.1.$SLSFX
-        ;;
     usl_us5 )
         $shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o \
         -l(PROG0PRFX)compat.1 \
         $shlink_opts -hlib(PROG1PRFX)api.1.so
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts -hlib(PROG1PRFX)api.1.$SLSFX
         ;;
       *_lnx|int_rpl)
 	$shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.${slvers}.$SLSFX *.o \
@@ -1833,48 +1566,11 @@ then
         $shlink_cmd -o $INGLIB/oiicens.1.$SLSFX *.o \
         $shlink_opts -L $INGLIB -l(PROG0PRFX)compat.1
         ;;
-    rmx_us5)
-        $shlink_cmd -o $INGLIB/oiicens.1.$SLSFX *.o \
-        -Bstatic -lcompat -lm \
-        $shlink_opts
-        ;;
-    rux_us5)
-        $shlink_cmd -o $INGLIB/oiicens.1.$SLSFX *.o \
-        $shlink_opts -L $INGLIB -l(PROG0PRFX)frame.1 -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1
-        ;;
-    ts2_us5)
-#	Tandem NonStop apparently requires no space between '-L' and the
-#	directory.
-        $shlink_cmd -o $INGLIB/oiicens.1.$SLSFX *.o \
-        $shlink_opts -L$INGLIB -l(PROG0PRFX)frame.1 -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 \
-	-soname oiicens.1.$SLSFX
-        ;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
         $shlink_cmd -o $INGLIB/oiicens.1.$SLSFX *.o \
         $shlink_opts -lelf -L $INGLIB -l(PROG0PRFX)compat.1
-        ;;
-    sqs_ptx)
-        $shlink_cmd -Ur \
-        -o $INGLIB/oiicens.1.$SLSFX *.o \
-        $INGLIB/libcompat.a \
-        /lib/libc.a /lib/libm.a /lib/libllrt.a \
-        -hoiicens.1.$SLSFX
-        ;;
-    nc4_us5)
-	$shlink_cmd -o $INGLIB/oiicens.1.$SLSFX *.o \
-        $shlink_opts -lelf -lsocket -lnsl -lc -L $INGLIB \
-        -l(PROG0PRFX)compat -lm -hoiicens.1.$SLSFX \
-        -L /usr/ccs/lib -ldl /usr/ccs/lib/libc.so
-        ;;
-    ris_us5)
-	# -r flag causes ld to ignore unresolved Netscape functions.
-        $shlink_cmd -r -o $INGLIB/oiicens.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts
         ;;
     r64_us5|\
     rs4_us5)
@@ -1882,35 +1578,10 @@ then
         -L/lib $shlink_opts \
         -L$ING_BUILD/lib -l(PROG0PRFX)q$BITSFX.1 -l(PROG0PRFX)compat$BITSFX.1
         ;;
-    ris_u64)
-	# -r flag causes ld to ignore unresolved Netscape functions.
-	# -bI:$ING_SRC/front/web/insapi/netscape.symbols \
-        $shlink_cmd -r -o $INGLIB/oiicens.1.$SLSFX *.o \
-        $INGLIB/libc.a \
-        -L/lib $shlink_opts \
-        -L$INGLIB -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1
-        ;;
-    dgi_us5 | dg8_us5)
-        $shlink_cmd -o $INGLIB/oiicens.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts -hoiicens.so -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -lc \
-	-lthread -lsocket -lnsl -lrte
-        ;;
-    sos_us5)
-         $shlink_cmd -o $INGLIB/oiicens.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        -lc -lnsl -lsocket -lcrypt -lm \
-        $shlink_opts -hoiicens.$SLSFX
-        ;;
     usl_us5 )
         $shlink_cmd -o $INGLIB/oiicens.1.$SLSFX *.o \
         -l(PROG0PRFX)compat.1 \
         $shlink_opts -hoiicens.1.so 
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $INGLIB/oiicens.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts -hoiicens.$SLSFX
         ;;
       *_lnx|int_rpl)
 	$shlink_cmd -o $INGLIB/oiicens.${slvers}.$SLSFX *.o \
@@ -1939,7 +1610,6 @@ then
         echo $0 Failed,  aborting !!
         exit 4
     else
-        [ "$config" = "ris_us5" ] && archive_lib oiicens.1
         chmod 755 $INGLIB/oiicens.${slvers}.$SLSFX
         ls -l $INGLIB/oiicens.${slvers}.$SLSFX
         echo Cleaning up ...
@@ -2007,53 +1677,12 @@ then
         $INGLIB/libcuf.a  \
         $shlink_opts -L $INGLIB -l(PROG0PRFX)compat.1
         ;;
-    rmx_us5)
-        $shlink_cmd -o $INGLIB/oiiceap.1.$SLSFX *.o \
-        -Bstatic -lcompat -lm $INGLIB/libcuf.a  \
-        $shlink_opts
-        ;;
-    rux_us5)
-        $shlink_cmd -o $INGLIB/oiiceap.1.$SLSFX *.o \
-        $shlink_opts $INGLIB/libcuf.a -L $INGLIB    \
-        -l(PROG0PRFX)frame.1 -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1
-        ;;
-    ts2_us5)
-#	Tandem NonStop apparently requires no space between '-L' and the
-#	directory.
-        $shlink_cmd -o $INGLIB/oiiceap.1.$SLSFX *.o \
-        $shlink_opts $INGLIB/libcuf.a  -L$INGLIB  \
-        -l(PROG0PRFX)frame.1 -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 \
-	-soname oiiceap.1.$SLSFX
-        ;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
         $shlink_cmd -o $INGLIB/oiiceap.1.$SLSFX *.o \
         $shlink_opts -lelf -L $INGLIB -l(PROG0PRFX)compat.1 -lcuf \
         -lsocket -lnsl -lresolv -lposix4
-        ;;
-    sqs_ptx)
-        $shlink_cmd -Ur \
-        -o $INGLIB/oiiceap.1.$SLSFX *.o \
-        $INGLIB/libcompat.a \
-        $INGLIB/libcuf.a  \
-        /lib/libc.a /lib/libm.a /lib/libllrt.a \
-        -hoiiceap.1.$SLSFX
-        ;;
-    nc4_us5)
-        $shlink_cmd -o $INGLIB/oiiceap.1.$SLSFX *.o \
-        $shlink_opts -lelf -lsocket -lnsl -lc -L $INGLIB \
-        -l(PROG0PRFX)compat $INGLIB/libcuf.a -lm -hoiiceap.1.$SLSFX \
-        -L /usr/ccs/lib -ldl /usr/ccs/lib/libc.so
-        ;;
-    ris_us5)
-	# -r flag causes ld to ignore unresolved Netscape functions.
-        $shlink_cmd -r -o $INGLIB/oiiceap.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-	$INGLIB/libcuf.a \
-        $shlink_opts
         ;;
     r64_us5|\
     rs4_us5)
@@ -2069,43 +1698,11 @@ then
 	$INGLIB/libcuf.a \
         -L$ING_BUILD/lib -l(PROG0PRFX)q$BITSFX.1 -l(PROG0PRFX)compat$BITSFX.1
         ;;
-    ris_u64)
-        # Because the executable program's symbol set has to be
-        # known by the dynamic shared object, so use the httpd.exp 
-        # file from Apache as the import file to build the shared lib.
-        $shlink_cmd \
-        -bI:/ingres/ii25test/apache64/apache_1.3.19/src/support/httpd.exp \
-        -o $INGLIB/oiiceap.1.$SLSFX *.o \
-        $INGLIB/libc.a \
-        -L/lib $shlink_opts \
-	$INGLIB/libcuf.a \
-        -L$INGLIB -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1
-        ;;
-    dgi_us5 | dg8_us5)
-        $shlink_cmd -o $INGLIB/oiiceap.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.a \
-        $INGLIB/lib(PROG0PRFX)q.a  \
-	$INGLIB/libcuf.a \
-        $shlink_opts -hoiiceap.so 
-        ;;
-    sos_us5)
-        $shlink_cmd -o $INGLIB/oiiceap.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-	$INGLIB/lib(PROG0PRFX)apapi.a \
-	$INGLIB/libcuf.a \
-	$shlink_opts -lsocket -lcrypt -lc
-        ;;
     usl_us5 )
         $shlink_cmd -o $INGLIB/oiiceap.1.$SLSFX *.o \
         -l(PROG0PRFX)compat.1 \
 	$INGLIB/libcuf.a \
         $shlink_opts -hoiiceap.1.so    
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $INGLIB/oiiceap.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-	$INGLIB/libcuf.a \
-        $shlink_opts -hoiiceap.$SLSFX
         ;;
       *_lnx|int_rpl)
 	$shlink_cmd -o $INGLIB/oiiceap.${slvers}.$SLSFX *.o \
@@ -2136,7 +1733,6 @@ then
         echo $0 Failed,  aborting !!
         exit 4
     else
-        [ "$config" = "ris_us5" ] && archive_lib oiiceap.1
         chmod 755 $INGLIB/oiiceap.${slvers}.$SLSFX
         ls -l $INGLIB/oiiceap.${slvers}.$SLSFX
         echo Cleaning up ...
@@ -2204,53 +1800,11 @@ then
         $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
         $shlink_opts -L $INGLIB -l(PROG0PRFX)compat.1
         ;;
-    rmx_us5)
-        $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
-        -lc -lnsl -lsocket -lmproc -ldl \
-        -z defs \
-        $shlink_opts -L $INGLIB -l(PROG0PRFX)frame.1 -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -lddf
-        ;;
-    rux_us5)
-        $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
-        $shlink_opts -z defs -L /opt/thread/lib -L $INGLIB -l(PROG0PRFX)compat.1 \
-	-lcma -l(PROG0PRFX)frame.1 -l(PROG0PRFX)q.1 -lddf -lnsl -lsocket -lm -lc_r -lmproc -ldl
-        ;;
-    ts2_us5)
-#	Tandem NonStop apparently requires no space between '-L' and the
-#	directory.
-        $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
-        $shlink_opts -L$INGLIB -l(PROG0PRFX)frame.1 -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 \
-	-soname ${SLDDIHEAD}oiddi.1.$SLSFX
-        ;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
         $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
         $shlink_opts -lelf -L $INGLIB -l(PROG0PRFX)frame.1 -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1
-        ;;
-    sqs_ptx)
-	$shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
-	-hoiddi.$SLDDITAIL \
-	-z defs \
-	-L$INGLIB -lddf \
-	-l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 -l(PROG0PRFX)frame.1 \
-	-lsocket -lnsl -lc -lllrt
-	;;
-    nc4_us5)
-        $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
-        -hoiddi.$SLDDITAIL \
-        -lnsl -lsocket -lelf -lddf -lc \
-        $shlink_opts \
-        -L $INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)frame.1 \
-        -l(PROG0PRFX)q.1 -ldl -lcrypt \
-        /usr/ccs/lib/libc.so
-        ;;
-    ris_us5)
-        $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts
         ;;
     r64_us5|\
     rs4_us5)
@@ -2270,36 +1824,10 @@ then
            cp $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL $ING_BUILD/lib/${SLDDIHEAD}oiddi$BITSFX.$SLDDITAIL 
         fi
         ;;
-    ris_u64)
-        $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o  \
-        $INGLIB/libc.a \
-        -L/lib $shlink_opts \
-        -L$INGLIB -lddf -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1
-        ;;
-    dgi_us5 | dg8_us5)
-        $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
-        $shlink_opts -hoiddi.$SLDDITAIL \
-	-z defs -lddf -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -lc -lthread -lsocket -lnsl -lrte
-        ;;
     usl_us5 )
         $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
         -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 \
         $shlink_opts -lddf -hoiddi.$SLSFX -lc
-        ;;
-    sos_us5 )
-        $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-	$INGLIB/lib(PROG0PRFX)frame.1.$SLSFX \
-	$INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-	$shlink_opts -lsocket -lnsl -lcrypt -lddf -lc -zdefs
-        ;;
-    dr6_us5)
-	# Changed the file name to be consistent with the rest of
-	# this section, don't know what the -h option does though,
-	# so left as is.
-        $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts -hoiddi.$SLSFX
         ;;
       *_lnx)
 	# Changed the file name to be consistent with the rest of
@@ -2393,42 +1921,12 @@ then
         $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
         -L$INGLIB -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG0PRFX)frame.1 $shlink_opts
         ;;
-    rmx_us5)
-        $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
-        -lingres \
-        $shlink_opts
-        ;;
-    rux_us5)
-        $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
-        -lm -lc -lnsl -lsocket -lmproc -ldl \
-        -L$INGLIB -l(PROG0PRFX)compat \
-        -z defs \
-        $shlink_opts
-        ;;
-    ts2_us5)
-#	Tandem NonStop apparently requires no space between '-L' and the
-#	directory.
-        $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
-        $shlink_opts \
-	-soname liboinodesmgr.$SLSFX
-        ;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
         $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
 	-L$ING_BUILD/lib -lcompat.1 -lq.1 -lframe.1 \
         $shlink_opts -lelf
-        ;;
-    nc4_us5 | sqs_ptx)
-        $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
-        $shlink_opts -lelf \
-        -hliboinodesmgr.$SLSFX
-        ;;
-    ris_us5)
-	# -r flag causes ld to ignore unresolved Netscape functions.
-        $shlink_cmd -r -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
-        $shlink_opts
         ;;
     r64_us5|\
     rs4_us5)
@@ -2436,33 +1934,11 @@ then
 	-L$ING_BUILD/lib -lcompat.1 -lq.1 -lframe.1 \
         -L/lib $shlink_opts
         ;;
-    ris_u64)
-	# -r flag causes ld to ignore unresolved Netscape functions.
-	# -bI:$ING_SRC/front/web/insapi/netscape.symbols \
-        $shlink_cmd -r -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
-	-L$ING_BUILD/lib -lcompat.1 -lq.1 -lframe.1 \
-        -L/lib $shlink_opts
-        ;;
-    sos_us5)
-    $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o
-$INGLIB/lib(PROG0PRFX)compat.a \
-        $shlink_opts -hliboinodesmgr.$SLSFX -lddf -lsocket -lcrypt -lc -z
-defs
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
-        $shlink_opts -hliboinodesmgr.$SLSFX
-        ;;
       *_lnx|int_rpl)
 	$shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
 	-L$ING_BUILD/lib -lcompat.${slvers} -lq.${slvers} -lframe.${slvers} \
 	$shlink_opts -soname=liboinodesmgr.$SLSFX
 	;;
-    dgi_us5 | dg8_us5)
-        $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
-        $shlink_opts -z defs -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 -lc -lthread -lsocket \
-	-lnsl -lrte -l(PROG0PRFX)compat
-        ;;
     sgi_us5)
         $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
         $INGLIB/libingres.a \
@@ -2478,7 +1954,6 @@ defs
         echo $0 Failed,  aborting !!
         exit 4
     else
-        [ "$config" = "ris_us5" ] && archive_lib oinodesmgr.1
         chmod 755 $ING_BUILD/lib/liboinodesmgr.$SLSFX
         echo Cleaning up ...
         cd $workdir; 
@@ -2526,43 +2001,12 @@ then
         $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
         -L$INGLIB -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG0PRFX)frame.1 $shlink_opts
         ;;
-    rmx_us5)
-        $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
-        -lingres \
-        $shlink_opts
-        ;;
-    rux_us5)
-        $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
-        -lm -lc -lnsl -lsocket -lmproc -ldl \
-        -L$INGLIB -l(PROG0PRFX)compat \
-        -z defs \
-        $shlink_opts
-        ;;
-    ts2_us5)
-#	Tandem NonStop apparently requires no space between '-L' and the
-#	directory.
-        $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
-        $shlink_opts \
-	-soname liboijniquery.$SLSFX
-        ;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
         $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
 	-L$ING_BUILD/lib -lcompat.1 -lq.1 -lframe.1 \
         $shlink_opts -lelf
-        ;;
-    nc4_us5 | sqs_ptx)
-        $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
-        $shlink_opts -lelf \
-        -hliboijniquery.$SLSFX
-
-        ;;
-    ris_us5)
-	# -r flag causes ld to ignore unresolved Netscape functions.
-        $shlink_cmd -r -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
-        $shlink_opts
         ;;
     r64_us5|\
     rs4_us5)
@@ -2570,33 +2014,11 @@ then
 	-L$ING_BUILD/lib -lcompat.1 -lq.1 -lframe.1 \
         -L/lib $shlink_opts
         ;;
-    ris_u64)
-	# -r flag causes ld to ignore unresolved Netscape functions.
-	# -bI:$ING_SRC/front/web/insapi/netscape.symbols \
-        $shlink_cmd -r -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
-	-L$ING_BUILD/lib -lcompat.1 -lq.1 -lframe.1 \
-        -L/lib $shlink_opts
-        ;;
-    sos_us5)
-    $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o
-$INGLIB/lib(PROG0PRFX)compat.a \
-        $shlink_opts -hliboijniquery.$SLSFX -lddf -lsocket -lcrypt -lc -z
-defs
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
-        $shlink_opts -hliboijniquery.$SLSFX
-        ;;
       *_lnx|int_rpl)
 	$shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
 	-L$ING_BUILD/lib -lcompat.1 -lq.1 -lframe.1 -lfstm -lqr \
 	$shlink_opts -soname=liboijniquery.$SLSFX
 	;;
-    dgi_us5 | dg8_us5)
-        $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
-        $shlink_opts -z defs -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 -lc -lthread -lsocket \
-	-lnsl -lrte -l(PROG0PRFX)compat
-        ;;
     sgi_us5)
         $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
         $INGLIB/libingres.a \
@@ -2612,7 +2034,6 @@ defs
         echo $0 Failed,  aborting !!
         exit 4
     else
-        [ "$config" = "ris_us5" ] && archive_lib oijniquery.1
         chmod 755 $ING_BUILD/lib/liboijniquery.$SLSFX
         echo Cleaning up ...
         cd $workdir; 
@@ -2666,72 +2087,21 @@ then
         $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
         -L$INGLIB -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 $shlink_opts
         ;;
-    rmx_us5)
-        $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
-        -lingres \
-        $shlink_opts
-        ;;
-    rux_us5)
-        $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
-        -lm -lc -lnsl -lsocket -lmproc -ldl \
-        -L$INGLIB -l(PROG0PRFX)compat \
-        -z defs \
-        $shlink_opts
-        ;;
-    ts2_us5)
-#	Tandem NonStop apparently requires no space between '-L' and the
-#	directory.
-        $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
-        $shlink_opts \
-	-soname libplay_NewOrder.$SLSFX.2.0
-        ;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
         $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
         $shlink_opts -lelf
-        ;;
-    nc4_us5 | sqs_ptx)
-        $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
-        $shlink_opts -lelf \
-        -hlibplay_NewOrder.$SLSFX.2.0
-        ;;
-    ris_us5)
-	# -r flag causes ld to ignore unresolved Netscape functions.
-        $shlink_cmd -r -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
-        $shlink_opts
         ;;
     r64_us5|\
     rs4_us5)
         $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
         -L/lib $shlink_opts
         ;;
-    ris_u64)
-	# -r flag causes ld to ignore unresolved Netscape functions.
-	# -bI:$ING_SRC/front/web/insapi/netscape.symbols \
-        $shlink_cmd -r -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
-        -L/lib $shlink_opts
-        ;;
-    sos_us5)
-    $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o
-$INGLIB/lib(PROG0PRFX)compat.a \
-        $shlink_opts -hlibplay_NewOrder.$SLSFX.2.0 -lddf -lsocket -lcrypt -lc -z
-defs
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
-        $shlink_opts -hlibplay_NewOrder.$SLSFX.2.0
-        ;;
     *_lnx|int_rpl)
 	$shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLDDITAIL *.o \
 	$shlink_opts -soname=libplay_NewOrder.$SLDDITAIL
 	;;
-    dgi_us5 | dg8_us5)
-        $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
-        $shlink_opts -z defs -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 -lc -lthread -lsocket \
-	-lnsl -lrte -l(PROG0PRFX)compat
-        ;;
     sgi_us5)
         $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
         $INGLIB/libingres.a \
@@ -2833,46 +2203,13 @@ then
         $shlink_opts -L$INGLIB \
                      -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1
         ;;
-    rmx_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o \
-        -lm -lc -lnsl -lsocket -lmproc -ldl -z defs \
-        $shlink_opts -L$INGLIB \
-                     -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1
-        ;;
-    rux_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o \
-        -hlib(PROG1PRFX)odbcdriver$RO.1.$SLSFX \
-        $shlink_opts -lsocket -L$INGLIB \
-                     -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1
-        ;;
-    ts2_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o \
-        $shlink_opts -lsocket -L$INGLIB \
-                     -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1
-        -soname lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX
-        ;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
         $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o \
         $shlink_opts -lelf -lsocket -L$INGLIB \
                      -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1
 #                    -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1 -ladf -lgcf -lcuf
-        ;;
-    nc4_us5|\
-    sqs_ptx)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o \
-        $shlink_opts -lsocket -L$INGLIB \
-                     -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1 \
-        -hlib(PROG1PRFX)odbcdriver$RO.1.$SLSFX
-        ;;
-    ris_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o \
-        $INGLIB/(PROG0PRFX)libq.1.$SLSFX \
-        $INGLIB/lib(PROG1PRFX)api.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts
         ;;
     r64_us5|\
     rs4_us5)
@@ -2894,41 +2231,12 @@ then
            cp $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX $ING_BUILD/lib/lib(PROG1PRFX)odbcdriver$BITSFX$RO.1.$SLSFX 
         fi
         ;;
-    ris_u64)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o  \
-        $INGLIB/libc.a \
-        -L/lib $shlink_opts \
-        -L$INGLIB \
-                     -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1
-        ;;
-    dgi_us5 |\
-    dg8_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $INGLIB/lib(PROG1PRFX)api.1.$SLSFX \
-        $shlink_opts -hlib(PROG1PRFX)odbcdriver$RO.1.$SLSFX
-        ;;
-    sos_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $INGLIB/lib(PROG1PRFX)api.1.$SLSFX \
-        $shlink_opts -hlib(PROG1PRFX)odbcdriver$RO.1.$SLSFX
-        ;;
     usl_us5 )
         $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o \
         $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
         $INGLIB/lib(PROG1PRFX)api.1.$SLSFX \
         $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
         $shlink_opts
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $INGLIB/lib(PROG1PRFX)api.1.$SLSFX \
-        $shlink_opts -hlib(PROG1PRFX)odbcdriver$RO.1.$SLSFX
         ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.${slvers}.$SLSFX *.o \
@@ -3037,45 +2345,12 @@ then
         $shlink_opts -L$INGLIB \
         -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1
         ;;
-    rmx_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o \
-        -lm -lc -lnsl -lsocket -lmproc -ldl -z defs \
-        $shlink_opts -L$INGLIB \
-        -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1
-        ;;
-    rux_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o \
-        -hlib(PROG1PRFX)odbc.1.$SLSFX \
-        $shlink_opts -lsocket -L$INGLIB \
-         -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1
-        ;;
-    ts2_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o \
-        $shlink_opts -lsocket -L$INGLIB \
-        -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1 \
-        -soname lib(PROG1PRFX)odbc.1.$SLSFX
-        ;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
         $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o \
         $shlink_opts -lelf -lsocket -L$INGLIB \
         -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1 
-        ;;
-    nc4_us5|\
-    sqs_ptx)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o \
-        $shlink_opts -lsocket -L$INGLIB \
-        -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1 \
-        -hlib(PROG1PRFX)odbc.1.$SLSFX
-        ;;
-    ris_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o \
-        $INGLIB/(PROG0PRFX)libq.1.$SLSFX \
-        $INGLIB/lib(PROG1PRFX)api.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts
         ;;
     r64_us5|\
     rs4_us5)
@@ -3097,42 +2372,12 @@ then
            cp $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX $ING_BUILD/lib/lib(PROG1PRFX)odbc$BITSFX.1.$SLSFX 
         fi
         ;;
-    ris_u64)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o  \
-        $INGLIB/libc.a \
-        -L/lib $shlink_opts \
-        -L$INGLIB \
-        -l(PROG0PRFX)compat.1
-        ;;
-    dgi_us5 |\
-    dg8_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $INGLIB/lib(PROG1PRFX)api.1.$SLSFX \
-        $shlink_opts -hlib(PROG1PRFX)odbc.1.$SLSFX
-        ;;
-    sos_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $INGLIB/lib(PROG1PRFX)api.1.$SLSFX \
-        $shlink_opts -hlib(PROG1PRFX)odbc.1.$SLSFX
-        ;;
     usl_us5 )
         $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o \
         $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
         $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
         $INGLIB/lib(PROG1PRFX)api.1.$SLSFX \
         $shlink_opts
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $INGLIB/lib(PROG1PRFX)api.1.$SLSFX \
-        
-        $shlink_opts -hlib(PROG1PRFX)odbc.1.$SLSFX
         ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.${slvers}.$SLSFX *.o \
@@ -3234,43 +2479,12 @@ then
         $shlink_opts -L$INGLIB \
         -l(PROG0PRFX)compat.1
         ;;
-    rmx_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o \
-        -lm -lc -lnsl -lsocket -lmproc -ldl -z defs \
-        $shlink_opts -L$INGLIB \
-        -l(PROG0PRFX)compat.1
-        ;;
-    rux_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o \
-        -hlib(PROG1PRFX)odbctrace.1.$SLSFX \
-        $shlink_opts -lsocket -L$INGLIB \
-        -l(PROG0PRFX)compat.1
-        ;;
-    ts2_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o \
-        $shlink_opts -lsocket -L$INGLIB \
-        -l(PROG0PRFX)compat.1
-        -soname lib(PROG1PRFX)odbctrace.1.$SLSFX
-        ;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
         $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o \
         $shlink_opts -lelf -lsocket -L$INGLIB \
         -l(PROG0PRFX)compat.1
-        ;;
-    nc4_us5|\
-    sqs_ptx)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o \
-        $shlink_opts -lsocket -L$INGLIB \
-        -l(PROG0PRFX)compat.1
-        -hlib(PROG1PRFX)odbctrace.1.$SLSFX
-        ;;
-    ris_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts
         ;;
     r64_us5|\
     rs4_us5)
@@ -3290,33 +2504,10 @@ then
            cp $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX $ING_BUILD/lib/lib(PROG1PRFX)odbctrace$BITSFX.1.$SLSFX 
         fi
         ;;
-    ris_u64)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o  \
-        $INGLIB/libc.a \
-        -L/lib $shlink_opts \
-        -L$INGLIB \
-        -l(PROG0PRFX)compat.1
-        ;;
-    dgi_us5 |\
-    dg8_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts -hlib(PROG1PRFX)odbctrace.1.$SLSFX
-        ;;
-    sos_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts -hlib(PROG1PRFX)odbctrace.1.$SLSFX
-        ;;
     usl_us5 )
         $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o \
         $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
         $shlink_opts
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $shlink_opts -hlib(PROG1PRFX)odbctrace.1.$SLSFX
         ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.${slvers}.$SLSFX *.o \
@@ -3400,45 +2591,13 @@ then
 	  -l(PROG0PRFX)frame.1 $INGLIB/libgcf.a $INGLIB/libutil.a \
 	  $INGLIB/libinstall.a $shlink_opts
 	;;
-    rmx_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o \
-        -lc -lnsl -lsocket -lmproc -ldl -z defs \
-        -L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 -l(PROG0PRFX)frame.1 \
-        $shlink_opts -L$INGLIB -lgcf -lutil -linstall
-        ;;
-    rux_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o \
-	$shlink_opts -hlib(PROG0PRFX)oiutil.1.$SLSFX \
-                     -L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 \
-                               -l(PROG0PRFX)frame.1  -lgcf -lutil -linstall
-	;;
-    ts2_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o \
-	$shlink_opts -soname lib(PROG0PRFX)oiutil.1.$SLSFX  \
-                     -L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 \
-                        -l(PROG0PRFX)frame.1  -lgcf -lutil -linstall
-	;;
     a64_sol|\
-    sui_us5|\
     su9_us5|\
     su4_us5)
 	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o \
 	$shlink_opts -L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)frame.1 \
 	                       -l(PROG0PRFX)q.1 -lgcf -lutil -linstall
 	;;
-    nc4_us5 | sqs_ptx)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)oiutil.1.$SLSFX \
-                     -L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 \
-                        -l(PROG0PRFX)frame.1  -lgcf -lutil -linstall
-        ;;
-    ris_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX \
-        $shlink_opts -L$INGLIB -lgcf -lutil -linstall
-        ;;
     r64_us5|\
     rs4_us5)
         $shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o  \
@@ -3458,38 +2617,10 @@ then
            cp $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX $ING_BUILD/lib/lib(PROG0PRFX)oiutil$BITSFX.1.$SLSFX 
         fi
         ;;
-    ris_u64)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o  \
-        $INGLIB/libc.a \
-        -L/lib $shlink_opts \
-        -L$INGLIB -l(PROG0PRFX)q.1  -l(PROG0PRFX)compat.1 \
-                  -l(PROG0PRFX)frame.1 -lgcf -lutil -linstall
-        ;;
-    dgi_us5 | dg8_us5 )
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX \
-        $shlink_opts -hlib(PROG0PRFX)oiutil.1.so -lgcf -lutil -linstall
-        ;;
-    sos_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX \
-        $shlink_opts -lgcf -lutil -linstall
-        ;;
     usl_us5 )
         $shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o \
         -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 -l(PROG0PRFX)frame.1 \
         $shlink_opts -hlib(PROG0PRFX)oiutil.1.so  -lgcf -lutil -linstall
-        ;;
-    dr6_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o \
-        $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX \
-        $INGLIB/lib(PROG0PRFX)q.1.$SLSFX  \
-        $shlink_opts -hlib(PROG0PRFX)oiutil.1.$SLSFX  -lgcf -lutil -linstall
         ;;
       *_lnx|int_rpl)
 	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.${slvers}.$SLSFX *.o \

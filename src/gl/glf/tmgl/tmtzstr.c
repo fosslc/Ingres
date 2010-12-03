@@ -4,24 +4,13 @@
 
 # include	<compat.h>
 # include	<gl.h>
-# if defined(ris_us5) || defined(ts2_us5)
-# include       <clconfig.h>
-# include       <rusage.h>
-# endif
-# if !(defined(dr6_us5) || defined(sqs_ptx))
 # include	<systypes.h>
-# endif  /* dr6_us5) */
-# if defined(ris_us5) || defined(sos_us5)
-# include	<time.h>
-# endif /* ris_us5 sos_us5 */
 # include	<st.h>
 # include	<tm.h>			/* hdr file for TM stuff */
 # include       <tmtz.h>
-# if defined(dr6_us5) || defined( dgi_us5 ) || defined(dg8_us5) || \
-     defined(sqs_ptx) || defined(int_lnx) || defined(ibm_lnx) || \
-     defined(int_rpl)
+# if defined(int_lnx) || defined(ibm_lnx) || defined(int_rpl)
 # include       <time.h>
-# endif  /* dr6_us5 */
+# endif
 
 /**
 ** Name: TMTZSTR.C - Timezone Local Time to string
@@ -59,6 +48,8 @@
 **	    Added ibm_lnx to platforms needing time.h.
 **       6-Nov-2006 (hanal04) SIR 117044
 **          Add int.rpl for Intel Rpath Linux build.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports from header includes.
 **/
 
 

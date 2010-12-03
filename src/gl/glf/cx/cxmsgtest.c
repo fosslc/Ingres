@@ -32,6 +32,8 @@ NEEDLIBS = COMPAT MALLOCLIB
 **	    Port to VMS.
 **      03-nov-2010 (joea)
 **          Declare local functions static.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Fix CS function assignments for new prototyping.
 */
 
 
@@ -578,8 +580,9 @@ bye(void)
 ** Generic thread function, called out of CSdispatch 
 */
 static STATUS
-threadproc( i4 mode, MY_SCB *scb, i4 *next_mode )
+threadproc( i4 mode, CS_SCB *csscb, i4 *next_mode )
 {
+    MY_SCB *scb = (MY_SCB *) csscb;
     STATUS status;
 
     switch( mode )
@@ -652,17 +655,29 @@ threadproc( i4 mode, MY_SCB *scb, i4 *next_mode )
 
 /* log function, called as the output when needed */
 
-static void
-logger( i4 errnum, i4 arg1, i4 arg2 )
+static VOID
+logger( i4 errnum, CL_ERR_DESC *dum, i4 numargs, ... )
 {
     char buf[ ER_MAX_LEN ];
+    va_list args;
 
     if( ERreport( errnum, buf ) == OK )
-    	SIfprintf(stderr, ERx("%s\n"), buf);
+    	SIfprintf(stderr, "%s\n", buf);
     else
-	SIfprintf(stderr, ERx("ERROR %d (%x), %s %d\n"), 
+    {
+	char *arg1 = "";
+	i4 arg2 = 0;
+	if (numargs > 0)
+	{
+	    va_start(args, numargs);
+	    arg1 = va_arg(args, char *);
+	    if (numargs > 1)
+		arg2 = va_arg(args, i4);
+	    va_end(args);
+	}
+	SIfprintf(stderr, "ERROR %d (%x), %s %d\n", 
 		errnum, errnum, arg1, arg2 );
-    SIflush( stderr );
+    }
     if(errnum != E_CS0018_NORMAL_SHUTDOWN)
 	PCexit(FAIL);
     PCexit(OK);
@@ -675,38 +690,51 @@ logger( i4 errnum, i4 arg1, i4 arg2 )
 */
 
 static STATUS
-newscbf( MY_SCB **newscb, PTR crb, i4 type )
+newscbf( CS_SCB **newscb, void *crb, i4 type )
 {
-    *newscb = (MY_SCB*) calloc( 1, sizeof( **newscb ) );
+    /* god this is ugly, making us store type here... */
+
+    *(MY_SCB **)newscb = (MY_SCB*) calloc( 1, sizeof( **newscb ) );
     return( NULL == *newscb );
 }
 
 /* release an scb */
 
 static STATUS
-freescb( MY_SCB *oldscb )
+freescb( CS_SCB *oldscb )
 {
     free( oldscb );
-    return( OK );
+    return (OK);
 }
 
 /* Function used when CS_CB insists on having one and we don't care */
 
 static STATUS
-fnull(void)
+fnull1(void *dum1, i4 dum2)
 {
-    return( OK );
+    return (OK);
 }
 
+static STATUS
+fnull2(i4 dum1, CS_SCB *dum2)
+{
+    return (OK);
+}
+static STATUS
+fnull3(CS_SCB *dum1, char *dum2, i4 dum3, i4 dum4)
+{
+    return (OK);
+}
 
-static void
-vnull(void)
+static VOID
+vnull(CS_SCB *dum)
 {
 }
 
 /* Function needed for read and write stub */
+
 static STATUS
-rwnull( MY_SCB *scb, i4 sync )
+rwnull( CS_SCB *dummy, i4 sync )
 {
     CS_SID sid;
 
@@ -715,6 +743,11 @@ rwnull( MY_SCB *scb, i4 sync )
     return( OK );
 }
 
+static i4
+pidnull(void)
+{
+    return (1234);
+}
 
 static void
 usage( char *badparm )
@@ -924,23 +957,23 @@ main( i4 argc, char *argv[] )
     cb.cs_scnt = 3;	/* Number of sessions */
     cb.cs_ascnt = 0;		/* nbr of active sessions */
     cb.cs_stksize = (8 * 1024);	/* size of stack in bytes */
+    cb.cs_process = threadproc;	/* Routine to do major processing */
+    cb.cs_stkcache = FALSE;     /* Match csoptions default - no stack caching */
     cb.cs_scballoc = newscbf;	/* Routine to allocate SCB's */
     cb.cs_scbdealloc = freescb;	/* Routine to dealloc  SCB's */
-    cb.cs_saddr = fnull;	/* Routine to await session requests */
-    cb.cs_reject = fnull;	/* how to reject connections */
+    cb.cs_saddr = fnull1;	/* Routine to await session requests */
+    cb.cs_reject = fnull1;	/* how to reject connections */
     cb.cs_disconnect = vnull;	/* how to dis- connections */
     cb.cs_read = rwnull;	/* Routine to do reads */
     cb.cs_write = rwnull;	/* Routine to do writes */
-    cb.cs_process = threadproc;	/* Routine to do major processing */
-    cb.cs_attn = fnull;		/* Routine to process attn calls */
+    cb.cs_attn = fnull2;	/* Routine to process attn calls */
     cb.cs_elog = logger;	/* Routine to log errors */
     cb.cs_startup = hello;	/* startup the server */
     cb.cs_shutdown = bye;	/* shutdown the server */
-    cb.cs_format = fnull;	/* format scb's */
-    cb.cs_get_rcp_pid = fnull;  /* init to fix SEGV in CSMTp_semaphore*/
-    cb.cs_scbattach = vnull;    /* init to fix SEGV in CSMT_setup */
-    cb.cs_scbdetach = vnull;    /* init to fix SEGV in CSMT_setup */
-    cb.cs_stkcache = FALSE;     /* Match csoptions default - no stack caching */
+    cb.cs_format = fnull3;	/* format scb's */
+    cb.cs_get_rcp_pid = pidnull; /* init to fix SEGV in CSMTp_semaphore*/
+    cb.cs_scbattach = vnull;	/* init to fix SEGV in CSMT_setup */
+    cb.cs_scbdetach = vnull;	/* init to fix SEGV in CSMT_setup */
     cb.cs_format_lkkey = NULL;  /* Not used in this context. */
 
     /* now fudge argc and argv for CSinitiate */

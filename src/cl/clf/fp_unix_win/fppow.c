@@ -12,6 +12,7 @@
 # include	<me.h>
 # include	<meprivate.h>
 # include	<fp.h>
+# include	<exinternal.h>
 
 # include	"fplocal.h"
 
@@ -49,11 +50,23 @@
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**      29-Nov-2010 (frima01) SIR 124685
+**          Added prototype for IIfppowsig.
 **/
 
 /* Externs */
 
 /* statics */
+
+/* prototypes */
+
+TYPESIG IIfppowsig(
+	int		signum,
+	EX_SIGCODE	SIGCODE(sigcode),
+	EX_SIGCONTEXT	SIGCONTEXT(sigcontext)
+);
 
 /* return from floating point exception */
 

@@ -19,16 +19,15 @@
 #include	<tr.h>
 #include	<ex.h>
 #include	<er.h>
+#include	<cs.h>
 #include	<evset.h>
+#include	<exinternal.h>
 
 
-GLOBALDEF     VOID    (*Ex_print_stack)();      /* NULL or CS_dump_stack   */
-GLOBALDEF     i4      Ex_core_enabled = 0;      /* 1 = allow core          */
-FUNC_EXTERN   VOID    ex_print_error(PTR arg1, i4 msg_length, 
-							char * msg_buffer);
-# ifdef	mc68000
-static VOID	dumpstack();
-# endif
+GLOBALDEF void (*Ex_print_stack)(CS_SCB *, void *, PTR, TR_OUTPUT_FCN *, i4);
+GLOBALDEF     i4 Ex_core_enabled = 0;      /* 1 = allow core          */
+
+static STATUS ex_print_error(PTR arg1, i4 msg_length, char * msg_buffer);
 
 # if defined(any_aix)
 static VOID	dump_ris_trace(char *buffer, unsigned long sp);
@@ -241,6 +240,11 @@ static VOID	dump_ris_trace(char *buffer, unsigned long sp);
 **          but for now have to give support something to go on.
 **	20-Jun-2009 (kschendel) SIR 122138
 **	    Hybrid and config symbols changed, fix here.
+**	16-Nov-2010 (kschendel) SIR 124685
+**	    Make Ex-print-stack call match the real CS-dump-stack.
+**	    Delete a few more unused platform ifdefs (mc68000?!?).
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete DG ports.
 */
 
 bool
@@ -259,8 +263,8 @@ char			*buffer;
 # if defined(any_aix) && defined(BUILD_ARCH64)
     unsigned long       stack_p = 0L;
 # else
-    int			stack_p = 0;
-# endif  /* ris_u64  */
+    u_i4		stack_p = 0;
+# endif
     i4                  pid;
     STATUS              status;
     CL_ERR_DESC		error;
@@ -323,28 +327,12 @@ char			*buffer;
 # define        REGFMT "@ PC %x NPC %x PSR %x G1 %x o0 %x"
 # endif /* sparc */
 
-# if defined(sun_u42) || defined(hp3_us5)
-    int                 pc = 0;
-    int                 psl = 0;
-    int                 sp = 0;
-# define        REGFMT "@ PC = 0x%x, SP = 0x%x, PSL 0x%x"
-# endif	/* sun_u42 hp3_us5 */
-
-# if defined(pyr_us5)
-    int                 pc = 0;
-    int                 sp = 0;
-    int                 psl = 0;
-    int                 csp = 0;
-    int                 cfp = 0;
-# define        REGFMT "@ PC = 0x%x, SP = 0x%x, PSL 0x%x CSP 0x%x CFP 0x%x"
-# endif	/* pyr_us5 */
-
-# if defined(ds3_ulx) || defined(sgi_us5)
+# if defined(sgi_us5)
     int                 pc = 0;
 # define        REGFMT "@ PC = 0x%x"
-# endif /* ds3_ulx sgi_us5 */
+# endif /* sgi_us5 */
 
-# if defined(any_hpux) || defined(hp8_bls) 
+# if defined(any_hpux)
 #if defined(LP64)
       uint64_t  pc = 0;
       uint64_t  sp = 0;
@@ -355,15 +343,7 @@ char			*buffer;
 # define        REGFMT "@ PC = 0x%x, SP = 0x%x"
 #endif
 # define        sc_pc   sc_pcoq_head
-# endif	/* hp8_us5 hp8_bls */
-
-# if defined(dg8_us5) || defined(dgi_us5)
-        int     sxip = 0;
-        int     snip = 0;
-        int     sfip = 0;
-        int     sp = 0;
-# define        REGFMT "@ SP = 0x%x, SXIP = 0x%x, SNIP = 0x%x, SFIP = 0x%x"
-# endif /* dg8_us5 dgi_us5 */
+# endif	/* any_hpux */
 
 # if defined(rs4_us5)
 	int pc = 0;
@@ -403,14 +383,6 @@ char			*buffer;
 			  "RCX %016lx  RDX %016lx\n"
 #    endif
 
-#    if defined(dr6_us5)
-    int                 pc = 0;
-    int                 sp = 0;
-    int                 psr = 0;
-    int                 g1 = 0;
-    int                 o0 = 0;
-#    define        REGFMT "@ PC %x SP %x PSR %x G1 %x o0 %x"
-#    endif /* dr6_us5 */
 #    if defined(sparc_sol) || defined(a64_sol)
     long                pc = 0;
     long                sp = 0;
@@ -444,12 +416,6 @@ char			*buffer;
 # define REGFMT "@ PC = 0x%x ;"
 # endif /* LP64 */
 # endif /* aix */
-
-# if defined(sqs_ptx)
-    int                 pc = 0;
-    int                 sp = 0;
-# define        REGFMT  "@ PC = %x, SP = %x"
-# endif /* sqs_ptx */ 
 
 # if defined(any_hpux)
 #if defined(LP64)
@@ -509,10 +475,8 @@ char			*buffer;
       case EXCHLDDIED:
 # ifdef SIGCHLD
 	cp = "Child died (SIGCHLD)";
-# else
-# ifdef SIGCLD
+# elif defined(SIGCLD)
 	cp = "Child died (SIGCLD)";
-# endif
 # endif
 	break;
 
@@ -730,39 +694,16 @@ char			*buffer;
     o0 = scp->sc_o0;
 # define gotregs
 # endif
-# if defined(sun_u42) || defined(hp3_us5)
-    pc = scp->sc_pc;
-    psl = scp->sc_ps;
-    sp = scp->sc_sp;
-    stack_p = sp;
-# define gotregs
-# endif
-# if defined(pyr_us5)
-    pc = scp->sc_pc;
-    sp = scp->sc_sp;
-    psl = scp->sc_ps;
-    csp = scp->sc_csp;
-    cfp = scp->sc_cfp;
-    stack_p = sp;
-# define gotregs
-# endif
-# if defined(ds3_ulx) || defined(sgi_us5)
+# if defined(sgi_us5)
     pc = scp->sc_pc;
 # define gotregs
 # endif
-# if defined(any_hpux) || defined(hp8_bls)
+# if defined(any_hpux)
     pc = scp->sc_pc;
     sp = scp->sc_sp;
     stack_p = sp;
 # define gotregs
 # endif
-# if defined(dg8_us5) || defined(dgi_us5)
-        int     sxip = 0;
-        int     snip = 0;
-        int     sfip = 0;
-        int     sp = 0;
-# define        REGFMT "@ SP = 0x%x, SXIP = 0x%x, SNIP = 0x%x, SFIP = 0x%x"
-# endif /* dg8_us5 dgi_us5 */
 # if defined(any_aix)		/*see <mstsave.h>*/
 	pc = scp->sc_jmpbuf.jmp_context.iar;
 	sp = scp->sc_jmpbuf.jmp_context.gpr[1];
@@ -802,16 +743,6 @@ char			*buffer;
 #   define gotregs
 #   endif /* su4_us5 su9_us5 a64_sol */
 
-#   if defined(dr6_us5)
-    pc = ucontext->uc_mcontext.gregs[R_PC];
-    sp = ucontext->uc_mcontext.gregs[R_SP];
-    psr = ucontext->uc_mcontext.gregs[R_PS];
-    g1 = ucontext->uc_mcontext.gregs[R_G1];
-    o0 = ucontext->uc_mcontext.gregs[R_O0];
-    stack_p = sp;
-#   define gotregs
-#   endif /* dr6_us5 */
-
 # if defined(any_hpux)
 # if defined(i64_hpu)
     __uc_get_ip(ucontext, &pc);
@@ -837,11 +768,6 @@ char			*buffer;
 #  endif /* xCL_072_SIGINFO_H_EXISTS && xCL_071_UCONTEXT_H_EXISTS */
 # endif /* xCL_011_USE_SIGACTION */
 
-# ifdef sqs_ptx
-    (void)sigcontext(SF_PC,&pc);
-    (void)sigcontext(SF_SP,&sp);
-# define gotregs
-# endif /* sqs_ptx */
 # define gotregs
 # endif /* xCL_011_USE_SIGVEC */
 # ifdef sgi_us5
@@ -883,27 +809,14 @@ char			*buffer;
 	STprintf( buffer, fmt, pc, npc, psr, g1, o0 );
 # define gotfmt
 # endif
-# if defined(sun_u42) || defined(hp3_us5)
-	STprintf(buffer, fmt, pc, sp, psl );
-# define gotfmt
-# endif
-# if defined(pyr_us5)
-	STprintf(buffer, fmt, pc, sp, psl, csp, cfp );
-# define gotfmt
-# endif
-# if defined(ds3_ulx) || defined(sgi_us5)
+# if defined(sgi_us5)
 	STprintf(buffer, fmt, pc );
 # define gotfmt
 # endif
-# if defined(any_hpux) || defined(hp8_bls)
+# if defined(any_hpux)
 	STprintf(buffer, fmt, pc, sp );
 # define gotfmt
 # endif
-
-# if defined(dg8_us5) || defined(dgi_us5)
-        STprintf(buffer, fmt, sp, sxip, snip, sfip);
-# define gotfmt
-# endif /* dg8_us5 dgi_us5 */
 
 # if defined(any_aix)
 	STprintf(buffer, fmt, pc );
@@ -922,7 +835,7 @@ char			*buffer;
 #  ifdef xCL_068_USE_SIGACTION
 #   if ( defined(xCL_072_SIGINFO_H_EXISTS) || defined(LNX) ) \
 	 && defined(xCL_071_UCONTEXT_H_EXISTS)
-#    if (defined(dr6_us5) || defined(any_hpux)) && !defined(LP64)
+#    if defined(any_hpux) && !defined(LP64)
 	/* If we can get a symbol then print it out */
 	{
 	    PTR sym = NULL;
@@ -935,14 +848,10 @@ char			*buffer;
 	    }
 	    else
 		STprintf( fmt, "%s %s", cp,REGFMT);
-# if defined(any_hpux)
 	    STprintf( buffer, fmt, pc, sp, psw );
-# else
-	    STprintf( buffer, fmt, pc, sp, psr, g1, o0 );
-# endif /* hp8_us5 */
 	}
 #    define gotfmt
-#    endif /* dr6_us5 hp8_us5 */
+#    endif /* hpux */
 
 #    if defined(sparc_sol) || defined(a64_sol)
 	/* If we can get a symbol then print it out */
@@ -967,7 +876,7 @@ char			*buffer;
 # endif
 	}
 #    define gotfmt
-#    endif /* su4_us5 su9_us5 a64_sol */
+#    endif /* solaris */
 
 #if  defined(hp2_us5)
 	/* If we can get a symbol then print it out */
@@ -1020,36 +929,26 @@ char			*buffer;
 #   endif /* xCL_072_SIGINFO_H_EXISTS && xCL_071_UCONTEXT_H_EXISTS */
 #  endif /* xCL_011_USE_SIGACTION */
 
-# ifdef sqs_ptx
-	STprintf( fmt, "%s %s", cp, REGFMT );
-	STprintf(buffer, fmt, pc, sp);
-# define gotfmt
-# endif /* sqs_ptx */
-
 # ifndef gotfmt
 	STcopy( cp, buffer );
 # endif
 
 # endif /* xCL_011_USE_SIGVEC */
 
-# ifdef	mc68000
-    TRdisplay("Stack dump of %s\n", buffer);
-    dumpstack();
-# endif	/* mc68000 */
 	ERsend(ER_ERROR_MSG, buffer_hdr, STlength(buffer_hdr), &error);
     }
 
     if (print_stack && Ex_print_stack)
     {
 	/* dump to evidence sets */
-	EXdump(EV_SIGVIO_DUMP,stack_p);
+	EXdump(EV_SIGVIO_DUMP,&stack_p);
 #   ifdef axp_osf
-        Ex_print_stack(NULL, scp, ex_print_error);
+        Ex_print_stack(NULL, scp, NULL, ex_print_error, TRUE);
 # elif defined(any_hpux) || defined(int_lnx) || defined(int_rpl) || \
        defined(a64_lnx) || defined(sparc_sol) || defined(a64_sol)
-        Ex_print_stack( 0, ucontext, ex_print_error, TRUE );
+        Ex_print_stack( NULL, ucontext, NULL, ex_print_error, TRUE );
 # else
-        Ex_print_stack(0, stack_p, ex_print_error, TRUE);
+        Ex_print_stack(NULL, stack_p, NULL, ex_print_error, TRUE);
 #   endif
     }
 
@@ -1069,34 +968,6 @@ char			*buffer;
     }
     return TRUE;
 }
-
-# ifdef	mc68000
-
-/*
- * Simple stack dump for 68000 style call frames
- *
- * History:
- *	6-Dec-1989 (anton)
- *	    Added memory bounds check to prevent seg faults.
- */
-GLOBALREF	char	*MEbase, *MElimit;
-
-static VOID
-dumpstack()
-{
-    int			a[1];
-    register int	*fp;
-
-    for (fp = a + 1; fp; fp = (int *)*fp)
-    {
-	TRdisplay("%x: %x %x\n", (int)fp, fp[1], fp[0]);
-	if ((char *)*fp > MElimit || (char *)*fp < MEbase)
-	{
-	    break;
-	}
-    }
-}
-# endif
 
 # if defined(any_aix)
 
@@ -1149,8 +1020,10 @@ dump_ris_trace(char *buffer, unsigned long sp)
 **      31-dec-1993 (andys)
 **              Add ER_ERROR_MSG parameter to ERsend.
 */
-VOID ex_print_error(PTR arg1, i4 msg_length, char * msg_buffer)
+static STATUS
+ex_print_error(PTR arg1, i4 msg_length, char * msg_buffer)
 {
     CL_ERR_DESC err_code;
     ERsend(ER_ERROR_MSG, msg_buffer, msg_length, &err_code);
+    return (OK);
 }

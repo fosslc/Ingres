@@ -61,6 +61,8 @@
 **	    of I/O and transaction rates.
 **      04-nov-2010 (joea)
 **          Add prototype for CSMT_sampler.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 ******************************************************************************/
 # define MAXCONDS	17
 # define MAXEVENTS	10	/* DIO_MASK(r/w), BIO_MASK(r/w), LIO_MASK(r/w),
@@ -209,4 +211,4 @@ STATUS LockSamplerBlk(CS_SYNCH *hpLockSem);
 
 STATUS UnlockSamplerBlk(CS_SYNCH *hpLockSem);
 
-FUNC_EXTERN void CSMT_sampler(void);
+FUNC_EXTERN void * CSMT_sampler(void *);

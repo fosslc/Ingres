@@ -2,9 +2,6 @@
 ** Copyright (c) 2004 Ingres Corporation
 **
 */
-/*
-NO_OPTIM=hp8_bls
-*/
 # include <compat.h>
 # include <errno.h>
 # include <gl.h>
@@ -34,8 +31,10 @@ NO_OPTIM=hp8_bls
 # include <csinternal.h>
 # include <csev.h>
 # include <cssminfo.h>
+# include <exinternal.h>
 # include <rusage.h>
 # include <clpoll.h>
+# include <clnfile.h>
 # include <machconf.h>
 # include <pwd.h>
 # include <diracc.h>
@@ -45,14 +44,12 @@ NO_OPTIM=hp8_bls
 # include "cslocal.h"
 # include "cssampler.h"
 
-# if defined(su4_u42) || defined(dr6_us5) || \
-     defined(sparc_sol) || defined(su4_cmw)
+# if defined(sparc_sol)
 void    CS_su4_setup();
 # endif
 
-# if defined(ds3_ulx) || defined(rmx_us5) || defined(pym_us5) || \
-     defined(ts2_us5) || defined(sgi_us5) || defined(rux_us5)
-int CS_ds3_setup()
+# if defined(sgi_us5)
+void CS_ds3_setup(void)
 {
         CS_setup();
         CS_eradicate();
@@ -60,7 +57,7 @@ int CS_ds3_setup()
 # endif
 
 #if defined(any_aix)
-void CS_ris_setup()
+void CS_ris_setup(void)
 {
 	CS_setup();
 	CS_eradicate();
@@ -80,10 +77,7 @@ FUNC_EXTERN TYPESIG CSslave_danger( i4 );
 
 GLOBALREF       CS_SERV_INFO    *Cs_svinfo;
 
-# if defined(sqs_ptx) || defined(usl_us5) || \
-     defined(nc4_us5) || defined(dgi_us5) || defined(sos_us5) || \
-     defined(sui_us5) || defined(int_lnx) || defined(int_rpl) || \
-     defined(int_rpl)
+# if defined(usl_us5) || defined(int_lnx) || defined(int_rpl)
 void CS_sqs_pushf();
 # endif /* sui_us5 etc. */
 
@@ -91,12 +85,8 @@ void CS_sqs_pushf();
 void CS_ibmsetup();
 # endif /* ibm_lnx */
 
-# if defined(hp3_us5)
-GLOBALDEF bool CS_hp3_broken_tas;
-#endif /* hp3_us5 */
-
 #if defined(axp_osf) || defined(axp_lnx)
-long CS_axp_setup()
+long CS_axp_setup(void)
 {
         CS_setup();
         CS_eradicate();
@@ -104,10 +94,6 @@ long CS_axp_setup()
 	return 0;
 }
 # endif /* axp_osf */
-
-/*
-NO_OPTIM = dr6_us5 ibm_lnx int_lnx int_rpl i64_aix
-*/
 
 /**
 **
@@ -848,20 +834,17 @@ NO_OPTIM = dr6_us5 ibm_lnx int_lnx int_rpl i64_aix
 **          Changed MOintget to MOuintget for unsigned integer values.
 **      20-apr-2010 (stephenb)
 **          add new function CSadjust_i8counter.
+**	14-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	22-Nov-2010 (kschendel) SIR 124685
+**	    Fix broken ifdef a||b (use if defined);  drop obsolete ports.
 **/
 
 /*
 **  Forward and/or External function references.
 */
 
-FUNC_EXTERN VOID    CS_swuser();	/* suspend one thread, resume one */ 
-FUNC_EXTERN STATUS  CS_setup();
-FUNC_EXTERN i4	    CSsigterm();	/* terminate due to Unix signal */
-FUNC_EXTERN STATUS  CS_set_server_connect();
-FUNC_EXTERN VOID    CS_move_async();
-FUNC_EXTERN i4	    CS_cpres_event_handler(void);
 FUNC_EXTERN STATUS    CSoptions( CS_SYSTEM *cssb );
-FUNC_EXTERN void    CS_clear_wakeup_block(PID pid, CS_SID sid);
 typedef void FP_Callback(CS_SCB **scb);
 FUNC_EXTERN void    FP_set_callback( FP_Callback fun);
 
@@ -869,14 +852,7 @@ FUNC_EXTERN void    FP_set_callback( FP_Callback fun);
 FUNC_EXTERN     TYPESIG CSsigdanger();       /* handler for sigdanger */
 # endif /* aix */
 
-FUNC_EXTERN VOID CS_mo_init(void);
-FUNC_EXTERN VOID iiCLintrp();
-FUNC_EXTERN VOID    CS_wake( PID pid );	
 i4 CS_addrcmp( const char *a, const char *b );
-
-#if defined(OS_THREADS_USED)
-FUNC_EXTERN void CSMTnoresnow(char *, int);
-#endif
 
 
 /*
@@ -922,25 +898,22 @@ static const CS_FACILITIES cs_facilities[] =
 };
 #endif /* PERF_TEST */
 
-static i4   CS_usercnt( void );
-
 
 /*
 ** Definition of all global variables owned by this file.
 */
 
-GLOBALDEF CS_SYSTEM	      Cs_srv_block ZERO_FILL; /* Overall ctl struct */
-GLOBALDEF CS_SEMAPHORE        Cs_known_list_sem              ZERO_FILL;
-GLOBALDEF CS_SCB	      Cs_queue_hdrs[CS_LIM_PRIORITY] ZERO_FILL;
-GLOBALDEF CS_SCB	      Cs_known_list_hdr		     ZERO_FILL;
-GLOBALDEF CS_SCB	      Cs_to_list_hdr		     ZERO_FILL;
-GLOBALDEF CS_SCB	      Cs_wt_list_hdr		     ZERO_FILL;
-GLOBALDEF CS_SCB	      Cs_as_list_hdr		     ZERO_FILL;
-GLOBALDEF CS_STK_CB	      Cs_stk_list_hdr		     ZERO_FILL;
+GLOBALDEF CS_SYSTEM	Cs_srv_block		ZERO_FILL; /* Overall ctl struct */
+GLOBALDEF CS_SEMAPHORE	Cs_known_list_sem	ZERO_FILL;
+GLOBALDEF CS_SCB	Cs_queue_hdrs[CS_LIM_PRIORITY] ZERO_FILL;
+GLOBALDEF CS_STK_CB	Cs_stk_list_hdr		ZERO_FILL;
+GLOBALDEF CS_SCB		Cs_known_list_hdr	ZERO_FILL;
+static CS_SCB		Cs_to_list_hdr		ZERO_FILL;
+static CS_SCB		Cs_wt_list_hdr		ZERO_FILL;
+static CS_SCB		Cs_as_list_hdr		ZERO_FILL;
 
 /* SCBs not in the Cs_known_list must be checked in CS_find_scb() */
 GLOBALDEF CS_SCB	      Cs_idle_scb		     ZERO_FILL;
-GLOBALDEF CS_SCB	      Cs_repent_scb		     ZERO_FILL;
 GLOBALDEF CS_ADMIN_SCB	      Cs_admin_scb		     ZERO_FILL;
 GLOBALDEF CS_SYNCH	      Cs_utility_sem	             ZERO_FILL;
 
@@ -959,7 +932,6 @@ GLOBALREF CS_SMCNTRL	      *Cs_sm_cb;
 GLOBALREF i4	      Cs_lastquant;
 GLOBALREF i4		      Cs_incomp;
 GLOBALREF CS_SEMAPHORE        *ME_page_sem;
-GLOBALREF VOID                (*Ex_print_stack)();
 GLOBALREF VOID                (*Ex_diag_link)();
 
 static i4		      got_ex	ZERO_FILL;
@@ -1969,11 +1941,6 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb )
     char		pwnam_buf[512];
     i4			fd_wanted;
 
-#if defined(hp3_us5)
-# include <sys/utsname.h>
-    struct utsname      hp_uname;
-#endif /* hp3_us5 */
-
     /* check for native threads */
     Cs_srv_block.cs_mt = FALSE;
 
@@ -2165,15 +2132,6 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb )
     */
     PCpid(&Cs_srv_block.cs_pid);
 
-#if defined(hp3_us5)
-    /*
-    ** Must be set before any calls to CStas()
-    */
-    uname(&hp_uname);
-    CS_hp3_broken_tas = (hp_uname.machine[6] == '1'
-                        || hp_uname.machine[6] == '2') ? 1 : 0;
-#endif /* hp3_us5 */
-
     cssb->cs_state = CS_INITIALIZING;
 
     if (status = CS_map_sys_segment(&errcode))
@@ -2221,7 +2179,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb )
     Cs_known_list_hdr.cs_client_type = 0;
     Cs_known_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_known_list_hdr.cs_tag = CS_TAG;
-    Cs_known_list_hdr.cs_stk_area = 0;
+    Cs_known_list_hdr.cs_stk_area = NULL;
     Cs_known_list_hdr.cs_stk_size = 0;
     Cs_known_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_known_list_hdr.cs_priority = 0;
@@ -2235,7 +2193,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb )
     Cs_wt_list_hdr.cs_client_type = 0;
     Cs_wt_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_wt_list_hdr.cs_tag = CS_TAG;
-    Cs_wt_list_hdr.cs_stk_area = 0;
+    Cs_wt_list_hdr.cs_stk_area = NULL;
     Cs_wt_list_hdr.cs_stk_size = 0;
     Cs_wt_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_wt_list_hdr.cs_priority = 0;
@@ -2249,7 +2207,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb )
     Cs_to_list_hdr.cs_client_type = 0;
     Cs_to_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_to_list_hdr.cs_tag = CS_TAG;
-    Cs_to_list_hdr.cs_stk_area = 0;
+    Cs_to_list_hdr.cs_stk_area = NULL;
     Cs_to_list_hdr.cs_stk_size = 0;
     Cs_to_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_to_list_hdr.cs_priority = 0;
@@ -2263,7 +2221,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb )
     Cs_as_list_hdr.cs_client_type = 0;
     Cs_as_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_as_list_hdr.cs_tag = CS_TAG;
-    Cs_as_list_hdr.cs_stk_area = 0;
+    Cs_as_list_hdr.cs_stk_area = NULL;
     Cs_as_list_hdr.cs_stk_size = 0;
     Cs_as_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_as_list_hdr.cs_priority = 0;
@@ -2279,7 +2237,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb )
 	Cs_queue_hdrs[i].cs_client_type = 0;
 	Cs_queue_hdrs[i].cs_owner = (PTR)CS_IDENT;
 	Cs_queue_hdrs[i].cs_tag = CS_TAG;
-	Cs_queue_hdrs[i].cs_stk_area = 0;
+	Cs_queue_hdrs[i].cs_stk_area = NULL;
 	Cs_queue_hdrs[i].cs_stk_size = 0;
 	Cs_queue_hdrs[i].cs_state = CS_COMPUTABLE;
 	Cs_queue_hdrs[i].cs_priority = i;
@@ -2422,7 +2380,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb )
     idle_scb->cs_owner = (PTR)CS_IDENT;
     idle_scb->cs_tag = CS_TAG;
     idle_scb->cs_length = sizeof(CS_SCB);
-    idle_scb->cs_stk_area = 0;
+    idle_scb->cs_stk_area = NULL;
     idle_scb->cs_stk_size = 0;
     idle_scb->cs_state = CS_COMPUTABLE;
     idle_scb->cs_priority = CS_PIDLE;	 /* idle = lowest priority */
@@ -2666,16 +2624,16 @@ IICSterminate(i4 mode, i4  *active_count)
 
 	if (status)
 	{
-	    (*Cs_srv_block.cs_elog)(status, 0, 0);
+	    (*Cs_srv_block.cs_elog)(status, NULL, 0, 0);
 	}
     }
     if (mode != CS_CRASH)
     {
 	status = (*Cs_srv_block.cs_shutdown)();
 	if (status)
-	    (*Cs_srv_block.cs_elog)(status, 0, 0);
+	    (*Cs_srv_block.cs_elog)(status, NULL, 0, 0);
 	else
-	    (*Cs_srv_block.cs_elog)(E_CS0018_NORMAL_SHUTDOWN, 0, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS0018_NORMAL_SHUTDOWN, NULL, 0, 0);
     }
 
     PCexit(0);
@@ -2924,7 +2882,6 @@ IICSdispatch(void)
     i4			i;
     EX_CONTEXT		excontext;
     CS_INFO_CB		csib;
-    FUNC_EXTERN STATUS	cs_handler();
     CSSL_CB		*slcb;
 #ifdef LNX
     char                ex_altstack[CS_ALTSTK_SZ * 4] __attribute__  \
@@ -2967,7 +2924,7 @@ IICSdispatch(void)
     {
 	if (!got_ex++)
 	{
-	    (*Cs_srv_block.cs_elog)(E_CS0014_ESCAPED_EXCPTN, 0, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS0014_ESCAPED_EXCPTN, NULL, 0, 0);
 	}
 	EXdelete();
 	return(E_CS0014_ESCAPED_EXCPTN);
@@ -2989,9 +2946,6 @@ IICSdispatch(void)
     i_EXsetothersig(SIGHUP, CSsigterm);
     i_EXsetothersig(SIGINT, SIG_IGN);
     i_EXsetothersig(SIGPIPE, SIG_IGN);
-#if defined(rux_us5)
-    i_EXsetothersig(SIGVTALRM, SIG_IGN);
-#endif
 
     do
     {
@@ -3013,7 +2967,7 @@ IICSdispatch(void)
 		   sizeof(Cs_admin_scb.csa_scb.cs_username),
 		   Cs_admin_scb.csa_scb.cs_username);
 
-	    ret_val = CS_alloc_stack(&Cs_admin_scb, &error);
+	    ret_val = CS_alloc_stack(&Cs_admin_scb.csa_scb, &error);
 
 	    if (ret_val != OK)
 	    {
@@ -3024,45 +2978,15 @@ IICSdispatch(void)
 	    CSw_semaphore( &Cs_admin_scb.csa_sem, CS_SEM_SINGLE, "csa_sem");
 	    CS_scb_attach( &Cs_admin_scb.csa_scb );
 
-# if defined(sun_u42)
-# define got1
-	    *(--(long *)Cs_admin_scb.csa_scb.cs_registers[CS_SP])
-		= (long)CS_setup;
-# endif
-
-# ifdef hp3_us5
-# define got1
-            /*
-            ** Essentially, this is the same approach as the sun_us42 above.
-            ** The hp compiler did not like the above statement.
-            */
-            {
-            long *fake;
-
-            fake = (long *)Cs_admin_scb.csa_scb.cs_registers[CS_SP];
-            --fake;
-            Cs_admin_scb.csa_scb.cs_registers[CS_SP] = (long)fake;
-            *fake = (long)CS_setup;
-            }
-# endif /* hp3_us5 */
-
-# if defined(ds3_ulx) || defined(rmx_us5) || defined(pym_us5) || \
-     defined(ts2_us5) || defined(sgi_us5) || defined(rux_us5)
+# if defined(sgi_us5)
 # define got1
             Cs_admin_scb.csa_scb.cs_pc = (long) CS_ds3_setup;
-# endif
-# if defined(su4_u42) || defined(dr6_us5) || defined(su4_cmw)
-# define got1
-	    Cs_admin_scb.csa_scb.cs_pc = (long)CS_su4_setup + 4;
 # endif
 # if defined(sparc_sol)
 # define got1
 	    Cs_admin_scb.csa_scb.cs_pc = (long)CS_su4_setup - 4;
 #endif
-# if defined(sqs_ptx) || \
-     defined(usl_us5) || defined(nc4_us5) || defined(dgi_us5) || \
-     defined(sos_us5) || defined(sui_us5) || defined(int_lnx) || \
-     defined(int_rpl)
+# if defined(usl_us5) || defined(int_lnx) || defined(int_rpl)
 # define got1
 	    CS_sqs_pushf( &Cs_admin_scb.csa_scb, CS_setup);
 # endif
@@ -3085,21 +3009,14 @@ IICSdispatch(void)
 
     /* Create a thread that starts with CS_setup and ends with CS_rteradicate*/
     {
-    void CS_eradicate();
+	CS_SCB *scb = &Cs_admin_scb.csa_scb;
+	char *stack = (char *) (scb->cs_stk_area + 1);
+	int size    = scb->cs_stk_size;
 
-    CS_SCB *scb = &Cs_admin_scb.csa_scb;
-    char *stack = scb->cs_stk_area + sizeof(CS_STK_CB);
-    int size    = scb->cs_stk_size;
-
-    CS_create_ingres_thread(&scb->cs_mach, CS_setup, CS_eradicate, stack, size);
+	CS_create_ingres_thread(&scb->cs_mach, CS_setup, CS_eradicate, stack, size);
     }
 	
-# endif	/* hp8_us5, hp8_bls */
-
-# ifdef dg8_us5
-# define got1
-   Cs_admin_scb.csa_scb.cs_registers[ CS_PC ] = (long) CS_setup;
-# endif /*dg8_us5*/
+# endif	/* hpux */
 
 # if defined(any_aix) || defined(i64_hpu) || \
      defined(i64_lnx) || defined(a64_lnx)
@@ -3154,44 +3071,15 @@ Missing_machine_dependant_code!
 		return(ret_val);
 	    }
 
-# if defined(sun_u42)
-# define got2
-	    *(--(long *)Cs_idle_scb.cs_registers[CS_SP]) = (long)CS_setup;
-# endif
-
-# ifdef hp3_us5
-# define got2
-            /*
-            ** Essentially, this is the same approach as the sun_us42 above.
-            ** The hp compiler did not like the above statement.
-            */
-            {
-            long *fake;
-
-            fake = (long *)Cs_idle_scb.cs_registers[CS_SP];
-            --fake;
-            Cs_idle_scb.cs_registers[CS_SP] = (long)fake;
-            *fake = (long)CS_setup;
-            }
-# endif /* hp3_us5 */
-
-# if defined(ds3_ulx) || defined(rmx_us5) || defined(pym_us5) || \
-     defined(ts2_us5) || defined(sgi_us5) || defined(rux_us5)
+# if defined(sgi_us5)
 # define got2
             Cs_idle_scb.cs_pc = (long) CS_ds3_setup;
-# endif
-# if defined(su4_u42) || defined(dr6_us5) || defined(su4_cmw)
-# define got2
-	    Cs_idle_scb.cs_pc = (long)CS_su4_setup + 4;
 # endif
 # if defined(sparc_sol)
 # define got2
 	    Cs_idle_scb.cs_pc = (long)CS_su4_setup - 4;
 # endif
-# if defined(sqs_ptx) || \
-     defined(usl_us5) || defined(nc4_us5) || defined(dgi_us5) || \
-     defined(sos_us5) || defined(sui_us5) || defined(int_lnx) || \
-     defined(int_rpl)
+# if defined(usl_us5) || defined(int_lnx) || defined(int_rpl)
 # define got2
 	    CS_sqs_pushf(&Cs_idle_scb, CS_setup);
 # endif
@@ -3210,20 +3098,13 @@ Missing_machine_dependant_code!
 
     /* Create a thread that starts with CS_setup and ends with CS_rteradicate*/
     {
-    void CS_eradicate();
+	CS_SCB *scb = &Cs_idle_scb;
+	char *stack = (char *) (scb->cs_stk_area + 1);
+	int size    = scb->cs_stk_size;
 
-    CS_SCB *scb = &Cs_idle_scb;
-    char *stack = scb->cs_stk_area + sizeof(CS_STK_CB);
-    int size    = scb->cs_stk_size;
-
-    CS_create_ingres_thread(&scb->cs_mach, CS_setup, CS_eradicate, stack, size);
+	CS_create_ingres_thread(&scb->cs_mach, CS_setup, CS_eradicate, stack, size);
     }
-# endif	/* hp8_us5, hp8_bls */
-
-# ifdef dg8_us5
-# define got2
-   Cs_idle_scb.cs_registers[ CS_PC ] = (long) CS_setup;
-# endif /*dg8_us5*/
+# endif	/* hpux */
 
 # if defined(any_aix) || defined(i64_hpu) || \
      defined(i64_lnx) || defined(a64_lnx)
@@ -3440,7 +3321,7 @@ TRdisplay("->->->->->\n");
 	CS_swuser();
 
 	/* should never get here */
-	(*Cs_srv_block.cs_elog)(E_CS00FE_RET_FROM_IDLE, 0, 0);
+	(*Cs_srv_block.cs_elog)(E_CS00FE_RET_FROM_IDLE, NULL, 0, 0);
 	ret_val = E_CS00FF_FATAL_ERROR;
 
     } while( FALSE );
@@ -3453,7 +3334,7 @@ TRdisplay("->->->->->\n");
 	    status = 0;
 	}
 	SETCLERR (err_code, status, 0);
-	(*Cs_srv_block.cs_elog)(ret_val, status, 0);
+	(*Cs_srv_block.cs_elog)(ret_val, err_code, status, 0);
     }
 
     Cs_srv_block.cs_state = CS_CLOSING;
@@ -3461,6 +3342,8 @@ TRdisplay("->->->->->\n");
     CSterminate(CS_KILL, &i);
 
     PCexit(((status & 1) || (ret_val == 0)) ? 0 : status);
+    /* NOTREACHED */
+    return (FAIL);
 }
 
 /*{
@@ -3871,7 +3754,7 @@ IICSsuspend(i4 mask, i4  to_cnt, PTR ecb)
 	else
 	{
 	    /* we shouldn't be here */
-	    (*Cs_srv_block.cs_elog)(E_CS0019_INVALID_READY, 0, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS0019_INVALID_READY, NULL, 0, 0);
 	    rv = E_CS0019_INVALID_READY;
 	}
 
@@ -3903,7 +3786,7 @@ IICSsuspend(i4 mask, i4  to_cnt, PTR ecb)
 	while (!Cs_resumed)
 	{
 	    tim = 0;
-	    CS_find_events(&tim, &nevents);
+	    (void) CS_find_events(&tim, &nevents);
 	    if (nevents == 0)
 	    {
 		CS_ACLR(&Cs_svinfo->csi_wakeme);
@@ -4255,6 +4138,7 @@ IICSresume(CS_SID sid)
 STATUS
 IICSsuspend_for_AST(i4 mask, i4  to_cnt, PTR ecb)
 {
+    return (OK);
 }
 
 /*{
@@ -4488,7 +4372,7 @@ CL_ERR_DESC	   *error;
     scb->cs_priority = priority;
     scb->cs_self = (CS_SID)scb;
     scb->cs_mode = CS_INITIATE;
-    scb->cs_stk_area = 0;
+    scb->cs_stk_area = NULL;
     scb->cs_pid = Cs_srv_block.cs_pid;
     scb->cs_ppid = 0;       /* hack, really used for idle time */
     scb->cs_ef_mask = 0;
@@ -4531,45 +4415,15 @@ CL_ERR_DESC	   *error;
 	}
     }
 
-# if defined(sun_u42)
-# define got3
-    *(--(long *)scb->cs_registers[CS_SP]) = (long)CS_setup;
-# endif
-
-# ifdef hp3_us5
-# define got3
-            /*
-            ** Essentially, this is the same approach as the sun_us42 above.
-            ** The hp compiler did not like the above statement.
-            */
-            {
-            long *fake;
-
-            fake = (long *)scb->cs_registers[CS_SP];
-            --fake;
-            scb->cs_registers[CS_SP] = (long)fake;
-            *fake = (long)CS_setup;
-            }
-# endif /* hp3_us5 */
-
-# if defined(ds3_ulx) || defined(rmx_us5) || defined(pym_us5) || \
-     defined(ts2_us5) || defined(sgi_us5) || defined(rux_us5)
+# if defined(sgi_us5)
 # define got3
             scb->cs_pc = (long) CS_ds3_setup;
-# endif
-# if defined(su4_u42) || defined(dr6_us5) || \
-     defined(su4_cmw)
-# define got3
-	    scb->cs_pc = (long)CS_su4_setup + 4;
 # endif
 # ifdef sparc_sol
 # define got3
             scb->cs_pc = (long)CS_su4_setup - 4;
 # endif
-# if defined(sqs_ptx) || \
-     defined(usl_us5) || defined(nc4_us5) || defined(dgi_us5) || \
-     defined(sos_us5) || defined(sui_us5) || defined(int_lnx) || \
-     defined(int_rpl)
+# if defined(usl_us5) || defined(int_lnx) || defined(int_rpl)
 # define got3
 	   CS_sqs_pushf(scb, CS_setup);
 # endif
@@ -4588,19 +4442,12 @@ CL_ERR_DESC	   *error;
 
     /* Create a thread that starts with CS_setup and ends with CS_rteradicate*/
     {
-    void CS_eradicate();
+	char *stack = (char *) (scb->cs_stk_area + 1);
+	int size    = scb->cs_stk_size;
 
-    char *stack = scb->cs_stk_area + sizeof(CS_STK_CB);
-    int size    = scb->cs_stk_size;
-
-    CS_create_ingres_thread(&scb->cs_mach, CS_setup, CS_eradicate, stack, size);
+	CS_create_ingres_thread(&scb->cs_mach, CS_setup, CS_eradicate, stack, size);
     }
-# endif	/* hp8_us5, hp8_bls */
-
-# ifdef dg8_us5
-# define got3
-   scb->cs_registers[ CS_PC ] = (long) CS_setup;
-# endif /*dg8_us5*/
+# endif	/* hpux */
 
 # if defined(any_aix) || defined(i64_hpu) || \
      defined(i64_lnx) || defined(a64_lnx)
@@ -4725,7 +4572,6 @@ STATUS
 IICSremove(CS_SID sid)
 {
     CS_SCB		*scb;
-    CS_SCB		*cscb;
 
     scb = CS_find_scb(sid);
     if (scb == 0)
@@ -5818,7 +5664,7 @@ IICSget_sid(CS_SID *sidptr)
     CS_SID	    sid = (CS_SID)0;
     CS_SCB	    *scb;
 
-    if (scb = Cs_srv_block.cs_current)
+    if ((scb = Cs_srv_block.cs_current) != NULL)
     {
 	sid = scb->cs_self;
     }
@@ -5866,7 +5712,7 @@ IICSget_cpid(CS_CPID *cpid)
 	cpid->wakeup = 0;
 # endif /* OS_THREADS_USED */
 
-	if (scb = Cs_srv_block.cs_current)
+	if ((scb = Cs_srv_block.cs_current) != NULL)
 	{
 	    cpid->sid = scb->cs_self;
 	    cpid->pid = Cs_srv_block.cs_pid;
@@ -6733,7 +6579,7 @@ IICScancelCheck(CS_SID sid)
 }
 
 # if defined(ibm_lnx)
-void CS_ibmsetup()
+void CS_ibmsetup(void)
 {
     CS_setup();
     CS_eradicate();
@@ -6831,60 +6677,6 @@ CSms_thread_nap(i4	ms)
     return;
 }
 
-/*
-**
-**	Function:
-**		CSget_sid (remains CSget_sid as wrapper to II routine).
-**
-**	History:
-**	18-oct-1993 (kwatts)
-**	    Created as wrapper because of name changes.
-*/
-#ifdef CSget_sid
-#undef CSget_sid
-VOID
-CSget_sid(CS_SID *sidptr)
-{
-	IICSget_sid(sidptr);
-}
-#endif
-
-/*
-**
-**	Function:
-**		CSresume (remains CSresume as wrapper to II routine).
-**
-**	History:
-**	18-oct-1993 (kwatts)
-**	    Created as wrapper because of name changes.
-*/
-#ifdef CSresume
-#undef CSresume
-VOID
-CSresume(CS_SID sid)
-{
-    IICSresume(sid);
-}
-#endif
-
-/*
-**
-**	Function:
-**		CSsuspend (remains CSsuspend as wrapper to II routine).
-**
-**	History:
-**	18-oct-1993 (kwatts)
-**	    Created as wrapper because of name changes.
-*/
-#ifdef CSsuspend
-#undef CSsuspend
-STATUS
-CSsuspend(i4 mask, i4  to_cnt, PTR ecb)
-{
-    return(IICSsuspend(mask, to_cnt, ecb));
-}
-#endif
-
 bool
 CS_is_mt()
 {
@@ -7079,7 +6871,7 @@ CSfac_stats(
         if (times(&time_info) < 0)
         {
 	    SETCLERR (err_code, errnum, 0);
-            (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, err_code, 0);
+            (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, err_code, 0, 0);
 	    return;
         }
 	/* activate counting */
@@ -7097,7 +6889,7 @@ CSfac_stats(
 	if (Cs_srv_block.cs_profile[fac_id].cs_active == FALSE)
 	{
 	    /* Oops...coding inconsistency */
-	    (*Cs_srv_block.cs_elog)(E_CS0046_CS_NO_START_PROF, 0, 1, 
+	    (*Cs_srv_block.cs_elog)(E_CS0046_CS_NO_START_PROF, NULL, 0, 1, 
 		sizeof(fac_id), &fac_id);
 	    return;
 	}
@@ -7107,7 +6899,7 @@ CSfac_stats(
         if (times(&time_info) < 0)
         {
 	    SETCLERR (err_code, errnum, 0);
-            (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, err_code, 0);
+            (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, err_code, 0, 0);
 	    return;
         }
 	/* calculate cpu usage */
@@ -7203,7 +6995,7 @@ CScollect_stats(bool	start)
         if (times(&time_info) < 0)
         {
 	    SETCLERR(err_code,&errnum,0);
-            (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, err_code, 0);
+            (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, err_code, 0, 0);
 	    return;
         }
 	else
@@ -7223,7 +7015,7 @@ CScollect_stats(bool	start)
         if (times(&time_info) < 0)
         {
 	    SETCLERR(err_code,&errnum,0);
-            (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, err_code, 0);
+            (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, err_code, 0, 0);
 	    return;
         }
 	else
@@ -7360,9 +7152,6 @@ CSkill( CS_SID sid, bool force, u_i4 waittime )
     STATUS              retval;
     bool                active = FALSE;
     i4                  saved_state;
-    i4                  i;
-    QUEUE               *semlist;
-    CS_SEMAPHORE        *sem;
  
     /* first, give it some time to complete */
     PCsleep( waittime );
@@ -7424,11 +7213,6 @@ CSkill( CS_SID sid, bool force, u_i4 waittime )
     return ( retval );
 }
 
-static i4
-CS_usercnt()
-{
-    return(Cs_srv_block.cs_user_sessions);
-}
 
 /*{
 ** Name: CSnoresnow()   - Check if thread has been CSresumed

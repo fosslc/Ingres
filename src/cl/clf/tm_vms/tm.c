@@ -909,6 +909,8 @@ TMinit()
 **          Correct millisecond time increment for code that does not
 **          use gettimeofday() function.  There was some confusion
 **          about whether this routine returned microseconds or milliseconds.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete DG ports, this is VMS anyway.
 */
 
 VOID
@@ -920,15 +922,11 @@ SYSTIME *stime;
     {
         struct timeval  t;
         struct timezone tz;
-# if defined(dg8_us5) || defined(dgi_us5)
-        int gettimeofday ( struct timeval *, struct timezone * ) ;
-# else
 # if defined(xCL_GETTIMEOFDAY_TIMEONLY_V)
     int gettimeofday ( struct timeval *, ...) ;
 # else
         int             gettimeofday();
 # endif /* xCL_GETTIMEOFDAY_TIMEONLY_V */
-# endif
 
 # if defined(xCL_GETTIMEOFDAY_TIMEONLY)
         gettimeofday(&t);

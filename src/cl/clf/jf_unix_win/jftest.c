@@ -62,6 +62,8 @@
 **	    replace nat and longnat with i4
 **	29-Sep-2004 (drivi01)
 **	    Removed MALLOCLIB from NEEDLIBS
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 /*
@@ -114,7 +116,7 @@ PROGRAM =       jftest
 **	    PAGESIZE is defined in sys/limits.h for AIX (rs4_us5).  Added a
 **	    check for the define and an undefine.
 */
-STATUS
+static STATUS
 JFtest(defpath, defpathlength, filename, filelength)
 char		*defpath;
 u_i4	defpathlength;

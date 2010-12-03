@@ -5,9 +5,24 @@ require "fp_constants"
 require "routes"
 require "profiles"
 
+# Document-class: DatabaseConnection
+# 
+# Provides database access and canned queries for the Frequent Flyer demo
+#
+# See README.rdoc for information on the methods provided in this class
+ 
+
+
 class DatabaseConnection
   include Singleton
- 
+
+  # Document-method: disconnect
+  #
+  # call-seq:
+  #    disconnect()
+  # 
+  # Disconnects from the database server
+  #
   def disconnect
     if (@connected) then 
       begin
@@ -24,6 +39,17 @@ class DatabaseConnection
     pexecute(*args)
   end
 
+  # Document-method: countries
+  #
+  # call-seq:
+  #    countries()
+  #  
+  # Provide a list of countries stored in the <tt>country</tt> table using the SQL query:
+  #   <tt>SELECT ct_name, ct_code FROM country ORDER BY ct_name</tt>
+  #
+  # The countryCode can then be used to get a list of aiports for that country with the regions
+  # method.
+  #  
   def countries
     if (!@countryCodes) then
       countryResults = execute("SELECT ct_name, ct_code FROM country ORDER BY ct_name")
@@ -37,6 +63,14 @@ class DatabaseConnection
     @countries
   end
 
+  # Document-method: regions
+  #
+  # call-seq:
+  #    regions(country)
+  #  
+  # Provide a list of regions which have an airport in the country supplied using the query:
+  #   <tt>SELECT DISTINCT ap_place, ap_ccode FROM airport WHERE ap_ccode = '#{@countryCodes[country]}' ORDER BY ap_place"</tt>
+  #  
   def regions(country)
     regionResults = execute("SELECT DISTINCT ap_place, ap_ccode FROM airport WHERE ap_ccode = '#{@countryCodes[country]}' ORDER BY ap_place")
     regionCodes = Hash.new
@@ -46,6 +80,13 @@ class DatabaseConnection
     regions
   end
 
+  # Document-method: getAirportDetails
+  #
+  # call-seq:
+  #    getAirportDetails(airport)
+  #  
+  # For a given airport code, e.g. LHR (London Heathrow), provide the region/place and country code
+  #  
   def getAirportDetails(airport)
     airportDetailResults = execute("SELECT DISTINCT ap_place, ap_ccode FROM airport WHERE ap_iatacode = '#{airport}' ORDER BY ap_place")
     countryCode = String.new
@@ -54,6 +95,32 @@ class DatabaseConnection
     return @codeCountries[countryCode], region
   end
 
+  # Document-method: regions
+  #
+  # call-seq:
+  #    regions(country)
+  #  
+  # Provide a list of regions which have an airport in the country supplied using the query:
+  #   <tt>SELECT DISTINCT ap_place, ap_ccode FROM airport WHERE ap_ccode = '#{@countryCodes[country]}' ORDER BY ap_place"</tt>
+  #  
+  def regions(country)
+    regionResults = execute("SELECT DISTINCT ap_place, ap_ccode FROM airport WHERE ap_ccode = '#{@countryCodes[country]}' ORDER BY ap_place")
+    regionCodes = Hash.new
+    regions = Array.new
+    regionResults.each { | regionDetails | regionCodes[regionDetails[0]]= regionDetails[1] ; regions << regionDetails[0] }
+    @regionCodes = regionCodes
+    regions
+  end
+
+  # Document-method: airports
+  #
+  # call-seq:
+  #    airports(country,region)
+  #  
+  # Returns a list of airports based on a search of a country and region using a row producing procedure.
+  # To list all airports whose country code is 'ES', specify <tt>region</tt> as '%'. 
+  # The results from the procedure are treated like a SELECT from a table or a view.
+  #  
   def airports(country, region)
     airportResults = execute("{call get_my_airports ( ccode = ?, area = ? )}",  "ccode", "n", @countryCodes[country] , "area", "n", region)
     airportCodes = Hash.new
@@ -63,6 +130,14 @@ class DatabaseConnection
     airports
   end
 
+  # Document-method: getRoutes
+  #
+  # call-seq:
+  #    getRouters(departFrom, arriveTo, days, includeReturn)
+  #  
+  # Returns an Array of flights between <tt>departFrom</tt> and <tt>arriveTo</tt> on <tt>days</tt>. 
+  # If <tt>includeReturn</tt> is set provide details for return flights on the same <tt>days</tt>
+  #  
   def getRoutes(departFrom, arriveTo, days, includeReturn)
     flightDay = getFlightDays(days)
     query = "SELECT rt_airline, al_iatacode, al_name, rt_flight_num, rt_depart_from, rt_arrive_to, rt_depart_at, rt_arrive_at, rt_arrive_offset, rt_flight_day " + 
@@ -76,6 +151,13 @@ class DatabaseConnection
     routes
   end
 
+  # Document-method: getEmailAddresses
+  #
+  # call-seq:
+  #    getEmailAddresses
+  #  
+  # Returns a Array of email addresses stored in the <tt>user_profile</tt> table.
+  #  
   def getEmailAddresses
     emailAddressResults = execute("SELECT up_email FROM user_profile ORDER BY up_email")
     emailAddresses = Array.new
@@ -83,12 +165,18 @@ class DatabaseConnection
     emailAddresses
   end
 
+  # Document-method: insertProfile
+  #
+  # call-seq:
+  #    insertProfile(lastname, firstname, iataCode, emailAddress, isDefault = false, profileImage = nil)
+  #  
+  # Add a new frequent flyer profile to the <tt>user_profile</tt> table. With the exception of 
+  # isDefault and profileImage, the other parameters are required. 
+  #  
   def insertProfile(lastname, firstname, iataCode, emailAddress, isDefault = false, profileImage = nil)
     profileImage = "" if (profileImage == nil)
-#    setDebugFlag("GLOBAL_DEBUG", "TRUE")
     execute("INSERT INTO user_profile (up_id, up_last, up_first, up_airport, up_email, up_image) VALUES (next value FOR up_id, ?, ?, ?, ?, ?)", 
             "N", lastname, "N", firstname, "v", iataCode, "v", emailAddress, "B", profileImage)
-#    setDebugFlag("GLOBAL_DEBUG", "TRUE")
     if (isDefault) then
       @defaultProfileEmailAddress = String.new(emailAddress)
       saveConnectionInfo
@@ -98,10 +186,8 @@ class DatabaseConnection
 
   def updateProfile(lastname, firstname, iataCode, emailAddress, isDefault = false, profileImage = nil)
     profileImage = "" if (profileImage == nil)
-#    setDebugFlag("GLOBAL_DEBUG", "TRUE")
     execute("UPDATE user_profile SET up_last = ?, up_first = ?, up_airport = ?, up_image = ? WHERE up_email = ?", 
             "N", lastname, "N", firstname, "v", iataCode, "B", profileImage, "v", emailAddress)
-#    setDebugFlag("GLOBAL_DEBUG", "TRUE")
     if (isDefault || @defaultProfileEmailAddress == emailAddress) then
       @defaultProfileEmailAddress = FPConstants.dbConnectionDefaultProfileEmailAddress
       @defaultProfileEmailAddress = String.new(emailAddress) if (isDefault)
@@ -132,8 +218,6 @@ class DatabaseConnection
   end
 
   def deleteProfile(emailAddress)
-#    Not handling up_image just yet as LOBs are not fully implemented in the Ingres Ruby driver
-#    resultset = execute("SELECT up_last, up_first, up_email, up_airport, up_image FROM user_profile WHERE up_email = '#{emailAddress}'")
     resultset = execute("DELETE FROM user_profile WHERE up_email = '#{emailAddress}'")
   end
 
@@ -159,7 +243,7 @@ class DatabaseConnection
     if (!@username) then
       database()
     end
-    @username = "" if !@username #BPK070523
+    @username = "" if !@username
     @username
   end
 
@@ -167,7 +251,7 @@ class DatabaseConnection
     if (!@database) then
       database()
     end
-    @password = "" if !@password #BPK070523
+    @password = "" if !@password
     @password
   end
 
@@ -231,7 +315,7 @@ class DatabaseConnection
     addDetail(dbC, "defaultProfileEmailAddress", @defaultProfileEmailAddress)
     xml << REXML::XMLDecl.new
     xml.add_element(dbC)
-    xml.write(xmlFile, 0)
+    xml.write(xmlFile)
     xmlFile.close
   end
   
@@ -240,10 +324,10 @@ class DatabaseConnection
       if (!@connected) then
         @connecting = true
         @connection = Ingres.new() if (!@connection)
-        if (hostname().length > 0 && instance().length > 0 && username().length > 0) then
-          @connection.connect_with_credentials("@" + hostname() + ",tcp_ip," + instance() + "[" + username() + "," + password() + "]::" + database(), username(), password())
-        elsif (username().length > 0) then
-          @connection.connect_with_credentials(database(), username(), password())
+        if (hostname().length > 0 && instance().length > 0 && username().length > 0 && password().length > 0) then
+          @connection.connect("@" + hostname() + ",tcp_ip," + instance() + "[" + username() + "," + password() + "]::" + database(), username(), password())
+        elsif (username().length > 0 && password().length > 0) then
+          @connection.connect(database(), username(), password())
         else
           @connection.connect(database())
         end
@@ -308,9 +392,7 @@ class DatabaseConnection
 
   def pexecute(*args)
     connect()
-#    setDebugFlag("GLOBAL_DEBUG", "TRUE")
     results = @connection.pexecute(*args)
-#    setDebugFlag("GLOBAL_DEBUG", "FALSE")
     results
   end
 

@@ -57,7 +57,8 @@
 **	    of the default MU semaphore routines.
 **	25-sep-2003 (somsa01)
 **	    Properly name the ER MU semaphore.
-[@history_template@]...
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 */
 
 /*	Static Declarations  */
@@ -175,12 +176,12 @@ static	ER_SEMFUNCS	er_sem_funcs;
 */
 
 VOID
-ERinit(flags, p_sem_func, v_sem_func, i_sem_func, n_sem_func)
-i4		flags;
-STATUS		(*p_sem_func)();
-STATUS		(*v_sem_func)();
-STATUS		(*i_sem_func)();
-VOID		(*n_sem_func)();
+ERinit(
+    i4			flags,
+    STATUS		(*p_sem_func)(),
+    STATUS		(*v_sem_func)(),
+    STATUS		(*i_sem_func)(),
+    VOID		(*n_sem_func)())
 {
 	async_state = (flags & ER_ASYNC) ? SETON : SETOFF;
 	test_state = (flags & ER_MSGTEST) ? SETON : SETOFF;
@@ -242,7 +243,7 @@ VOID		(*n_sem_func)();
 */
 
 bool
-cer_isasync()
+cer_isasync(void)
 {
 	return ((async_state == SETON) ? TRUE : FALSE);
 }
@@ -279,7 +280,7 @@ cer_isasync()
 */
 
 bool
-cer_istest()
+cer_istest(void)
 {
 	char	*nambuf;
 
@@ -336,8 +337,7 @@ cer_istest()
 */
 
 bool
-cer_issem(sem_funcs)
-ER_SEMFUNCS	**sem_funcs;
+cer_issem(ER_SEMFUNCS **sem_funcs)
 {
     if (!sem_set_yet)
     {

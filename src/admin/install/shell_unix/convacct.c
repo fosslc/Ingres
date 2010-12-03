@@ -189,6 +189,8 @@ NEEDLIBS = COMPAT
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
 **	   Also remove local declaration of errno, shouldn't be there.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 **/
 
 
@@ -322,14 +324,12 @@ struct acct *output_rec;
 
     /* fill in the applicable fields */
 
-# if defined(sparc_sol) || defined(a64_sol) || defined(LNX) || \
-     defined(sos_us5) || defined(sui_us5) || \
-     defined(su4_cmw) || defined(OSX)
+# if defined(sparc_sol) || defined(a64_sol) || defined(LNX) || defined(OSX)
 # define GOT_FORMAT
-# if defined(sparc_sol) || defined(sui_us5) || defined(a64_sol)
+# if defined(sparc_sol) || defined(a64_sol)
         /* sun solaris expects this to delimit records */
         output_rec->ac_flag = ' ';
-# endif /* su4_us5 sui_us5 */
+# endif
     /* All fields match, clock ticks == 60/sec */
     output_rec->ac_uid = input_rec->ac_uid;
     output_rec->ac_btime = input_rec->ac_btime;
@@ -340,24 +340,15 @@ struct acct *output_rec;
     output_rec->ac_rw = input_rec->ac_rw;
 # endif /* !Linux */
     STcopy(input_rec->ac_comm, output_rec->ac_comm);
-# endif /* su4_u42 su4_us5 sui_us5 su4_cmw */
+# endif /* sol linux osx */
 
-# if defined(any_hpux) || defined(hp3_us5) || defined(dr6_us5) || \
-     defined(pym_us5) || defined(dg8_us5) || defined(sqs_ptx) || \
-     defined(usl_us5) || defined(dol_us5) || \
-     defined(dgi_us5) || defined(rmx_us5) || \
-     defined(ts2_us5) || defined(sgi_us5) || defined(rux_us5)
+# if defined(any_hpux) || defined(usl_us5) || defined(sgi_us5)
 # define GOT_FORMAT
     /* All fields match, clock ticks != 60/sec */
-# if defined(pym_us5) || defined(rmx_us5) || defined(ts2_us5) || \
-     defined(rux_us5)
-    /* to distinguish betw svr3 & svr4 formats - we want the latter */
-    output_rec->ac_flag |= AEXPND;
-# endif
-# if defined(dr6_us5) || defined(usl_us5)
+# if defined(usl_us5)
     /* Set ac_flag to ' ' to delimit records in iiacct file */
     output_rec->ac_flag = ' ';
-# endif /* dr6_us5 usl_us5 */
+# endif /* usl_us5 */
     /* It appears this flag is needed for svr4 to delimit record */
     output_rec->ac_uid = input_rec->ac_uid;
     output_rec->ac_btime = input_rec->ac_btime;
@@ -368,8 +359,7 @@ struct acct *output_rec;
     output_rec->ac_io = input_rec->ac_io;
     output_rec->ac_rw = input_rec->ac_rw;
     STcopy(input_rec->ac_comm, output_rec->ac_comm);
-# endif /* hp8_us5 hp3_us5 dr6_us5 usl_us5
-	   dol_us5 dgi_us5  su4_us5 */
+# endif /* hpux usl */
 
 # if defined(any_aix)
 # define GOT_FORMAT
@@ -389,37 +379,6 @@ struct acct *output_rec;
     STcopy(input_rec->ac_comm, output_rec->ac_comm);
 # endif /* aix */
 
-# ifdef ds3_ulx
-# define GOT_FORMAT
-    /*
-    ** Ultrix does not have ac_rw, MIPS uses AHZ for clock ticks.
-    ** Even though ac_io is an integral value, it is in AHZ units.
-    */
-    output_rec->ac_uid = input_rec->ac_uid;
-    output_rec->ac_btime = input_rec->ac_btime;
-    output_rec->ac_utime = CS_compress(
-	((comp_t_uncompress(input_rec->ac_utime) * AHZ) + 30) / 60);
-    output_rec->ac_etime = CS_compress(
-	((comp_t_uncompress(input_rec->ac_etime) * AHZ) + 30) / 60);
-    output_rec->ac_io = CS_compress(comp_t_uncompress(input_rec->ac_io) * AHZ);
-    STcopy(input_rec->ac_comm, output_rec->ac_comm);
-# endif /* ds3_ulx */
-
-# if defined(nc4_us5)
-# define GOT_FORMAT
-    output_rec->ac_flag = ' ';
-    output_rec->ac_uid = (uid_t) input_rec->ac_uid;
-    output_rec->ac_btime = (time_t) input_rec->ac_btime;
-    output_rec->ac_tty = (dev_t) input_rec->ac_tty;
-    output_rec->ac_utime = CS_compress(
-        ((comp_t_uncompress(input_rec->ac_utime) * HZ) + 30) / 60);
-    output_rec->ac_etime = CS_compress(
-        ((comp_t_uncompress(input_rec->ac_etime) * HZ) + 30) / 60);
-    output_rec->ac_io = input_rec->ac_io;
-    output_rec->ac_rw = input_rec->ac_rw;
-    STcopy(input_rec->ac_comm, output_rec->ac_comm);
-# endif /* nc4_us5 */    
-
 # ifdef axp_osf
 # define GOT_FORMAT
     output_rec->ac_uid = input_rec->ac_uid;
@@ -431,20 +390,6 @@ struct acct *output_rec;
     output_rec->ac_io = CS_compress(comp_t_uncompress(input_rec->ac_io) * AHZ);
     STcopy(input_rec->ac_comm, output_rec->ac_comm);
 # endif /* axp_osf */
-
-# if defined(m88_us5)
-# define GOT_FORMAT
-   output_rec->ac_uid = (uid_t) input_rec->ac_uid;
-   output_rec->ac_btime = (time_t) input_rec->ac_btime;
-   output_rec->ac_tty = (dev_t) input_rec->ac_tty;
-   output_rec->ac_utime = CS_compress(
-      ((comp_t_uncompress(input_rec->ac_utime) * HZ) + 30) / 60);
-   output_rec->ac_etime = CS_compress(
-       ((comp_t_uncompress(input_rec->ac_etime) * HZ) + 30) / 60);
-   output_rec->ac_io = input_rec->ac_io;
-   output_rec->ac_rw = input_rec->ac_rw;
-   STcopy(input_rec->ac_comm, output_rec->ac_comm);
-# endif /* m88_us5 */
 
 # ifndef GOT_FORMAT
 	# error: You MUST add a format conversion for your box

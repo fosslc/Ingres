@@ -54,7 +54,8 @@
 **	    Add stack caching for os-threaded servers.
 **	21-may-1999 (hanch04)
 **	    Replace STbcompare with STcasecmp,STncasecmp,STcmp,STncmp
-[@history_template@]...
+**	18-Nov-2010 (kschendel)
+**	    Add braces to initializer to stop compiler complaints.
 */
 
 # define	CSO_ACT_SESSION        	  1
@@ -80,23 +81,23 @@ static struct CSO_OPTIONS {
 } 
 cso_opttab[] = 
 {
-    CSO_ECHO,		'z',	"!.echo",		/* first! */
+    {CSO_ECHO,		'z',	"!.echo"},		/* first! */
 
-    CSO_ACT_SESSION,	'o',	"!.active_limit",
-    CSO_CON_SESSION,	'o',	"!.connect_limit",
-    CSO_CPUSTATS,	't',	"!.cpu_statistics",
-    CSO_DEFINE,		't',	"!.define_address",
-    CSO_MAXLDB_CON,	'o',	"!.outbound_limit",
-    CSO_MAX_WS,		'm',	"!.unix_maximum_working_set",
-    CSO_PRIORITY,	'p',	"!.unix_priority",
-    CSO_QUANTUM,	'o',	"!.quantum_size",
-    CSO_SESS_ACCTNG,	't',	"!.session_accounting",
-    CSO_STK_SIZE,	'o',	"!.stack_size",
-    CSO_STK_CACHE,	't',	"!.stack_caching",
-    CSO_SERVER_CLASS,	'g',	"!.server_class",
-    CSO_SIZE_IO_BUF,	'o',	"!.size_io_buf",
-    CSO_NUM_IO_BUF,	'o',	"!.num_io_buf",
-    0, 0, 0
+    {CSO_ACT_SESSION,	'o',	"!.active_limit"},
+    {CSO_CON_SESSION,	'o',	"!.connect_limit"},
+    {CSO_CPUSTATS,	't',	"!.cpu_statistics"},
+    {CSO_DEFINE,	't',	"!.define_address"},
+    {CSO_MAXLDB_CON,	'o',	"!.outbound_limit"},
+    {CSO_MAX_WS,	'm',	"!.unix_maximum_working_set"},
+    {CSO_PRIORITY,	'p',	"!.unix_priority"},
+    {CSO_QUANTUM,	'o',	"!.quantum_size"},
+    {CSO_SESS_ACCTNG,	't',	"!.session_accounting"},
+    {CSO_STK_SIZE,	'o',	"!.stack_size"},
+    {CSO_STK_CACHE,	't',	"!.stack_caching"},
+    {CSO_SERVER_CLASS,	'g',	"!.server_class"},
+    {CSO_SIZE_IO_BUF,	'o',	"!.size_io_buf"},
+    {CSO_NUM_IO_BUF,	'o',	"!.num_io_buf"},
+    {0, 0, 0}
 };
 
 /*
@@ -144,7 +145,6 @@ CSoptions( CS_SYSTEM *cssb )
 	     csopt++ )
 	{
 	    char	*cs_svalue;
-	    f8		cs_dvalue;
 	    i4		cs_value = 0;
 
 	    /* 

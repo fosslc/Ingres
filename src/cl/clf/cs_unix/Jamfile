@@ -11,19 +11,20 @@
 #           Put a significant space in front of semi-colon after axp_osf.
 #       21-May-2010 (bonro01)
 #           Add conditional compilation for ICE
+#	12-Nov-2010 (kschendel)
+#	    Drop no-optims for some obsolete/unused platforms.
 
 SubDir ING_SRC cl clf cs_unix ;
 
 IISUBSYS cl clf cs_unix ;
 
 IINOOPTIM iirun.c : i64_aix axp_osf ;
-IINOOPTIM csspintest.c : rmx_us5 rux_us5 sqs_ptx ris_u64 rs4_us5 i64_aix ;
-IINOOPTIM cssl.c : dr6_us5 dr6_ues i64_aix ;
-IINOOPTIM csinterface.c : dr6_us5 ibm_lnx int_lnx int_rpl i64_aix ;
-IINOOPTIM csinstall.c : ris_us5 i64_aix ;
-IINOOPTIM cshl.c : su4_us5 su4_u42 dr6_us5 su4_cmw i64_aix ;
-IINOOPTIM csev.c : dr6_us5 i64_aix ;
-IINOOPTIM cscp.c : hp3_us5 ;
+IINOOPTIM csspintest.c : ris_u64 rs4_us5 i64_aix ;
+IINOOPTIM cssl.c : i64_aix ;
+IINOOPTIM csinterface.c : ibm_lnx int_lnx int_rpl i64_aix ;
+IINOOPTIM csinstall.c : i64_aix ;
+IINOOPTIM cshl.c : su4_us5 i64_aix ;
+IINOOPTIM csev.c : i64_aix ;
 
 IIUTILEXE iirun : iirun.c ;
 IINEEDLIBS iirun : COMPATLIB MALLOCLIB ;

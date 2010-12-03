@@ -211,6 +211,9 @@
 **	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    Delete non-conforming LG_status_is_abort() function.
 **	    Those that need to know this must use LGshow().
+**	11-Nov-2010 (kschendel)
+**	    CS_xxx_critical_sems exists on VMS as well as unix, change the
+**	    conditional.
 */
 
 static	STATUS	get_critical_sems(void);
@@ -1446,7 +1449,7 @@ LG_check_dead(CL_ERR_DESC *sys_err)
 
     (VOID)LG_unmutex(&lgd->lgd_lpb_q_mutex);
 
-#ifdef UNIX
+#ifndef NT_GENERIC
     /* Call cs to cleanup up any programs which may have owned a server
     ** slot but never have exited without freeing it.  This includes
     ** programs which may never have opened any database (and thus are
@@ -1997,7 +2000,7 @@ get_critical_sems(void)
 	ret_status = status;
     }
 
-#ifdef UNIX
+#ifndef NT_GENERIC
     CS_get_critical_sems();
 #endif
 
@@ -2050,7 +2053,7 @@ rel_critical_sems(void)
     SIZE_TYPE	*lxbb_table;
     i4	i;
 
-#ifdef UNIX
+#ifndef NT_GENERIC
     CS_rel_critical_sems();
 #endif
 

@@ -166,6 +166,8 @@
 **	    replace nat and longnat with i4
 **	28-Nov-2005 (kschendel)
 **	    Make zeroing buffer size a config parameter.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 /*

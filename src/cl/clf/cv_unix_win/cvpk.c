@@ -256,10 +256,12 @@
 **	    Re-wrote according to CL-approved spec.
 **      25-feb-1993 (smc)
 **          Forward declared CV0decerr.
+**      29-Nov-2010 (frima01) SIR 124685
+**          Complete prototype for CV0decerr.
 */
 
 /* forward declarations */
-static STATUS CV0decerr();
+static STATUS CV0decerr(STATUS status, PTR pkbuff, i4 prec);
 
 STATUS
 CVpka(

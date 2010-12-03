@@ -73,6 +73,8 @@
 ##	4-Oct-2004 (drivi01)
 ##		Due to merge of jam build with windows, some directories
 ##		needed to be updated to reflect most recent map.
+##	22-Nov-2010 (kschendel) SIR 124685
+##	    Drop a few more ancient / obsolete ports
 ##		
 #
 
@@ -97,11 +99,6 @@ done
 
 . readvers
 vers=$config
-
-case $vers in
-    	ds3_ulx)	SYMDEFNAME='__________ELEL_' ;;
-    	*)		SYMDEFNAME='__.SYMDEF' ;;
-esac
 
 # make sure we are at the right place...
 cd $ING_BUILD/lib
@@ -140,10 +137,6 @@ objs=$TMP/mgb$$
 
 lnames1="interp abfrt iaom ilrf ioi generate uf runsys runtime fd ft mt qxa oo"
 lnames2="feds ui qsys q ug fmt afe qgca sqlca gcf adf compat cuf"
-
-case $vers in
-    	*)		;;
-esac
 
 # directory list for object removals (unwanted)
 dlist="common/gcf$noise/gcn common/gcf$noise/gcc back/dmf$noise/lg back/dmf$noise/lgk back/dmf$noise/lk cl/clf$noise/cs_unix cl/clf$noise/di_unix cl/clf$noise/ck_unix_win cl/clf$noise/jf_unix_win cl/clf$noise/sr_unix_win"
@@ -269,24 +262,11 @@ do
 	if $do_lorder
 	then
 		echo "lorder ..."
-		# Sun OS 4.0 lorder is buggy; it lists archive names along 
-		# with objects
-		case $vers in
-		ds3_ulx)
-		   lorder $libs > $allobjs 2>/dev/null
-		   ;;
-		*)
-		   lorder $libs | grep -v '\.a' > $allobjs 2>/dev/null
-		   ;;
-		esac
+		lorder $libs | grep -v '\.a' > $allobjs 2>/dev/null
 
 		echo "tsort ..."
 		# clean up output to screen of tsort errors for mx3_us5
-		case $vers in
-		*)
-		   tsort $allobjs 2> /dev/null | grep -v tsort > $objs
-		   ;;
-		esac
+	        tsort $allobjs 2> /dev/null | grep -v tsort > $objs
 	else
 		sort $allobjs >$objs 2>/dev/null
 	fi

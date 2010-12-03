@@ -43,21 +43,14 @@
 **	    replace nat and longnat with i4
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Removed FUNC_EXTERN commands.
 **/
 
 #define	HISTO_SIZE	1024		/* default histo size */
 #define	HISTO_GRANDU	1		/* default grandularity */
 #define	HISTO_HWMARK	50		/* high water mark */
 #define	HISTO_MAX	10		/* max number of running histos */
-
-/*
-** externals/forwards
-*/
-FUNC_EXTERN	bool	iiHisto();
-FUNC_EXTERN	VOID	iiHistoDump();
-FUNC_EXTERN	VOID	iiHistoBreak();
-FUNC_EXTERN	VOID	iiHistoExit();
-FUNC_EXTERN	char	*getenv();
 
 /*
 ** local data
@@ -85,6 +78,21 @@ struct HISTO
 static	struct HISTO	histo[HISTO_MAX] ZERO_FILL;
 
 extern	char	*getenv();
+
+/*
+** externals/forwards
+*/
+
+/* TABLE OF CONTENTS */
+bool iiHisto(
+	char *name,
+	i4 sample);
+VOID iiHistoDump(
+	struct HISTO *histop);
+VOID iiHistoExit(void);
+VOID iiHistoBreak(
+	char *name,
+	i4 n);
 
 bool
 iiHisto(name, sample)

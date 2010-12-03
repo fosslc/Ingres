@@ -17,6 +17,7 @@
 #include   <me.h>
 #include   <cldio.h>
 #include   "dilru.h"
+#include   <csinternal.h>
 
 #include    <errno.h>
 
@@ -180,6 +181,10 @@
 **	6-Nov-2009 (kschendel) SIR 122757
 **	    Make io-sem a SYNCH.  Test for backend before messing with
 **	    SCB states.
+**	15-Nov-2010 (kschendel) SIR 124685
+**	    Delete unused variables.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Compiler warning fix.
 **/
 
 /* # defines */
@@ -482,7 +487,6 @@ DI_slave_read(
     register DI_SLAVE_CB        *disl;
     ME_SEG_INFO                 *seginfo;
     bool                        direct_read;
-    static i4		read_op = 0x70000000;
     STATUS			small_status = OK, big_status = OK, 
 				intern_status = OK, status;
     
@@ -572,8 +576,8 @@ DI_slave_read(
 		    small_status = DI_ENDFILE;
 #ifdef	xDEV_TST
 
-		    TRdisplay("num_pages\n, read_op = %x", 
-				  num_of_pages, read_op);
+		    TRdisplay("num_pages %d\n, read_op = %x", 
+				  num_of_pages, 0x70000000);
 		    DIlru_dump();
 #endif	/* xDev_TST */
 		    break;
@@ -872,10 +876,10 @@ DI_async_read(
 
 # if defined(OS_THREADS_USED) && !defined(xCL_ASYNC_IO)
     bytes_read = DI_thread_rw( O_RDONLY, diop, buf, bytes_to_read,
- 	    			      lseek_offset, (long*)0, err_code);
+ 	    			      lseek_offset, NULL, err_code);
 # else /* OS_THREADS_USED */
     bytes_read = DI_aio_rw( O_RDONLY, diop, buf, bytes_to_read,
- 	    			  lseek_offset, (long*)0, err_code);
+ 	    			  lseek_offset, NULL, err_code);
 # endif /* OS_THREADS_USED */
     if ( bytes_read != bytes_to_read )
     {

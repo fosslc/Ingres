@@ -175,6 +175,8 @@
 **	    Add trace point sc925 for logging long-running queries
 **      08-sep-2010 (maspa05) SIR 124345
 **          SC930 2 should switch on tracing when run by itself
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    CS prototype / include fixes.
 **/
 
 
@@ -717,11 +719,11 @@ scf_handler( EX_ARGS *ex_args )
     if (EXmatch(EXSEGVIO, 1, ex_args->exarg_num))
     {
 	char	    server_id[64];
-	CS_SCB      *scb;
+	CS_SID	    *sid;
 
 	CSget_svrid( server_id );
-	CSget_scb( &scb );
-	ERmsg_hdr( server_id, scb->cs_self, a_vio_msg);
+	CSget_sid( &sid );
+	ERmsg_hdr( server_id, sid, a_vio_msg);
 
 	EXsys_report(ex_args, a_vio_msg);
 	a_vio_length = STlength(a_vio_msg);

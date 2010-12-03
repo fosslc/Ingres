@@ -424,6 +424,8 @@ EXEC SQL include SQLCA;
 **          mask.
 **     22-apr-2010 (stial01)
 **          Fix create/modify statement used for iigw07
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **
 NEEDLIBS =	DBUTILLIB SHEMBEDLIB COMPATLIB 
 
@@ -444,6 +446,11 @@ FUNC_EXTERN 	    DU_STATUS       duu_chkenv();
 FUNC_EXTERN 	    DU_STATUS       duc_grant_select_wgo_on_cats();
 FUNC_EXTERN DU_STATUS duc_modify_pagesize(i4 pagesize, bool star_flag,
 				 DU_ERROR *errcb);
+
+/* This one is in ui.qsh, but the jam rules don't know that dbutil
+** needs front/hdr/hdr.
+*/
+FUNC_EXTERN char *IIUIpassword(char *);
 
 char		    *cmdflagarg();
 STATUS    	    get_pm_params();

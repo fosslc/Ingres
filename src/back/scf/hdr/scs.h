@@ -286,6 +286,8 @@
 **	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    Add missing prototypes for scs_raat_(), 
 **	    scs_check_external_password()
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 
@@ -1772,11 +1774,11 @@ FUNC_EXTERN int scs_api_call(i4 op_code, SCD_SCB *scb, i4  *next_op );
 
 FUNC_EXTERN VOID scs_mo_init(void);
 
-FUNC_EXTERN STATUS scs_scb_attach( SCD_SCB *scb );
+FUNC_EXTERN void scs_scb_attach( CS_SCB *scb );
 
-FUNC_EXTERN STATUS scs_scb_detach( SCD_SCB *scb );
+FUNC_EXTERN void scs_scb_detach( CS_SCB *scb );
 
-FUNC_EXTERN DB_STATUS scs_sequencer(i4 op_code, SCD_SCB *scb, i4  *next_op );
+FUNC_EXTERN DB_STATUS scs_sequencer(i4 op_code, CS_SCB *scb, i4  *next_op );
 
 FUNC_EXTERN DB_STATUS scs_input(SCD_SCB *scb, i4  *next_state );
 
@@ -1889,20 +1891,20 @@ FUNC_EXTERN DB_STATUS scs_disable(SCF_CB *scf_cb,
 FUNC_EXTERN DB_STATUS scs_enable(SCF_CB *scf_cb,
 				 SCD_SCB *scb );
 
-FUNC_EXTERN STATUS scs_attn(i4 eid, SCD_SCB *scb );
+FUNC_EXTERN STATUS scs_attn(i4 eid, CS_SCB *scb );
 
 FUNC_EXTERN DB_STATUS scs_i_interpret(SCD_SCB *scb );
 
 FUNC_EXTERN STATUS scs_fhandler( EX_ARGS *ex_args );
 
-FUNC_EXTERN STATUS scs_format(SCD_SCB *scb,
+FUNC_EXTERN STATUS scs_format(CS_SCB *scb,
 			      char *stuff,
 			      i4  powerful,
 			      i4  suppress_sid );
 
 FUNC_EXTERN STATUS scs_avformat(void);
 
-FUNC_EXTERN i4  scs_facility(SCD_SCB *scb);
+FUNC_EXTERN i4  scs_facility(CS_SCB *scb);
 
 FUNC_EXTERN STATUS scs_iformat(SCD_SCB *scb,
 			       i4  powerful,

@@ -19,23 +19,29 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototype for OLretassign and removed
+**	    ifdef CL_PROTOTYPED commands.
 **/
 
 FUNC_EXTERN STATUS  OLpcall(
-#ifdef CL_PROTOTYPED
 	    VOID	(*func)(), 
 	    OL_PV	args[], 
 	    i4		argcnt, 
 	    i4		lang, 
 	    i4		proc_rettype, 
 	    OL_RET	*ret_value
-#endif
 );
 
 #ifndef OLanguage
 FUNC_EXTERN char * OLanguage(
-#ifdef CL_PROTOTYPED
 	    i4		ol_type
-#endif
 );
 #endif
+
+FUNC_EXTERN void
+OLretassign(
+	double  *value,
+	i4      rettype,
+	OL_RET  *retvalue);
+

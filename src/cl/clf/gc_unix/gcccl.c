@@ -9,6 +9,8 @@
 # include	<clsigs.h>
 # include	<cs.h>
 # include	<gcccl.h>
+# include	<ex.h>
+# include	<exinternal.h>
 
 /*
 **
@@ -67,6 +69,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 /*

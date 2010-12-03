@@ -218,6 +218,8 @@
 ##	    New scheme for hybrid building.
 ##      01-nov-2010 (joea)
 ##          Change di_unix to di.
+##	22-Nov-2010 (kschendel) SIR 124685
+##	    Drop a few more ancient / obsolete ports
 
 [ $SHELL_DEBUG ] && set -x
 
@@ -356,14 +358,6 @@ fi
 
 cd $INGLIB
 
-case $vers in
-        ncr_us5|sx1_us5|mx3_us5|386_us5)
-                splitlibs $*
-                exit $?
-                ;;
-        *) ;;
-esac
-
 . (PROG1PRFX)sysdep
 
 # see if they want stripped
@@ -377,7 +371,6 @@ do
 done
 
 case $vers in
-    	ds3_ulx)	SYMDEFNAME='__________ELEL_' ;;
     	axp_osf)	SYMDEFNAME='________64ELEL_' ;;
     	*)		SYMDEFNAME='__.SYMDEF' ;;
 esac
@@ -420,9 +413,6 @@ unwanted="mucs.o gcccl.o gcapsub.o gcctcp.o gccdecnet.o gccptbl.o \
 	clnt_udp.o pmap_rmt.o svc.o svc_run.o svc_tcp.o meuse.o \
 	meconsist.o medump.o mebdump.o meberror.o mexdump.o fegeterr.o \
 	pcsspawn.o pcfspawn.o "
-
-[ "$vers" = "rmx_us5" -o "$vers" = "rux_us5" ] &&
-unwanted="$unwanted iiufutil.o "
 
 # wanted object list within unwanted directories (libcompat.a)
 wanted="cxapi.o cxdata.o cxnuma.o"
@@ -536,15 +526,7 @@ fi
 if $do_lorder
 then
 	echo "lorder ..."
-	# Sun OS 4.0 lorder is buggy; it lists archive names along with objects
-	case $vers in
-    	ds3_ulx)
-	   lorder $libs > $allobjs 2>/dev/null
-	   ;;
-    	*)
-	   lorder $libs | grep -v '\.a' > $allobjs 2>/dev/null
-	   ;;
-	esac
+	lorder $libs | grep -v '\.a' > $allobjs 2>/dev/null
 
 	echo "tsort ..."
 	# clean up output to screen of tsort errors for mx3_us5

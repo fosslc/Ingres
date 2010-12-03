@@ -89,29 +89,13 @@ static struct parsedescs {
 **	    replace nat and longnat with i4
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 */
-#ifdef CL_PROTOTYPED
 STATUS DLparsedesc(LOCATION *locp, char *exename,
 	char *dlmodname, char *vers, char *creationdate,
 	char *functionbuf, char *functions[], i4  *func_cnt,
 	char *libbuf, char *libs[], i4  *lib_cnt, CL_ERR_DESC *errp)
-#else
-STATUS DLparsedesc(locp, exename, dlmodname, vers, creationdate,
-	functionbuf, functions, func_cnt,
-	libbuf, libs, lib_cnt, errp)
-LOCATION *locp;
-char *exename;
-char *dlmodname;
-char *vers;
-char *creationdate;
-char *functionbuf;
-char *functions[];
-i4  *func_cnt;
-char *libbuf;
-char *libs[];
-i4  *lib_cnt;
-CL_ERR_DESC *errp;
-#endif	/* CL_PROTOTYPED */
 {
 	STATUS ret;
 	FILE *fp;

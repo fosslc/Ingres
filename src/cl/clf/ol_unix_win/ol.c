@@ -261,9 +261,10 @@
 **	11-Oct-2010 (drivi01)
 **	    Update a64_win to use the same routines as a64_lnx
 **	    to fix alignment problem with floats.
-*/
-/*
-NO_OPTIM=ris_us5 rs4_us5 ris_u64
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added static declaration to local functions.
+**	30-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */
 
 /*
@@ -293,12 +294,7 @@ NO_OPTIM=ris_us5 rs4_us5 ris_u64
 # define	VSTR		7
 # define	FSTRFAKE	8
 
-#if defined(hp3_us5) || defined(ds3_ulx) || \
-    defined(bu3_us5) || defined(su4_u42) || \
-    defined(any_hpux) || defined(any_aix) || \
-    defined(sqs_ptx) || defined(pym_us5) || defined(sparc_sol) || \
-    defined(hp8_bls) || defined(sui_us5) || \
-    defined(rmx_us5) || defined(ner_us5) || defined(ts2_us5)
+#if defined(any_hpux) || defined(any_aix) || defined(sparc_sol)
 # define	FSTR_RET		FSTRFAKE
 #endif
 
@@ -343,15 +339,9 @@ static struct {
 ** called fortran routines correctly. (daveb).
 */
 
-# if defined (any_hpux) || defined (dg8_us5) || defined(hp8_bls) || defined(dgi_us5)
+# if defined (any_hpux)
 	/* XXX Not sure if this is right XXX */
 # define FLEN_BUNCHED_AT_END
-#	define gotit
-# endif
-
-# if defined(sco_us5) || defined(ds3_ulx) || \
-     defined(sqs_ptx) || defined(sos_us5)
-#	define LPI_FLEN_BUNCHED_AT_END
 #	define gotit
 # endif
 
@@ -366,20 +356,20 @@ static struct {
 */
 # define	MAX_ARGS	40
 
-# if defined(any_aix) || defined(ds3_ulx)
-void load_float_reg()
+# if defined(any_aix)
+static void load_float_reg()
 {
 }
 # endif /* aix */
 
 # if defined(i64_hpu) || defined(i64_lnx)
-void load_float_regs2(f8 float_arg0, f8 float_arg1)
+static void load_float_regs2(f8 float_arg0, f8 float_arg1)
 {
 }
-void load_float_regs4(f8 float_arg0, f8 float_arg1, f8 float_arg2, f8 float_arg3)
+static void load_float_regs4(f8 float_arg0, f8 float_arg1, f8 float_arg2, f8 float_arg3)
 {
 }
-void load_float_regs40(f8 float_arg0, f8 float_arg1, f8 float_arg2, f8 float_arg3, f8 float_arg4,
+static void load_float_regs40(f8 float_arg0, f8 float_arg1, f8 float_arg2, f8 float_arg3, f8 float_arg4,
 	f8 float_arg5, f8 float_arg6, f8 float_arg7, f8 float_arg8, f8 float_arg9,
 	f8 float_arg10, f8 float_arg11, f8 float_arg12, f8 float_arg13, f8 float_arg14,
 	f8 float_arg15, f8 float_arg16, f8 float_arg17, f8 float_arg18, f8 float_arg19,
@@ -392,13 +382,13 @@ void load_float_regs40(f8 float_arg0, f8 float_arg1, f8 float_arg2, f8 float_arg
 # endif /* i64_hpu || i64_lnx */
 
 # if defined(a64_lnx) || defined(a64_win)
-void load_float_regs2(f8 float_arg0, f8 float_arg1)
+static void load_float_regs2(f8 float_arg0, f8 float_arg1)
 {
 }
-void load_float_regs4(f8 float_arg0, f8 float_arg1, f8 float_arg2, f8 float_arg3)
+static void load_float_regs4(f8 float_arg0, f8 float_arg1, f8 float_arg2, f8 float_arg3)
 {
 }
-void load_float_regs14(f8 float_arg0, f8 float_arg1, f8 float_arg2, f8 float_arg3, 
+static void load_float_regs14(f8 float_arg0, f8 float_arg1, f8 float_arg2, f8 float_arg3, 
 	f8 float_arg4, f8 float_arg5, f8 float_arg6, f8 float_arg7, f8 float_arg8, 
 	f8 float_arg9, f8 float_arg10, f8 float_arg11, f8 float_arg12, f8 float_arg13)
 {
@@ -426,28 +416,6 @@ OL_RET		*retvalue;
 	f8			ris_flt_arg[RIS_FREGS];
 	register i4		float_cnt = 0;
 # endif /* aix */
-# ifdef ds3_ulx
-# define RIS_FREGS		2   /* actually more than 2 floating registers,
-				     * but at most two floating parameters
-				     * will be passed thru registers.
-				     */
-	f8			ris_flt_arg[RIS_FREGS];
-	register i4		float_cnt = 0;
-# endif /* ds3_ulx */
-
-# if defined(ner_us5) || defined(pym_us5) || defined(rmx_us5) \
-  || defined(ts2_us5) || defined(rux_us5)
-/*
-** MAX_FLOAT_REG_ARGS is the maximum number of floating-point
-** arguments that will be passed in floating-point registers.
-**
-** On the MIPS R3000, typically the first two floating-point
-** parameters are loaded into $f12-$f13 and $f14-$f15.
-*/
-# define MAX_FLOAT_REG_ARGS	2
-	f8			float_args[MAX_FLOAT_REG_ARGS];
-	register i4		float_cnt = 0;
-# endif /* ner_us5 pym_us5 rmx_us5 ts2_us5 */
 
 # ifdef axp_osf
 # define FREGS	6		/* floating point argument registers */
@@ -501,19 +469,6 @@ OL_RET		*retvalue;
 	    retvalue = &real_ret;
 
 /*
-** Some machines can't return strings from fortran.  This code prev
-ents
-** a core dump if the user attempts this in his application.
-*/
-
-#if defined(dg8_us5) || defined(dgi_us5)
-        if (abs(rettype) == OL_STR && lang == OLFORTRAN)
-        {
-                return (FAIL);
-        }
-#endif
-
-/*
 ** Some machines, like the HP 9000/300, expect that we [somehow]
 ** pass a "save area" as an "invisible" argument as a place to
 ** stash string return values. (Don't laugh. Some machines do this
@@ -554,10 +509,10 @@ ents
 		switch( abs( t ) )
 		{
 		case OL_PTR:
-		case OL_I4:	type = t < 0 ? REF : mecchar[ lang ].itype;
+		case OL_I4:	type = (t < 0 ? REF : mecchar[ lang ].itype);
 				break;
 
-		case OL_F8:	type = t < 0 ? REF : mecchar[ lang ].ftype;
+		case OL_F8:	type = (t < 0 ? REF : mecchar[ lang ].ftype);
 				break;
 
 		/* OL_STR & default lumped together for historical reasons.
@@ -639,8 +594,7 @@ ents
 			ap = (SCALARP *) ME_ALIGN_MACRO(ap, sizeof(ALIGN_RESTRICT));
 # endif
 
-# if (defined (any_hpux) || defined(hp8_bls)) && \
-     !defined(i64_hpu)
+# if defined (any_hpux) && !defined(i64_hpu)
 	 		/* reverse f8's for right to left */
 			ap[0] = ((i4 *)pv->OL_value)[1];
 			ap[1] = ((i4 *)pv->OL_value)[0];
@@ -648,12 +602,6 @@ ents
 			*(f8 *)ap = *(f8 *)pv->OL_value;
 # endif
 
-
-# if defined(ner_us5) || defined(pym_us5) || defined(rmx_us5) \
-  || defined(ts2_us5) || defined(rux_us5)
-			if (float_cnt < MAX_FLOAT_REG_ARGS)
-				float_args[float_cnt++] = *(f8 *)pv->OL_value;
-# endif /* ner_us5 pym_us5 rmx_us5 ts2_us5 */
 
 # if defined(any_aix)
 			if (float_cnt < RIS_FREGS)
@@ -760,12 +708,6 @@ ents
 			*ap++ = &lenv[i];
 # endif
 
-# if defined(ner_us5) || defined(pym_us5) || defined(rmx_us5) \
-  || defined(ts2_us5) || defined(rux_us5)
-	if (float_cnt)
-		load_float_regs(float_args[0], float_args[1]);
-# endif /* ner_us5 pym_us5 rmx_us5 ts2_us5 */
-
 	switch( rettype )
         {
 	case OL_NOTYPE:
@@ -811,11 +753,6 @@ ents
                                 (void) load_float_reg(ris_flt_arg[0],
 				  ris_flt_arg[1]);
 # endif
-# if defined(ds3_ulx)
-                            if (float_cnt)
-                                (void) load_float_reg(ris_flt_arg[0],
-				  ris_flt_arg[1]);
-# endif /* ds3_ulx */
 # ifdef axp_osf
 			    if (floats_passed)
 				load_float_regs(float_arg[0], float_arg[1],
@@ -850,11 +787,6 @@ ents
 				ris_flt_arg[16],ris_flt_arg[17],ris_flt_arg[18],
 				ris_flt_arg[19]);
 # endif /* aix */
-# if defined(ds3_ulx)
-                            if (float_cnt)
-                                (void) load_float_reg(ris_flt_arg[0],
-				  ris_flt_arg[1]);
-# endif /* ds3_ulx */
 # ifdef axp_osf
 			    if (floats_passed)
 				load_float_regs(float_arg[0], float_arg[1],
@@ -963,11 +895,6 @@ ents
 				ris_flt_arg[16],ris_flt_arg[17],ris_flt_arg[18],
 				ris_flt_arg[19]);
 # endif /* aix */
-# if defined(ds3_ulx)
-                            if (float_cnt)
-                                (void) load_float_reg(ris_flt_arg[0],
-				  ris_flt_arg[1]);
-# endif /* ds3_ulx */
 # ifdef axp_osf
 			    if (floats_passed)
 				load_float_regs(float_arg[0], float_arg[1],
@@ -1061,11 +988,6 @@ ents
 				ris_flt_arg[16],ris_flt_arg[17],ris_flt_arg[18],
 				ris_flt_arg[19]);
 # endif /* aix */
-# if defined(ds3_ulx)
-                            if (float_cnt)
-                                (void) load_float_reg(ris_flt_arg[0],
-				  ris_flt_arg[1]);
-# endif /* ds3_ulx */
 # ifdef axp_osf
 			    if (floats_passed)
 				load_float_regs(float_arg[0], float_arg[1],
@@ -1134,17 +1056,8 @@ ents
 }
 
 # ifdef axp_osf
-load_float_regs( a, b, c, d, e, f )
+static void load_float_regs( a, b, c, d, e, f )
 float	a, b, c, d, e, f;
 {
 }
 # endif /* axp_osf */
-
-# if defined(ner_us5) || defined(pym_us5) || defined(rmx_us5) \
-  || defined(ts2_us5) || defined(rux_us5)
-load_float_regs(fparg1, fparg2)
-f8 fparg1;
-f8 fparg2;
-{
-}
-# endif /* ner_us5 pym_us5 rmx_us5 ts2_us5 */

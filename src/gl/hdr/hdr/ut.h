@@ -4,10 +4,8 @@
 # ifndef UT_HDR_INCLUDED
 # define UT_HDR_INCLUDED 1
 
-#ifdef CL_PROTOTYPED
 /* needed for LOCATION definition */
 #include    <lo.h>
-#endif
 #include    <utcl.h>
 
 /**CL_SPEC
@@ -38,19 +36,19 @@
 **          varargs.h), to use newer (ANSI) 2 argument version (in stdargs.h).
 **          This is because the older version is no longer implemented in
 **          version 3.3.1 of GCC.
+**      29-Nov-2010 (frima01) SIR 124685
+**          Added UTcommand prototype and removed CL_PROTOTYPED from
+**          function declarations.
 **/
 FUNC_EXTERN STATUS  UTcompile(
-#ifdef CL_PROTOTYPED
 	    LOCATION	*srcfile, 
 	    LOCATION	*objfile, 
 	    LOCATION	*outfile, 
 	    bool	*pristine, 
 	    CL_ERR_DESC *clerror
-#endif
 );
 
 FUNC_EXTERN STATUS  UTcompile_ex(
-#ifdef CL_PROTOTYPED
 	    LOCATION	*srcfile, 
 	    LOCATION	*objfile, 
 	    LOCATION	*outfile, 
@@ -58,23 +56,18 @@ FUNC_EXTERN STATUS  UTcompile_ex(
 		bool      append,
 	    bool	*pristine, 
 	    CL_ERR_DESC *clerror
-#endif
 );
 
 FUNC_EXTERN STATUS  UTdeffile(
-#ifdef CL_PROTOTYPED
 	    char	*progname,
 	    char	*buf,
 	    LOCATION	*ploc,
 	    CL_ERR_DESC *clerror
-#endif
 );
 
 FUNC_EXTERN STATUS  UTedit(
-#ifdef CL_PROTOTYPED
 	    char	*e, 
 	    LOCATION	*f
-#endif
 );
 
 #ifndef UTexe
@@ -90,25 +83,32 @@ FUNC_EXTERN STATUS  UTexe(i4,
 #endif
 
 FUNC_EXTERN STATUS  UTlink(
-#ifdef CL_PROTOTYPED
 	    LOCATION	*objs[], 
 	    char	*usrlist[], 
 	    LOCATION	*exe, 
 	    LOCATION	*outfile, 
 	    bool	*pristine, 
 	    CL_ERR_DESC *clerror
-#endif
 );
 
 FUNC_EXTERN STATUS  UTprint(
-#ifdef CL_PROTOTYPED
 	    char	*printer_cmd, 
 	    LOCATION	*filename, 
 	    bool	delete,
 	    i4		copies, 
 	    char	*title, 
 	    char	*destination
-#endif
 );
 
+typedef ArrayOf(DsTemplate *) ArrayDsTemplate;
+STATUS UTcommand(
+        ModDictDesc             *dict,
+        ArrayDsTemplate		*dsTab,
+        char                    *program,
+        char                    *arglist,
+        char                    **comline,
+        i4                      N,
+        PTR                     arg1);
+
 # endif /* ! UT_HDR_INCLUDED */
+

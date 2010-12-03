@@ -78,6 +78,8 @@
 **	    Revise hybrid symbols.
 **	03-Sept-2009 (frima01) SIR 122138
 **	    Update CCFLAGS for HP-UX.
+**	23-Nov-2010 (kschendel)
+**	    Drop a few more obsolete ports.
 */
 
 /* **** FIXME! **** The compile strings here assume the traditional
@@ -95,28 +97,10 @@ CCFLAGS=-signed -Daxp_osf -O
 CC=cc
 #endif
 
-#ifdef ris_us5
-#define GOT_IT
-CCFLAGS=-Dris_us5 -D_ALL_SOURCE -qchars=signed
-CC=c89
-#endif
-
 #if defined(rs4_us5) || defined(r64_us5)
 #define GOT_IT
 CCFLAGS=-Dr64_us5 -DBUILD_ARCH64 -Dconf_BUILD_ARCH_32_64 -D_ALL_SOURCE -q64 -qchars=signed -O
 CC=c89
-#endif
-
-#ifdef ris_u64
-#define GOT_IT
-CCFLAGS=-Dris_u64 -D_ALL_SOURCE -q64 -qchars=signed -O
-CC=c89
-#endif
-
-#ifdef dg8_us5
-#define GOT_IT
-CCFLAGS=-O2
-CC=cc
 #endif
 
 #if defined(hp2_us5) || defined(i64_hpu)
@@ -129,24 +113,6 @@ CCFLAGS=-O -Di64_hpu -DBUILD_ARCH64 +DAportable +DS2.0a +DD64 +M2 -o$@
 CC=c89
 #endif
 
-#ifdef su4_u42
-#define GOT_IT
-CCFLAGS=-O2
-CC=acc
-#endif
-
-#ifdef rmx_us5
-#define GOT_IT
-CCFLAGS=-Drmx_us5 -O -K signed
-CC=cc
-#endif
-
-#ifdef pym_us5
-#define GOT_IT
-CCFLAGS=-Dpym_us5 -O -K signed
-CC=cc
-#endif
-
 #ifdef sgi_us5
 #define GOT_IT
 #ifdef conf_BUILD_ARCH_32_64
@@ -157,21 +123,9 @@ CCFLAGS=-mips3 -n32 -O -signed -Dsgi_us5
 CC=cc
 #endif
 
-#ifdef sos_us5
-#define GOT_IT
-CCFLAGS=-Dsos_us5 -O
-CC=cc
-#endif
-
 #ifdef usl_us5
 #define GOT_IT
 CCFLAGS=-Dusl_us5 -O
-CC=cc
-#endif
-
-#ifdef sui_us5
-#define GOT_IT
-CCFLAGS=-Dsui_us5 -O
 CC=cc
 #endif
 
@@ -184,24 +138,6 @@ CC=cc
 #ifdef a64_sol
 #define GOT_IT
 CCFLAGS=-O -Da64_sol -DBUILD_ARCH64 -Dconf_BUILD_ARCH_32_64 -xarch=generic64 -mt -o$@
-CC=cc
-#endif
-
-#ifdef rmx_us5
-#define GOT_IT
-CCFLAGS=-Drmx_us5 -O -K signed
-CC=cc
-#endif
-
-#ifdef dgi_us5
-#define GOT_IT
-CCFLAGS=-Ddgi_us5 -O
-CC=cc
-#endif
-
-#ifdef dg8_us5
-#define GOT_IT
-CCFLAGS=-Ddg8_us5 -O
 CC=cc
 #endif
 

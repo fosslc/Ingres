@@ -1482,6 +1482,9 @@
 #        1-DEC-2010 (hanal04) Bug b124731
 #           Add ARMERGELIB to the GeoSpatial dependency list to ensure
 #           geo libraries are copied/linked before building iimerge.
+#	19-Nov-2010 (frima01) BUG 124750
+#	    Move CCFLAGS in front of -c compile flag, neccessary for cross
+#	    compilation on i64.lnx.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -9341,7 +9344,7 @@ if $(UNIX)
      {
 	actions Cc
 	{
-	$(CC) -c $(CUSTOMFLAG) $(CCFLAGS) $(OPTIM) -I$(HDRS) -o $(<:S=$(SUFFIX)) $(>)
+	$(CC) $(CCFLAGS) -c $(CUSTOMFLAG) $(OPTIM) -I$(HDRS) -o $(<:S=$(SUFFIX)) $(>)
         }
      }
      else
@@ -9352,7 +9355,7 @@ if $(UNIX)
 	{
 	    actions Cc
 	    {
-	    $(CC) -c $(CCFLAGS) $(OPTIM) -I$(HDRS) -o $(<) $(>) -aux-info $(>:S=.aux)
+	    $(CC) $(CCFLAGS) -c $(OPTIM) -I$(HDRS) -o $(<) $(>) -aux-info $(>:S=.aux)
 	    }
 	}
 	else
@@ -9360,13 +9363,13 @@ if $(UNIX)
 	    # The usual Cc action
 	    actions Cc
 	    {
-	    $(CC) -c $(CCFLAGS) $(OPTIM) -I$(HDRS) -o $(<) $(>)
+	    $(CC) $(CCFLAGS) -c $(OPTIM) -I$(HDRS) -o $(<) $(>)
 	    }
 	}
 
         actions C++
         {
-        $(C++) -c $(C++FLAGS) $(OPTIM) -I$(HDRS) -o $(<) $(>)
+        $(C++) $(C++FLAGS) -c $(OPTIM) -I$(HDRS) -o $(<) $(>)
         }
      }
 }

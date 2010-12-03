@@ -190,6 +190,8 @@
 **          replace nat and longnat with i4
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for function defintions
+**	1-Dec-2010 (kschendel)
+**	    Fix compiler warnings.
 */
 
 /*
@@ -335,7 +337,7 @@ do_delete_cmmd(char *filenm)
 {
     LOCATION               aLoc ;
     char                  *fileBuf = NULL ;
-    LOCTYPE                aLocType = NULL ;
+    LOCTYPE                aLocType = 0 ;
     bool                   is_ok ;
 
     fileBuf = SEP_MEalloc(SEP_ME_TAG_NODEL, MAX_LOC+1, TRUE, (STATUS *)NULL);
@@ -381,7 +383,7 @@ exists_cmmd(char *filenm)
 {
     LOCATION               aLoc ;
     char                  *fileBuf = NULL ;
-    LOCTYPE                aLocType = NULL ;
+    LOCTYPE                aLocType = 0 ;
     bool                   is_ok ;
 
     fileBuf = SEP_MEalloc(SEP_ME_TAG_NODEL, MAX_LOC+1, TRUE, (STATUS *)NULL);
@@ -418,7 +420,7 @@ cd_cmmd(char *directory)
     char                   dirBuf [MAX_LOC] ;
     char                  *dirPtr  = NULL ;
     i2                     isadir ;
-    LOCTYPE                aLocType = NULL ;
+    LOCTYPE                aLocType = 0 ;
     bool                   is_ok ;
 
     if (is_ok = IS_FileNotation(directory))
@@ -523,7 +525,7 @@ type_cmmd(char *filenm)
     FILE                  *aPtr = NULL ;
     char                   lastchar = EOS ;
     char                  *fileBuf = NULL ;
-    LOCTYPE                aLocType = NULL ;
+    LOCTYPE                aLocType = 0 ;
     i2                     isitafile ;
     bool                   is_ok ;
 
@@ -1022,7 +1024,7 @@ fill_cmmd(FILE *testFile,char *filenm)
     FILE                  *aPtr = NULL ;
     char                  *fileBuf = NULL ;
     char                  *cptr = NULL ;
-    LOCTYPE                aLocType = NULL ;
+    LOCTYPE                aLocType = 0 ;
     bool                   is_ok ;
     bool                   to_editor = TRUE ;
 

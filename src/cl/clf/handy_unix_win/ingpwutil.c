@@ -28,6 +28,8 @@
 **	    Password may be terminated with EOS as well as ' '.
 **	09-Mar-2010 (hanje04)
 **	    Don't define errno, locally.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Add int argument to handler() to match signal.h.
 */
 
 int	p[2];
@@ -149,7 +151,7 @@ iscan(char *input, char *username, char *password)
         return(E_OK);
 }
 
-void handler()
+void handler(int arg)
 {
     exit(E_BADLOG);
 }

@@ -327,6 +327,8 @@ typedef struct _BS_DRIVER
 **	09-Sep-97 (rajus01)
 **	    Added "is_remote" flag in BS_PARMS.
 **	    Added IPADDR_COUNT, BYTES_IN_IPADDR, LOOPBACK_ADDRESS defines.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Prototype the callback.
 */
 
 # include <pc.h>
@@ -342,8 +344,8 @@ typedef struct _BS_PARMS
 	char		*buf;		/* buffer for certain functions */
 	i4		len;		/* length of buffer */
 	char		regop;		/* for regfd */
-	VOID		(*func)();	/* for regfd */
-	PTR		closure;	/* for regfd */
+	VOID		(*func)(void *, i4); /* for regfd */
+	void		*closure;	/* for regfd */
 	i4		timeout;	/* for regfd */
 	STATUS		status;		/* return status */
 	CL_ERR_DESC	*syserr;	/* modified if status != OK */

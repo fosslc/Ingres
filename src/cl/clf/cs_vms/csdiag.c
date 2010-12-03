@@ -9,7 +9,6 @@
 #include <evset.h>
 
 
-GLOBALREF CS_SYSTEM	Cs_srv_block;
 GLOBALREF CS_SEMAPHORE  Cs_known_list_sem;
 
 /**
@@ -51,8 +50,12 @@ GLOBALREF CS_SEMAPHORE  Cs_known_list_sem;
 **      28-dec-2003 (horda03) Bug 111860/INGSRV2722
 **          Enable diagnostics for all OS, and ensure that pointers are
 **          displayed correctly on all OS's.
-**      18-Feb-2009 (horda03)
-**          Correct CS_dump_stack() parameters.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Delete CS_SYSTEM ref, get from csinternal.
+**	    Prototype fixups.
+**	    Invent diag output helper, because diag routines were calling
+**	    this with a printf-style outputter, but CS-dump-stack wants
+**	    a TRformat-style outputter.  The two are very different!
 */
 
 /*{
@@ -88,13 +91,29 @@ GLOBALREF CS_SEMAPHORE  Cs_known_list_sem;
 **          lot easier than just PC addresses.
 */
 
+/* First, a helper function.
+** The DIAG routines supply a printf-like function.  CS_dump_stack
+** expects a TR_OUTPUT_FCN, which is entirely different.
+** This helper is a TR_OUTPUT_FCN which calls the DIAG-style output.
+** The arg has to be typed PTR, but it's in fact a DIAG_LINK *
+** where the CS_dump_stack has stashed the proper DIAG-style routine,
+** in the ->output member.
+*/
 
+static STATUS diag_output_helper(PTR diaglink, i4 length, char *buffer)
+{
+    DIAG_LINK *dl = (DIAG_LINK *)diaglink;
+
+    (*dl->output)("%.*s",length,buffer);
+    return (OK);
+}
+
+static void
 CSdiagDumpSched(output,error)
 VOID (*output)();
 VOID (*error)();
 {
     CS_SCB 	*scb;
-    CS_SCB 	*current_scb;
     char 	*what;
 
 
@@ -153,15 +172,20 @@ VOID (*error)();
 
 	/* read symbols from the object file */
 
-	CSget_scb( &current_scb );
-        if (Cs_srv_block.cs_state == CS_INITIALIZING ||
-           scb == current_scb)
-        {
-	   CS_dump_stack(0,error,TRUE);
-        }
-        else
-        {
-	   CS_dump_stack(scb,error,TRUE);
+	{
+	    DIAG_LINK diag_link;
+	    CS_SCB *current_scb;
+	    CS_SCB *dump_scb;
+
+	    diag_link.output = output;
+	    dump_scb = NULL;
+	    if (Cs_srv_block.cs_state != CS_INITIALIZING)
+	    {
+		CSget_scb( &current_scb );
+		if (current_scb != scb)
+		    dump_scb = scb;
+	    }
+	    CS_dump_stack(dump_scb,0,(PTR)&diag_link,diag_output_helper,TRUE);
         }
 
         (*output)
@@ -218,18 +242,18 @@ PTR	filename;
 {
 DIAG_LINK	diag_link;
 
+	diag_link.output = output;
 	if (type == DIAG_DUMP_STACKS)
 	{
-	    (*error)
+	    (*output)
 	    ("======================= STACK DUMP ==========================\n");
-	    CS_dump_stack(0,output,FALSE);
-	    (*error)
+	    CS_dump_stack(NULL, NULL, (PTR) &diag_link, diag_output_helper, 0);
+	    (*output)
 	    ("====================== SCHEDULER QUEUE ======================\n");
 	    CSdiagDumpSched(error,output);
 	    return;
 	}
 	diag_link.type = type;
-	diag_link.output = output;
 	diag_link.error = error;
 	diag_link.filename = filename;
 	CSget_scb( (CS_SCB **)&diag_link.scd );

@@ -1,8 +1,9 @@
 
 # include	<compat.h>
 # include	<gl.h>
+# include	<clconfig.h>
 # include	<ex.h>
-# include	"exi.h"
+# include	<exinternal.h>
 
 /*
 **Copyright (c) 2004 Ingres Corporation
@@ -62,6 +63,8 @@
 **	  Initialise previous_context pointer to 0,
 **	  else EXdelete() can SIGBUS ->server death on
 **	  non-0 uninitialised pointer. (bug 89411)
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 static bool	exsetfirst = TRUE;

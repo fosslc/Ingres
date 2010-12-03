@@ -239,6 +239,8 @@
 **	    Compiler warning fixes.
 **	30-May-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Fix prototypes, CS expects CS_SCB *, xlate to SCD_SCB * here.
 **/
 
 /*
@@ -937,8 +939,9 @@ scc_trace( SCF_CB *scf_cb, SCD_SCB *scb )
 [@history_template@]...
 */
 STATUS
-scc_send( SCD_SCB *scb, i4  sync )
+scc_send( CS_SCB *csscb, i4  sync )
 {
+    SCD_SCB		*scb = (SCD_SCB *) csscb;
     SCC_GCMSG           *cmsg = scb->scb_cscb.cscb_mnext.scg_next;
     SCC_GCMSG           *cmsg_next;
     DB_STATUS           status;
@@ -1482,8 +1485,9 @@ scc_send( SCD_SCB *scb, i4  sync )
 **          Disable ASTs (on VMS) while accessing the GCA_STATUS variable.
 */
 STATUS
-scc_recv( SCD_SCB *scb, i4  sync )
+scc_recv( CS_SCB *csscb, i4  sync )
 {
+    SCD_SCB		    *scb = (SCD_SCB *) csscb;
     DB_STATUS		    status;
     DB_STATUS		    error;
     GCA_RV_PARMS	    *rparms = &scb->scb_cscb.cscb_gci;

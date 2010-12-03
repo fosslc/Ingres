@@ -115,6 +115,8 @@
 **          Added support for Solaris AMD64 a64_sol.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 **/
 
 /* # defines */
@@ -203,11 +205,7 @@ i4	*zone;
 # else
 	tm = localtime( (time_t *)&t.tv_sec );
 # endif /* solaris */
-#if defined(dgi_us5) || defined(dg8_us5)
-	*zone = (i4) (tz.__hide__tz_minuteswest - ( tm->tm_isdst ? MIN_PER_HR : 0 ));
-#else
 	*zone = (i4) (tz.tz_minuteswest - ( tm->tm_isdst ? MIN_PER_HR : 0 ));
-#endif /* dgi_us5 */
  
 # else
 
@@ -324,15 +322,11 @@ SYSTIME	*stime;
     {
         struct timeval  t;
 	struct timezone tz;
-# if defined(dg8_us5) || defined(dgi_us5)
-        int gettimeofday ( struct timeval *, struct timezone * ) ;
-# else
 # if defined(xCL_GETTIMEOFDAY_TIMEONLY_V)
     int gettimeofday ( struct timeval *, ...) ;
 # else
 	int		gettimeofday();
 # endif /* xCL_GETTIMEOFDAY_TIMEONLY_V */
-# endif
 
 # if defined(xCL_GETTIMEOFDAY_TIMEONLY)
 	gettimeofday(&t);

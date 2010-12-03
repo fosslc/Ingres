@@ -39,6 +39,9 @@
 #           Added PAMLIB to resolve symbols defined in PAM library.
 #	22-Jun-2009 (kschendel) SIR 122138
 #	    Add 32-bit symbols for new hybrid scheme.
+#	21-Sep-2010 (frima01) BUG 124750
+#	    Remove crosscompiler version from link and compile flags.
+#	    Add 32 bit library paths.
 #
 #####
 
@@ -61,9 +64,9 @@ CD      = "cd" ;
 CC      default = "cc" ;
 CCDEBUG = "-g" ;
 CPP     default = "/lib/cpp" ;
-CCMACH32 = -DBUILD_ARCH32 -b i686-unknown-linux-gnu -V 3.2.3 -m32 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS ;
+CCMACH32 = -b i686-unknown-linux-gnu -DBUILD_ARCH32 -m32 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS ;
 CCMACH64 = -DBUILD_ARCH64 -fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS ;
-CCLDMACH32 = -b i686-unknown-linux-gnu -V 3.2.3 -rdynamic ;
+CCLDMACH32 = -b i686-unknown-linux-gnu -rdynamic ;
 CCLDMACH64 = -rdynamic ;
 
 # Note that this LDORIGIN is used for various distributed binaries,
@@ -73,12 +76,12 @@ CCLDMACH64 = -rdynamic ;
 # for set-uid reasons, so there are various hoops;  but iilink takes
 # care of all that.
 LDORIGIN = -Wl,-rpath,'$ORIGIN/../lib' ;
-LDORIGINLP32 = -Wl,-rpath,'$ORIGIN/../../lib/lp32' ;
+LDORIGINLP32 = -Wl,-rpath,'$ORIGIN/../../lib/lp32:/emul/ia32-linux/usr/lib:/emul/ia32-linux/lib' ;
 LDORIGINLP64 = -Wl,-rpath,'$ORIGIN/../../lib/lp64' ;
 
-CCSHLDMACH32      = "-b i686-unknown-linux-gnu -V 3.2.3 -shared" ;
+CCSHLDMACH32      = "-b i686-unknown-linux-gnu -shared" ;
 CCSHLDMACH64      = "-shared" ;
-CCLDSERVER32    = "-b i686-unknown-linux-gnu -V 3.2.3" ;
+CCLDSERVER32    = "-b i686-unknown-linux-gnu " ;
 CCLDSERVER64	= "" ;
 CCPICFLAG = -fPIC ;
 SLSFX = so ;
@@ -86,7 +89,7 @@ LIBSFX = a ;
 OBJSFX = o ;
 MWSLSFX = so ;
 CGISFX = cgi ;
-LDLIBPATH32 = /lib /usr/lib /usr/local/lib ;
+LDLIBPATH32 = /emul/ia32-linux/lib /emul/ia32-linux/usr/lib /emul/ia32-linux/usr/local/lib ;
 LDLIBPATH64 = /lib /usr/lib /usr/local/lib ;
 LIBMACH = ;
 LDLIBMACH32 = -lpthread -lrt -lm -lc -lcrypt -ldl -lgcc_s ;

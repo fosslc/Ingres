@@ -11,6 +11,7 @@
 #include    <pc.h>
 
 #include    <csinternal.h>
+#include    <csev.h>
 
 /**
 **
@@ -96,6 +97,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Delete CS_SYSTEM ref, get from csinternal.
 **/
 
 /*
@@ -107,7 +110,6 @@
 ** Definition of all global variables used by this file.
 */
 
-GLOBALREF CS_SYSTEM           Cs_srv_block;
 GLOBALREF CS_SEMAPHORE        Cs_known_list_sem;
 
 

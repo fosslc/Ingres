@@ -2,13 +2,8 @@
 ** Copyright (c) 2010 Ingres Corporation
 */
 
-# if defined(dgi_us5)
-#include <compat.h>
-#include <stdlib.h>
-# else
 #include <stdlib.h>
 #include <compat.h>
-# endif /* dgi_us5 */
 
 #include <sql.h>                    /* ODBC Core definitions */
 #include <sqlext.h>                 /* ODBC extensions */
@@ -220,6 +215,8 @@
 **          string elements.
 **     24-Sep-2010 (thoda04) Bug 124307
 **          In ConvertUCS4ToUCS2(), let casting handle big/little endian.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete dgi port.
 */
 
 /*

@@ -89,8 +89,10 @@ NEEDLIBS =  COMPAT MALLOCLIB
 
 /* local prototypes */
 
-static STATUS XXsocket(
-		CL_ERR_DESC* errdesc );
+static STATUS XXcomplex(CL_ERR_DESC *errdesc);
+static STATUS XXsimple(CL_ERR_DESC *errdesc);
+static STATUS XXsocket( CL_ERR_DESC* errdesc );
+static int client(char);
 
 main(argc, argv)
 char **argv;
@@ -115,7 +117,7 @@ char **argv;
 }
 
 
-client(mode)
+int client(mode)
 char mode;
 {
     CL_ERR_DESC clerror, er_err;
@@ -146,9 +148,8 @@ char mode;
 **  XXsimple is a public CL entry that has a simple implementation
 **  and returns either OK or XX_BADOPEN.
 */
-STATUS
-XXsimple(errdesc)
-CL_ERR_DESC* errdesc;
+static STATUS
+XXsimple(CL_ERR_DESC *errdesc)
 {
     char *filename = "/some/unix/file";
 
@@ -178,9 +179,8 @@ CL_ERR_DESC* errdesc;
 **  (most of the work is done in a private routine, XXsocket) and
 **  returns either OK or XX_CANT.
 */
-STATUS
-XXcomplex(errdesc)
-CL_ERR_DESC* errdesc;
+static STATUS
+XXcomplex(CL_ERR_DESC *errdesc)
 {
     int status;
 
@@ -211,8 +211,7 @@ CL_ERR_DESC* errdesc;
 **  or XX_PRIVATE_DUNNO, which are internal CL error codes.
 */
 static STATUS
-XXsocket(errdesc)
-CL_ERR_DESC* errdesc;
+XXsocket(CL_ERR_DESC *errdesc)
 {
     extern int errno;
     STATUS status = OK;
@@ -259,6 +258,7 @@ CL_ERR_DESC* errdesc;
 **                  YOU NEEDN'T READ ANY FURTHER.
 **-----------------------------------------------------------------------------
 ** This is a dummy version of ERslookup() for illustrative purposes only.
+** It is NOT normally compiled.
 */
 # ifdef USE_DUMMY_ERSLOOKUP
 static int level = -1;

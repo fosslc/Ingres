@@ -982,6 +982,8 @@ CS_scb_thread_type_get(i4 offset,
 ** History:
 **	26-Oct-1992 (daveb)
 **	    documented.
+**	18-Nov-2010 (kschendel) SIR 124685
+**	    Compiler suggested more parens around embedded assignment.
 */
 
 STATUS
@@ -1003,8 +1005,8 @@ CS_scb_mask_get(i4 offset,
 	{
 	    if( p != buf )
 		*p++ = ',';
-	    for( q = mp->str; *p++ = *q++ ; )
-		continue;
+	    for( q = mp->str; (*p++ = *q++) != 0 ; )
+		/* loop */;
 	}
     }
     *p = EOS;

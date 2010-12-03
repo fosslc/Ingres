@@ -94,6 +94,10 @@
 ##		needed to be updated to reflect most recent map.
 ##     22-May-2008 (rajus01) SIR 120420, SD issue 116370
 ##		Added PAM support in Ingres.
+##	1-Dec-2010 (kschendel)
+##	    cp -f because we might be copying r--r--r-- sources.
+##	    The Jam rule attempts an rm -f first, but it doesn't know
+##	    about all the things we're copying.
 ##	       
 ##
 #******************************************************************************
@@ -113,10 +117,10 @@ chmod 755 $DEST
 # Copy the files over to the build area
 
 echo "#define $config" > $DEST/pwconfig.h
-cp $ING_SRC/cl/clf$noise/handy_unix_win/ingvalidpw.x $DEST/ingvalidpw.c
-cp $ING_SRC/cl/clf$noise/handy_unix_win/ingvalidpam.c $DEST/ingvalidpam.c
-cp $ING_SRC/cl/clf$noise/handy_unix_win/ingpwutil.c $DEST/ingpwutil.c
-cp $ING_SRC/cl/clf$noise/handy_unix_win/ingpwutil.h $DEST/ingpwutil.h
+cp -f $ING_SRC/cl/clf$noise/handy_unix_win/ingvalidpw.x $DEST/ingvalidpw.c
+cp -f $ING_SRC/cl/clf$noise/handy_unix_win/ingvalidpam.c $DEST/ingvalidpam.c
+cp -f $ING_SRC/cl/clf$noise/handy_unix_win/ingpwutil.c $DEST/ingpwutil.c
+cp -f $ING_SRC/cl/clf$noise/handy_unix_win/ingpwutil.h $DEST/ingpwutil.h
 chmod 644 $DEST/ingvalidpw.c $DEST/pwconfig.h
 
 exit 0

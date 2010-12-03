@@ -148,6 +148,10 @@
 **	    than 1000 times a second. (b104072/INGSRV1389).
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	16-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 **/
 
 GLOBALDEF i4	Cs_enable_clock = 0;
@@ -230,7 +234,7 @@ CS_checktime(void)
     bool  idle_update = FALSE;
 
 #if defined(OS_THREADS_USED)
-# if !defined(any_aix) && !defined(dgi_us5)
+# if !defined(any_aix)
     if (Cs_srv_block.cs_mt)
 	{
 	HRSYSTIME hrtime;
@@ -238,12 +242,9 @@ CS_checktime(void)
 	TMhrnow(&hrtime);
 	return (hrtime.tv_sec * 1000) + (hrtime.tv_nsec / NANO_PER_MILLI);
 	}
-# endif /* !aix  !dgi_us5 */
+# endif /* !aix */
 #endif /* OS_THREADS_USED */
 
-# if defined(sqs_us5)
-    CS_realtime_update_smclock();
-#else
     if (&Cs_idle_scb == Cs_srv_block.cs_current)
     {
         if(Cs_sm_cb->css_clock.cscl_calls_since_idle == 0)
@@ -269,7 +270,6 @@ CS_checktime(void)
 	Cs_sm_cb->css_clock.cscl_calls_since_inc = 0;
 	CS_ADD_QUANTUM(Cs_sm_cb->css_clock.cscl_fixed_update);
     }
-#endif /* sqs_ptx */
 
     return(Cs_sm_cb->css_qcount);
 }
@@ -414,8 +414,7 @@ CS_realtime_update_smclock(void)
 **          Initialise the new cs_clock field cscl_calls_since_idle.
 */
 void
-CS_clockinit(
-CS_SMCNTRL	*sm)
+CS_clockinit(CS_SMCNTRL	*sm)
 {
     HRSYSTIME	t;
 

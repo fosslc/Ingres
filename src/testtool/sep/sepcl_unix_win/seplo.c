@@ -47,6 +47,9 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	1-Dec-2010 (kschendel)
+**	    Compiler warning fixes after CL prototyping.
+**	    Delete useless code in SEP-LOrebuild.
 */
 #include <compat.h>
 #include <cm.h>
@@ -64,12 +67,7 @@
 STATUS
 SEP_LOrebuild(LOCATION *locptr)
 {
-    LOINFORMATION          LocInfo ;
     char                  *loc_str = NULL ;
-    i4                     infoflag ;
-    i2                     itexists ;
-    char                  *curBuf = NULL ;
-    LOCATION               curLoc ;
 
     char                  *reb_dev = NULL ;
     char                  *reb_path = NULL ;
@@ -94,10 +92,6 @@ SEP_LOrebuild(LOCATION *locptr)
     LOdetail(locptr, reb_dev,  reb_path, reb_fpre, reb_fsuf, reb_fver);
 
     SEP_LOcompose(reb_dev, reb_path, reb_fpre, reb_fsuf, reb_fver, locptr);
-
-    infoflag = LO_I_ALL;
-    itexists = (LOinfo(locptr, &infoflag, &LocInfo) == OK);
-    LOwhat(locptr,&infoflag);
 
     MEtfree(SEP_ME_TAG_SEPLO);
     return (OK);
@@ -215,9 +209,9 @@ SEP_LOwhatisit(char *f_string)
     char                  *cptr2 = NULL ;
 
     if (f_string == NULL || *f_string == EOS)
-	return (NULL);
+	return (0);
 
-    what_itis = NULL;
+    what_itis = 0;
 
 
     if (STindex(f_string,ERx("/"),0) == NULL)
@@ -228,9 +222,9 @@ SEP_LOwhatisit(char *f_string)
 	    CMnext(cptr1);
 	    NMgtAt(cptr1,&cptr2);
 	    if (cptr2 == NULL || *cptr2 == EOS)
-		return (NULL);
+		return (0);
 
-	    if ((what_itis = SEP_LOwhatisit(cptr2)) != NULL)
+	    if ((what_itis = SEP_LOwhatisit(cptr2)) != 0)
 		STcopy(cptr2,f_string);
 
 	    return (what_itis);

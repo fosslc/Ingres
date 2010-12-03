@@ -2,8 +2,9 @@
 ** Copyright (c) 1993, 2009 Ingres Corporation
 */
 # include	<compat.h>
+# include	<clconfig.h>
 #include <ex.h>
-#include "exi.h"
+#include <exinternal.h>
 
 /*
 **

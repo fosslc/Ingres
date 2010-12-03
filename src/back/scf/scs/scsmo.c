@@ -165,6 +165,8 @@
 **	    cast to PTR to match the expected type.
 **      09-Feb-2010 (smeke01) b123226, b113797 
 **	    MOlongout/MOulongout now take i8/u_i8 parameter.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Refine CS prototyping.
 */
 
 /* forward decls */
@@ -249,16 +251,16 @@ scs_mo_init(void)
 **	    Use MOsidout() for cs_self, since it is now basically the scb.
 */
 
-STATUS
-scs_scb_attach( SCD_SCB *scb )
+void
+scs_scb_attach( CS_SCB *csscb )
 {
     char buf[ 80 ];
 
-    MOptrout( 0, (PTR)scb, sizeof(buf), buf );
-    MOattach( MO_INSTANCE_VAR, index_ptr, buf, (PTR)scb );
+    MOptrout( 0, (PTR)csscb, sizeof(buf), buf );
+    MOattach( MO_INSTANCE_VAR, index_ptr, buf, (PTR)csscb );
 
-    MOsidout( 0, (PTR)(scb->cs_scb.cs_self), sizeof(buf), buf );
-    return( MOattach( MO_INSTANCE_VAR, index_name, buf, (PTR)scb ) );
+    MOsidout( 0, (PTR)(csscb->cs_self), sizeof(buf), buf );
+    (void) MOattach( MO_INSTANCE_VAR, index_name, buf, (PTR)csscb );
 }
 
 
@@ -292,16 +294,16 @@ scs_scb_attach( SCD_SCB *scb )
 **	    Use MOsidout() for cs_self, since it is now basically the scb.
 */
 
-STATUS
-scs_scb_detach( SCD_SCB *scb )
+void
+scs_scb_detach( CS_SCB *csscb )
 {
     char buf[ 80 ];
 
-    MOptrout( 0, (PTR)scb, sizeof(buf), buf );
+    MOptrout( 0, (PTR)csscb, sizeof(buf), buf );
     MOdetach( index_ptr, buf);
 
-    MOsidout( 0, (PTR)(scb->cs_scb.cs_self), sizeof(buf), buf );
-    return( MOdetach( index_name, buf ) );
+    MOsidout( 0, (PTR)(csscb->cs_self), sizeof(buf), buf );
+    (void) MOdetach( index_name, buf );
 }
 
 

@@ -73,6 +73,8 @@
 **	    Add TMsecs_to_stamp.
 **	08-May-2009 (drivi01)
 **	    In efforts to port to Visual Studio 2008, clean up warnings.
+**	23-Nov-2010 (kschendel)
+**	    Silly to have unix platform tests in win source, delete.
 **/
 
 /* defines */
@@ -190,7 +192,6 @@ TM_STAMP	*stamp)
     static int	pid = 0;
     static TM_STAMP   last_stamp = { 0, 0 };
 
-# ifdef NT_GENERIC
     time_t secs;
     SYSTEMTIME stime;
     TIME_ZONE_INFORMATION tz;
@@ -219,58 +220,6 @@ TM_STAMP	*stamp)
 
     stamp->tms_sec = (i4)secs;
     stamp->tms_usec = stime.wMilliseconds * 1000;
-
-# else //NT_GENERIC
-
-# ifdef xCL_005_GETTIMEOFDAY_EXISTS
- 
- 
-	struct timeval  t;
-	struct timezone tz;
-# ifdef dg8_us5
-        int gettimeofday ( struct timeval *, struct timezone * ) ;
-# else
-        int gettimeofday();
-# endif
- 
-# if defined(xCL_GETTIMEOFDAY_TIMEONLY)
-	gettimeofday(&t);
-# elif defined(xCL_GETTIMEOFDAY_TIME_AND_TZ)
-	gettimeofday(&t, &tz);
-# endif
-
-	stamp->tms_sec = t.tv_sec;
-	stamp->tms_usec = t.tv_usec;
- 
-# else
- 
-    static i4	seconds = 0;
-    static i4	usecs   = 0;
- 
-    stamp->tms_sec = time(0);
- 
-    /* DMF code expects timestamps to be of finer granularity than
-    ** a second.  In order to fake this on UNIX's with this granularity
-    ** we will make the timestamps monatomically increasing within
-    ** a process.  We increase 1000 at a time because the timestamp that
-    ** actually gets printed is only in 100th's of a second.
-    */
-    gen_Psem(&CL_misc_sem);
-    if (stamp->tms_sec == seconds)
-    {
-	usecs += 1000;
-    }
-    else
-    {
-	seconds = stamp->tms_sec;
-	usecs = 0;
-    }
-    stamp->tms_usec = usecs;
-    gen_Vsem(&CL_misc_sem);
- 
-# endif
-
-# endif //NT_GENERIC
 
     /* To enhance the uniqueness of the returned value as a stamp,
     ** salt in the low 8 bits worth of the pid (daveb) 

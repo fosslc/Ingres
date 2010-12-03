@@ -195,6 +195,9 @@
 **          Changes for Long IDs
 **	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    Prototype static scs_gwinfo_subget()
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Refine CS prototypes.  CS expects CS_SCB *, translate to
+**	    SCD_SCB * here rather than implicitly.
 **/
 
 # define USER_STRING	ERx("user=")
@@ -501,7 +504,7 @@ scs_enable(SCF_CB *scf_cb, SCD_SCB *scb )
     scb->scb_sscb.sscb_cfac = abs(scb->scb_sscb.sscb_cfac);
     if (scb->scb_sscb.sscb_interrupt == SCS_PENDING_INTR)
     {
-	scs_attn(scb->scb_sscb.sscb_eid, scb);
+	scs_attn(scb->scb_sscb.sscb_eid, &scb->cs_scb);
     }
     return(status);
 }
@@ -572,11 +575,12 @@ scs_enable(SCF_CB *scf_cb, SCD_SCB *scb )
 */
 STATUS
 scs_attn(i4 eid,
-	 SCD_SCB *scb )
+	 CS_SCB *csscb )
 {
     DB_STATUS		status;
     i4                  fac;
     SCD_ALIST		*list;
+    SCD_SCB		*scb = (SCD_SCB *) csscb;
     void		*fac_scb;
     
     list = &Sc_main_cb->sc_alist;
@@ -804,11 +808,11 @@ scs_fhandler( EX_ARGS *ex_args )
     char    msg[EX_MAX_SYS_REP];
 
     char	server_id[64];
-    CS_SCB      *scb;
+    CS_SID	sid;
 
     CSget_svrid( server_id );
-    CSget_scb( &scb );
-    ERmsg_hdr( server_id, scb->cs_self, msg);
+    CSget_sid( &sid );
+    ERmsg_hdr( server_id, sid, msg);
 
     if (!(EXsys_report(ex_args, msg)))
 	TRdisplay(
@@ -851,13 +855,13 @@ scs_fhandler( EX_ARGS *ex_args )
 [@history_template@]...
 */
 STATUS
-scs_format(SCD_SCB *scb,
+scs_format(CS_SCB *scb,
             char *stuff,
             i4  powerful,
             i4  suppress_sid )
 
 {
-	return(scs_iformat(scb, powerful, suppress_sid, 0));
+	return(scs_iformat((SCD_SCB *)scb, powerful, suppress_sid, 0));
 }
 
 /*
@@ -921,9 +925,10 @@ scs_avformat(void)
 }
 
 i4
-scs_facility(SCD_SCB *scb)
-
+scs_facility(CS_SCB *csscb)
 {
+    SCD_SCB *scb = (SCD_SCB *) csscb;
+
     if (scb->scb_sscb.sscb_stype!=SCS_SMONITOR)
 	return scb->scb_sscb.sscb_cfac;
     else

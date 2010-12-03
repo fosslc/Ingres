@@ -33,21 +33,9 @@
 **	01-dec-2000	(kinte01)
 **		Bug 103393 - removed nat, longnat, u_nat, & u_longnat
 **		from VMS CL as the use is no longer allowed
+**      29-Nov-2010 (frima01) SIR 124685
+**	    Moved declaration of CIencrypt, CIexpand and CIshrink to cilocal.h.
 **/
-
-
-/*
-**	Forward function references.
-*/
-
-	VOID	CIencrypt();		/* actually encrypt or decrypt some information. */
-	VOID	CIexpand();		/* unpack bits to be crypted into an
-					** equal number of bytes, one bit per
-					** byte.
-					*/
-	VOID	CIshrink();		/* pack bits that have been crypted back
-					** into bytes.
-					*/
 
 
 /*

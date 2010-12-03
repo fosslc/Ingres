@@ -62,6 +62,10 @@
 **	    on, so we'll use it.
 **	04-Nov-2010 (miket) SIR 124685
 **	    Prototype cleanup. Add cast to silence sigaction type warning.
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Fix up jobctrl args to match usage (void).
 **	
 */
 
@@ -82,8 +86,8 @@
 **  can them when a job control signal occurs.
 */
 
-static	i4	(*TEreset)() = NULL;
-static	i4	(*TEredraw)() = NULL;
+static	void	(*TEreset)(void) = NULL;
+static	void	(*TEredraw)(void) = NULL;
 
 /*
 **  This routine is internal to the CL and
@@ -96,7 +100,7 @@ static	i4	(*TEredraw)() = NULL;
 */
 
 static TYPESIG
-TEjobhdlr()
+TEjobhdlr(int notused)
 {
 # ifdef xCL_011_USE_SIGVEC
 	struct	sigvec	newvec;
@@ -140,7 +144,7 @@ TEjobhdlr()
 	*/
 
 # ifdef xCL_011_USE_SIGVEC
-	sigvec_func(SIGTSTP, &newvec, &oldvec);
+	sigvec(SIGTSTP, &newvec, &oldvec);
 
 	sigsetmask(tmpmask);	/* re-enable the signal */
 # else
@@ -163,7 +167,7 @@ TEjobhdlr()
 	*/
 
 # ifdef xCL_011_USE_SIGVEC
-	sigvec_func(SIGTSTP, &oldvec, (struct sigvec *)NULL);
+	sigvec(SIGTSTP, &oldvec, (struct sigvec *)NULL);
 # else
 # ifdef xCL_068_USE_SIGACTION
         sigaction(SIGTSTP, &oldaction, (struct sigaction *)0);
@@ -190,9 +194,7 @@ TEjobhdlr()
 */
 
 VOID
-TEjobcntrl(reset, redraw)
-i4	(*reset)();
-i4	(*redraw)();
+TEjobcntrl(void (*reset)(void), void (*redraw)(void))
 {
 # ifdef xCL_011_USE_SIGVEC
 	struct	sigvec	newvec;
@@ -218,7 +220,7 @@ i4	(*redraw)();
 	newvec.sv_onstack = 0;
 # else
 # ifdef xCL_068_USE_SIGACTION
-        newaction.sa_handler = (VOID*)TEjobhdlr;
+        newaction.sa_handler = TEjobhdlr;
         sigemptyset(&(newaction.sa_mask));
         newaction.sa_flags = 0;
 # endif /* xCL_068_USE_SIGACTION */
@@ -231,7 +233,7 @@ i4	(*redraw)();
 	*/
 
 # ifdef xCL_011_USE_SIGVEC
-	sigvec_func(SIGTSTP, &newvec, (struct sigvec *)NULL);
+	sigvec(SIGTSTP, &newvec, (struct sigvec *)NULL);
 # else
 # ifdef xCL_068_USE_SIGACTION
         sigaction(SIGTSTP, &newaction, (struct sigaction *)0);
@@ -251,9 +253,7 @@ i4	(*redraw)();
 */
 
 VOID
-TEjobcntrl(reset, redraw)
-i4	(*reset)();
-i4	(*redraw)();
+TEjobcntrl(void (*reset)(void), void (*redraw)(void))
 {
 }
 

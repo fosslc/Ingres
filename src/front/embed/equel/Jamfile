@@ -3,12 +3,12 @@
 #
 #     20-Oct-2009 (hweho01)
 #       Remove the IINOOPTIM entries that were generated incorrectly.
+#	23-Nov-2010 (kschendel)
+#	    Drop obsolete dg8 nooptim.
 
 SubDir ING_SRC front embed equel ;
 
 IISUBSYS front embed equel ;
-
-IINOOPTIM esqyylex.c : dg8_us5 ;
 
 
 IILIBRARY EQUELLIB : sytree.c syscope.c syq.c sypl1sym.c symutils.c

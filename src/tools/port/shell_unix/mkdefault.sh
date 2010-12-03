@@ -778,6 +778,8 @@
 ##	    Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
 ##	21-Sept-2010 (troal01)
 ##	    If conf_WITH_GEO is set, make sure we link to libgeos and libproj
+##	23-Nov-2010 (kschendel)
+##	    Delete some more obsolete ports.
 ##	24-Nov-2010 (bonro01)
 ##	    Fix syntax error when conf_WITH_GEO is not defined.
 ##      30-Nov-2010 (hanal04) Bug 124731
@@ -855,23 +857,6 @@ echo '#endif'
 #
 
 case $vers in
-  dg8_us5 | dgi_us5)
-        echo "# define WINSYSLIB_SET"
-        echo "XTERMLIB = /usr/opt/X11/lib/libXaw.a /usr/opt/X11/lib/libXmu.a /usr/opt/X11/lib/libXt.a /usr/opt/X11/lib/libX11.a -ltermcap"
-        echo "WINSYSLIB = /usr/opt/X11/lib/libXaw.a /usr/opt/X11/lib/libXext.a /usr/opt/X11/lib/libXm.a /usr/opt/X11/lib/libXt.a /usr/opt/X11/lib/libX11.a /usr/lib/libPW.a"
-        echo "XTERMHDR = /usr/include/X11 /usr/include/X11/Xaw /usr/include/X11/Xmu"
-        echo 'XNETLIB = /usr/opt/X11/lib/libXext.a'
-        echo 'XMLIB =  /usr/opt/X11/lib/libXm.a'
-        echo 'XAWLIB = /usr/opt/X11/lib/libXaw.a'
-        echo 'XMULIB = /usr/opt/X11/lib/libXmu.a'
-        echo 'XTLIB  = /usr/opt/X11/lib/libXt.a'
-        echo 'XLIB   = /usr/opt/X11/lib/libX11.a'
-        echo 'XPW    =/usr/lib/libPW.a'
-        echo 'LIBDL  =/usr/lib/libdl.a'
-        echo 'TERMCAPLIB = -ltermcap'
-        echo "CCPICFLAG = -K PIC"
-        echo "NETSCAPE_API_FLAG = -DXP_UNIX"
-        ;;
  hp8_us5|\
  hpb_us5|\
  i64_hpu|\
@@ -891,22 +876,6 @@ case $vers in
 	   fi
 	
            ;;
- hp8_bls)
-	   echo "XTERMLIB = /usr/lib/X11R4/libXaw.sl /usr/lib/X11R4/libXmu.sl /usr/lib/X11R4/libXt.a /usr/lib/X11R4/libX11.a -lcurses"
-           echo "XNETLIB ="
-           echo '#define R_INGRES_XLIB'
-           ;;
-  nc4_us5) echo "XTERMLIB = /usr/lib/libXaw.so /usr/lib/libXmu.so /usr/lib/libXt.so /usr/lib/libX11.so /usr/lib/libXext.so -lcurses"
-           echo "XNETLIB ="
-           echo "NETSCAPE_API_FLAG = -DNET_SSL -DXP_UNIX"
-           ;;
-  sos_us5)
-           echo "XTERMLIB = -lXaw -lXmu -lXt -lX11 -ltermcap -lPW"
-           echo "XNETLIB ="
-	   echo "XTERMHDR = /usr/include/X11"
-           echo "WINSYSLIB = /usr/lib/libXm.so /usr/lib/libXt.so /usr/lib/libX11.so"
-            echo "NETSCAPE_API_FLAG =  -DXP_UNIX"
-           ;;
   r64_us5|\
   rs4_us5) echo "XTERMLIB = /usr/lpp/X11/Xamples/lib/Xaw/libXaw.a /usr/lpp/X11/Xamples/lib/Xmu/libXmu.a /usr/lpp/X11/lib/R6/libXt.a /usr/lpp/X11/lib/R6/libXext.a /usr/lpp/X11/lib/R6/libX11.a /usr/lib/libcurses.a /usr/lib/libcur.a"
            echo "INGNETLIB = -ltli_r"
@@ -922,11 +891,6 @@ case $vers in
            echo "NETSCAPE_API_FLAG = -DXP_UNIX"
            ;;
 
-su4_cmw)	echo "XTERMLIB = /usr/openwin/lib/libXaw.a /usr/openwin/lib/libXmu.a /usr/openwin/lib/libXt.a /usr/openwin/lib/libX11.a /lib/libtermcap.a"
-		echo "XNETLIB ="
-		echo '# define R_INGRES_XLIB'
-		echo "INGNETLIB = /usr/sunlink/sunlink.a"
-		;;
   su4_us5) echo "XTERMLIB = /usr/openwin/lib/libXaw.so /usr/openwin/lib/libXmu.so /usr/openwin/lib/libXt.so /usr/openwin/lib/libX11.so /usr/ucblib/libucb.a"
            echo "XTERMHDR = /usr/openwin/include"
            echo "NETSCAPE_API_FLAG = -DNET_SSL -DSOLARIS -D_REENTRANT -DMCC_HTTPD -DXP_UNIX -DSPAPI20"
@@ -945,24 +909,6 @@ su4_cmw)	echo "XTERMLIB = /usr/openwin/lib/libXaw.a /usr/openwin/lib/libXmu.a /u
            echo "XNETLIB ="
 	    echo "NETSCAPE_API_FLAG = -DNET_SSL -DSOLARIS -D_REENTRANT -DMCC_HTTPD -DXP_UNIX -DSPAPI20"
            ;;
-  sui_us5) echo "XTERMLIB = /usr/openwin/lib/libXaw.so /usr/openwin/lib/libXmu.so /usr/openwin/lib/libXt.so /usr/openwin/lib/libX11.so /usr/ucblib/libucb.a"
-           echo "XTERMHDR = /usr/openwin/include"
-           echo "XNETLIB ="
-	   echo "INGNETLIB ="
-           echo "APACHE_API_FLAG = -DSOLARIS2=260 -DUSE_EXPAT"
-           echo "NETSCAPE_API_FLAG = -DXP_UNIX"     
-           ;;
-  sqs_ptx) echo "XTERMLIB = -lXaw -lXmu -lXt -lX11 -ltermcap"
-           echo "XNETLIB ="
-           echo "CCPICFLAG = -K PIC"
-           echo "NETSCAPE_API_FLAG = -DXP_UNIX"
-           ;;
- dr6_us5) echo "XNETLIB = "
-  	  echo "XTERMLIB = /usr/X/lib/libXaw.so /usr/X/lib/libXmu.so /usr/X/lib/libXt.so /usr/X/lib/libX11.so /usr/X/lib/libXext.so /usr/ucblib/libtermcap.a"
-          # echo "XTERMLIB = -L/usr/X/lib -lXaw -lXmu -lXt -lX11 -lXext -ltermcap"
-          echo "#define WINSYSLIB_SET"
-          echo "WINSYSLIB = /usr/X/lib/libXm.a /usr/X/lib/libXt.a /usr/X/lib/libX11.a"
-           ;;
  usl_us5) echo "XNETLIB ="
 	  echo "XTERMLIB = -lcurses -lXaw -lXext -lXmu -lXt -lX11 -lSM -lICE"
 	  echo "# define WINSYSLIB_SET"
@@ -978,17 +924,6 @@ su4_cmw)	echo "XTERMLIB = /usr/openwin/lib/libXaw.a /usr/openwin/lib/libXmu.a /u
           echo "NETSCAPE_API_FLAG = -DIS_64 -ieee_with_inexact -DXP_UNIX -DOSF1"
           echo "APACHE_API_FLAG = -DOSF1"
 	  ;;
- rux_us5|\
- rmx_us5) echo "XTERMLIB = /opt/X/lib/libXaw.a /opt/X/lib/libXmu.a /opt/X/lib/libXt.a /opt/X/lib/libX11.a /opt/X/lib/libXext.a -ltermcap -lcmd"
-          echo "XNETLIB ="
-          echo "WINSYSLIB = -lXm -lXaw -lXt -lX11"
-	  echo "NETSCAPE_API_FLAG = -DXP_UNIX"
-          echo "APACHE_API_FLAG = -DSVR4 -D_XPG_IV -DHAS_DLFCN -DUSE_MMAP_FILES -DUSE_SYSVSEM_SERIALIZED_ACCEPT -DNEED_UNION_SEMUN -DUSE_HSREGEX -DUSE_EXPAT"
-          ;;
- ts2_us5) echo "XTERMLIB = -lXaw -lXmu -lXt -lX11 -ltermcap"
-          echo "XNETLIB ="
-          echo "WINSYSLIB = -lXm -lXaw -lXt -lX11"
-          ;;
  *_lnx|\
  int_rpl)
 	  if [ "$vers" = 'a64_lnx' -o "$vers" = 'ppc_lnx' ] ; then
@@ -1017,7 +952,6 @@ echo "VERS = $vers"
 # HDRMACH specials
 
 case $vers in
-  dg8_us5 | dgi_us5) echo "HDRMACH = /usr/include/X11 /usr/include/X11/Xmu /usr/include/X11/Xaw /usr/include/netinet";;
   i64_hpu) echo "HDRMACH = /usr/include/X11R6";;
   hpb_us5|\
   hp2_us5) echo "HDRMACH = /usr/include/sna";;
@@ -1029,9 +963,6 @@ case $vers in
 	   fi
 	   [ -d /usr/include/sna ] && HDRMACH="$HDRMACH /usr/include/sna"
 	   echo "HDRMACH = $HDRMACH";;
-  hp8_bls) echo "HDRMACH = /usr/include/X11R4";;
-  rux_us5|\
-  rmx_us5) echo "HDRMACH = /opt/X/include";;
   sgi_us5) echo "HDRMACH = /usr/include/X11";;
   axp_osf) echo "HDRMACH = /usr/sys/include /usr/sys/BINARY";;
   int_lnx|\
@@ -1057,13 +988,9 @@ esac
 # CPP specials
 # CPP should be set to the name of the C pre-processor on the system.
 case $vers in 
-  rmx_us5|\
-  rux_us5) echo "CPP = /usr/ccs/lib/cpp";;
   su4_us5|\
-  su9_us5|\
-  sui_us5) echo "CPP = /usr/ccs/lib/cpp";;
+  su9_us5) echo "CPP = /usr/ccs/lib/cpp";;
   sgi_us5) echo "CPP = /usr/lib32/cmplrs/cpp";;
-  dr6_us5) echo "CPP = /usr/ccs/lib/cpp";;
   *_osx) echo "CPP = /usr/bin/cpp";;
         *) echo "CPP = /lib/cpp";;
 esac
@@ -1071,19 +998,10 @@ esac
 # CCMACH specials
 case $vers in
    axp_osf) echo "CCMACH = -signed -D_BSD -pthread -ieee";;
-   dg8_us5) echo "CCMACH = -Xa";;
-   dgi_us5) echo "CCMACH = -Xa -DSYSV -DSVR4 -DSVR4_0 -D_POSIX4_DRAFT_SOURCE";;
    usl_us5) echo "CCMACH = -Xt -DSYSV -DSVR4 -DSVR4_0 -D_REENTRANT -K thread,pentium";;
-   sos_us5) echo "CCMACH = -Xt -b elf -a ods30";;
    sgi_us5) echo "CCMACH32 = -n32 -mips3 -signed -common -D_SGI_SOURCE -D_SGI_MP_SOURCE -D_SGI_REENTRANT_FUNCTIONS -D_OLD_TERMIOS -woff 1116 -woff 1009 -woff 1174 -woff 1552"
    	    echo "CCMACH_DBG = -g -n32 -mips3 -signed -common -D_SGI_SOURCE -D_SGI_REENTRANT_FUNCTIONS -D_OLD_TERMIOS -woff 1116 -woff 1009 -woff 1174 -woff 1552"
             echo "CCMACH64 = -DBUILD_ARCH64 -64 -mips4 -G0 -signed -common -D_SGI_SOURCE -D_SGI_MP_SOURCE -D_SGI_REENTRANT_FUNCTIONS -D_OLD_TERMIOS -woff 1116 -woff 1009 -woff 1174 -woff 1552"
-	    ;;
-   dr6_us5) echo "CCMACH = -DSYSV -DSVR4 -DSVR4_0"
-	    echo "CCMACH_DBG = -g -DSYSV -DSVR4 -DSVR4_0"
-	    ;;
-   hp8_bls) compflags="-D_INCLUDE_HPUX_SOURCE -D_INCLUDE_XOPEN_SOURCE -D_INCLUDE_POSIX_SOURCE -D_INCLUDE_AES_SOURCE -DSEC_MSIX_IPC"
-	    echo "CCMACH = $compflags +DA1.0 +DS1.0 "
 	    ;;
    hp2_us5|\
    hpb_us5) [ -z "$conf_ANSIC" ] && compflags=" -W  p,-H375000"
@@ -1117,13 +1035,6 @@ case $vers in
             echo "CCMACH = $compflags"
             echo "CCMACH_DBG = $compflags -g"
             ;;
-   ris_us5) echo "CCMACH = -D_ALL_SOURCE -qnoro -qhssngl -qpgmsize=l -qmaxmem=-1 -Q -bI:/usr/lib/FCM/lowsys.exp" 
-	    echo "CCMACH_DBG = -g -D_ALL_SOURCE -qnoro -qhssngl -qpgmsize=l -qmaxmem=-1 -qchars=signed -Q -bI:/usr/lib/FCM/lowsys.exp" 
-	    ;;
-   sqs_ptx)
-	echo "CCMACH = -DNO_XPG3_HDR -D_SOCKET_VERSION=11"
-	echo "CCMACH_DBG = -g -DNO_XPG3_HDR -D_SOCKET_VERSION=11"
-	;;
    r64_us5|\
    rs4_us5) compflags='-qnoro -qlanglvl=extc99 -qhssngl -qchars=signed -qmaxmem=-1 -Q -D_BSD=43'
 	    ## FIXME get rid of -qnoro, use -qro now (no writable literals)
@@ -1131,8 +1042,7 @@ case $vers in
             echo "CCMACH64 = -DBUILD_ARCH64 -q64 $compflags"
 	    ;;
    su9_us5| \
-   su4_us5| \
-   sui_us5) 
+   su4_us5) 
 	    suncc32='-xarch=v8plus'
 	    suncc64='-xarch=v9'
 	    # -m32/-m64 should be used for Studio 12 and later.
@@ -1175,12 +1085,6 @@ case $vers in
 	echo "#define CCSUN64 $suncc64"
 	;;
 
-   nc4_us5) echo "CCMACH = -w -DSVR4 -Hnocopyr" ;;
-   su4_cmw) echo "CCMACH = -DSunOS_CMW" ;;
-   rmx_us5) echo "CCMACH = -W0 -Xt -Ksigned -Kpic -KOlimit:4000 -Kr4000";;
-   rux_us5) echo "CCMACH = -Kthread -Ksigned -Kmips3 -FOlimit,4000"
-            echo "CCMACH_DBG = -g -Kthread -Ksigned -Kmips3 -FOlimit,4000";;
-   ts2_us5) echo "CCMACH = -KPIC -Wx,-G0 -Olimit 4000 -signed -D_REENTRANT";;
      *_lnx|\
     int_rpl) compflags="-fsigned-char -fno-strength-reduce -D_REENTRANT -DLINUX -D_GNU_SOURCE -DXLIB_ILLEGAL_ACCESS $WITH_GEO -Wno-write-strings"
 	    compflags32=
@@ -1218,7 +1122,6 @@ esac
 #  The ICL DRS 500 based machines must invoke m4 preprocessor
 #  so that comments may be added to CS assembler sources !
 case $vers in
-  ts2_us5) echo "ASMACH = -O -G0 -KPIC" ;;
   sgi_us5) 
       echo "ASMACH32 = -n32 -mips3 -show -KPIC -Wb,-nosymregs -w"
       echo "ASMACH64 = -64 -mips4 -show -KPIC -Wb,-nosymregs -w -DBUILD_ARCH64"
@@ -1239,11 +1142,6 @@ esac
 # CCLDMACH specials--desired flags which aren't passed to ld by cc
 case $vers in
    axp_osf) echo "CCLDMACH = " ;;
-   dg8_us5 |\
-   dgi_us5) echo "CCLDMACH = " ;;
-   dr6_us5) echo "CCLDMACH = " 
-	    echo "CCLDMACH_DBG = " 
-	    ;;
    hp8_us5) if [ -n "$conf_W4GL" ] ; then
               echo "CCLDMACH = -z -Wl,-E -Wl,-O"
               echo "CXXLDMACH = -z -Wl,-E -Wl,-O"
@@ -1263,7 +1161,6 @@ case $vers in
 	    echo "CCLDMACH64 = +DD64 -Wl,-E -Wl,+s -Wl,+n"
 	    echo "CXXLDMACH64 = +DD64 -Wl,-E -Wl,+s"
             ;;
-   hp8_bls) echo "CCLDMACH = -Wl,-O" ;;
    ibm_lnx) echo "CCLDMACH = -m31 -rdynamic " ;;
    i64_hpu)
 	    echo "CCLDMACH64 = +DD64 -Wl,-E -Wl,+s"
@@ -1271,16 +1168,10 @@ case $vers in
 	    echo "CCLDMACH32 = -Wl,-E -Wl,+s"
 	    echo "CXXLDMACH32 = -Wl,-E -Wl,+s"
 	    ;;
-   sos_us5) echo "CCLDMACH = " ;;
-   ris_us5) echo "CCLDMACH = -x" 
-            echo "CCLDMACH_DBG = -x" 
-	    ;;
    r64_us5|\
    rs4_us5) echo "CCLDMACH32 = -q32"
             echo "CCLDMACH64 = -q64"
             ;;
-   sqs_ptx) echo "CCLDMACH = " ;;
-   nc4_us5) echo "CCLDMACH = " ;;
    su9_us5|\
    su4_us5) echo "CCLDMACH32 = $suncc32 -mt"
             echo "CCLDMACH64 = $suncc64 -mt"
@@ -1293,15 +1184,9 @@ case $vers in
    a64_sol) echo "CCLDMACH32 = $suncc32 -mt"
             echo "CCLDMACH64 = $suncc64 -mt"
 	    ;;
-   sui_us5) echo "CCLDMACH = " ;;
-   su4_cmw) CCLDMACH="-Qoption ld -dc -Qoption ld -dp"
-            CCLDMACH="$CCLDMACH -Qoption ld -x -Qoption ld -X"
-            echo "CCLDMACH = $CCLDMACH"
-            ;;
    sgi_us5) echo "CCLDMACH = -mips3 -Wl,-woff,84 -Wl,-woff,85 -Wl,-woff,34"
             echo "CCLDMACH64 = -64 -mips4 -Wl,-woff,84 -Wl,-woff,85 -Wl,-woff,34"
             ;;
-   ts2_us5) echo "CCLDMACH = " ;;
    usl_us5) echo "CCLDMACH = -Qy -K thread" ;;
      *_lnx|\
    int_rpl) 
@@ -1337,7 +1222,6 @@ case $vers in
 		echo 'LDSRVORIGIN64 = -Wl,-rpath,\$ORIGIN'
 	    fi
 	    ;;
-   rux_us5) echo "CCLDMACH = -Kthread" ;;
      *_osx)	if [ "$conf_64BIT" ] ; then
 		    ARCHOUT="-arch x86_64"
 		else
@@ -1366,19 +1250,14 @@ esac
 # CCPICFLAG specials: must be set to the compiler options needed for generating
 # position independent code for shared libraries ("-PIC" on sun4).
 case $vers in
-   dr6_us5) echo "CCPICFLAG = -K PIC" ;;
    su4_us5|\
-   su9_us5|\
-   sui_us5) echo "CCPICFLAG = -K PIC" ;;
+   su9_us5) echo "CCPICFLAG = -K PIC" ;;
    a64_sol) echo "CCPICFLAG = -K PIC" ;;
-   rux_us5|\
-   rmx_us5) echo "CCPICFLAG = -K PIC" ;;
    rs4_us5|\
    r64_us5) echo "CCPICFLAG = " ;;
    hp2_us5|\
    hpb_us5|\
    hp8_us5) echo "CCPICFLAG = +Z" ;;
-   sos_us5) echo "CCPICFLAG = -K pic" ;;
    sgi_us5) echo "CCPICFLAG = -KPIC" ;;
    axp_osf) echo "CCPICFLAG = " ;;
      *_lnx|\
@@ -1390,18 +1269,15 @@ esac
 # Shared library suffix. You need this if you want to deliver ingres shared
 # libs with the same suffix as other shared libs on the box. Default is "so".
 case $vers in
-  ris_u64|\
   r64_us5|\
-  rs4_us5|\
-  ris_us5) echo "SLSFX = a" 
+  rs4_us5) echo "SLSFX = a" 
 	   SFX=a
 	   export SFX 
 	   ;;
   i64_hpu|\
   hp2_us5|\
   hpb_us5|\
-  hp8_us5|\
-  hp8_bls) echo "SLSFX = sl" 
+  hp8_us5) echo "SLSFX = sl" 
 	SFX=sl
 	export SFX
 	;;
@@ -1436,13 +1312,6 @@ echo "CGISFX = cgi"
 # exist in one of the directories in the LDLIBPATH list.
 ldlibpath=
 case $vers in
-   su4_cmw) ldlibpath="/usr/lang/SC1.0 /usr/lang/SC0.0 /lib /usr/lib \
-		/usr/local/lib"
-	    syslibs="net inet bsdipc socket ld dnet tsi stcp nsl_s nsl cmw bsm"
-	    ;;
-   sui_us5) ldlibpath="/opt/SUNWspro/lib /usr/ccs/lib /usr/lib /usr/ucb/lib"
-            syslibs="curses gen m"
-            ;;
    su9_us5|\
    su4_us5) ldlibpath32="/opt/SUNWspro/lib /usr/ccs/lib /usr/lib"
             ldlibpath64="/opt/SUNWspro/lib/v9 /usr/ccs/lib/sparcv9 /usr/lib/sparcv9"
@@ -1463,37 +1332,13 @@ case $vers in
    hp8_us5) ldlibpath="/lib /usr/lib /usr/local/lib"
 	    syslibs=""
 	    ;;
-   hp8_bls) ldlibpath="/lib /usr/lib /usr/local/lib"
-            syslibs="m6 /lib/libsec.sl net bsdipc ld"
-            ;;
-   dgi_us5) ldlibpath="/usr/sde/ix86dgux/usr/lib /usr/lib"
-	    syslibs="resolv socket nsl elf gen m l rte"
-	    ;;
-   dr6_us5) ldlibpath="/usr/ccs/lib /usr/lib /usr/ucblib"
-            syslibs="nsl socket elf gen m c ucb"
-            ;;
    usl_us5) ldlibpath="/usr/ccs/lib /usr/lib"
             syslibs="nsl socket elf gen m"
             ;;
-   nc4_us5) ldlibpath="/usr/ucblib /usr/ccs/lib /usr/lib"
-            syslibs="nsl socket elf gen dl"
-            ;;
-   sos_us5) ldlibpath="/lib /usr/ccs/lib /usr/lib /usr/local/lib"
-            syslibs="net inet bsdipc ld dnet tsi stcp nsl_s nsl"
-	    ;;
    axp_osf) ldlibpath="/lib /usr/lib /usr/ccs/lib /usr/shlib"
             syslibs="net inet bsdipc socket ld dnet_stub \
             tsi stcp nsl_s nsl"
 	    ;;
-   rmx_us5) ldlibpath="/usr/ccs/lib /usr/lib"
-            syslibs=""
-            ;;
-   rux_us5) ldlibpath="/opt/thread/lib /usr/lib"
-            syslibs="mproc dl elf socket_r nsl_r m_r"
-            ;;
-   ts2_us5) ldlibpath="/lib /usr/lib"
-            syslibs="c m net inet bsdipc socket ld dnet tsi stcp"
-            ;;
    sgi_us5) ldlibpath="/usr/lib32/mips3 /usr/lib32 /lib32"
             ldlibpath64="/usr/lib64/mips4 /usr/lib64 /lib64"
             syslibs="pthread fpe socket nsl elf "
@@ -1569,46 +1414,13 @@ case $vers in
               suffix="-lm -lcl"
             fi
             ;;
-   hp8_bls) if [ "$conf_W4GL" ] ; then
-              suffix="-ldld -lm -lc -lPW"
-            else
-              suffix="-lm"
-            fi
-            ;;
-   dr6_us5) libs= ; prefix="-L/usr/ccs/lib -L/usr/lib -L/usr/ucblib"
-            suffix="-lnsl -lsocket -lgen -lm -lelf -ldl -lc -lucb"
-            ;;
    usl_us5) libs= ; prefix="-YP,/usr/ccs/lib:/usr/lib"
             suffix="-lnsl -lsocket -lgen -lm -lelf -ldl -K thread"
-            ;;
-   dgi_us5) suffix="-lsocket -lnsl -lgen -lm -lelf -ldl -ll -lcurses -lthread -lrte"
-            ;;
-   dg8_us5) suffix="-lm -lc -lthread"
-            ;;
-   sos_us5) libs=
-            if [ -r /lib/libcrypt_d.a ]
-            then
-                suffix="-lnsl_s -lsocket -lprot -lintl -lm -lld -lc -lc_s \
-                -lcrypt_d /lib/crtn.o"
-            else
-                suffix="-lsuds -lnsl_s -lsocket -lprot -lx -lm -lld -lc -lc_s \
-                -lintl \
-                -lcurses -lcrypt_i /lib/crtn.o"
-            fi
-            ;;
-   rmx_us5) prefix="-YP,/usr/ccs/lib:/usr/lib:/usr/ucblib"
-            suffix="-lsocket -lnsl -lc -lmproc -lext -lcurses -lelf -ldl -lgen -lm -lc -lucb"
-            ;;
-   rux_us5) prefix="-L/opt/thread/lib"
-            suffix="-lmproc -ldl -lelf -lsocket_r -lnsl_r -lm_r"; libs=
             ;;
    r64_us5|\
    rs4_us5) suffix="-lm -lbsd -lc_r"
             libs="-ltli_r -liconv -lpthreads -ldl"
             ;;
-   sqs_ptx) prefix="-L/lib"
-            suffix="-lseq -lsocket -lnsl -lelf -lm -ldl -lc";;
-   sui_us5|\
    su9_us5|\
    su4_us5) prefix32="-L/usr/lib/sparc"
             prefix64="-L/usr/lib/sparcv9"
@@ -1617,12 +1429,6 @@ case $vers in
    a64_sol) prefix32="-L/usr/lib"
    	    prefix64="-L/usr/lib/amd64"
 	    suffix="-ldl -lsocket -lelf -mt -lposix4 -ldl -lnsl -lm"
-	    ;;
-   su4_cmw) suffix="-lm -lc -ldl" 
-            ;;
-   nc4_us5) suffix="-lm -lc -lc89"
-            ;;
-   ts2_us5) suffix="-lnsl -lthread /usr/ucblib/libucb.a"
 	    ;;
    sgi_us5) prefix="-L/usr/lib32/mips3 -L/usr/lib32 -L/lib "
             prefix64="-L/usr/lib64/mips4 -L/usr/lib64 -L/lib64 "
@@ -1661,7 +1467,7 @@ fi
 
 # LD_ICE_FLAGS special link options for icesvr
 case $vers in
-   ris_u64 | rs4_us5) 
+   rs4_us5) 
 	echo "LD_ICE_FLAGS = -brtl -bexpall"
 	;;
    usl_us5) 
@@ -1680,16 +1486,9 @@ case $vers in
   i64_hpu|\
   hp2_us5|\
   hpb_us5|\
-  hp8_us5|\
-  hp8_bls) compiler="c89" ;;
+  hp8_us5) compiler="c89" ;;
   r64_us5|\
   rs4_us5) compiler="xlc_r" ;;
-  ris_u64) compiler="xlc_r" ;;
-  ris_us5) compiler="c89" ;;
-  su4_u42) compiler="acc"
-	   [ "$conf_GCC" ]  && compiler="gcc";;
-  su4_cmw) compiler="acc" 
-	   [ "$conf_GCC" ]  && compiler="gcc";;
   *_osx) compiler="gcc" ;;
         *) compiler="cc" ;;
 esac
@@ -1698,27 +1497,14 @@ echo "CC = $compiler"
 # Set optimizer flag
 case $vers in
   axp_osf) optimflag="-O -Olimit 5000" ;;
-  dr6_us5) optimflag=-O 
-	   echo 'OPTIM_DBG = '
-	   ;;
   i64_hpu|\
   hp2_us5|\
   hpb_us5|\
   hp8_us5) optimflag=-O ;;
-  hp8_bls) optimflag=+O3 ;;
   su4_us5|\
-  su9_us5|\
-  sui_us5) optimflag=-O ;;
+  su9_us5) optimflag=-O ;;
   a64_sol) optimflag=-xO2 ;;
-  sos_us5) optimflag=-O ;;
-  rux_us5|\
-  rmx_us5) optimflag=-O ;;
   sgi_us5) optimflag="-O3 ";;
-  sqs_ptx)
-	optimflag=-O
-	echo 'OPTIM_DBG =-Wc,-O0'
-	;;
-  su4_u42|su4_cmw|dg8_us5|dgi_us5) optimflag=-O2 ;;
         *) optimflag=-O ;;
 esac
 echo "OPTIM = $optimflag"
@@ -1745,36 +1531,22 @@ case $vers in
 esac
 
 case $vers in
-  dr6_us5|\
    usl_us5) echo '#define NOROC 1' ;;
    hp8_us5|\
    hpb_us5|\
-   hp2_us5|\
-   hp8_bls) echo '#define RROC +ESlit' ;;
+   hp2_us5) echo '#define RROC +ESlit' ;;
    i64_hpu) echo '#define RROC +Olit=all' ;;
-   sos_us5) echo '#define NOROC 1' ;;
    r64_us5|\
    rs4_us5) echo '#define NOROC 1' ;;
-   sqs_ptx)\
-            echo '#define NOROC 1'
-            echo 'LOW_OPTIM=-Wc,-Og'
-            ;;
-   su4_u42|su4_cmw) echo '#define RROC -R' ;;
-   nc4_us5) echo 'LOW_OPTIM=-O0' ;;
-   rmx_us5|ts2_us5|sgi_us5|rux_us5) echo '#define NOROC 1'
+   sgi_us5) echo '#define NOROC 1'
             echo '#define RROC -Wf,-Cr,-Cs'
             ;;
-   sgi_us5) echo '#define NOROC 1'
-	    echo '#define RROC -Wf,-Cr,-Cs'
-	    echo 'LOW_OPTIM=-O1' ;;
    axp_osf) echo '#define NOROC 1' ;;
 
 esac
 
 case $vers in
-  sos_us5|\
-  hp8_us5|\
-   hp8_bls) ;;
+  hp8_us5) ;;
          *) [ -f /bin/ranlib -o -f /usr/bin/ranlib -o -f /usr/ucb/ranlib ] &&
             { echo '#define HASRANLIB 1' ; }
             ;;
@@ -1787,11 +1559,7 @@ esac
 # Remainder sometimes dependencies of CCDEFS, to be passed to cc for
 # compiling tools.
 case $vers in
-   dr6_us5|\
-   rmx_us5|\
-   rux_us5|\
    usl_us5) echo "SYS5=1" ; echo 'DIRFUNC=1' ; echo 'DIRENT=1' ;;
-  dg8_us5 | dgi_us5) echo "SYS5=1" ; echo 'DIRFUNC=1' ; echo 'INGRES6=1' ;;
    sgi_us5) echo 'DIRENT=1' ; echo 'DIRFUNC=1' ; echo 'INGRES6=1' ; echo 'SYS5=1' ;;
          *) if grep -s SIGTSTP /usr/include/signal.h > /dev/null ; then
               echo "BSD42=1"
@@ -1808,11 +1576,8 @@ case $vers in
             ;;
 esac
 
-# Special libraries needed only by rungraph and vigraph...
-case $vers in
-  su4_u42) echo 'SYSGRAPHLIB = -lsuntool -lsunwindow -lpixrect' ;;
-        *) echo 'SYSGRAPHLIB = '
-esac
+# vigraph etc obsolete
+echo 'SYSGRAPHLIB = '
 
 # Test flag to use to test for symbolic links, default to "-h" for
 # platforms that have symbolic links (lstat exists) and "!" for
@@ -1919,7 +1684,7 @@ case $vers in
                  echo 'XERC_DEFS=-DXML_USE_NATIVE_TRANSCODER -DXML_USE_INMEM_MESSAGELOADER -DXML_USE_NETACCESSOR_SOCKET'
                  echo 'XERC_LIBS='
                 ;;
-	*)	echo 'CXX=Add C++ defs in mkdefault.sh for you platform'
+	*)	echo 'CXX=Add C++ defs in mkdefault.sh for your platform'
 		;;
 esac
 

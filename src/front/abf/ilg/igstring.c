@@ -53,6 +53,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Fix a couple erroneous u_i2 mecopy casts while fixing prototypes.
 */
 
 typedef struct _strtab {
@@ -158,7 +160,7 @@ i4		len;
 	st = (STRTAB *) lt->lt_rec;
 	if (st->st_kind == STTEXT
 	    && st->st_ptr.st_text->db_t_count == len
-	    && MEcmp((PTR)str, (PTR)st->st_ptr.st_text->db_t_text, (u_i2)len)
+	    && MEcmp((PTR)str, (PTR)st->st_ptr.st_text->db_t_text, len)
 	             == 0
 	    )
 	{
@@ -169,7 +171,7 @@ i4		len;
     /* String was not in table so it must be added */
 
     vstr->db_t_count = len;
-    MEcopy((PTR) str, (u_i2) len, (PTR) vstr->db_t_text);
+    MEcopy((PTR) str, len, (PTR) vstr->db_t_text);
 
     newstring.st_kind = STTEXT;
     newstring.st_ptr.st_text = vstr;
@@ -198,6 +200,8 @@ i4		len;
 **      01-dec-93 (smc)
 **	    Bug #58882
 **          Commented lint pointer truncation warning.
+**	1-Dec-2010 (kschendel)
+**	    Fix the warning.
 */
 
 static char	*strblock = NULL;
@@ -220,10 +224,7 @@ LIST	**ent;
     value = ( str->st_kind == STCHAR )
 		? (PTR) str->st_ptr.st_char : (PTR) str->st_ptr.st_text;
     /* Calculate pad for string length (u_i2) */
-    /* lint truncation warning if size of ptr > i4, but code valid 
-       assuming that we are aligning on powers of two boundries */
-    if ( (pad = (i4)strblock % align) != 0 )
-    	pad = align - pad;
+    pad = ME_ALIGN_MACRO(strblock, align) - strblock;
     /*
     ** See if enough space is left in the current block for
     ** the string plus any pad.  If not, allocate more.
@@ -242,7 +243,7 @@ LIST	**ent;
 
 	    if ((strblock = (char *)MEalloc(size, &status)) == NULL)
 		EXsignal(EXFEMEM, 1, ERx("iiIG_string()"));
-	    MEcopy(value, (u_i2) size, (PTR) strblock);
+	    MEcopy(value, size, (PTR) strblock);
 	    return strblock;
 	}
 
@@ -250,12 +251,9 @@ LIST	**ent;
 	    EXsignal(EXFEMEM, 1, ERx("iiIG_string()"));
 	strleft = STRBLOCK;
     }
-    /* lint truncation warning if size of ptr > i4, but code valid 
-       assuming that we are aligning on powers of two boundries */
-    if ( (pad = (i4)strblock % align) != 0 )
-	pad = align - pad;
+    pad = ME_ALIGN_MACRO(strblock, align) - strblock;
     strval = strblock + pad;
-    MEcopy(value, (u_i2) size, (PTR) strval);
+    MEcopy(value, size, (PTR) strval);
     strblock += size + pad;
     strleft -= size + pad;
     /*
@@ -263,7 +261,7 @@ LIST	**ent;
     */
     if ((st = (STRTAB *)MEalloc(sizeof(*st), &status)) == NULL)
 	EXsignal(EXFEMEM, 1, ERx("iiIG_string()"));
-    MEcopy((PTR) str, (u_i2) sizeof(*st), (PTR) st);
+    MEcopy((PTR) str, sizeof(*st), (PTR) st);
     if (str->st_kind == STCHAR)
 	st->st_ptr.st_char = strval;
     else

@@ -12,13 +12,15 @@
 #include 	<gc.h>
 #include	<me.h>
 #include	<pc.h>
+#include	<ex.h>
+#include	<exinternal.h>
 #include	<rusage.h>
 #include	<bsi.h>
 #include 	"gcarw.h"
 #include 	"gcacli.h"
+#include	"clpoll.h"
 
 #include	<errno.h>
-extern	int	errno;
 
 #define	NUM_PACKETS	40
 #define	MIN_PACKETS	4
@@ -85,6 +87,8 @@ NEEDLIBS = COMPAT MALLOCLIB
 **	    GCrelease() for each client and finally issues GCterminate().
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	14-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **	15-nov-2010 (stephenb)
 **	    correctlt prototype all functions
 */

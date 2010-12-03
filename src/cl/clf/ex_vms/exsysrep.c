@@ -8,12 +8,14 @@
 # include	<st.h>
 # include	<er.h>
 # include	<ex.h>
+# include	<cs.h>
 # include	<descrip.h>
 # include	<chfdef.h>
 # include       <evset.h>
 # include	<lib$routines.h>
+# include	<exinternal.h>
 
-GLOBALDEF       VOID    (*Ex_print_stack)();  /* NULL or CS_dump_stack   */
+GLOBALDEF void (*Ex_print_stack)(CS_SCB *, void *, PTR, TR_OUTPUT_FCN *, i4);
 GLOBALDEF       i4      Ex_core_enabled = 0;      /* 1 = allow core          */
 FUNC_EXTERN	VOID	EXdump();
 
@@ -58,11 +60,13 @@ static volatile bool  in_sysrep = FALSE;      /* Used to prevent recursion
 **      07-sep-2010 (joea)
 **          For i64_vms, move EXsetclient to exsignal.c.
 */
-static VOID ex_print_error(PTR arg1, i4 msg_length, char *msg_buffer)
+static STATUS
+ex_print_error(PTR arg1, i4 msg_length, char *msg_buffer)
 {
     CL_ERR_DESC err_code;
 
     ERsend( ER_ERROR_MSG, msg_buffer, msg_length, &err_code );
+    RETURN (OK);
 }
 
 /*{
@@ -106,6 +110,8 @@ static VOID ex_print_error(PTR arg1, i4 msg_length, char *msg_buffer)
 **          Added support for stack dumps.  Use ANSI fn definitions.
 **	24-jan-1996 (dougb)
 **	    Correct call to EX_print_stack().
+**	16-Nov-2010 (kschendel) SIR 124865
+**	    Another print-stack call update.
 */
 
 #if 0
@@ -160,7 +166,7 @@ EXsys_report( register EX_ARGS	*exargs, char *buffer )
 
 	    if (Ex_print_stack)
 	    {
-		Ex_print_stack(0, ex_print_error, TRUE);
+		Ex_print_stack(NULL, NULL, NULL, ex_print_error, TRUE);
 	    }
 
 	    in_sysrep = FALSE;

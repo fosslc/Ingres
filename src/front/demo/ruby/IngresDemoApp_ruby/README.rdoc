@@ -1,0 +1,16 @@
+= Ingres Ruby Frequent Flyer Demo
+
+This archive/directory structure contains a sample TK (http://www.tcl.tk/)
+application that shows how to connect and query an Ingres Database using the
+Ingres Ruby driver.
+
+== Installation
+
+Information on obtaining a copy of this demonstration application as well as
+the requirements and install process can be found at
+http://community.ingres.com/wiki/Ruby/Learn/Flight_Planner_Demo_Application.
+
+== Code
+
+The code is available in the _src_ directory as well as being documented in the
+DatabaseConnection class

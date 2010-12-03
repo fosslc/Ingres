@@ -27,6 +27,8 @@
 **			written
 **
 **		12/84 (jhw) -- Added declaration of `UT_CO_DEBUG'.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added UTerror prototype.
 */
 
 
@@ -41,3 +43,8 @@ extern		STATUS			UTstatus;
 # ifdef UT_DEBUG
 extern		bool			UT_CO_DEBUG;
 # endif
+
+
+/* uterror.c */
+FUNC_EXTERN STATUS UTerror(
+	STATUS Status);

@@ -53,6 +53,8 @@
 **          support for archiving large files. All supported versions
 **          of Solaris and Tru64 provide support for the -E option under
 **          II 9.2.x.
+**	22-Nov-2010 (kschendel) SIR 124685
+**	    Fix broken ifdef a||b (use if defined);  drop obsolete ports.
 */
 
 ! The CKTMPL_WRAP.TPL is a template for invoking a shell script to trap warning
@@ -74,66 +76,6 @@
 !
 ! Then define II_CKTMPL_FILE as $II_SYSTEM/ingres/files/cktmpl_wrap.def
 !
-
-# ifdef hp8_bls
-/*
-** BLS version uses GTAR not TAR
-*/
-BSTD:   /bin/echo beginning checkpoint to tape %C of %N locations
-BSDD:   /bin/echo beginning checkpoint to disk %C of %N locations
-ESTD:   /bin/echo ending checkpoint to tape %C of %N locations
-ESDD:   /bin/echo ending checkpoint to disk %C of %N locations
-PSTD:   /bin/echo mount tape %M and press return; read foo; 
-WSTD:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /usr/bin/tar cbf 20 %C *
-PSDD:   /bin/echo executing checkpoint to disk
-WSDD:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap gtar cf %A *
-BSTT:   /bin/echo PARTIAL: beginning checkpoint to tape %C of %N locations
-BSDT:   /bin/echo PARTIAL: beginning checkpoint to disk %C of %N locations
-ESTT:   /bin/echo PARTIAL: ending checkpoint to tape %C of %N locations
-ESDT:   /bin/echo PARTIAL: ending checkpoint to disk %C of %N locations
-PSTT:   /bin/echo PARTIAL: mount tape %K and press return; read foo;
-WSTT:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /usr/bin/tar cbf 20 %C %B
-PSDT:   /bin/echo executing checkpoint to disk %C of %N locations
-WSDT:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap gtar cf %A %B
-
-BRDD:   /bin/echo beginning restore of disk %C of %N locations
-BRTD:   /bin/echo beginning restore of tape %C of %N locations
-BRDT:   /bin/echo PARTIAL: beginning restore of disk %C of %N locations
-BRTT:   /bin/echo PARTIAL: beginning restore of tape %C of %N locations
-BJDA:   /bin/echo beginning restore of journals
-BJTA:   /bin/echo beginning restore of journals
-BUDA:   /bin/echo beginning restore of dumps
-BUTA:   /bin/echo beginning restore of dumps
-
-PRDD:   /bin/echo executing restore to disk %C of %N locations
-WRDD:   cd %D; gtar xf %A
-PRTD:   /bin/echo mount tape %M and press return; read foo;
-WRTD:   cd %D; /usr/bin/tar xf %C
-PRDT:   /bin/echo restoring table %X in database location %D;
-WRDT:   cd %D; gtar xf %A %B
-PRTT:   /bin/echo mount tape %K and press return; read foo;
-WRTT:   cd %D; /usr/bin/tar xf %C %B
-WJDA:   /bin/true
-WJTA:   /bin/true
-WUDA:   /bin/true
-WUTA:   /bin/true
-WCDA:   /bin/echo Checking database snapshot for table level recovery
-WCTA:   /bin/echo Checking database snapshot for table level recovery
-WDDD:   /bin/echo deleting files in location %D; cd %D; rm -f *
-WDTD:   /bin/echo deleting files in location %D; cd %D; rm -f *
-WDDT:   /bin/echo deleting table %X in database location %D
-WDTT:   /bin/echo deleting table %X in database location %D
-
-IRDT:   /bin/echo beginning table level recovery
-IRTT:   /bin/echo beginning table level recovery
-
-FRDT:   /bin/echo ending table level recovery
-FRTT:   /bin/echo ending table level recovery
-
-EETE:   /bin/echo done with tape operations
-EEDE:   /bin/echo done with disk operations
-# define HAVE_CKTMPL
-# endif /* hp8_bls */
 
 # ifdef sqs_us5
 /*
@@ -265,9 +207,9 @@ EEDE:   /bin/echo done with disk operations
 # define HAVE_CKTMPL
 # endif	 /* odt_us5 || sco_us5 */
 
-# if defined(any_hpux) || defined(hp3_us5)
+# if defined(any_hpux)
 /*
-** hpux and hp3_us5
+** hpux
 */
 BSTD:   /bin/echo beginning checkpoint to tape %C of %N locations
 BSDD:   /bin/echo beginning checkpoint to disk %C of %N locations
@@ -323,9 +265,9 @@ FRTT:   /bin/echo ending table level recovery
 EETE:   /bin/echo done with tape operations
 EEDE:   /bin/echo done with disk operations
 # define HAVE_CKTMPL
-# endif	 /* hpux and hp3_us5 */
+# endif	 /* hpux */
 
-# if defined(pyr_us5) || defined(sos_us5)
+# if defined(sos_us5)
 /*
 **  In att universe, use /usr/bin/tar.
 */
@@ -383,129 +325,8 @@ FRTT:   echo ending table level recovery
 EETE:   echo done with tape operations
 EEDE:   echo done with disk operations
 # define HAVE_CKTMPL
-# endif	 /* pyr_us5 */
+# endif	 /* sos_us5 */
 
-
-
-# ifdef dr3_us5
-/*
-** use /usr/bin/tar
-*/
-BSTD:   echo beginning checkpoint to tape %C of %N locations; sleep 5
-BSDD:   echo beginning checkpoint to disk %C of %N locations; sleep 5
-ESTD:   echo ending checkpoint to tape %C of %N locations
-ESDD:   echo ending checkpoint to disk %C of %N locations
-PSTD:   echo mount tape %M and press return; read foo;
-WSTD:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /usr/bin/tar cbf 20 %C *
-PSDD:   echo executing checkpoint to disk
-WSDD:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /usr/bin/tar cf %A *
-BSTT:   echo PARTIAL: beginning checkpoint to tape %C of %N locations
-BSDT:   echo PARTIAL: beginning checkpoint to disk %C of %N locations
-ESTT:   echo PARTIAL: ending checkpoint to tape %C of %N locations
-ESDT:   echo PARTIAL: ending checkpoint to disk %C of %N locations
-PSTT:   echo PARTIAL: mount tape %K and press return; read foo;
-WSTT:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /usr/bin/tar cbf 20 %C %B
-PSDT:   echo executing checkpoint to disk %C of %N locations
-WSDT:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /usr/bin/tar cf %A %B
-
-BRDD:   echo beginning restore of disk %C of %N locations; sleep 5
-BRTD:   echo beginning restore of tape %C of %N locations; sleep 5
-BRDT:   echo PARTIAL: beginning restore of disk %C of %N locations
-BRTT:   echo PARTIAL: beginning restore of tape %C of %N locations
-BJDA:   echo beginning restore of journals; sleep 5
-BJTA:   echo beginning restore of journals; sleep 5
-BUDA:   echo beginning restore of dumps; sleep 5
-BUTA:   echo beginning restore of dumps; sleep 5
-
-PRDD:   echo executing restore to disk %C of %N locations
-WRDD:   cd %D; /usr/bin/tar xf %A
-PRTD:   echo mount tape %M and press return; read foo;
-WRTD:   cd %D; /usr/bin/tar xf %C
-PRDT:   echo restoring table %X in database location %D;
-WRDT:   cd %D; /usr/bin/tar xf %A %B
-PRTT:   echo mount tape %K and press return; read foo;
-WRTT:   cd %D; /usr/bin/tar xf %C %B
-WJDA:   /bin/true
-WJTA:   /bin/true
-WUDA:   /bin/true
-WUTA:   /bin/true
-WCDA:   echo Checking database snapshot for table level recovery; sleep 5
-WCTA:   echo Checking database snapshot for table level recovery; sleep 5
-WDDD:   echo deleting files in location %D; cd %D; rm -f *
-WDTD:   echo deleting files in location %D; cd %D; rm -f *
-WDDT:   echo deleting table %X in database location %D; sleep 5
-WDTT:   echo deleting table %X in database location %D; sleep 5
-
-IRDT:   echo beginning table level recovery; sleep 5
-IRTT:   echo beginning table level recovery; sleep 5
-
-FRDT:   echo ending table level recovery; sleep 5
-FRTT:   echo ending table level recovery; sleep 5
-
-EETE:   echo done with tape operations; sleep 5
-EEDE:   echo done with disk operations; sleep 5
-# define HAVE_CKTMPL
-#endif	 /* dr3_us5*/
-
-/*
-**  dr6_us5 and rmx_us5
-*/
-# if defined(dr6_us5) || defined(rmx_us5)
-BSTD:   echo beginning checkpoint to tape %C of %N locations
-BSDD:   echo beginning checkpoint to disk %C of %N locations
-ESTD:   echo ending checkpoint to tape %C of %N locations
-ESDD:   echo ending checkpoint to disk %C of %N locations
-PSTD:   echo mount tape %M and press return; read foo;
-WSTD:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /usr/sbin/tar cbf 20 %C *
-PSDD:   echo executing checkpoint to disk
-WSDD:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /usr/sbin/tar cf %A *
-BSTT:   echo PARTIAL: beginning checkpoint to tape %C of %N locations
-BSDT:   echo PARTIAL: beginning checkpoint to disk %C of %N locations
-ESTT:   echo PARTIAL: ending checkpoint to tape %C of %N locations
-ESDT:   echo PARTIAL: ending checkpoint to disk %C of %N locations
-PSTT:   echo PARTIAL: mount tape %K and press return; read foo;
-WSTT:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /usr/sbin/tar cbf 20 %C %B
-PSDT:   echo executing checkpoint to disk %C of %N locations
-WSDT:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /usr/sbin/tar cf %A %B
-
-BRDD:   echo beginning restore of disk %C of %N locations
-BRTD:   echo beginning restore of tape %C of %N locations
-BRDT:   echo PARTIAL: beginning restore of disk %C of %N locations
-BRTT:   echo PARTIAL: beginning restore of tape %C of %N locations
-BJDA:   echo beginning restore of journals
-BJTA:   echo beginning restore of journals
-BUDA:   echo beginning restore of dumps
-BUTA:   echo beginning restore of dumps
-
-PRDD:   echo executing restore to disk %C of %N locations
-WRDD:   cd %D; /usr/sbin/tar xf %A
-PRTD:   echo mount tape %M and press return; read foo;
-WRTD:   cd %D; /usr/sbin/tar xf %C
-PRDT:   echo restoring table %X in database location %D;
-WRDT:   cd %D; /usr/sbin/tar xf %A %B
-PRTT:   echo mount tape %K and press return; read foo;
-WRTT:   cd %D; /usr/sbin/tar xf %C %B
-WJDA:   /bin/true
-WJTA:   /bin/true
-WUDA:   /bin/true
-WUTA:   /bin/true
-WCDA:   echo Checking database snapshot for table level recovery
-WCTA:   echo Checking database snapshot for table level recovery
-WDDD:   echo deleting files in location %D; cd %D; rm -f *
-WDTD:   echo deleting files in location %D; cd %D; rm -f *
-WDDT:   echo deleting table %X in database location %D
-WDTT:   echo deleting table %X in database location %D
-
-IRDT:   echo beginning table level recovery
-IRTT:   echo beginning table level recovery
-
-FRDT:   echo ending table level recovery
-FRTT:   echo ending table level recovery
-
-EETE:   echo done with tape operations
-EEDE:   echo done with disk operations
-# define HAVE_CKTMPL
-# endif	 /* dr6_us5 */
 
 # if defined(int_w32) || defined(axp_w32) || defined(i64_win)
 BSTD:    echo Beginning checkpoint to tape %C of %N locations.
@@ -575,13 +396,13 @@ BSDD:	/bin/echo beginning checkpoint to disk %C of %N locations
 ESTD:   /bin/echo ending checkpoint to tape %C of %N locations
 ESDD:   /bin/echo ending checkpoint to disk %C of %N locations
 PSTD:	/bin/echo mount tape %M and press return; read foo; 
-# ifdef su4_us5 || axp_osf
+# if defined(sparc_sol) || defined(a64_sol) || defined(axp_osf)
 WSTD:	cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /bin/tar cbfE 20 %C *
 # else
 WSTD:	cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /bin/tar cbf 20 %C *
 # endif
 PSDD:   /bin/echo executing checkpoint to disk 
-# ifdef su4_us5 || axp_osf
+# if defined(sparc_sol) || defined(a64_sol) || defined(axp_osf)
 WSDD:	cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /bin/tar cfE %A *
 # else
 WSDD:	cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /bin/tar cf %A *
@@ -602,13 +423,13 @@ BSDT:   /bin/echo PARTIAL: beginning checkpoint to disk %C of %N locations
 ESTT:   /bin/echo PARTIAL: ending checkpoint to tape %C of %N locations
 ESDT:   /bin/echo PARTIAL: ending checkpoint to disk %C of %N locations
 PSTT:   /bin/echo PARTIAL: mount tape %K and press return; read foo;
-# ifdef su4_us5 || axp_osf
+# if defined(sparc_sol) || defined(a64_sol) || defined(axp_osf)
 WSTT:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /bin/tar cbfE 20 %C %B
 # else
 WSTT:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /bin/tar cbf 20 %C %B
 # endif
 PSDT:   /bin/echo executing checkpoint to disk %C of %N locations
-# ifdef su4_us5 || axp_osf
+# if defined(sparc_sol) || defined(a64_sol) || defined(axp_osf)
 WSDT:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /bin/tar cfE %A %B
 # else
 WSDT:   cd %D; --II_SYSTEM/ingres/bin/cktmpl_wrap /bin/tar cf %A %B

@@ -4,12 +4,10 @@
 # ifndef PC_HDR_INCLUDED
 # define PC_HDR_INCLUDED 1
 
-#ifdef CL_PROTOTYPED
 /* for LOCATION definition */
 #include    <lo.h>
 /* for EX definition */
 #include    <ex.h>
-#endif
 #include    <pccl.h>
 
 /**CL_SPEC
@@ -59,6 +57,8 @@
 **	   macro is epcl.h.
 **	24-Nov-2009 (frima01) Bug 122490
 **	   Added prototype for PCreap to eliminate gcc 4.3 warnings.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 VOID PCatexit(
@@ -66,42 +66,32 @@ VOID PCatexit(
 );
 
 FUNC_EXTERN STATUS  PCcmdline(
-#ifdef CL_PROTOTYPED
 	    LOCATION	*interpreter, 
 	    char	*cmdline,
 	    i4		wait, 
 	    LOCATION	*err_log, 
 	    CL_ERR_DESC *err_code
-#endif
 );
 
 FUNC_EXTERN STATUS  PCcmdline95(
-#ifdef CL_PROTOTYPED
 	    LOCATION	*interpreter, 
 	    char	*cmdline,
 	    i4		wait, 
 	    LOCATION	*err_log, 
 	    CL_ERR_DESC *err_code
-#endif
 );
 
 FUNC_EXTERN VOID PCcrashself(
-#ifdef CL_PROTOTYPED
 	    void
-#endif
 );
 
 FUNC_EXTERN VOID    PCexit(
-#ifdef CL_PROTOTYPED
 	    STATUS	status
-#endif
 );
 
 #ifdef NT_GENERIC
 FUNC_EXTERN STATUS PCexec_suid(
-#ifdef CL_PROTOTYPED
 	    char	*cmdbuf
-#endif
 );
 FUNC_EXTERN STATUS PCadjust_SeDebugPrivilege(
 	    BOOL bEnablePrivilege,
@@ -117,9 +107,7 @@ void
 
 #ifndef PCpid
 FUNC_EXTERN VOID    PCpid(
-#ifdef CL_PROTOTYPED
 	    PID		*pid
-#endif
 );
 #endif
 
@@ -138,15 +126,11 @@ FUNC_EXTERN u_i4 PCtidx(VOID);
 #endif
 
 FUNC_EXTERN VOID    PCsleep(
-#ifdef CL_PROTOTYPED
 	    u_i4	msec
-#endif
 );
 
 FUNC_EXTERN VOID    PCunique(
-#ifdef CL_PROTOTYPED
 	    char	*uniquestr
-#endif
 );
 
 FUNC_EXTERN STATUS  PCforce_exit(
@@ -163,10 +147,8 @@ FUNC_EXTERN bool    PCisthread_alive(
 );
 
 FUNC_EXTERN STATUS  PCexeclp64(
-#ifdef CL_PROTOTYPED
 	    i4 argc,
 	    char **argv
-#endif
 );
 
 FUNC_EXTERN i4 PCreap(void);

@@ -93,6 +93,8 @@
 **	    Do not #include <sys/param.h> on VMS.    
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	23-Nov-2010 (kschendel)
+**	    Drop a couple more obsolete ports.
 **/
 
 
@@ -100,11 +102,11 @@
 error "You didn't include clconfig.h before including rusage.h"
 # endif
 
-# if defined(sco_us5) || defined(any_aix) || defined(sos_us5)
+# if defined(any_aix)
 # include    <sys/time.h>
 # include    <time.h>
 # define GOT_TIMEVAL
-# endif	/* sco_us5 aix sos_us5 */
+# endif	/* aix */
 
 # if !defined(GOT_TIMEVAL)	/* default */
 #   if defined(xCL_015_SYS_TIME_H_EXISTS) && !defined (DESKTOP)  
@@ -136,24 +138,6 @@ error "You didn't include clconfig.h before including rusage.h"
 # include	<sys/times.h>			/* for struct tms */
 # endif /* NT_GENERIC */
 
-
-# ifdef sqs_ptx
-# include 	<sys/resource.h>
-# endif
-
-# if defined(ds3_ulx)
-# undef LK_RETRY                                /* avoid redefinition warning */
-# include       <sys/param.h>                   /* for HZ */
-
-# ifdef II_LK_RETRY     /* workaround for DEC stealing our name space */
-# undef LK_RETRY
-# define LK_RETRY II_LK_RETRY
-# endif /* II_LK_RETRY */
-# else 
-# if !defined(NT_GENERIC) && !defined(VMS)
-# include       <sys/param.h>                   /* for HZ */
-# endif /* NT_GENERIC && VMS */
-# endif /* des3_ulx */
 
 # define	MIN_PER_HR	60
 # define	SEC_PER_MIN	60

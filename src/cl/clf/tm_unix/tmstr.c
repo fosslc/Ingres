@@ -10,10 +10,6 @@
 # include	<st.h>
 # include	<tm.h>			/* hdr file for TM stuff */
 # include       <tmtz.h>
-#if defined(dg8_us5)
-# include     <cs.h>
-GLOBALREF       CS_SEMAPHORE     CL_misc_sem;
-#endif
 /**
 ** Name: TMSTR.C - Time to string
 **
@@ -41,6 +37,8 @@ GLOBALREF       CS_SEMAPHORE     CL_misc_sem;
 **          Replaced STlcopy with STncpy
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 **/
 
 
@@ -158,26 +156,14 @@ char	*timestr;
     status = TMtz_init(&tm_cb);
     if( status == OK)
 	time_input += TMtz_search(tm_cb, TM_TIMETYPE_GMT, time_check);
-# ifdef dg8_us5
-    gen_Psem(&CL_misc_sem);
-    STncpy( timestr, asctime(gmtime( &time_input)), 24);
-    timestr[ 24 ] = EOS;
-    gen_Vsem(&CL_misc_sem);
-# else
 # ifdef OS_THREADS_USED
-#  if defined(rux_us5)
-    STncpy( timestr, asctime_r(gmtime( &time_input)), 24);
-    timestr[ 24 ] = EOS;
-#  else
     TM_copy_gmtime( &time_input, &gmtime_res );
     TM_copy_asctime( &gmtime_res, asctime_res, 26 );
     STncpy( timestr, asctime_res, 24); 
     timestr[ 24 ] = EOS;
-#  endif
 # else
     STncpy( timestr, asctime(gmtime( &time_input)), 24);
     timestr[ 24 ] = EOS;
 # endif /* OS_THREADS_USED */
-# endif /* dg8_us5 */
 }
 

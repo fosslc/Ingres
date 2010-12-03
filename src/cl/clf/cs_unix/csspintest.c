@@ -214,6 +214,8 @@ NO_OPTIM = rmx_us5  rux_us5 sqs_ptx ris_u64 rs4_us5 i64_aix
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**	15-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 /* Testing constants */
@@ -241,7 +243,12 @@ typedef struct tally {
 	i4 	set;
 	} TALLY;
 
-extern	int	errno;
+static void spin_on_lock(i4 revolutions, i4 lockid,
+	VOLATILE TALLY * result,
+	i4 use_tas, i4 num_child);
+
+static void getargs(i4 argc, char **argv,
+	i4 *revolutions, i4 *num_child, i4 *use_tas);
 
 /*ARGSUSED*/
 main(argc, argv)
@@ -252,7 +259,7 @@ char	**argv;
     PTR	       address;
     LOCATION   shmid;
     CL_SYS_ERR err_code;
-    TALLY      *result;
+    volatile TALLY      *result;
     i4     x; 
     i4     revolutions = 1000; 
     i4     num_child = 1;
@@ -298,7 +305,7 @@ char	**argv;
     {
         if (fork() == 0)		/* In child */
     	{
-#if defined(ds3_ulx) || defined(ris_us5)
+#if defined(ris_us5)
 	    shmdt(address);
 #endif
     	    if (status = MEget_pages(ME_MSHARED_MASK,1,"spintst.mem", &address, 
@@ -337,9 +344,9 @@ char	**argv;
 **  spin_on_lock
 **
 */
-spin_on_lock(revolutions, lockid, result, use_tas, num_child)
-i4	revolutions, lockid, use_tas, num_child;
-VOLATILE struct tally * result;
+static void
+spin_on_lock(i4 revolutions, i4 lockid, volatile TALLY *result,
+	i4 use_tas, i4 num_child)
 {
     i4		x;
     i4		y;
@@ -378,10 +385,8 @@ VOLATILE struct tally * result;
         result->slot[lockid] = 1;
 }
 
-getargs(argc, argv, revolutions, num_child, use_tas)
-i4	argc;
-char	**argv;
-i4	*revolutions, *num_child, *use_tas;
+static void
+getargs(i4 argc, char **argv, i4 *revolutions, i4 *num_child, i4 *use_tas)
 {
 	i4 	argvpointer; 
  	argvpointer = argc - 1; 

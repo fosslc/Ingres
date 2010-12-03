@@ -9,13 +9,13 @@
 # include   <errno.h>
 # include   <clsigs.h>
 # include   <cs.h>
-# if defined(ts2_us5) || defined(sgi_us5) || defined(sui_us5)
+# if defined(sgi_us5)
 # include   <fdset.h>
 # endif
 # include   <csev.h>
-# include   <cssminfo.h>
 # include   <di.h>
 # include   <me.h>
+# include   <nm.h>
 # include   <tr.h>
 # include   <dislave.h>
 # include   "dilocal.h"
@@ -25,12 +25,16 @@
 #endif /* xCL_006_FCNTL_H_EXISTS */
 
 #if defined (xCL_ASYNC_IO) || defined (OS_THREADS_USED) 
-# if !defined(hp8_us5)
 # include   <diasync.h>
 # include   <signal.h>
 # ifdef OS_THREADS_USED
 # include   <sys/stat.h>
 # endif /* OS_THREADS_USED */
+
+/* For Cs_srv_blk: */
+#if defined(any_hpux)
+# include    <csinternal.h>
+#endif
 
 /**
 ** Name: diasync.c - Functions used to control DI asynchronous I/O
@@ -43,7 +47,6 @@
 **      DI_aio_inprog()      -  Check if async io in progress.
 **	DI_aio_rw()          -  Do async operation on one page. 
 **      DI_get_aiocb()       -  get an aiocb from free list.
-**	DIwrite_list()	     -  Buffer up/write out lio_listio requests
 **
 **	Additionally, it contains the following routines, which are 
 **	used internally:
@@ -56,11 +59,6 @@
 **	getalbuf()		- get pointer to alligned i/o buffer
 **	dolog()			- sets trace switch if II_DIO_TRACE set
 **	nohold()		- sets nohold switch if II_AIO_NOHOLD set
-**	DI_listio_write		- POSIX lio_listio wrapper
-**	gather_listio		- Batch up write requests
-**	do_listio		- perform lio_listio call
-**	force_listio		- force all outstanding writes to disc
-**	DI_complete_listio	- lio_listio completion handler for DI
 **
 ** History:
 **	21-sep-1995 (itb ICL)
@@ -174,6 +172,8 @@
 **	    Compiler warning fixes.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Delete unused DIwrite_list.  Prototype fixes.
 */
 
 /* Globals */
@@ -201,7 +201,7 @@ static bool listioSemsInit = FALSE;
 # define AIO_ALLOC      32
 # define AIO_RETRIES    10
 
-# if !defined(LARGEFILE64) && ( defined(sparc_sol) || defined(sui_us5) )
+# if !defined(LARGEFILE64) && defined(sparc_sol)
 
 # define aio_errno	aio__error
 # define aio_return	aio__return
@@ -214,20 +214,11 @@ static bool listioSemsInit = FALSE;
 ** These should really not be referenced by name at all, only
 ** by function call.
 */
-#if defined(sui_us5)
-# define aio_errno    aio_resultp.aio_errno
-# define aio_return   aio_resultp.aio_return
-#else
 # define aio_errno    aio__error
 # define aio_return   aio__return
-#endif
 
 # endif /* usl_us5 */
 
-#ifdef dr6_us5
-# define aio_read	aioread
-# define aio_write	aiowrite
-#endif /* dr6_us5 */
 
 # if defined(OS_THREADS_USED) && !defined(xCL_ASYNC_IO)
 /* structure to pass params to async i/o read/write thread */
@@ -259,13 +250,6 @@ typedef struct _II_DIO_OPARMS II_DIO_OPARMS;
 **  Forward and/or External typedef/struct references.
 */
 static char *getalbuf( i4  size, CL_ERR_DESC *err );
-
-static STATUS do_listio( DI_LISTIOCB * currThread);
-static STATUS gather_listio( DI_AIOCB *aio, CL_ERR_DESC *err);
-
-# if defined(any_hpux)
-GLOBALREF CS_SYSTEM	Cs_srv_block;  /* Overall ctl struct */
-# endif  /* HP-UX */
 
 
 /*{
@@ -460,7 +444,6 @@ DI_get_aiocb( VOID)
 
     return( newspace);
 }
-# endif /* hp8_us5 */
 
 /*{
 ** Name: DI_chk_aio_list - Check for completed I/O's. 
@@ -508,15 +491,11 @@ DI_chk_aio_list(void)
     iolist_ptr = aioList;
     while ( iolist_ptr != NULL)
     {
-#ifdef dr6_us5
-        if ( iolist_ptr->aio.aio_errno != EINPROGRESS )
-#else
 #ifdef LARGEFILE64
         if ((aio_error64(&iolist_ptr->aio)) != EINPROGRESS )
 #else /* LARGEFILE64 */
         if ((aio_error(&iolist_ptr->aio)) != EINPROGRESS )
 #endif /* LARGEFILE64 */
-#endif  /* dr6_us5 */
         {
             if ( iolist_ptr->resumed != TRUE )
             {
@@ -571,7 +550,6 @@ DI_chk_aio_list(void)
     return(OK);
 }
 
-# if !defined(hp8_us5)
 /*{
 ** Name: DI_aio_inprog - Check if async io in progress.
 **
@@ -612,20 +590,8 @@ DI_aio_inprog(i4 fd)
 	tptr = aioList;
 	while (tptr != NULL)
 	{
-#ifdef dr6_us5
-#ifndef MINX
-	   if (tptr->aio.aio_filedes == fd) &&
-#else
 	   if (tptr->aio.aio_fildes == fd) &&
-#endif /* MINX */
-#else
-	   if (tptr->aio.aio_fildes == fd) &&
-#endif /* dr6_us5
-#ifdef dr6_us5 
-	      (tptr->aio.aio_errno == EINPROGRESS)
-#else
 	      ((aio_error(&tptr->aio)) == EINPROGRESS)
-#endif  /* dr6_us5 */
 	   {
 		return(FAIL);
 	   }
@@ -690,21 +656,6 @@ DI_aio_pkg( i4  fd, char *iobuf, i4  len, OFFSET_TYPE off)
 # endif
         newptr->aio.aio_sigevent.sigev_signo = SIGUSR2;
         newptr->aio.aio_reqprio = 0;
-#ifdef dr6_us5
-        if ( nohold() > 1)
-            newptr->aio.aio_flag = AIO_NOHOLD;
-        else
-            newptr->aio.aio_flag = 0;
-        newptr->aio.aio_key = (VOID *) NULL;
-        newptr->aio.aio_iovcnt = 0;
-#ifndef MINX
-        newptr->aio.aio_iov = (struct iov *)0;
-#else
-        newptr->aio.aio_iov = (struct iovec *)0;
-#endif /* MINX */
-        newptr->aio.aio_errno = EINPROGRESS;
-#else  
-#endif /* dr6_us5 */
 
 	newptr->aio.aio_fildes = fd;  /* assign fd for axp_osf */
         newptr->aio.aio_buf = iobuf;
@@ -846,56 +797,32 @@ DI_aio_rw(
 #else /* LARGEFILE64 */
 	    actual = aio_write( &aio->aio );
 #endif /*  LARGEFILE64 */
-#ifdef dr6_us5 
-	if ( actual >= 0 || aio->aio.aio_errno != EAGAIN || cnt == AIO_RETRIES )
-#else
 #ifdef LARGEFILE64
 	if ( actual >= 0 || ((aio_error64(&aio->aio)) != EAGAIN) || cnt == AIO_RETRIES )
 #else /* LARGEFILE64 */
 	if ( actual >= 0 || ((aio_error(&aio->aio)) != EAGAIN) || cnt == AIO_RETRIES )
 #endif /* LARGEFILE64 */
-#endif /* dr6_us5 */
 	    break;
 
-#ifdef dr6_us5
-	aiopoll( NULL, 0 );
-#endif /* dr6_us5 */
     }
  
     if ( actual == 0)
     {
-#ifdef dr6_us5
-        while (aio->aio.aio_errno == EINPROGRESS)
-#else
 #ifdef LARGEFILE64
         while (( aiostatus = aio_error64(&aio->aio) ) == EINPROGRESS)
 #else /* LARGEFILE64 */
         while (( aiostatus = aio_error(&aio->aio) ) == EINPROGRESS)
 #endif /* LARGEFILE64 */
-#endif  /* dr6_us5 */
         {
-/*
-            if ( (status=CSsuspend( op == O_RDONLY ? CS_DIOR_MASK : CS_DIOW_MASK, 0, 0) ) 
-					!= OK)
-            {
-                DIlru_set_di_error( status, err, DI_LRU_CSSUSPEND_ERR, 
-                                    DI_GENERAL_ERR);
-		break;
-            }
-*/
+	    /* nothing */
         }
     }
-#ifdef dr6_us5
-    if (  aio->aio.aio_errno == 0 )
-	actual = aio->aio.aio_retval;
-#else
     if ( aiostatus == OK )
 #ifdef LARGEFILE64
 	actual = aio_return64(&aio->aio);
 #else /* LARGEFILE64 */
 	actual = aio_return(&aio->aio);
 #endif /* LARGEFILE64 */
-#endif  /* dr6_us5 */
     else
     {
 	errno = aiostatus;
@@ -911,10 +838,6 @@ DI_aio_rw(
 	    SETCLERR( err, 0, errcode );
 
         if ( dolog() )
-#ifdef dr6_us5
-	    TRdisplay("DI_aio_rw: bad %s, fd %d errno %d\n",
-				opmsg, fd, aio->aio.aio_errno );
-#else
 #ifdef LARGEFILE64
 	    TRdisplay("DI_aio_rw: bad %s, fd %d errno %d\n",
 				opmsg, fd, aio_error64(&aio->aio) );
@@ -922,7 +845,6 @@ DI_aio_rw(
 	    TRdisplay("DI_aio_rw: bad %s, fd %d errno %d\n",
 				opmsg, fd, aio_error(&aio->aio) );
 #endif /* LARGEFILE64 */
-#endif  /* dr6_us5 */
     }
 
     if ( dolog() > 1 )
@@ -1050,798 +972,7 @@ static i4  nohold( VOID )
     }
     return( dohold );
 }
-# endif /* hp8_us5 */
 
-/*{
-** Name: DIwrite_list	- POSIX lio_listio external interface.
-**
-** Description:
-**	This routine is called by any thread that wants to write multiple pages 
-**	The caller indicates via the op parameter whether the write request 
-**	should be batched up or/and the batch list should be written to disc.
-**
-** Inputs:
-**	i4 op 		- indicates what operation to perform:
-**				DI_QUEUE_LISTIO - adds request to threads 
-**						  listio queue.
-**				DI_FORCE_LISTIO - causes lio_listio() to be 
-**						  called using listio queue.
-**      DI_IO *f        - Pointer to the DI file context needed to do I/O.
-**      i4  *n          - Pointer to value indicating number of pages to  
-**                        write.                                          
-**      i4 page    - Value indicating page(s) to write.              
-**      char *buf       - Pointer to page(s) to write.                    
-**	(evcomp)()	- Ptr to callers completion handler.
-**      PTR closure     - Ptr to closure details used by evcomp.
-**                                                                           
-** Outputs:                                                                  
-**      f               - Updates the file control block.                 
-**      n               - Pointer to value indicating number of pages written.
-**      err_code        - Pointer to a variable used to return operating system
-**                        errors.                                         
-**
-**      Returns:
-**          OK                         	Function completed normally. 
-**          non-OK status               Function completed abnormally
-**					with a DI error number.
-**
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**      The completion handler (evcomp) will do unspecified work. 
-**
-** History:
-**	01-mar-1995 (anb)
-**          Created.
-**  29-Apr-1997 (merja01)
-**          Fixed call to CSv_semaphore by removing TRUE.  This function
-**          releases the semaphore and only takes a single argument.
-*/
-STATUS
-DIwrite_list( i4  op, DI_IO *f, i4  *n, i4 page, char *buf, 
-	      STATUS (*evcomp)(), PTR closure, CL_ERR_DESC *err_code)
-{
-    STATUS			big_status = OK, small_status = OK;
-
-#ifdef xCL_ASYNC_IO
-    i4			num_of_pages;
-    i4			last_page_to_write;
-    CL_ERR_DESC    		lerr_code;
-    DI_OP			diop;
-
-    if ( op & DI_QUEUE_LISTIO)
-    {
-        /* default returns */
-
-	CL_CLEAR_ERR( err_code );
-
-        num_of_pages = *n;
-        *n = 0;
-        last_page_to_write = page + num_of_pages - 1;
-
-        diop.di_flags = 0;
-
-        if (f->io_type != DI_IO_ASCII_ID)
-        {
-            return(DI_BADFILE);
-        }
-
-        if (f->io_mode != DI_IO_WRITE)
-        {
-            return(DI_BADWRITE);
-        }
-
-        do
-        {
-	    /* 
-	    ** get open file descriptor for the file
-	    */
-	    big_status = DIlru_open(f, FALSE, &diop, err_code);
-	    if ( big_status != OK )
-	        break;
-
-	    /* 
-	    ** now check for write within bounds of the file 
-	    */
-	    if (last_page_to_write > f->io_alloc_eof) 
-	    {
-	        i4	real_eof;
-
-		/*
-		** DI_sense updates f->io_alloc_eof with the protection
-		** of io_sem (OS_THREADS), so there's no need to
-		** duplicate that update here.
-		*/
-	        big_status = DI_sense(f, &diop, &real_eof, err_code);
-
-	        if ( big_status != OK )
-	        {
-	           (VOID) DIlru_release(&diop, &lerr_code );
-		    break;
-	        }
-
-	        if (last_page_to_write > f->io_alloc_eof)
-	        {
-		    big_status = DIlru_release(&diop, err_code );
-		    if ( big_status != OK )
-		        break;
-
-		    small_status = DI_ENDFILE;
-	            SETCLERR(err_code, 0, ER_write);
-
-		    /*
-		    ** The above sets errno as errno will be left over from
-		    ** a previous call zero it out to avoid confusion.
-		    */
-		    err_code->errnum = 0;
-
-		    break;
-	        }
-	     }
-
-
-#ifdef xOUT_OF_DISK_SPACE_TEST
-	     if ((f->io_open_flags & DI_O_NODISKSPACE_DEBUG) &&
-	        (last_page_to_write > f->io_logical_eof)    &&
-	        (last_page_to_write <= f->io_alloc_eof))
-	     {
-	        f->io_open_flags &= ~DI_O_NODISKSPACE_DEBUG;
-
-	        big_status = DIlru_release(&diop, err_code );
-	        if ( big_status != OK )
-		    break; 
-
-	        small_status = DI_EXCEED_LIMIT;
-	        errno = ENOSPC;
-	        SETCLERR(err_code, 0, ER_write);
-
-	        TRdisplay(
-		"DIwrite_list(): Returning false DI_EXCEED_LIMIT, page %d\n", page);
-	        break;
-	    }
-#endif /* xOUT_OF_DISK_SPACE_TEST */
-	    
-	    big_status = DI_listio_write( f, &diop, buf, page, num_of_pages,
-				         evcomp, closure, err_code );
-	    if ( big_status != OK )
-	    {
-	        (VOID) DIlru_release(&diop, &lerr_code);
-	        break;
-	    }
-
-	    *n = num_of_pages;
-
-        } while (FALSE);
-
-    }
-
-    if (op & DI_FORCE_LISTIO)
-    {
-        /* Won't return here until all writes have completed or failed */
-        big_status=force_listio( err_code);
-    }
-
-    if (op & DI_CHECK_LISTIO)
-    {
-	return(DI_check_list());
-    }
-
-    if (big_status != OK )
-    {
-	return( big_status );
-    }
-#endif /* xCL_ASYNC_IO */
-
-    return( small_status );
-}
-
-# if !defined(hp8_us5)
-/*{
-** Name: DI_listio_write -  POSIX lio_listio wrapper.
-**
-** Description:
-**	This function batches up I/O calls that will eventually be written
-**	to disc simultaneously.  Below this level the I/O list might reach
-**	a maximum size and be written out in a batch anyway.
-**
-** Inputs:
-**      DI_IO *f        - Pointer to the DI file context needed to do I/O.
-**      diop		     Pointer to dilru file context.
-**      buf                  Pointer to page(s) to write.
-**      page                 Value indicating page(s) to write.
-**      num_of_pages	     number of pages to write
-**      evcomp               completion routine
-**      closure              info used by the completion routine
-**      
-** Outputs:
-**      err_code             Pointer to a variable used
-**                           to return operating system 
-**                           errors.
-**    Returns:
-**          OK
-**	    other errors.
-**    Exceptions:
-**        none
-**
-** Side Effects:
-**        If number of write requests reaches AIO_LISTIO_MAX then
-**	  the output requests in the list will be done.
-**
-** History:
-**    01-mar-1995 (anb)
-**	    Created.
-**    11-may-1999 (hweho01)
-**          aio_errno is obsolete in this function, it should
-**          be removed.
-*/
-static STATUS
-DI_listio_write(
-    DI_IO	*f,
-    DI_OP	*diop,
-    char        *buf,
-    i4	page,
-    i4	num_of_pages,
-    STATUS (*evcomp)(), 
-    PTR closure, 
-    CL_ERR_DESC *err_code)
-{
-    STATUS	status = OK;
-
-    DI_AIOCB * aio;
-#if !defined(any_aix) && !defined(sui_us5)
-    char *iobuf = buf;
-
-    /* unix variables */
-    i4		bytes_to_write;
-    OFFSET_TYPE lseek_offset;
-    i4		bytes_written;
-
-    /* 
-    ** seek to place to write 
-    */
-    lseek_offset = (OFFSET_TYPE)f->io_bytes_per_page * (OFFSET_TYPE)page;
-    bytes_to_write = (f->io_bytes_per_page * (num_of_pages));
-	    
-    /*
-    ** If alignment is required, then copy data buffer to an aligned
-    ** buffer for the io request.
-    **
-    ** Buffer alignment is only required on raw devices.
-    */
-    if (fisraw((i4)diop->di_fd) && (((i4)(SCALARP)buf) & (IO_ALIGN - 1)) )
-    {
-    	if ( !(iobuf = getalbuf( bytes_to_write, err_code )) )
-	{
-	    return -1;
-	}
-	MEcopy( buf, bytes_to_write, iobuf );
-    }
-
-    aio = DI_aio_pkg( (i4)diop->di_fd, iobuf, bytes_to_write, lseek_offset);
-    if ( !aio)
-    {
-        return(DI_MEREQMEM_ERR);
-    }
-    aio->aio.aio_lio_opcode = LIO_WRITE;
-    aio->evcomp = evcomp;
-    aio->diop = *diop;
-    aio->data = closure;
-
-    status = gather_listio( aio, err_code );
-
-#endif /* !aix !sui_us5 */
-    return( status );
-}
-
-/*{
-** Name: gather_listio -  Gather write requests together.
-**
-** Description:
-**	This routine batches up write requests for later submission via     
-**	the lio_listio() routine.
-**
-** Inputs:
-**	DI_AIOCB * aio	  - aio Control block for write operation.
-**      
-** Outputs:
-**      err_code             Pointer to a variable used
-**                           to return operating system 
-**                           errors.
-**    Returns:
-**          OK
-**          DI_BADEXTEND       - MEreqmem failed.
-**	    DI_NO_AIO_RESOURCE - The kernel has insufficient resources at
-**                               this time to satisfy the request.
-**    Exceptions:
-**        none
-**
-** Side Effects:
-**        Will actually call do_listio if number of write requests reaches
-**        AIO_LISTIO_MAX.
-**
-** History:
-**    01-mar-1995 (anb)
-**	    Created.
-*/
-static STATUS
-gather_listio( DI_AIOCB *aio, CL_ERR_DESC *err)
-{
-#if defined(xCL_ASYNC_IO) || defined(OS_THREADS_USED)
-    DI_LISTIOCB *tptr;
-    DI_AIOCB *aptr = NULL;
-    DI_LISTIOCB *newone;
-    STATUS status = OK;
-    i4  cnt=0;
-
-# ifdef OS_THREADS_USED
-    CSp_semaphore( TRUE, &listioThreadsSem );
-# endif /* OS_THREADS_USED */
-
-    for ( tptr = listioThreads; tptr != NULL; tptr = tptr->next )
-    {
-        if ( tptr->sid == aio->sid)
-            break;
-    }
-
-    if ( tptr == NULL)
-    {
-        /* No cb for this thread yet so create one */
-    
-        newone = (DI_LISTIOCB *)MEreqmem(0,
-		(sizeof( DI_LISTIOCB )), TRUE, NULL);
-        if ( !newone)
-        {
-	    return( DI_MEREQMEM_ERR);
-        }
-        newone->sid = aio->sid;
-        newone->next = (DI_LISTIOCB *) NULL;
-        newone->list = (DI_AIOCB *) NULL;
-        newone->listio_entries = 0;
-        newone->outstanding_aio = 0;
-        if ( listioThreads == NULL)
-	{
-	    listioThreads = newone;
-	    listioThreads->prev = (DI_LISTIOCB*) NULL;
-	}
-	else
-	{
-	    for (tptr = listioThreads; tptr->next != NULL; tptr = tptr->next)
-		;
-	    tptr->next = newone;
-	    newone->prev = tptr;
-	}
-	tptr = newone;
-    }
-
-    append_aio( &tptr->list, aio );
-
-    tptr->listio_entries += 1; 
-    tptr->state = AIOLIST_ACTIVE;
-    if ( tptr->listio_entries == AIO_LISTIO_MAX )
-        do
-        {
-            status = do_listio( tptr );
-            if ( status )
-            {
-		/*
-		** Managed to queue some I/O's so just carry on
-		** until the thread is forced out.
-		*/
-                if ( tptr->listio_entries < AIO_LISTIO_MAX )
-                    break;
-#ifdef dr6_us5
-                /* Wait until at least one kernel resource is available */
-                aiopoll( NULL, 0 );
-#endif /* dr6_us5 */
-            }
-	    cnt++;
-        }
-        while (status && cnt <= AIO_RETRIES);
-
-# ifdef OS_THREADS_USED
-    CSv_semaphore( &listioThreadsSem );
-# endif /* OS_THREADS_USED */
-
-    if ( status && (cnt > AIO_RETRIES) )
-    {
-        if ( err)
-            SETCLERR( err, 0, ER_lio_listio);
-        return( DI_NO_AIO_RESOURCE);
-    }
-#endif /* xCL_ASYNC_IO || OS_THREADS_USED */
-    return( OK);
-}
-
-/*{
-** Name: do_listio -  Perform lio_listio() call.
-**
-** Description:
-**	This routine calls lio_listio to queue the write requests that have 
-**	been gathered.
-**
-** Inputs:
-**	DI_LISTIOCB * currThread  - Control block for current thread. 
-**      
-** Outputs:
-**    None.
-**
-** Returns:
-**    OK
-**    FAIL - The lio_listio call failed to queue some or all of the requests.
-**
-**    Exceptions:
-**        none
-**
-** Side Effects:
-**        Any write requests that are submitted are removed from this threads
-**        control block and placed on the global outstanding aio list.
-**
-** History:
-**    01-mar-1995 (anb)
-**	    Created.
-**	29-Apr-1997 (merja01)
-**      Added axp_osf ifdef to account for aiocb differences.
-*/
-static STATUS
-do_listio( DI_LISTIOCB * currThread)
-{
-    STATUS status=OK;
-    i4  ret_val = 0;
-    i4  count;
-    DI_AIOCB *iocb_ptr;
-    DI_AIOCB **base_ptr;
-
-#if defined(xCL_ASYNC_IO) 
-    if ( currThread == NULL)
-        return( FAIL);
-
-    /*
-    ** Need to build an array of pointers to the aiocb's of
-    ** our I/O requests.
-    */
-
-    iocb_ptr = currThread->list;
-    for (count=0; count < AIO_LISTIO_MAX; count++)
-    {
-	if (iocb_ptr)
-	{
-	    currThread->gather[count] = &iocb_ptr->aio;
-	    iocb_ptr = iocb_ptr->next;
-	}
-	else
-	    /* null pointers for unused slots */
-#ifdef LARGEFILE64
-	    currThread->gather[count] = (aiocb64_t *)NULL;
-#else /* LARGEFILE64 */
-	    currThread->gather[count] = (aiocb_t *)NULL;
-#endif /* LARGEFILE64 */
-    }
-
-# ifdef xCL_ASYNC_IO
-#ifdef MINX
-    ret_val = aio_list( &currThread->gather[0], 
-                        currThread->listio_entries, NULL );
-#else
-#ifdef LARGEFILE64
-    ret_val = lio_listio64( LIO_NOWAIT, &currThread->gather[0], 
-                          currThread->listio_entries, NULL );
-#else /* LARGEFILE64 */
-    ret_val = lio_listio( LIO_NOWAIT, &currThread->gather[0], 
-                          currThread->listio_entries, NULL );
-#endif /* LARGEFILE64 */
-#endif /* MINX */
-# else /* xCL_ASYNC_IO */
-# ifdef OS_THREADS_USED
-    ret_val = DI_thread_listio( LIO_NOWAIT, &currThread->gather[0], 
-                                currThread->listio_entries, NULL );
-# endif /* OS_THREADS_USED */
-# endif /* xCL_ASYNC_IO */
-
-    /*
-    ** Here lieth a problem. 
-    ** If lio_listio returns -1 it (in this case) indicates that some writes
-    ** failed to be queued. These will need to be resubmitted, but we must not
-    ** attempt to resubmit those that have been successfully queued as by the
-    ** time they are dealt with again their DI control blocks may have been 
-    ** freed. So we move the successfully queued ones to the global I/O list
-    ** and leave the others to be submitted in a later call to do_listio.
-    */
-    iocb_ptr = currThread->list;
-    base_ptr = &currThread->list;
-    while( iocb_ptr != NULL)
-    {
-	/*
-	** aio_errno is originally set 'in progress' but it is
-	** possible that it has already completed OK.
-	*/
-#ifdef dr6_us5
-	if ( (iocb_ptr->aio.aio_errno == EINPROGRESS) ||
-	    (iocb_ptr->aio.aio_errno == 0))
-#else
-#ifdef LARGEFILE64
-	if ( ((aio_error64(&iocb_ptr->aio)) == EINPROGRESS) ||
-	    ((aio_error64(&iocb_ptr->aio)) == 0))
-#else /* LARGEFILE64 */
-	if ( ((aio_error(&iocb_ptr->aio)) == EINPROGRESS) ||
-	    ((aio_error(&iocb_ptr->aio)) == 0))
-#endif /* LARGEFILE64 */
-#endif  /* dr6_us5 */
-        {
-            remove_aio( base_ptr, iocb_ptr);
-# ifdef OS_THREADS_USED
-	    CSp_semaphore( TRUE, &aioListSem );
-# endif /* OS_THREADS_USED */
-            append_aio( &aioList, iocb_ptr);
-            currThread->listio_entries -= 1;
-            currThread->outstanding_aio += 1;
-	    iocb_ptr = *base_ptr;
-# ifdef OS_THREADS_USED
-	    CSv_semaphore( &aioListSem );
-# endif /* OS_THREADS_USED */
-        }
-	else
-	{
-	    base_ptr = &iocb_ptr->next;
-	    iocb_ptr = iocb_ptr->next;
-	}
-    }
-    if (ret_val)
-    {
-        return( FAIL);
-    }
-#endif /* xCL_ASYNC_IO */
-    return( OK);
-}
-
-/*{
-** Name: force_listio -  Force all outstanding writes to disc.
-**
-** Description:
-**	This routine attempts to write all outstanding listio requests.
-**
-** Inputs:
-**	DI_AIOCB * aio	  - aio Control block for write operation.
-**      
-** Outputs:
-**      err_code             Pointer to a variable used
-**                           to return operating system 
-**                           errors.
-** Returns:
-**      OK
-**      FAIL 		   - No listio control block found for this thread.
-**	DI_NO_AIO_RESOURCE - The kernel has insufficient resources at
-**                           this time to satisfy the request.
-** Exceptions:
-**      none
-**
-** Side Effects:
-**      None.
-**
-** History:
-**    01-mar-1995 (anb)
-**	    Created.
-**    29-Apr-1997 (merja01)
-**      Added ifdefs for dr6_us5 for aiopoll.  This function only
-**      appears to be available on the ICL platforms and is ifdefed
-**      for dr6_us5 in other places in the code.  
-*/
-static STATUS
-force_listio( CL_ERR_DESC *err)
-{
-    DI_LISTIOCB *tptr;
-    DI_AIOCB *aptr = NULL;
-    DI_AIOCB *iolist_ptr = NULL;
-    STATUS status=FAIL;
-    STATUS big_error=OK;
-    i4  cnt=0;
-    CS_SID sid;
-
-#ifdef xCL_ASYNC_IO
-    CSget_sid(&sid);
-
-# ifdef OS_THREADS_USED
-    CSp_semaphore( TRUE, &listioThreadsSem );
-# endif /* OS_THREADS_USED */
-    for ( tptr = listioThreads; tptr != NULL; tptr = tptr->next )
-    {
-        if ( tptr->sid == sid)
-            break;
-    }
-
-    if ( (tptr == NULL) || (tptr->state == AIOLIST_INACTIVE))
-    {
-	/*
-	** No cb for this thread or nothing on it's I/O list,
-	** therefore no work to do.
-	*/
-# ifdef OS_THREADS_USED
-        CSv_semaphore( &listioThreadsSem );
-# endif /* OS_THREADS_USED */
-	return(OK);
-    }
-    
-    /*
-    ** Loop until successfully fired off all the requests in the list.
-    */
-
-    while( tptr->listio_entries > 0 &&
-           status &&
-           cnt <= AIO_RETRIES)
-    {
-        status=do_listio( tptr);
-        if (status)
-#ifdef  dr6_us5
-            /* 
-            ** Ensure don't attempt re-try until at least one kernel 
-            ** resource is available
-            */
-            aiopoll( NULL, 0);
-#endif  /*dr6_us5*/
-        cnt++;
-    }
-
-    if ( status && (cnt > AIO_RETRIES) )
-    {
-        if ( err)
-            SETCLERR( err, 0, ER_lio_listio);
-# ifdef OS_THREADS_USED
-        CSv_semaphore( &listioThreadsSem );
-# endif /* OS_THREADS_USED */
-        return( DI_NO_AIO_RESOURCE);
-    }
-
-    /*
-    ** The thread is only resumed when all replies have come back.
-    */
-    tptr->state = AIOLIST_FORCE;
-
-    status = OK;
-    if (tptr->outstanding_aio != 0)
-	if ( (status=CSsuspend( CS_DIOW_MASK, 0, 0) ) != OK)
-	    DIlru_set_di_error( status, err, DI_LRU_CSSUSPEND_ERR, 
-							DI_GENERAL_ERR);
-
-    if (!status)
-    {
-# ifdef OS_THREADS_USED
-	CSp_semaphore( TRUE, &aioListSem );
-# endif /* OS_THREADS_USED */
-	iolist_ptr = aioList;
-	while( iolist_ptr != NULL)
-	    if (iolist_ptr->sid == sid && iolist_ptr->resumed)
-	    {
-		status=DI_complete_listio( iolist_ptr);
-		if ( status)
-		    big_error=DI_BADWRITE;
-		aptr = iolist_ptr;
-		iolist_ptr = iolist_ptr->next;
-		DI_free_aio( aptr);
-            }
-	    else
-		iolist_ptr = iolist_ptr->next;
-# ifdef OS_THREADS_USED
-	CSv_semaphore( &aioListSem );
-# endif /* OS_THREADS_USED */
-    }
-
-    tptr->state = AIOLIST_INACTIVE;
-
-# ifdef OS_THREADS_USED
-    CSv_semaphore( &listioThreadsSem );
-# endif /* OS_THREADS_USED */
-
-    if ( big_error)
-    {
-	return( big_error);
-    }
-#endif /* xCL_ASYNC_IO */
-    return( status);
-}
-
-/*{
-** Name: DI_complete_listio -  lio_listio completion handler for DI.
-**
-** Description:
-**	This routine tidies up after a listio op finishes.
-**
-** Inputs:
-**	DI_AIOCB * aio - control block holding completion data.
-**      
-** Outputs:
-**      None.
-**
-** Returns:
-**      OK
-**      FAIL 
-** 
-** Exceptions:
-**      none
-**
-** Side Effects:
-**      Will execute the callers completion handler if data ptr not null.
-**
-** History:
-**    01-mar-1995 (anb)
-**	    Created.
-*/
-static STATUS
-DI_complete_listio( DI_AIOCB *aio)
-{
-    STATUS status=OK;
-    STATUS big_status=OK;
-    CL_ERR_DESC err_code;
-
-    /*
-    ** DIwrite_list copies DIwrite, except that this line needs to execute
-    ** after the asynchronous write completes.
-    */
-    big_status=DIlru_release(&aio->diop, &err_code);
-
-    status=(aio->evcomp)( aio->data, big_status);
-    return( big_status?big_status:status );
-}
-
-/*{
-** Name: DI_check_list	 -  Return a non-zero value if there are outstanding
-**			    I/O's on this thread.
-**
-** Description:
-**	Checks for oustanding I/O's on this thread.
-**
-** Inputs:
-**	None.
-**      
-** Outputs:
-**      None.
-**
-** Returns:
-**      0 		   - No outstanding I/O's.
-**	1		   - There are outstanding I/O's.
-**
-** Exceptions:
-**      none
-**
-** Side Effects:
-**      None.
-**
-** History:
-**    09-nov-1995 (itb)
-**	    Created.
-*/
-static STATUS
-DI_check_list()
-{
-    DI_LISTIOCB *tptr;
-    STATUS status;
-    CS_SID sid;
-
-    CSget_sid(&sid);
-
-# ifdef OS_THREADS_USED
-    CSp_semaphore( TRUE, &listioThreadsSem );
-# endif /* OS_THREADS_USED */
-    for ( tptr = listioThreads; tptr != NULL; tptr = tptr->next )
-    while( tptr != NULL)
-    {
-        if ( tptr->sid == sid)
-            break;
-    }
-
-    if ( (tptr == NULL) || (tptr->state == AIOLIST_INACTIVE))
-        /*
-	** No cb for this thread or nothing on it's I/O list,
-	** therefore no work to do.
-	*/
-	status = 0;
-    else
-	status = 1;
-# ifdef OS_THREADS_USED
-    CSv_semaphore( &listioThreadsSem );
-# endif /* OS_THREADS_USED */
-    
-    return(status);
-}
 
 # if defined(OS_THREADS_USED) && !defined(xCL_ASYNC_IO)
 /*{
@@ -2018,285 +1149,7 @@ DI_thread_rw(
     return (actual);
 }
 
-static
-void *
-DI_thrp_open( void *parm )
-{
-    II_DIO_OPARMS	*oparms = (II_DIO_OPARMS *) parm;
-    int fd;
-    STATUS memstatus;                 /* dummy parameter for MEreqmem */
-#ifdef LARGEFILE64
-    struct stat64 sbuf;
-#else /* LARGEFILE64 */
-    struct stat sbuf;
-#endif /*  LARGEFILE64 */
-    i4 tablesize;
 
-    if ( oparms->err )
-	CL_CLEAR_ERR( oparms->err );
-
-    /* create a rawfd[] array of the right size the first time through */
-
-    if ( !rawfd )
-    {
-        tablesize = iiCL_get_fd_table_size();
-        rawfd = (char*)MEreqmem(0, tablesize, TRUE, &memstatus);
-        if ( !rawfd )
-        {
-            CS_exit_thread( (void *) (SCALARP)-1 );
-        }
-    }
-
-#if defined(xCL_081_SUN_FAST_OSYNC_EXISTS)
-    {
-        static bool     checked = 0;
-        static bool     stickycheck = 0;
-        char            *cp;
-
-        /* Don't mess with unsetting the sticky bit if this is set. */
-        if ( !checked )
-        {
-            NMgtAt("II_DIO_STICKY_SET", &cp);
-            if ( stickycheck = (cp && *cp != EOS) )
-            {
-                TRdisplay("IIdio: Sticky bit not being checked.\n" );
-            }
-
-            checked = TRUE;
-        }
-
-        if (((oparms->mode & O_SYNC) == 0) && 
-	    ((oparms->mode & O_CREAT) == 0) && !stickycheck)
-        {
-            /*
-            ** Turn off the sticky bit if we're not using O_SYNC.
-            ** The sticky bit feature was only designed to work with
-            ** files that were opened with O_SYNC.
-            **
-            ** Note that we're ignoring the return status because all of the
-            ** serious file problems will be caught be the open() call.
-            */
-
-#ifdef LARGEFILE64
-            if (!stat64(oparms->file, &sbuf))
-#else /* LARGEFILE64 */
-            if (!stat(oparms->file, &sbuf))
-#endif /* LARGEFILE64 */
-            {
-                int     new_perms = (unsigned)sbuf.st_mode & ~S_IFMT;
-
-                new_perms &= ~S_ISVTX;
-                (VOID) chmod(oparms->file, new_perms);
-            }
-        }
-    }
-# endif
-
-#ifdef LARGEFILE64
-    if ( (fd = open64( oparms->file, oparms->mode, oparms->perms )) == -1 )
-#else /* LARGEFILE64 */
-    if ( (fd = open( oparms->file, oparms->mode, oparms->perms )) == -1 )
-#endif /*  LARGEFILE64 */
-    {
-        if ( oparms->err )
-            SETCLERR(oparms->err, 0, ER_open);
-    }
-    else
-    {
-        /* "can't fail" */
-#ifdef LARGEFILE64
-        (void) fstat64( fd, &sbuf );
-#else /* LARGEFILE64 */
-        (void) fstat( fd, &sbuf );
-#endif /*  LARGEFILE64 */
-        if ( sbuf.st_mode & S_IFCHR )
-            rawfd[ fd ] =  TRUE;
-        else
-            rawfd[ fd ] =  FALSE;
-
-#if defined(xCL_081_SUN_FAST_OSYNC_EXISTS)
-        {
-            /*
-            ** On SunOS systems, if we set the sticky bit and clear the
-            ** execute bits, non-critical inode updates will be deferred
-            ** when the file is open for O_SYNC.  The feature may not be
-            ** enabled on all systems; so, ignore any errors.
-            **
-            ** Try to do this just at file creation time--assume that
-            ** if file is empty and O_CREAT is set, then this is file
-            ** creation time.
-            **
-            ** If we are opening a file with O_SYNC, and the sticky
-            ** bit got turned off for some reason, let's turn it back on.
-            **
-            ** For Solaris, we use O_DSYNC and avoid this whole mess.
-            **
-            */
-            if ( ((((oparms->mode & O_CREAT) == O_CREAT) && sbuf.st_size == 0)
-                  || (((oparms->mode & O_SYNC) == O_SYNC)
-                     && ((sbuf.st_mode & S_ISVTX) == 0)))
-                 && (rawfd[ fd ] == FALSE)
-               )
-            {
-                int     new_perms = (unsigned)sbuf.st_mode & ~S_IFMT;
-
-                new_perms |= S_ISVTX;
-                new_perms &= ~(S_IEXEC | S_IXGRP | S_IXOTH);
-                (VOID) fchmod(fd, new_perms);
-            }
-        }
-#endif /* xCL_081_SUN_FAST_OSYNC_EXISTS */
-
-    }
-
-    if ( dolog() > 0 )
-        TRdisplay("IIdio_open: file %s mode 0x%x on fd %d [%s]\n",
-                oparms->file, oparms->mode, fd, 
-		rawfd[fd] ? "raw disk" : "regular file" );
-
-    CS_exit_thread( (void *) (SCALARP)fd );
-}
-
-int
-DI_thread_open( char *file,
-	 	int  mode,
-		int  perms,
-		CL_ERR_DESC *err )
-{
-    II_DIO_OPARMS	op, *oparms = &op;
-    CS_THREAD_ID	tid;
-    STATUS		status;
-    int			ret_val;
-
-    oparms->file = file;
-    oparms->mode = mode;
-    oparms->perms = perms;
-    oparms->err = err;
-		
-#if defined(DCE_THREADS)
-    CS_create_thread( 32768, DI_thrp_open, oparms, &tid, CS_JOINABLE, &status );
-#elif defined(any_hpux)
-    CS_create_thread( 32768, NULL, DI_thrp_open, oparms, 
-		      &tid, CS_JOINABLE,
-		      Cs_srv_block.cs_stkcache,
-		      &status );
-#else
-    CS_create_thread( 32768, NULL, DI_thrp_open, oparms,
-                      &tid, CS_JOINABLE,
-                      &status );
-#endif
-
-    if ( status )
-    {
-        if ( err )
-            SETCLERR( err, status, 0 );
-    }
-
-    /* sleep until i/o completes */
-    if ( status == OK )
-        CS_join_thread(tid,(void**)&ret_val);
-
-    return (ret_val);
-}
-
-static
-int
-DI_thread_listio( int mode,
-		  aiocb_t **list,
-		  int nent,
-		  struct sigevent *sig )
-{
-    register int i;
-    STATUS status = OK;
-    II_DIO_RWPARMS *diop;
-    struct di_lio_ret
-    {
-	CS_THREAD_ID tid;
-        II_DIO_RWPARMS dioparms;
-	CL_ERR_DESC  err;
-    } *lio_ret;
-
-
-    lio_ret = (struct di_lio_ret *) MEreqmem( 0, 
-					      (nent*sizeof(struct di_lio_ret)), 
-				      	      TRUE, NULL );
-    if ( lio_ret == NULL )
-	return -1;
-
-    /* fire off the different I/O's */
-    for ( i = 0; i < nent; i++ )
-    {
-	if ( list[i]->aio_lio_opcode == LIO_READ )
-	    diop->op = O_RDONLY;
-	else if ( list[i]->aio_lio_opcode == LIO_WRITE )
-	    diop->op = O_WRONLY;
-	else
-	{
-	    nent--;
-	    i--;
-	    continue;
-	}
-	diop = &lio_ret[i].dioparms;
-	diop->fd = list[i]->aio_fildes;
-	diop->buf = (char *) list[i]->aio_buf;
-	diop->len = list[i]->aio_nbytes;
-	diop->off = list[i]->aio_offset;
-	diop->loffp = 0;
-	diop->err = &lio_ret[i].err;
-#ifdef dr6_us5
-	list[i]->aio_errno = EINPROGRESS;
-#endif  /* dr6_us5 */
-	
-#if defined(DCE_THREADS)
-    CS_create_thread( 32768, DI_thrp_rw, diop,
-                          &lio_ret[i].tid, CS_JOINABLE, &status );
-#elif defined(any_hpux)
-    CS_create_thread( 32768, NULL, DI_thrp_rw, diop,
-		      &lio_ret[i].tid, CS_JOINABLE,
-		      Cs_srv_block.cs_stkcache,
-		      &status );
-#else
-    CS_create_thread( 32768, NULL, DI_thrp_rw, diop,
-                      &lio_ret[i].tid, CS_JOINABLE,
-                      &status );
-#endif
-
-	if ( status )
-	{
-#ifdef dr6_us5
-	    list[i]->aio_errno = errno;
-#endif /* dr6_us5 */
-            SETCLERR( &lio_ret[i].err, status, 0 );
-	}
-	/* sleep until I/O completes */
-	if ( status == OK )
-#ifdef dr6_us5
-	    CS_join_thread( lio_ret[i].tid, (void**)&list[i]->aio_return );
-#else
-	    CS_join_thread( lio_ret[i].tid, NULL);
-#endif /* dr6_us5 */
-#ifdef dr6_us5
-	if ( lio_ret[i].err.errnum != OK )
-	    list[i]->aio_errno = lio_ret[i].err.errnum;
-#endif /* dr6_us5 */
-    }
-    MEfree( (PTR)lio_ret );
-}
 # endif /* OS_THREADS_USED */
-# endif /* hp8_us5 */
-# else /* xCL_ASYNC_IO || OS_THREADS_USED */ 
-
-
-#if !defined (xCL_ASYNC_IO) && !defined (OS_THREADS_USED)
-
-/* Dummy function to resolve link symbols if async i/o not supported */
-STATUS
-DIwrite_list( i4  op, DI_IO *f, i4  *n, i4 page, char *buf,
-	      STATUS (*evcomp)(), PTR closure, CL_ERR_DESC *err_code)
-{
-    return(OK);
-}
-
-#endif
 
 # endif /* xCL_ASYNC_IO || OS_THREADS_USED */ 

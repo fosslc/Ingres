@@ -47,6 +47,10 @@
 **          Will be revisited and submitted at a later date. 
 **	29-Apr-2010 (kschendel)
 **	    Fix a Solaris compiler warning.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototype for UTetable and UTemodtype.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 /*
@@ -152,7 +156,7 @@ typedef struct {
 
 
 FUNC_EXTERN STATUS UTcomline(
-#if defined(CL_PROTOTYPED) && !defined(sgi_us5)
+#if !defined(sgi_us5)
         SH_DESC                 *sh_desc,
         SH_DESC                 *desc_ret,
         i4                      mode,
@@ -168,17 +172,25 @@ FUNC_EXTERN STATUS UTcomline(
 );
 
 FUNC_EXTERN VOID UTopentrace(
-#ifdef CL_PROTOTYPED
 	FILE    **Trace
-#endif
 );
 
 FUNC_EXTERN VOID UTlogtrace(
-#ifdef CL_PROTOTYPED
 	LOCATION        *errfile,
 	STATUS          status
-#endif
 );
 
 #define UTECOM 4094
 
+typedef ArrayOf(ModDict *) ArrayModDictP;
+ModDict *UTetable(
+	char 	*modname,
+	ArrayModDictP      *dict);
+i4 UTemodtype(char *s);
+
+FUNC_EXTERN void II_subst(
+        i4 magic_char,
+        char *input_str,
+        i4 *size_ptr,
+        char *output_str,
+        ...);

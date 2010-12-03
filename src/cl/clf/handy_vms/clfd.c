@@ -17,6 +17,7 @@
 #include <iledef.h>
 #include <iosbdef.h>
 #include <efndef.h>
+#include <gl.h>
 
 #include <lib$routines.h>         /* librtl prototypes         */
 #include <starlet.h>              /* system service prototypes */
@@ -50,6 +51,8 @@
 **
 ** History:
 **    10-Dec-2008 (stegr01)   Initial Version
+**    29-Nov-2010 (frima01) SIR 124685
+**	   Added include of gl.h for prototype.
 */
 
 

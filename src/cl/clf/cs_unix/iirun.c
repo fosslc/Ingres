@@ -6,6 +6,7 @@
 #include    <gl.h>
 #include    <clconfig.h>
 #include    <systypes.h>
+#include    <ex.h>
 #include    <me.h>
 #include    <nm.h>
 #include    <lo.h>
@@ -18,6 +19,7 @@
 #include    <errno.h>
 #include    <cs.h>
 #include    <cx.h>
+#include    <exinternal.h>
 #if defined(xCL_018_TERMIO_EXISTS)
 #include    <termio.h>
 #elif defined(xCL_TERMIOS_EXISTS)
@@ -269,6 +271,8 @@
 **          OS limit OPEN_MAX.
 **	12-Feb-2007 (bonro01)
 **	    Remove JDBC package.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 /* Ming hints
@@ -300,13 +304,9 @@ static STATUS pollChildPassOrFail(int pid, char *tmpFile);
 
 static STATUS	check_dummy(PROG_LIST *p);
 static VOID	process_flags( PROG_LIST *p );
-static VOID	handler(i4 sig);
 static VOID	usage_and_die(char *prog);
 static VOID	get_sys_dependencies(void);
 
-/* some flags for the signal handler */
-
-static i4  stillborn;
 
 /* flags for "flagword" */
 
@@ -809,9 +809,7 @@ char	**envp;
 	if(p->await)
             sleep( p->await );
 
-        /* exit fail if the daemon process died already */
-
-	PCexit( stillborn ? 5 : 0 );
+	PCexit( 0 );
 }
 
 static VOID
@@ -949,29 +947,6 @@ usage_and_die( char *prog )
         PCexit(FAIL);
 }
 
-static VOID
-handler( int sig )
-{
-    /*
-    ** We must clear the SIGCHLD by calling PCreap (which calls wait())
-    ** _before_ replanting our handler. This relies on having used PCfork()
-    ** and not fork() or vfork() to start the child process.
-    */
-    switch(sig)
-    { 
-        case SIGCHLD:
-            /* intermediate or final child death -- must call wait() to clear */
-            PCreap();
-            stillborn++;
-            break;
-	default:
-            /* huh? */
-            PCexit(FAIL);
-    }
- 
-    /* replant the handler */
-    EXsetsig( sig, handler );
-}
 
 /*
 ** Name: get_sys_dependencies -   Set up global variables
@@ -1115,8 +1090,6 @@ static STATUS
 pollChildPassOrFail(PID pid, char *tmpFile)
 {
     i4  status;
-    i4  resultCode = 0;
-    i4  loop=0;
 
     while (1)
     {

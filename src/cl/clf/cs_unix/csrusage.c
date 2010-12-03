@@ -8,6 +8,8 @@
 #include <rusage.h>
 #include <tr.h>
 #include <pc.h>
+#include <cs.h>
+#include <csinternal.h>
 
 /* 
 ** History
@@ -28,14 +30,18 @@
 **          to agree with arguments of gettimeofday() in <sys/time.h>.
 **      29-feb-2000 (wansh01)
 **         added if defined to define CS_itv for sos_us5 
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Fix up prototypes.
+**	23-Nov-2010 (kschendel)
+**	    Drop a couple more obsolete ports missed in the last edit.
 */
 
-# if defined(xCL_005_GETTIMEOFDAY_EXISTS) || defined(sos_us5) 
+# if defined(xCL_005_GETTIMEOFDAY_EXISTS)
 struct timeval	CS_itv;
 # endif
 
-void
-CS_rrusage()
+static void
+CS_rrusage(void)
 {
 #ifdef xCL_003_GETRUSAGE_EXISTS
     struct timeval	tv;
@@ -84,7 +90,8 @@ CS_rrusage()
 #endif /* xCL_003_GETRUSAGE_EXISTS */
 }
 
-CS_recusage()
+void
+CS_recusage(void)
 {
 # ifdef xCL_005_GETTIMEOFDAY_EXISTS
 

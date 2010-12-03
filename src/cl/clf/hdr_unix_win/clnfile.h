@@ -49,6 +49,10 @@
 **	    replace nat and longnat with i4
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	18-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	23-Nov-2010 (kschendel)
+**	    Drop a few more obsolete ports.
 */
 
 # ifndef CLCONFIG_H_INCLUDED
@@ -63,26 +67,20 @@
 #	ifdef _NFILE
 #		define CL_NFILE()	_NFILE
 #	endif
-#	ifdef gld_u42
-#		include <systypes.h>
-#		include <sys/param.h>
-#		define CL_NFILE()	NOFILE
-#	endif
-#       if defined(dr6_us5) || defined(usl_us5) || defined(sos_us5)
+#       if defined(usl_us5)
 #		include <ulimit.h>
 #               ifdef CL_NFILE
 #                       undef CL_NFILE
 #               endif
 #               define CL_NFILE()       ((int)ulimit(UL_GDESLIM, 0L))
-#       endif /* dr6_us5 usl_us5 */
-#	if defined(hp3_us5) || defined(any_hpux) || defined(hp8_bls) || \
-	   defined(rmx_us5) || defined(rux_us5)
+#       endif /* usl_us5 */
+#	if defined(any_hpux)
 #		ifdef CL_NFILE
 #			undef CL_NFILE
 #		endif
 #		include <unistd.h>
 #		define CL_NFILE()	((int)sysconf(_SC_OPEN_MAX))
-#	endif /* hp3_us5, hpux, hp8_bls or rmx_us5 */
+#	endif /* hpux */
 # endif /* getdtablesize */
 # endif /* CL_NFILE */
 
@@ -96,3 +94,4 @@
 */
  
 FUNC_EXTERN i4 iiCL_get_fd_table_size(void);
+FUNC_EXTERN i4 iiCL_increase_fd_table_size(i4, i4);

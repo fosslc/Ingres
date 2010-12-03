@@ -12,6 +12,7 @@
 # include       <me.h>
 # include	<meprivate.h>
 # include	<fp.h>
+# include	<exinternal.h>
 
 # include	"fplocal.h"
 
@@ -41,7 +42,19 @@
 **      07-mar-1997 (canor01)
 **          Allow functions to be called from programs not linked with
 **          threading libraries.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototype for fpmathsig.
 **/
+
+/* prototypes */
+
+TYPESIG fpmathsig(
+        int             signum,
+        EX_SIGCODE      SIGCODE(sigcode),
+        EX_SIGCONTEXT   SIGCONTEXT(sigcontext)
+);
 
 /* Externs */
 

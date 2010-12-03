@@ -121,11 +121,15 @@
 **	    Replace mg5_osx with generic OSX
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Add forward declaration of powsig.
 **/
 
 /* # defines */
 /* typedefs */
 /* forward references */
+i4 powsig(i4 signal );
+
 /* externs */
 /* statics */
 

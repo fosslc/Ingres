@@ -64,7 +64,7 @@
 STATUS
 ERmsg_hdr( svr_id, session, msg_header)
 char		   *svr_id;
-char		   *session;
+SCALARP		   session;
 char		   *msg_header;
 {
     char        host_name[33];

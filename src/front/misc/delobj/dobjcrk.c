@@ -105,6 +105,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	23-Nov-2010 (kschendel)
+**	    Fix a CPP warning re extra token after #endif.
 */
 
 
@@ -338,7 +340,7 @@ do_crack_cmd(i4 argc, char **argv)
 	IIUIswc_SetWithClause(with_ptr);
 # else
 	with_ptr = ERx("");
-# endif DGC_AOS
+# endif
 
 	/*
 	** If -all was specified, then we can't have -wildcard, -include,

@@ -121,6 +121,8 @@
 **	    Replace mg5_osx with generic OSX
 **	20-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */
 
 #define	DLINT_H
@@ -130,31 +132,19 @@
 # define	DL_EXT_NAME	".exe"
 #endif	/* VMS */
 
-# if defined(su4_u42)
-#  define	DL_EXT_NAME	".so.2.0"
-#  define	DL_OLD_EXT_NAME	".so.1.0"
-#endif	/* old Sun */
-
 # if defined(any_aix)
 #  define	DL_EXT_NAME	".a.2.0"
 #  define	DL_OLD_EXT_NAME	".a.1.0"
 # endif /* aix */
 
-# if defined(m88_us5) || defined(sparc_sol) || defined(sui_us5) || \
-     defined(dgi_us5) || defined(axp_osf) || defined(nc4_us5) || \
-     defined(sqs_ptx) || defined(sgi_us5) || defined(rmx_us5) || \
-     defined(sos_us5) || defined(usl_us5) || defined(LNX) || \
-     defined(a64_sol)
+# if defined(sparc_sol) || defined(axp_osf) || defined(sgi_us5) || \
+     defined(usl_us5) || defined(LNX) || defined(a64_sol)
 #  define	DL_EXT_NAME	".so.2.0"
 # endif /* motorola || solaris */
 
-# if defined(any_hpux) || defined(hp3_us5) || defined(hp8_bls)
+# if defined(any_hpux)
 #  define	DL_EXT_NAME	".sl.2.0"
-# endif	/* su4_u42 */
-
-# if defined(dr6_us5)
-#  define       DL_EXT_NAME     ".so"
-# endif /* ICL */
+# endif	/* hpux */
 
 # if defined(OSX)
 #  define       DL_EXT_NAME     "2.0.dylib"
@@ -166,32 +156,17 @@
 
 #define	DL_TXT_NAME	".dsc"
 
-#if defined(hp3_us5)
-#define	DL_LOOKUP_FUNC	"_IIdllookupfunc"
-#define	DL_OLD_LOOKUP_FUNC	"_IIU3rpaResolveProcAddr"
-#else
 #define	DL_LOOKUP_FUNC	"IIdllookupfunc"
 #define	DL_OLD_LOOKUP_FUNC	"IIU3rpaResolveProcAddr"
-#endif
 #define	DLVERSNAME	"IIdlversion"
 
-/* motorola and ncr does not have the older versions of w4gl */
-#if defined(m88_us5)
-# undef DL_OLD_LOOKUP_FUNC
-#endif
-
-#if defined(hp3_us5) || defined(any_hpux) || defined(hp8_bls)
+#if defined(any_hpux)
 #include "/usr/include/dl.h"
 #include "/usr/include/shl.h"
 #define	HPUXWORKAROUND
 #endif
 
-#if defined(su4_u42) || defined (m88_us5)
-#include "/usr/include/dlfcn.h"
-#endif
-
-#if defined(dr6_us5) ||  defined(sparc_sol) || defined(usl_us5) || \
-    defined(sui_us5) ||  defined(sos_us5)
+#if defined(sparc_sol) || defined(usl_us5)
 #include <dlfcn.h>
 #endif
 
@@ -228,23 +203,18 @@ struct DLint {
 };
 
 STATUS DLosprepare(
-#ifdef CL_PROTOTYPED
 	char *vers, 
 	LOCATION *locp, 
 	char *syms[],
 	struct DLint *localareap, 
 	i4 flags,
 	CL_ERR_DESC *errp
-#endif /* CL_PROTOTYPED */
 );
 STATUS DLosunload(
-#ifdef CL_PROTOTYPED
 	PTR cookie, 
 	CL_ERR_DESC *errp
-#endif	/* CL_PROTOTYPED */
 );
 STATUS DLparsedesc(
-#ifdef CL_PROTOTYPED
 	LOCATION *locp, 
 	char *exename,
 	char *dlmodname, 
@@ -257,6 +227,5 @@ STATUS DLparsedesc(
 	char *libs[], 
 	i4 *lib_cnt, 
 	CL_ERR_DESC *errp
-#endif	/* CL_PROTOTYPED */
 );
 #endif	/* DLINT_H */

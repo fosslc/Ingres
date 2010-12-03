@@ -403,6 +403,8 @@
 **	    sure all its children are terminated too and are not 
 **	    lingering around and causing hangs or preventing
 **	    sep from cleaning up after itself or destroying databases.
+**	1-Dec-2010 (kschendel)
+**	    Compiler warning fixes.
 */
 
 /*
@@ -949,7 +951,7 @@ STATUS
 PTM_read_fm_TM( i4  *thechar )
 {
     STATUS                 ioerr = OK ;
-    i4                     lastchar = NULL ;
+    i4                     lastchar = 0 ;
 
     /*
     ** read results from TM
@@ -1211,7 +1213,7 @@ process_if(FILE *testFile,char *commands[],i4 cmmdID)
 	    else
 	    {
 		if (if_level[if_ptr++] = Eval_If(commands))
-		    cmd = NULL;		/* Evaluate expression. if true, */
+		    cmd = 0;		/* Evaluate expression. if true, */
 		else			/* get out. else, skip to next   */
 		{			/* control command and continue. */
 		    ioerr = get_command(testFile,CONTROL_PROMPT,FALSE);
@@ -1233,7 +1235,7 @@ process_if(FILE *testFile,char *commands[],i4 cmmdID)
 		    else
 		    {
 			if (if_level[if_ptr] = Eval_If(commands))
-			    cmd = NULL;
+			    cmd = 0;
 			else
 			{
 			    ioerr = get_command(testFile,CONTROL_PROMPT,FALSE);
@@ -1250,7 +1252,7 @@ process_if(FILE *testFile,char *commands[],i4 cmmdID)
 		    {
 			case FALSE:
 				if_level[if_ptr-1] = TRUE;
-				cmd = NULL;
+				cmd = 0;
 			    break;
 			case TRUE:
 				if_level[if_ptr-1] = FALSE;
@@ -1265,14 +1267,14 @@ process_if(FILE *testFile,char *commands[],i4 cmmdID)
 	    case ENDIF_CMMD:
 
 		    if (if_level[--if_ptr] != -1)
-			cmd = NULL;
+			cmd = 0;
 		    else
 		    {
 			ioerr = get_command(testFile,CONTROL_PROMPT,FALSE);
 			cmd = classify_cmmd(sepcmmds,lineTokens[1]);
 		    }
 
-		    if_level[if_ptr] = NULL;
+		    if_level[if_ptr] = 0;
 
 		break;
 
@@ -1863,7 +1865,7 @@ PFE_put_keystrokes( i4  recording, i4  *in_keys, bool fromBOS, i4  *sendEOQ )
 
 	if (buffer_1[*in_keys-1] == '\n')
 	{
-	    buffer_1[*in_keys-1] = NULL;    /* get rid of EOL */
+	    buffer_1[*in_keys-1] = EOS;    /* get rid of EOL */
 	}
 
 	/* decode input keys coming from test script */

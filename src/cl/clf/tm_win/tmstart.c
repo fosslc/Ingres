@@ -5,7 +5,6 @@
 # include	<compat.h>
 # include       <cs.h>
 # include       <pc.h>
-# include       <csinternal.h>
 # include	<gl.h>
 # include	<clconfig.h>
 # include	<systypes.h>
@@ -51,9 +50,9 @@
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Delete CS_SYSTEM ref, not used or needed.
 **/
-
-GLOBALREF CS_SYSTEM        Cs_srv_block;
 
 
 

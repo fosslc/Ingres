@@ -6,6 +6,7 @@ require "status_bar"
 require "button_bar"
 require "profiles_frames"
 require "database_connection"
+require "rubygems"
 $KCODE="UTF8"
 $-K = "u"
 require 'jcode'

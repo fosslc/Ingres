@@ -1,8 +1,0 @@
-<?xml version='1.0'?>
-<databaseConnection>
-  <database>demodb</database>
-  <password>olive$oil</password>
-  <username>ingres</username>
-  <instance>R3</instance>
-  <hostname>localhost</hostname>
-</databaseConnection>

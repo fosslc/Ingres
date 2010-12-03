@@ -54,6 +54,8 @@
 **	   Add UBIN as new location, used by LSB builds.
 **	08-Sep-2010 (rajus01) SD issue 146492, Bug 124381
 **	    Add LIB32, LIB64.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 /*
@@ -63,10 +65,8 @@
 FUNC_EXTERN char *  NMgetenv();
 
 FUNC_EXTERN STATUS NMstIngAt(
-#ifdef CL_PROTOTYPED
 	char   *name,
 	char   *value
-#endif
 );
 
 

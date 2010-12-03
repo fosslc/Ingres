@@ -17,6 +17,7 @@
 #include    <qu.h>
 #include    <clsigs.h>
 #include    <ex.h>
+#include    <exinternal.h>
 #include    <lo.h>
 #include    <pm.h>                /* needed for 1.1 onward */
 #include    <st.h>
@@ -45,8 +46,8 @@ extern  int     a64l();
 static  VOID    GClu62sm();
 static  VOID    lu62reg_pcb();
 static  VOID    lu62unreg_pcb();
-static  VOID    process_pcb_event();
-static  VOID    process_exception();
+static  VOID    process_pcb_event(void *, i4);
+static  VOID    process_exception(void *, i4);
 static  STATUS  lu62req_to_snd();
 static  STATUS  lu62prep_to_rcv();
 static  int     lu62write();
@@ -303,6 +304,8 @@ static     int           listen_fd;
 **          Set option flag in GCC_P_LIST to 0 (remote).
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Tweak prototypes.
 */
 STATUS
 GClu62(func_code, parms)
@@ -1127,10 +1130,9 @@ complete:
 */
 
 static VOID
-process_pcb_event(pcb, status)
-GC_PCB  *pcb;
-STATUS  status;    
+process_pcb_event(void *parm, i4 status)
 {
+    GC_PCB  *pcb = (GC_PCB *) parm;
     GCC_P_PLIST *parms;
     char        *rcv_ptr;
     int         rcv_len;
@@ -1355,10 +1357,9 @@ STATUS  status;
 ** Driven whenever a listen fd is selected for EXCEPTION
 */
 static VOID
-process_exception(parms, status)
-GCC_P_PLIST     *parms;
-STATUS          status;    
+process_exception(void *parm, i4 status)
 {
+    GCC_P_PLIST     *parms = (GCC_P_LIST *) parm;
 
     GCTRACE(2)("0x%p process_exception: entry status %d \n", parms, status);
 
@@ -1419,7 +1420,7 @@ GC_PCB *pcb;
 {
  
     GCTRACE(2)("lu62unreg_pcb: pcb 0x%p, fd %d\n", pcb, pcb->fd);
-    (VOID)iiCLfdreg(pcb->fd, FD_READ, (VOID (*)) 0, (PTR) 0, -1);
+    (VOID)iiCLfdreg(pcb->fd, FD_READ, NULL, NULL, -1);
     pcb->registered = FALSE;
 }
 

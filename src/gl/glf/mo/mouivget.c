@@ -61,6 +61,8 @@
 **	 6-sep-93 (swm)
 **	    Added comment to indicate that truncating cast of expression
 **	    assigned to ival is valid.
+**	1-Dec-2010 (kschendel)
+**	    Stop warnings.
 */
 
 STATUS 
@@ -68,8 +70,7 @@ MOuivget( i4  offset, i4  size, PTR object, i4  lsbuf, char *sbuf )
 {
     STATUS stat = OK;
 
-    /* lint truncation warning if size of ptr > int, but code valid */
-    u_i4 ival = (u_i4)((char *)object + offset);
+    u_i4 ival = (u_i4)((SCALARP)object + offset);
     
     if( stat == OK )
 	stat = MOulongout( MO_VALUE_TRUNCATED, ival, lsbuf, sbuf );

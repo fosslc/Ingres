@@ -51,6 +51,8 @@
 **	    scd_init_sngluser().
 **	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    Prototype scd_mo_init()
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 /*}
@@ -103,8 +105,18 @@
 #  pragma member_alignment save
 #  pragma member_alignment
 # endif
+
+/* *** ATTENTION ***
+** The CS_SCB has to be the first thing in the SCD_SCB.
+** CS thinks it's passing around a CS_SCB *.  Well, it is, but it's also
+** passing around a pointer to more than just the CS_SCB.
+** By making the CS_SCB be the first thing in an SCD_SCB, we can translate
+** a CS_SCB * to an SCD_SCB * simply by casting.
+** A wee bit nasty, but that's the way it's always worked...
+*/
 struct _SCD_SCB
 {
+    /* cs_scb MUST BE FIRST */
     CS_SCB	    cs_scb;		/* CS's part */
 
     /* value to put into cs_scb.cs_client_type for us to see later  */
@@ -134,17 +146,17 @@ FUNC_EXTERN DB_STATUS scd_dbinfo_fcn(ADF_DBMSINFO *dbi,
 
 FUNC_EXTERN DB_STATUS scd_adf_printf( char *cbuf );
 
-FUNC_EXTERN DB_STATUS scd_alloc_scb(SCD_SCB  **scb_ptr,
-				    GCA_LS_PARMS  *crb,
+FUNC_EXTERN DB_STATUS scd_alloc_scb(CS_SCB  **scb_ptr,
+				    void  *crb,
 				    i4  thread_type );
 
-FUNC_EXTERN DB_STATUS scd_dealloc_scb( SCD_SCB *scb );
+FUNC_EXTERN DB_STATUS scd_dealloc_scb( CS_SCB *scb );
 
-FUNC_EXTERN STATUS scd_reject_assoc( GCA_LS_PARMS  *crb, STATUS error );
+FUNC_EXTERN STATUS scd_reject_assoc( void *crb, STATUS error );
 
-FUNC_EXTERN VOID scd_disconnect( SCD_SCB *scb );
+FUNC_EXTERN VOID scd_disconnect( CS_SCB *scb );
 
-FUNC_EXTERN STATUS scd_get_assoc( GCA_LS_PARMS *crb, i4  sync );
+FUNC_EXTERN STATUS scd_get_assoc( void *crb, i4  sync );
 
 FUNC_EXTERN DB_STATUS scd_dbadd( SCV_DBCB *dbcb, 
 				DB_ERROR  *error,

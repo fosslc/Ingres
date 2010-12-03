@@ -1,12 +1,15 @@
 #
 # Jamfile file for cl!clf!ol_unix_win
 #
+#	1-Dec-2010 (kschendel)
+#	    nooptim for lnx (gcc), else gcc (4.5 at least) will optimize
+#	    away the "load-float-reg" tricks in ol.c.
 
 SubDir ING_SRC cl clf ol_unix_win ;
 
 IISUBSYS cl clf ol_unix_win ;
 
-IINOOPTIM ol.c : ris_us5 rs4_us5 ris_u64 i64_aix ;
+IINOOPTIM ol.c : ris_us5 rs4_us5 a64_lnx int_lnx int_rpl ;
 
 IILIBRARY COMPATLIB : olret.c
 	ol.c ;

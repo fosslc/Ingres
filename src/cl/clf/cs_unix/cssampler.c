@@ -68,6 +68,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 ****************************************************************************/
 
 # include <compat.h>
@@ -83,13 +85,13 @@
 # include <pc.h>
 # include <csinternal.h>
 # include "cssampler.h"
+# include "cslocal.h"
 
 GLOBALREF CSSAMPLERBLKPTR CsSamplerBlkPtr;
-GLOBALREF CS_SYSTEM	  Cs_srv_block;
 
 /* Forward References */
-VOID
-AddMutex( CS_SEMAPHORE	*CsSem,
+
+static VOID AddMutex( CS_SEMAPHORE	*CsSem,
 	  i4		thread_type );
 
 static	CS_SCB	samp_scb;
@@ -300,7 +302,7 @@ CS_sampler(void)
 ****************************************************************************/
 
 u_i4
-ElfHash(const unsigned char *name)
+CSsamp_elf_hash(const unsigned char *name)
 {
     u_i4	h = 0,
     		g;
@@ -308,7 +310,7 @@ ElfHash(const unsigned char *name)
     while (*name)
     {
     	h = (h << 4) + *name++;
-	if (g = h & 0xF0000000)
+	if ((g = (h & 0xF0000000)) != 0)
 	    h ^= g >> 24;
 	h &= ~g;
     }
@@ -316,7 +318,7 @@ ElfHash(const unsigned char *name)
 }
 
 
-VOID
+static VOID
 AddMutex( CS_SEMAPHORE *CsSem,
 	  i4		thread_type )
 {
@@ -329,7 +331,7 @@ AddMutex( CS_SEMAPHORE *CsSem,
 
     if (CsSem->cs_sem_name[0] != '\0')
     {	/* A "named" semaphore */
-    	hashnum = ElfHash((const unsigned char *)CsSem->cs_sem_name) % MAXMUTEXES;
+    	hashnum = CSsamp_elf_hash((const unsigned char *)CsSem->cs_sem_name) % MAXMUTEXES;
 	hashname = CsSem->cs_sem_name;
     }
     else

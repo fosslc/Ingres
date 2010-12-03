@@ -25,6 +25,7 @@
 #include    <machconf.h>
 #include    <clconfig.h>
 #include    <meprivate.h>
+#include    <exinternal.h>
 
 #include    "cslocal.h"
 #include    "csmgmt.h"
@@ -335,6 +336,8 @@
 **	    Added CSadjust_i8counter function which
 **          will make calls to intrinsic InterlockedCompareExchange64
 **          function.
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 #ifdef WIN64
 #pragma optimize ("",off)
@@ -369,8 +372,6 @@
 
 i4 CS_addrcmp( PTR a, PTR b );
 
-FUNC_EXTERN VOID   CSoptions(CS_SYSTEM *cssb );
-FUNC_EXTERN VOID CS_dump_stack();
 FUNC_EXTERN VOID GVshobj(char **ObjectPrefix);
 
 typedef void FP_Callback(CS_SCB **scb);
@@ -386,9 +387,7 @@ static i4  CS_usercnt( void );
 **
 ****************************************************************************/
 
-GLOBALREF CS_SYSTEM        Cs_srv_block;
 GLOBALREF CS_SCB           Cs_main_scb;
-GLOBALREF CS_SCB           Cs_known_list_hdr;
 GLOBALREF CS_SEMAPHORE     Cs_known_list_sem;
 GLOBALREF PTR              Cs_old_last_chance;
 GLOBALREF i4               nonames_opt;
@@ -401,7 +400,6 @@ GLOBALREF i4		   dio_resumes;
 GLOBALREF HANDLE	   hAsyncEvents[NUM_EVENTS];
 GLOBALREF HANDLE	   hSignalShutdown;
 GLOBALREF HANDLE	   CS_init_sem;
-GLOBALREF VOID             (*Ex_print_stack)(); /* NULL or CS_dump_stack */
 GLOBALREF VOID             (*Ex_diag_link)();
 
 GLOBALREF VOID (*GCevent_func[NUM_EVENTS])();
@@ -804,7 +802,7 @@ CSinitiate(i4   *argc,
 	** Get CS options
 	*/
 
-	CSoptions(&Cs_srv_block);
+	(void) CSoptions(&Cs_srv_block);
 
 	/*
 	** Store some values
@@ -1313,7 +1311,6 @@ CSdispatch()
 	i4              i;
 	EX_CONTEXT      excontext;
 	CS_INFO_CB      csib;
-	FUNC_EXTERN i4  cs_handler(EX_ARGS *);
 	static i4       got_ex;
 	STATUS          Retc;
 	char            szBuf[256];
@@ -2302,7 +2299,6 @@ CSadd_thread(i4         priority,
 {
 	STATUS status;
 	CS_SCB *scb;
-	void   CS_prf_setup(), CS_setup();
 	char   szEventName[MAX_PATH];
 	SECURITY_ATTRIBUTES	sa;
 

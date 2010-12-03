@@ -42,6 +42,8 @@
 #	20-Oct-2010 (kschendel)
 #	    int_osx insists on ranlib or the linker errors out.  (ar -s
 #	    would work too, but ranlib is simpler.)
+#	23-Nov-2010 (kschendel)
+#	    Drop obsolete ports.
 
 if [ -n "$ING_VERS" ] ; then
 
@@ -219,16 +221,6 @@ trap 'cd $workdir; rm -rf $workdir/*; exit 6' 1 2 3 15
 [ `(PROG1PRFX)dsfree` -le 20000 ] && echo "** WARNING !! You may run out of diskspace **"
 
 #
-# AIX needs some special things to be done: create an export list, archive the
-# shared objects.
-[ "$config" = "ris_us5" ] &&
-mkexplist()
-{
-    ls -1 *.o | xargs -n50 /usr/ucb/nm -p |
-      awk ' $2=="D"||$2=="B" { print $3 } ' > expsym_list
-}
-#
-#
 # AIX 4.1 no longer supports the -p option.  The -B option is similar.
 #
 [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] &&
@@ -345,11 +337,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_becompat
 
@@ -373,11 +361,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_scf
 
@@ -404,11 +388,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_opf
 
@@ -434,11 +414,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_rdf
 
@@ -462,11 +438,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_qef
 
@@ -490,11 +462,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_psf
 
@@ -526,11 +494,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_dbutil
 
@@ -554,11 +518,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_qsf
 
@@ -582,11 +542,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_dmf
 
@@ -610,11 +566,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_gwf
 
@@ -638,11 +590,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_adf
 
@@ -666,11 +614,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_ulf
 
@@ -694,11 +638,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_tpf
 
@@ -722,11 +662,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_rqf
 
@@ -750,11 +686,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_gcf
 
@@ -778,11 +710,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_sxf
 
@@ -806,11 +734,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_cuf
 
@@ -834,11 +758,7 @@ then
 
     [ "$config" = "rs4_us5" -o "$config" = "r64_us5" ] && mkexplist
     echo ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-    case $config in
-    *)
-        ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
-        ;;
-    esac
+    ar ru$AR_L_OPT $INGLIB/iimerge.a *.o
     rm -f *.o
 fi  # do_malloc
 

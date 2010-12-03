@@ -141,6 +141,8 @@
 **          Will be revisited and submitted at a later date. 
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    More warning / prototype fixes.
 */
 
 /*
@@ -170,32 +172,24 @@ static i1 sizetab[] =
 **	out the data type.
 */
 
-typedef struct
+typedef struct _DSTWRITE DSTWRITE;
+struct _DSTWRITE
 {
 	i4	dsw_lang;
 	i4	dsw_type;
-	i4	(*dsw_func)();
+	void	(*dsw_func)(DSTWRITE *, i4, char *, i2);
 	char	*dsw_temp;
-} DSTWRITE;
+};
 
-/*
-** These functions, and the member declaration above, should be "void",
-** but the structure initialization doesn't like it for some reason.
-*/
-
-static int	DScstri();
-static char *	DSlabmap();
+static void	DScstri(DSTWRITE *tp, i4 type, register char *val, i2 len);
+static char *	DSlabmap(char *label);
 
 /*
 ** On UNIX, only DSL_C is now supported (1/86 daveb).
 */
 DSTWRITE	Temptab[] =
 {
-# ifdef	MSDOS
-	DSL_C, DSD_I4,	NULL, "\t%ld",
-# else
 	DSL_C, DSD_I4,	NULL, "\t%d",
-# endif	/* MSDOS */
 	DSL_C, DSD_NAT,	NULL, "\t%d",
 	DSL_C, DSD_I2,	NULL, "\t%d",
 	DSL_C, DSD_I1,	NULL, "\t%d",
@@ -304,15 +298,14 @@ static DSTALIGN	aligntab[] =
 };
 
 /* forward declarations */
-STATUS   DSwrite();
-static VOID     DSaligni();
-static VOID     DSaligni();
-static VOID     DSlabi();
-static char     *DSglabi();
-static STATUS   DSdumptmp();
-static DSTWRITE *DSfwrite();
-static DSTALIGN *DSfalign();
-static VOID     DStlabi();
+STATUS   DSwrite(i4, char *, i4);
+static VOID     DSaligni(i4 type, i2 len);
+static VOID     DSlabi(char *lab, i4 vis, char *type);
+static char     *DSglabi(void);
+static STATUS   DSdumptmp(void);
+static DSTWRITE *DSfwrite(i4 type);
+static DSTALIGN *DSfalign(i4 type);
+static VOID     DStlabi(char *lab, i4 vis, char *type);
 
 
 
@@ -562,10 +555,7 @@ char	*type;
 */
 
 STATUS
-DSwrite(type, val, len)
-i4	type;
-char	*val;
-i4	len;
+DSwrite(i4 type, char *val, i4 len)
 {
 	register DSTWRITE	*tp;
 	register i4		i;
@@ -878,12 +868,8 @@ static	bool 	need_init = TRUE;
 static	char	print_class[1 << BITSPERBYTE] = {0};
 
 /*ARGSUSED*/
-static int
-DScstri(tp, type, val, len)
-DSTWRITE		*tp;
-i4			type;
-register char		*val;
-i2			len;
+static void
+DScstri(DSTWRITE *tp, i4 type, char *val, i2 len)
 {
 	register int	nlen = len;
 	register char	*icp;			/* pointer into input string */

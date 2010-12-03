@@ -195,6 +195,8 @@
 **          allowed to place integer valued functions here.
 **          DMLexpr itself allows the original qual_column_ref
 **          as an item.
+**	1-Dec-2010 (kschendel)
+**	    Fix a compiler warning.
 */
 
 /* %L Configuration begin */
@@ -2344,7 +2346,7 @@ view:		view_key qual_table_ref col_name_list AS select_expr view_with
 				osdbeval($3);	/* column name list (with "()") */
 			osdbstr(ERx(" as "));
 			osdbqry($5);
-			if ($6 != NULL)
+			if ($6 != 0)
 				osdbstr(ERx(" with check option"));
 		}
 ;
@@ -2359,7 +2361,7 @@ view_with:	WITH CHECK ID
 				yyerror(_SyntaxError);
 			$$ = TRUE;
 		}
-	|	/* emtpy */
+	|	/* empty */
 		{
 			$$ = FALSE;
 		}

@@ -12,6 +12,8 @@
 #            Remove the IINOOPTIM entries that were generated incorrectly.
 #       02-jul-2010 (joea)
 #           Compile opnenum.c with NOOPTIM on i64_vms.
+#	23-Nov-2010 (kschendel)
+#	    Drop obsolete nooptims.
 #            
 
 
@@ -19,7 +21,7 @@ SubDir ING_SRC back opf opn ;
 
 IISUBSYS back opf opn ;
 
-IINOOPTIM opncalcost.c : dgi_us5 rs4_us5 sgi_us5 i64_aix ;
+IINOOPTIM opncalcost.c : rs4_us5 sgi_us5 ;
 IINOOPTIM opnprleaf.c : rs4_us5 ;
 IINOOPTIM opnenum.c : i64_vms ;
 

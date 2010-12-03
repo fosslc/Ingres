@@ -1,12 +1,11 @@
 #include <bzarch.h>
-#if !defined(dg8_us5) && !defined(dgi_us5)
 #include <errno.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#endif
 
 #include <compat.h>
+#include <clconfig.h>
 #include <gl.h>
 #include <si.h>
 #include <st.h>
@@ -17,9 +16,11 @@
 #include <cs.h>
 #include <ex.h>
 #include <evset.h>
+#include <exinternal.h>
 # define Factab iiFactab
 #include <erfac.h>
 #include <tr.h>
+#include <stdarg.h>
 
 /*
 **Copyright (c) 2004, 2010 Ingres Corporation
@@ -72,6 +73,10 @@
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**	16-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete dg ports.
 */
 
 /*
@@ -90,16 +95,15 @@
 */
 
 #define MAP_SIZE 1000
-static STATUS DIAGhandler();
-VOID DIAGoutput();
-VOID DIAGtr_output();
-VOID DIAGerror();
+static STATUS DIAGhandler(EX_ARGS *ex_args);
+static VOID DIAGoutput(const char *format, ...);
+static VOID DIAGerror(const char *format, ...);
 static i4 to_hex(PTR);
 static FILE *summary_file=NULL;
 static char iiexcept_opt[MAX_LOC+1] = "iiexcept.opt";
 static char iidbms[MAX_LOC+1] = "iidbms";
 GLOBALDEF     VOID    (*Ex_diag_link)();     /*NULL or CSdiagDumpSched */
-GLOBALREF Version[];
+GLOBALREF char Version[];
 
 static struct IIERRMAP
 {
@@ -226,22 +230,20 @@ PTR script;
 **  History:
 */
  
-static
+static void
 execute(id,command,title)
 i4  id;
 PTR command;
 PTR title;
 {
-   char buffer[OUTPUT_BUFFER];
    EVSET_ENTRY fdetails;
    CL_ERR_DESC err_code;
    LOCATION my_loc;
    STATUS status;
    FILE *fdes;
-   i4  file=0;
  
-      if(status = EVSetCreateFile(id,EVSET_SYSTEM|EVSET_TEXT,title,
-                fdetails.value,sizeof(fdetails.value))!=OK)
+      if((status = EVSetCreateFile(id,EVSET_SYSTEM|EVSET_TEXT,title,
+                fdetails.value,sizeof(fdetails.value)) ) != OK)
       {
          DIAGoutput("Failure 0x%x",status);
          DIAGoutput("Fail to create evidence set file \"%s\"", title);
@@ -255,7 +257,6 @@ PTR title;
       }
  
       SIclose(fdes);
- 
  
 }
 
@@ -286,7 +287,7 @@ PTR title;
 */
  
 char copy_buffer[OUTPUT_BUFFER];
-static
+static void
 copy(id,location,title,lines)
 i4  id;
 LOCATION *location;
@@ -297,7 +298,6 @@ i4  lines;
    EVSET_ENTRY fdetails;
    FILE *source=NULL;
    FILE *dest=NULL;
-   i4  file=0;
    i4  len;
  
  
@@ -324,7 +324,7 @@ i4  lines;
          /* Position to required start position */
  
          i4  offset;
-         i4  pos;
+         i4  pos = 0;
  
          /* Find end of file */
  
@@ -380,15 +380,15 @@ i4  lines;
 **
 **      It is platform specific and needs to stay in the CL.
 */
-do_dump(stack)
-u_i4 *stack;
+static void
+do_dump(u_i4 *stack)
 {
     EX_CONTEXT ex;
 
 
     if(EXdeclare(DIAGhandler,&ex)==OK)
     {
-    	Ex_diag_link(DIAG_DUMP_STACKS,DIAGtr_output,DIAGoutput,(PTR)stack);
+    	(*Ex_diag_link)(DIAG_DUMP_STACKS,DIAGoutput,DIAGoutput,(PTR)stack);
     }
     else
     {
@@ -400,10 +400,10 @@ u_i4 *stack;
     {
 	DIAGoutput
         ("----------------------- OPEN TABLES -----------------------\n");
-  	Ex_diag_link(DMF_OPEN_TABLES,DIAGoutput,DIAGerror,NULL); 
+  	(*Ex_diag_link)(DMF_OPEN_TABLES,DIAGoutput,DIAGerror,NULL); 
 	DIAGoutput
         ("---------------------- CURRENT QUERY ----------------------\n");
-  	Ex_diag_link(SCF_CURR_QUERY,DIAGoutput,DIAGerror,NULL); 
+  	(*Ex_diag_link)(SCF_CURR_QUERY,DIAGoutput,DIAGerror,NULL); 
     }
     EXdelete();
 
@@ -450,13 +450,11 @@ u_i4 error;
 u_i4 *stack;
 {
     char 	buffer[200];
-    i4  	pid;
     i4  	c,i;
     i4  	status;
     i4  	evset;
     char	error_desc[30];
     i4		fac_num;
-    char	*summay_name;
     EVSET_DETAILS details;
     EVSET_ENTRY fdetails;
     LOCATION    my_loc;
@@ -531,6 +529,7 @@ u_i4 *stack;
     }
     in_dump = 1;
 
+    summary_name = NULL;
     status=EVSetCreateFile(evset,EVSET_TEXT|EVSET_SYSTEM,"Evidence summary",
           fdetails.value,sizeof(fdetails.value));
     if(status!=OK)
@@ -682,12 +681,11 @@ u_i4 *stack;
 */
 
 VOID
-EXdumpInit()
+EXdumpInit(void)
 {
     FILE 	*iiexcept;
     char 	buffer[200];
     LOCATION 	my_loc;
-    PTR 	path;
     PTR		ingbuild;
     char        ingbuild_var[30];
 
@@ -776,8 +774,7 @@ EXdumpInit()
 */
 
 static i4
-to_hex(pointer)
-PTR pointer;
+to_hex(PTR pointer)
 {
     i4  ret_val;
 
@@ -870,19 +867,11 @@ PTR pointer;
 **  History:
 */
 
-VOID
-DIAGoutput(format,a1,a2,a3,a4,a5,a6,a7,a8)
-PTR format;
-PTR a1;
-PTR a2;
-PTR a3;
-PTR a4;
-PTR a5;
-PTR a6;
-PTR a7;
-PTR a8;
+static VOID
+DIAGoutput(const char * format,...)
 {
     char output_buffer[OUTPUT_BUFFER];
+    va_list ap;
 
     if(format==NULL)
     {
@@ -891,7 +880,9 @@ PTR a8;
     }
     else
     {
-	 STprintf(output_buffer,format,a1,a2,a3,a4,a5,a6,a7,a8);
+	va_start(ap, format);
+	vsprintf(output_buffer, format, ap);
+	va_end(ap);
     }
 					       
     if (summary_file!=NULL)
@@ -901,26 +892,6 @@ PTR a8;
     }
 }
 
-VOID
-DIAGtr_output(arg, length, buffer)
-i4             arg;
-i4             length;
-char                *buffer;
-{
-    i4             count;
- 
-    if (summary_file!=NULL)
-    {
-	SIwrite(length, buffer, &count, summary_file);
-	SIwrite(1, "\n", &count, summary_file);
-	SIflush(summary_file);
-    }
-    else
-    {
-	TRdisplay("DIAG: evset_output: Cannot write to evset file:\n");
-	TRdisplay("DIAG: evset_output: evset_file == NULL FILE *.\n");
-    }
-}
 
 /*{
 **  Name: DIAGerror - Error handler
@@ -943,25 +914,28 @@ char                *buffer;
 **     Raises EXKILL signal
 **
 **  History:
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    I've no clue about the weird parameters, but this routine used
+**	    to call "output" with a null format, which ends the summary.
+**	    So, just do that...
 */
  
-VOID
-DIAGerror(format,a1,a2,a3,a4,a5,a6)
-PTR format;
-PTR a1;
-PTR a2;
-PTR a3;
-PTR a4;
-PTR a5;
-PTR a6;
+static VOID
+DIAGerror(const char *format,...)
 {
-    DIAGoutput(NULL,format,a1,a2,a3,a4,a5,a6,0,0);
+    char output_buffer[OUTPUT_BUFFER];
+    STprintf(output_buffer,
+	"============= END OF EVIDENCE SUMMARY =============\n");
+    if (summary_file!=NULL)
+    {
+	SIfprintf(summary_file,"%s\n",output_buffer);
+	SIflush(summary_file);
+    }
 }
 
 
 static STATUS
-DIAGhandler(ex_args)
-EX_ARGS *ex_args;
+DIAGhandler(EX_ARGS *ex_args)
 {
     return(EXDECLARE);
 }

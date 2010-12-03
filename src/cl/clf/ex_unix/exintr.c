@@ -4,7 +4,7 @@
 # include	<clconfig.h>
 # include	<clsigs.h>
 # include	<ex.h>
-# include	"exi.h"
+# include	<exinternal.h>
 
 
 /*
@@ -49,9 +49,9 @@
 **	16-jan-1996 (toumi01; from 1.1 axp_osf port)
 **	    (schte01) added 02-sep-93 (kchin)
 **	    Cast (long) 3rd... EXsignal args to avoid truncation.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
-
-int 	i_EXcatch();
 
 /* Zero means deliver immediately, nz means log and deliver later */
 GLOBALDEF i4	EXintr_count ZERO_FILL;

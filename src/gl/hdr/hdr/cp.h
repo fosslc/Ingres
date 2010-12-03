@@ -25,63 +25,53 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 #ifndef CPclose
 FUNC_EXTERN STATUS CPclose(
-#ifdef	CL_PROTOTYPED
 	CPFILE		*CPfile
-#endif
 );
 #endif
 
 #ifndef CPflush
 FUNC_EXTERN STATUS CPflush(
-#ifdef	CL_PROTOTYPED
 	CPFILE		*CPfile
-#endif
 );
 #endif
 
 #ifndef CPgetc
 FUNC_EXTERN i4  CPgetc(
-#ifdef	CL_PROTOTYPED
 	CPFILE		*CPfile
-#endif
 );
 #endif
 
 #ifndef CPopen
 FUNC_EXTERN STATUS CPopen(
-#ifdef	CL_PROTOTYPED
 	LOCATION	*loc,
 	char		*file_mode,
 	i2		file_type,
 	i4		rec_length,
 	CPFILE		*CPfile
-#endif
 );
 #endif
 
 #ifndef CPread
 FUNC_EXTERN STATUS CPread(
-#ifdef	CL_PROTOTYPED
 	CPFILE		*CPfile,
 	i4		size,
 	i4		*count,
 	char		*pointer
-#endif
 );
 #endif
 
 #ifndef CPwrite
 FUNC_EXTERN STATUS CPwrite(
-#ifdef	CL_PROTOTYPED
 	i4		size,
 	char		*pointer,
 	i4		*count,
 	CPFILE		*CPfile
-#endif
 );
 #endif
 

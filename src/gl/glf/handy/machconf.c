@@ -96,6 +96,8 @@
 **	    New sparc and hp symbols no longer imply old ones, fix here.
 **      03-nov-2010 (joea)
 **          Complete prototypes for ii_num_processors and get_value.
+**	23-Nov-2010 (kschendel)
+**	    Drop a few obsolete ports.
 **/
 
 
@@ -278,15 +280,6 @@ ii_num_processors()
     ** default configuration.
     */
 
-#if defined(sqs_ptx) 
-    num_processors = 2;
-#endif
-#if defined(rmx_us5) || defined(pym_us5) || defined(rux_us5)
-    num_processors = rmx_us5_get_num_of_processors();
-#endif
-#if defined(su4_u42) || defined(su4_cmw)
-    num_processors = su4_u42_get_num_of_processors();
-#endif
 #if defined(sparc_sol) || defined(any_aix)
     /* *** FIXME?  what about a64_sol? */
     num_processors = su4_us5_get_num_of_processors();
@@ -297,12 +290,6 @@ ii_num_processors()
 #if defined(axp_osf)
     num_processors = axp_osf_get_num_of_processors();
 #endif
-#if defined(dr6_us5)
-    num_processors = dr6_us5_get_num_of_processors();
-#endif
-# if defined(dg8_us5) || defined(dgi_us5)
-        num_processors = dg8_us5_get_num_of_processors();
-# endif /* dg8_us5 dgi_us5 */
 #if defined(axm_vms) || defined(i64_vms)
     num_processors = vms_get_num_of_processors();
 #endif
@@ -362,94 +349,6 @@ get_value(char *symbol, i4 default_value)
     return(value);
 }
 
-#if defined(su4_u42) || defined(su4_cmw)
-
-/* sun specific code to determine number of processors */
-
-#undef u_char
-#undef u_int
-#undef u_long
-#undef u_short
-#undef ushort
-#include <sys/types.h>
-#include <fcntl.h>
-#include <sys/ioccom.h>
-#include <sun/mem.h>
-
-/* The following is necessary if the code is built on a 4.1.1 Sun system,
-** as MIOCGPAM was not defined until 4.1.2.  This definition has been taken
-** out of a 4.1.2 <sun/mem.h>.
-*/
-#if !defined(MIOCGPAM)
-#define   MIOCGPAM        _IOWR(M, 3, u_int)
-#endif
-
-/*{
-** Name: su4_u42_get_num_of_processors() - return number of processors on a sun.
-**
-** Description:
-**	Sun Multi-processors running SUN OS 4.1.X support a special ioctl()
-**	call which returns a value which can be used to figure out how many
-**	processors are enabled.  This call will either fail on SP machines or
-**	it will return a value that will be interpreted as only one processor
-**	enabled.  This routine will not be valid under Solaris 2.0/SUNOS 5.0.
-**	On any errors routine returns "1" processor.
-**
-**	This routine makes the magic ioctl() call and returns the number of 
-**	processors on the machine.
-**
-**	If any error is encountered then the routine will default to 1 
-**	processor.
-**
-** Inputs:
-**      none.
-**
-** Outputs:
-**	none.
-**
-**	Returns:
-**	    number of processors on the machine.
-**
-** History:
-**      06-apr-92 (mikem)
-**	    SIR #43444
-**          Created.
-*/
-static i4
-su4_u42_get_num_of_processors()
-{
-    int		num_processors = 0;
-    int		bitcount;
-    int		fd;
-    int		pam;
-
-    if ((fd = open("/dev/null", O_RDONLY)) > 0)
-    {
-	if (ioctl(fd, MIOCGPAM, &pam) == 0)
-	  {
-	    /* # of set bits in "pam" is the number of processors */
-
-	    num_processors = 0;
-	    for (bitcount = 0; bitcount < BITS_IN(int); bitcount++)
-	    {
-		if (0x01 & pam)
-		    num_processors++;
-		pam >>= 1;
-	    }
-	}
-	close(fd);
-    }
-
-    if (num_processors < 1)
-    {
-	/* return 1 on all errors */
-	num_processors = 1;
-    }
-
-    return(num_processors);
-}
-#endif /* su4_u42 */
-
 #if defined(any_hpux)
 
 #undef u_char
@@ -636,145 +535,3 @@ vms_get_num_of_processors()
     return num_processors;
 }
 #endif /* axm_vms || i64_vms */
-
-#if defined(dr6_us5)
-/*{
-** Name: dr6_us5_get_num_of_processors() - return number of processors on an ICL DRS-6000.
-**
-** Description:
-**
-**      On icl DRS-6000 boxes there is an option for multiprocessor extensions cards.
-**      This procedure detects support for the option and will return 1 if whenever 
-**      it is not found. On the other hand should the option exists, it makes
-**      a sysconfig system call to determin the number of processors running. It
-**      then checks to ensure that the function call will return at least one
-**      processor in the event of a system error.
-**
-** Inputs:
-**      none.
-**
-** Outputs:
-**      none.
-**
-**      Returns:
-**          number of processors on the machine.
-**
-** History:
-**      15th-feb-94 (johnst)
-**	   Bug #59782.
-**         Added; integrated from 6.4/04.
-**         Added support to dynamically determin num of processors for 
-**	   ICL DRS/NX 6000s with mpe's.
-*/
-
-#if defined(xCL_069_UNISTD_H_EXISTS)
-#include <sys/unistd.h>
-#endif
-
-static i4
-dr6_us5_get_num_of_processors()
-{
-    int         num_processors=1;
-
-#if defined(xCL_079_SYSCONF_EXISTS) && defined(_SC_NPROCESSORS_ONLN)
-
-    num_processors = sysconf(_SC_NPROCESSORS_ONLN);
-
-    if (num_processors < 1)
-    {
-        /* return 1 on all errors */
-        num_processors = 1;
-    }
-
-#endif /* SYSCONF_EXISTS ... */
-
-    return(num_processors);
-}
-#endif /* dr6_us5 */
-
-# if defined(dg8_us5) || defined(dgi_us5)
-#include <sys/dg_sys_info.h>
-
-dg8_us5_get_num_of_processors()
-{
-        struct dg_sys_info_machine_info machine_info;
-        i4         dgstat;
-    i4             num_processors = 0;
-
-        dgstat = dg_sys_info((long *)&machine_info,
-                     DG_SYS_INFO_MACHINE_INFO_TYPE,
-                     DG_SYS_INFO_MACHINE_CURRENT_VERSION);
-        if (dgstat < 0)
-        {
-                /* default on DG machines is 2 */
-                num_processors = 2;
-        }
-        else
-        {
-        num_processors = machine_info.number_of_processors;
-        }
-
-    return((i4) num_processors);
-}
-#endif /* dg8_us5 dgi_us5 */
-
-
-# if defined(sos_us5)
-#include <sys/utsname.h>
-/*{
-** Name: sco_us5_get_num_of_processors() - return number of processors on 
-**                                         a SCO v4.2 or SCO 5.0 machine.
-**
-** Description:
-**
-** Inputs:
-**      none.
-**
-** Outputs:
-**      none.
-**
-**      Returns:
-**          number of processors on the machine.
-**
-** History:
-**      07-sep-95 (morayf)
-**          Created.
-*/
-
-static long
-sco_us5_get_num_of_processors()
-{
-	struct scoutsname info;
-	int	num_processors;
-	
-	if (__scoinfo( &info, sizeof(struct scoutsname)) < 0)
-	{
-		/* Default to 1 on failure */
-
-		num_processors = 1;
-	}
-	else
-		num_processors = info.numcpu > 0 ? info.numcpu : 1;
-
-	return((long) num_processors);
-}
-
-#endif /* sos_us5 */
-
-#if defined(rmx_us5) || defined(pym_us5) || defined(rux_us5)
-
-#include <sys/types.h>
-#include <sys/mpcntl.h>
-
-static i4
-rmx_us5_get_num_of_processors()
-{
-    i4             num_processors = 0;
-
-    if ((num_processors = mpcntl(MPCNTL_CPUCNT, (void *)NULL)) < 1)
-                num_processors = 2;	/* default SNI RMx00 to 2 */
-
-    return((i4) num_processors);
-}
-
-#endif /* rmx_us5, pym_us5 */

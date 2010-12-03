@@ -5,6 +5,7 @@
 #include    <compat.h>
 #include    <gl.h>
 #include    <cvcl.h>
+#include    <cv.h>
 
 /**
 ** Name: CVLA.C - Convert long to ascii.
@@ -78,6 +79,8 @@
 **	    Alter lookup table to allow alignment to be portably forced.
 **      18-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**      29-Nov-2010 (frima01) SIR 124685
+**          Added include of cv.h neccessary for CVla().
 **/
 
 /*

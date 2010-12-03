@@ -107,6 +107,8 @@
 **	    VMS port:  exclude Unix event system code.
 **	21-Aug-2009 (kschendel) 121804
 **	    Declare CSMTset_scb.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 ****************************************************************************/
 
 # include <compat.h>
@@ -128,14 +130,12 @@
 # include <csev.h>
 # include <csinternal.h>
 # include <rusage.h>
+# include "csmtlocal.h"
 # include "csmtsampler.h"
 
 GLOBALREF CSSAMPLERBLKPTR CsSamplerBlkPtr;
 GLOBALREF CS_SYNCH        hCsSamplerSem;
-GLOBALREF CS_SYSTEM	  Cs_srv_block;
 GLOBALREF CS_SEMAPHORE    Cs_known_list_sem;
-
-FUNC_EXTERN void CSMTset_scb(CS_SCB *);
 
 /* Forward References */
 static VOID
@@ -150,11 +150,13 @@ static	CS_SCB	samp_scb;
 static	LK_LOCK_KEY	dummy_lock	ZERO_FILL;
 
 
-VOID
-CSMT_sampler(void)
+/* The screwy looking return type is dictated by create-thread. */
+
+void *
+CSMT_sampler(void *dummy)
 {
 	CS_SCB	*an_scb;
-	i4	sleeptime, elapsed, seconds, temp, event;
+	i4	sleeptime, elapsed, seconds, event;
 	SYSTIME starttime, stoptime;
 	i4	cs_thread_type;
 	i4	cs_state;
@@ -162,7 +164,6 @@ CSMT_sampler(void)
 	u_i4	bior, biow;
 	u_i4	dior, diork, diow, diowk;
 	u_i4	lior, liork, liow, liowk;
-	CL_ERR_DESC sys_err;
 
   /* The sampler thread needs a minimal SCB to be able to sleep */
     samp_scb.cs_type = CS_SCB_TYPE;
@@ -170,7 +171,7 @@ CSMT_sampler(void)
     samp_scb.cs_owner = (PTR)CS_IDENT;
     samp_scb.cs_tag = CS_TAG;
     samp_scb.cs_length = sizeof(CS_SCB);
-    samp_scb.cs_stk_area = 0;
+    samp_scb.cs_stk_area = NULL;
     samp_scb.cs_stk_size = 0;
     samp_scb.cs_state = CS_COMPUTABLE;
     samp_scb.cs_priority = CS_LIM_PRIORITY;    /* highest priority */
@@ -188,7 +189,7 @@ CSMT_sampler(void)
 #if !defined(VMS)
     /* Allocate and init an event wakeup block */
     if ( CSMT_get_wakeup_block(&samp_scb) )
-	return;
+	return NULL;
 #endif
 
     /* Set the Sampler's SCB pointer in thread local storage */
@@ -253,7 +254,7 @@ CSMT_sampler(void)
 	CSMT_free_wakeup_block(&samp_scb);
 #endif
 
-	return;
+	return NULL;
     }
 
     ++CsSamplerBlkPtr->numsamples;   /* Count the number of times we sample */
@@ -488,6 +489,8 @@ CSMT_sampler(void)
     CSms_thread_nap( sleeptime );
   } /* for (;;) */
 
+    /* NOTREACHED */
+
 } /* CS_sampler */
 
 
@@ -537,7 +540,7 @@ AddMutex( CS_SEMAPHORE *CsSem,
 
     if (CsSem && CsSem->cs_sem_name[0] != '\0')
     {	/* A "named" semaphore */
-    	hashnum = ElfHash((const unsigned char *)CsSem->cs_sem_name)
+    	hashnum = CSsamp_elf_hash((const unsigned char *)CsSem->cs_sem_name)
 		% MAXMUTEXES;
 	hashname = CsSem->cs_sem_name;
     }
@@ -615,7 +618,7 @@ LockHash(LK_LOCK_KEY	*LkKey)
     for (i = sizeof(LK_LOCK_KEY); i > 0; i--)
     {
     	h = (h << 4) + *name++;
-	if (g = h & 0xF0000000)
+	if ((g = (h & 0xF0000000)) != 0)
 	    h ^= g >> 24;
 	h &= ~g;
     }

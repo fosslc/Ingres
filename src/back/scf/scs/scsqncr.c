@@ -1224,6 +1224,8 @@
 **           Added sc930_xatrace to trace XA operations in SC930. 
 **           Re-surrected scs_format_xa_xid to do the formatting of an XA xid
 **           for both sc930_xatrace and scs_xatrace
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Refine CS prototypes.
 **/
 
 /*
@@ -2701,7 +2703,7 @@ static char execproc_syntax2[] = " = session.";
 */
 DB_STATUS
 scs_sequencer(i4 op_code,
-	      SCD_SCB *scb,
+	      CS_SCB *csscb,
 	      i4  *next_op )
 {
     DB_STATUS           ret_val = E_DB_OK;
@@ -2735,6 +2737,7 @@ scs_sequencer(i4 op_code,
     QEF_DATA		*data_buffer;
     SCC_CSCB		*cscb;		/* Convenience: scb->scb_cscb */
     SCC_GCMSG		*message;
+    SCD_SCB		*scb = (SCD_SCB *) csscb;
     SCS_CURRENT		*cquery;	/* Current query info inside scb */
     SCS_SSCB		*sscb;		/* Convenience: scb->scb_sscb */
     QEF_DATA		qef_data;

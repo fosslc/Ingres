@@ -37,6 +37,8 @@
 **	28-oct-2000 (toumi01)
 **	    In CSget_stk_pages allocate 16*ME_PAGESIZE for primary stack
 **	    to avoid dmfrcp segv caused by yacc recursion stack overflow.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Moved inkernel and current to front of CS_SYSTEM, fix here.
 */
 
 /*
@@ -49,8 +51,8 @@ $EXSP		= 32	/* CS_SCB.cs_exsp - CS_SCB */
 $GPREGS		= 36	/* CS_SCB.cs_gpregptr - CS_SCB */
 /* $FPREGS	= 40	 CS_SCB.cs_fpregs[0] - CS_SCB */
 /* $CONDCODS	= 72	 CS_SCB.cs_condcods - CS_SCB */
-$CS_CURRENT	= 184	/* Cs_srv_block.cs_current - Cs_srv_block */
-$CS_INKERNEL	= 204	/* Cs_srv_block.cs_inkernel - Cs_srv_block */
+$CS_CURRENT	= 20	/* Cs_srv_block.cs_current - Cs_srv_block */
+$CS_INKERNEL	= 16	/* Cs_srv_block.cs_inkernel - Cs_srv_block */
 $CS_swuser_len	= 104	/* amount of frame space used by function
 			/* 0 - 63 = save gp regs here */
 			/* 64 - 79 = save fp regs here ??? */

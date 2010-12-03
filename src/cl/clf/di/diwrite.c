@@ -16,6 +16,7 @@
 #include   "dilocal.h"
 #include   <me.h>
 #include   <cldio.h>
+#include   <csinternal.h>
 #include   "dilru.h"
 
 /* unix includes */
@@ -210,6 +211,10 @@
 **	    Remove obsolete/wrong i2 cast on slave mecopy call.
 **	8-Sep-2005 (schka24)
 **	    Reverse dec-98 change, use pwrite if fd-per-thread.
+**	15-Nov-2010 (kschendel) SIR 124685
+**	    Delete unused variables.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Compiler warning fix.
 **/
 
 /* # defines */
@@ -931,7 +936,6 @@ DI_async_write(
     CL_ERR_DESC *err_code )
 {
     STATUS	status = OK;
-    int		errnum;
     CS_SCB	*scb;
     int		saved_state;
     i4	start_time, elapsed;
@@ -977,11 +981,11 @@ DI_async_write(
 # if defined(OS_THREADS_USED) && !defined(xCL_ASYNC_IO)
     bytes_written =
  	 DI_thread_rw( O_WRONLY, diop, buf, bytes_to_write,
- 	 	       lseek_offset, (long*)0, err_code);
+ 	 	       lseek_offset, NULL, err_code);
 # else /* OS_THREADS_USED */
     bytes_written =
  	 DI_aio_rw( O_WRONLY, diop, buf, bytes_to_write,
- 	 	       lseek_offset, (long*)0, err_code);
+ 	 	       lseek_offset, NULL, err_code);
 # endif /* OS_THREADS_USED */
     if ( bytes_written != bytes_to_write )
     {

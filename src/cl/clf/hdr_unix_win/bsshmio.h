@@ -20,6 +20,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototypes.
 */
 
 # include <sl.h>
@@ -57,4 +59,13 @@ typedef struct _GC_BATCH_SHM
     VOLATILE i4          bat_offset;
 } GC_BATCH_SHM;
  
+/* prototypes */
 
+FUNC_EXTERN PTR shm_addr(
+	BS_PARMS *bsp,
+	i4 op);
+FUNC_EXTERN i4 shm_getcliservidx(void);
+FUNC_EXTERN bool shm_regfd(
+	BS_PARMS *bsp);
+FUNC_EXTERN VOID shm_ok(
+	BS_PARMS *bsp);

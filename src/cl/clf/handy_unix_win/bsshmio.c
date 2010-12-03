@@ -81,6 +81,10 @@
 **	    replace nat and longnat with i4
 **      19-nov-2002 (loera01)
 **          Set is_remote to FALSE in BS_PARMS.
+**      29-Nov-2010 (frima01) SIR 124685
+**          Added static declaration to IIshm_clear_dirty.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Fine tune fdreg prototype.
 */
 
 extern	VOID	sock_ok();
@@ -97,7 +101,7 @@ static GC_BATCH_SHM	bsm, *GC_bsm[2] = {NULL,NULL};
 ** Support routines - not visible outside this file.
 */
 
-VOID
+static VOID
 IIshm_clear_dirty()
 {
   i4   idx;
@@ -536,8 +540,8 @@ BS_PARMS *bsp;
  
 	 /* unregister file descriptors */
 	  
-    (void)iiCLfdreg( bcb->fd, FD_READ, (VOID (*))0, (PTR)0, -1 );
-    (void)iiCLfdreg( bcb->fd, FD_WRITE, (VOID (*))0, (PTR)0, -1 );
+    (void)iiCLfdreg( bcb->fd, FD_READ, NULL, NULL, -1 );
+    (void)iiCLfdreg( bcb->fd, FD_WRITE, NULL, NULL, -1 );
 
     if (close(bcb->fd* -1) < 0)
     {

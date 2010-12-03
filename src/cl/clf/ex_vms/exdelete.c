@@ -1,7 +1,8 @@
 # include	<compat.h>
 # include	<gl.h>
 # include	<ex.h>
-# include	"exi.h"
+# include	<clconfig.h>
+# include	<exinternal.h>
 
 /*
 **Copyright (c) 2004 Ingres Corporation

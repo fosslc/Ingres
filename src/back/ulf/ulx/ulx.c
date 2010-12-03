@@ -7,6 +7,7 @@
 #include    <dbdbms.h>
 #include    <cs.h>
 #include    <ex.h>
+#include    <er.h>
 #include    <me.h>
 #include    <st.h>
 #include    <tr.h>
@@ -57,6 +58,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of er.h with ERmsg_hdr prototype.
 */
 
 
@@ -275,6 +278,8 @@ ulx_rverror(char *errorid, DB_STATUS status, DB_ERRTYPE error,
 **	09-aug-1993 (walt)
 **	    The newly added exception number needs its address passed to
 **	    ule_format rather than its value.
+**	18-Nov-2010 (kschendel) SIR 124685
+**	    Correct type of sid, it's not a pointer.
 */
 STATUS
 ulx_exception( EX_ARGS *args, DB_FACILITY facility, i4 fac_error,
@@ -283,7 +288,7 @@ ulx_exception( EX_ARGS *args, DB_FACILITY facility, i4 fac_error,
     i4	error;
     char	err_msg[EX_MAX_SYS_REP];
     char	server_id[64];
-    CS_SCB      *scb;
+    CS_SID	sid;
 
     /*
     ** Report the facility-specific error message, e.g., "There was an
@@ -295,8 +300,8 @@ ulx_exception( EX_ARGS *args, DB_FACILITY facility, i4 fac_error,
 		(i4 *) &args->exarg_num );
     
     CSget_svrid( server_id );
-    CSget_scb( &scb );
-    ERmsg_hdr( server_id, scb->cs_self, err_msg);
+    CSget_sid( &sid );
+    ERmsg_hdr( server_id, sid, err_msg);
 
     /* Dump session info to the logfile */
     if (dump_session)

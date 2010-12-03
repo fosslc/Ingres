@@ -99,6 +99,8 @@
 **          Fix lseek offset calculation for LARGEFILE64 (b106470)
 **	28-Nov-2005 (kschendel)
 **	    Use dynamically sized zeroing buffer.
+**	15-Nov-2010 (kschendel) SIR 124685
+**	    Delete unused variables.
 **/
 
 
@@ -234,7 +236,6 @@ DIguarantee_space(
     i4		number_pages,
     CL_ERR_DESC		*err_code )
 {
-    int		unix_fd;
     STATUS	status = OK;
     DI_OP	diop;
 
@@ -287,7 +288,6 @@ DI_guarantee(
     STATUS                      big_status = OK, small_status =OK;
     STATUS                      intern_status = OK;
     register DI_SLAVE_CB        *disl;
-    i4				toss_eof;
     i4				end_of_guaranteed_space;
     OFFSET_TYPE			lseek_ret;
     int				unix_fd;

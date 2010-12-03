@@ -42,6 +42,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Moved inkernel and current to front of CS_SYSTEM, fix here.
 */
 
 /* Values for locking */
@@ -58,8 +60,8 @@
 # define CS__ESI	   0x2c 		   /* +0xc source index */
 # define CS__EDI	   0x30 	    	   /* +0x10 destination index */
 # define CS__EXSP	   0x34 		   /* + 0x14 Exception stk ptr*/
-# define CS__CURRENT	   0xb8 		   /* Current thread SCB */
-# define CS__INKERNEL	   0xcc 		   /* In kernel lock */
+# define CS__CURRENT	   0x14 		   /* Current thread SCB */
+# define CS__INKERNEL	   0x10 		   /* In kernel lock */
 
 .text
 .globl	 _CS_tas

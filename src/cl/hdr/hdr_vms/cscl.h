@@ -565,6 +565,8 @@
 **      06-oct-2010 (joea)
 **          Remove CScas4 and CScasptr macros since they're already defined in
 **          csnormal.h.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 */
 
 
@@ -580,6 +582,7 @@ typedef struct _CS_SEMAPHORE	CS_SEMAPHORE;
 typedef struct _CS_CONDITION	CS_CONDITION;
 typedef struct _CS_SEM_STATS	CS_SEM_STATS;
 typedef struct _CS_CPID  CS_CPID;
+struct _LK_LOCK_KEY;
 # define IICSresume_from_AST CSresume
 # define IICSsuspend_for_AST CSsuspend
 
@@ -588,9 +591,7 @@ typedef struct _CS_CPID  CS_CPID;
 */
 
 
-#define                 CS_MAXNAME	32
-						/* should be the same
-						** as DB_MAXNAME in dbms.h */
+#define                 CS_MAXNAME	32	/* DB_SCHEMA_MAXNAME */
 
 #if defined(PERF_TEST) || defined(xDEV_TRACE)
 /*
@@ -622,6 +623,31 @@ typedef struct _CS_CPID  CS_CPID;
 /* length of a semaphore name - spec-ed to be at least 24 */
 
 # define		CS_SEM_NAME_LEN	CS_MAXNAME
+
+/*}
+** Name: CS_SCB_Q - Que entry for the session control block
+**
+** Description:
+**      This is simply a structure containing the standard queue
+**      header element for session control blocks.  Building a
+**      standard structure for this reduces name space problems
+**      as well as guaranteeing correct usage.
+**
+** History:
+**      27-Oct-1986 (fred)
+**          Created.
+*/
+typedef struct _CS_SCB_Q
+{
+    CS_SCB          *cs_q_next;         /* moving forward . . . */
+    CS_SCB          *cs_q_prev;         /* as well as backwards */
+}   CS_SCB_Q;
+
+
+
+/* Unix and VMS common definitions.  (Windows has its own thing.) */
+
+#include <csnormal.h>
 
 /*
 **      The following constants are used to allow the called
@@ -836,49 +862,27 @@ typedef struct _CS_CB
     i4              cs_ascnt;           /* nbr of active sessions */
     i4              cs_stksize;         /* size of stack in bytes */
     bool            cs_stkcache;        /* enable stack caching w/threads */
-    STATUS          (*cs_scballoc)();   /* Routine to allocate SCB's */
-    STATUS          (*cs_scbdealloc)(); /* Routine to dealloc  SCB's */
-    STATUS	    (*cs_saddr)();	/* Routine to await session requests */
-    STATUS	    (*cs_reject)();	/* how to reject connections */
-    STATUS	    (*cs_disconnect)();	/* how to dis- connections */
-    STATUS	    (*cs_read)();	/* Routine to do reads */
-    STATUS	    (*cs_write)();	/* Routine to do writes */
-    STATUS          (*cs_process)();    /* Routine to do major processing */
-    STATUS	    (*cs_attn)();	/* Routine to process attn calls */
-    VOID	    (*cs_elog)();       /* Routine to log errors */
-    STATUS	    (*cs_startup)();	/* startup the server */
-    STATUS	    (*cs_shutdown)();	/* shutdown the server */
-    STATUS	    (*cs_format)();	/* format scb's */
-    STATUS          (*cs_diag)();       /* Diagnostics for server */
-    STATUS          (*cs_facility)();   /* return current facility */
-    i4              (*cs_get_rcp_pid)();/* return RCP's pid */
-    VOID            (*cs_scbattach)();  /* Attach thread control block to MO */
-    VOID            (*cs_scbdetach)();  /* Detach thread control block */
-    char           *(*cs_format_lkkey)();/*Format an LK_LOCK_KEY for display */
+    STATUS	(*cs_scballoc)(CS_SCB **, void *, i4);	/* Routine to allocate SCB's */
+    STATUS	(*cs_scbdealloc)(CS_SCB *); /* Routine to dealloc  SCB's */
+    STATUS	(*cs_saddr)(void *, i4); /* Routine to await session requests */
+    STATUS	(*cs_reject)(void *, STATUS); /* how to reject connections */
+    VOID	(*cs_disconnect)(CS_SCB *); /* how to dis- connections */
+    STATUS	(*cs_read)(CS_SCB *, i4);	/* Routine to do reads */
+    STATUS	(*cs_write)(CS_SCB *, i4);	/* Routine to do writes */
+    STATUS	(*cs_process)(i4, CS_SCB *, i4 *); /* Routine to do major processing */
+    STATUS	(*cs_attn)(i4, CS_SCB *); /* Routine to process attn calls */
+    VOID	(*cs_elog)(i4, CL_ERR_DESC *, i4, ...);	/* Routine to log errors */
+    STATUS	(*cs_startup)(CS_INFO_CB *);	/* startup the server */
+    STATUS	(*cs_shutdown)(void);	/* shutdown the server */
+    STATUS	(*cs_format)(CS_SCB *,char *,i4,i4);	/* format scb's */
+    STATUS	(*cs_diag)(void *);	/* Diagnostics for server */
+    STATUS	(*cs_facility)(CS_SCB *); /* return current facility */
+    i4		(*cs_get_rcp_pid)(void); /* return RCP's pid */
+    VOID	(*cs_scbattach)(CS_SCB *); /* Attach thread control block to MO */
+    VOID	(*cs_scbdetach)(CS_SCB *); /* Detach thread control block */
+    char	*(*cs_format_lkkey)(struct _LK_LOCK_KEY *,char *); /*Format an LK_LOCK_KEY for display */
 #define                 CS_NOCHANGE     -1	/* no change to this parm */
 }   CS_CB;
-
-/*}
-** Name: CS_SCB_Q - Que entry for the session control block
-**
-** Description:
-**      This is simply a structure containing the standard queue
-**      header element for session control blocks.  Building a
-**      standard structure for this reduces name space problems
-**      as well as guaranteeing correct usage.
-**
-** History:
-**      27-Oct-1986 (fred)
-**          Created.
-*/
-typedef struct _CS_SCB_Q
-{
-    CS_SCB          *cs_q_next;         /* moving forward . . . */
-    CS_SCB          *cs_q_prev;         /* as well as backwards */
-}   CS_SCB_Q;
-
-#include <csnormal.h>
-
 
 /*
 **  Function Prototypes 
@@ -1064,6 +1068,13 @@ FUNC_EXTERN STATUS CSinitiate(i4 *argc, char ***argv, CS_CB *ccb );
 FUNC_EXTERN STATUS CSremove(CS_SID sid);
 
 FUNC_EXTERN STATUS CSterminate(i4 mode, i4 *active_count);
+
+FUNC_EXTERN i4 CSvms_uic(void);
+
+/* Export function prototypes that are platform dependent */
+FUNC_EXTERN void CS_get_critical_sems(void);
+FUNC_EXTERN void CS_rel_critical_sems(void);
+FUNC_EXTERN void CS_check_dead(void);
 
 /*
 ** Constants that define MIN and MAX priorities of sessions, and the

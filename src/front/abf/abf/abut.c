@@ -106,6 +106,8 @@
 **          Replace READONLY/WSCREADONLY by const.
 **	26-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	22-Nov-2010 (kschendel) SIR 124685
+**	    Drop a few more ancient / obsolete ports
 **/
 
 /* # define's */
@@ -125,11 +127,11 @@
 #define FORTRAN ERx("f")
 #define PASCAL ERx("")
 #define BASIC ERx("")
-#if defined (dr6_us5) || defined (usl_us5)
+#if defined (usl_us5)
 #define COBOL ERx("cbl")
 #else
 #define COBOL ERx("")
-#endif /* dr6_us5 || usl_us5 */
+#endif /* usl_us5 */
 #define ADA ERx("")
 #endif
  
@@ -216,10 +218,10 @@ static const UT_SUFFIX       utsuffix[] = {
         {ERx("sc"),     hostC,          CIesqC,         UT_SQL},
         {ERx("qf"),     hostFORTRAN,    CIeqFORTRAN,    UT_QUEL},
         {ERx("sf"),     hostFORTRAN,    CIesqFORTRAN,   UT_SQL},
-#if defined(dr6_us5) || defined(usl_us5)
+#if defined(usl_us5)
         {ERx("qcb"),    hostCOBOL,      CIeqCOBOL,      UT_QUEL},
         {ERx("scb"),    hostCOBOL,      CIesqCOBOL,     UT_SQL},
-#endif /* dr6_us5 || usl_us5 */
+#endif /* usl_us5 */
 #ifndef UNIX
         {ERx("qcb"),    hostCOBOL,      CIeqCOBOL,      UT_QUEL},
         {ERx("scb"),    hostCOBOL,      CIesqCOBOL,     UT_SQL},
@@ -262,9 +264,9 @@ static const UT_SUFFIX       utsuffix[] = {
         {ERx("f"),      hostFORTRAN,    -1,             UT_NODML},
         {ERx("F"),      hostFORTRAN,    -1,             UT_NODML},
         {ERx("s"),      hostC,          -1,             UT_NODML},
-#if defined(dr6_us5) || defined(usl_us5)
+#if defined(usl_us5)
         {ERx("cbl"),    hostCOBOL,      -1,             UT_NODML}
-#endif /* dr6_us5 || usl_us5 */
+#endif /* usl_us5 */
 #endif
 #ifdef VMS
         {ERx("mar"),    hostC,          -1,             UT_NODML},

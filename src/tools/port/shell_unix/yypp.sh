@@ -27,6 +27,9 @@
 ##	19-Jun-2009 (kschendel) SIR 122138
 ##	    readvers figures out config for hybrids now.
 ##	    Compute and pass conf_BUILD_ARCH_xx_yy symbol.
+##	23-Nov-2010 (kschendel)
+##	    -Z $READVERS apparently can't happen, because it was broken.
+##	    Fix it anyway, more or less.
 #
 
 CMD="`basename $0`"
@@ -95,11 +98,10 @@ if [ -z "$conf" -a -z "$config" ] ; then
 elif [ -z "$READVERS" ] ; then
   case $conf in
     [a-z0-9][a-z0-9][a-z0-9]_us5) ;;
-    [a-z0-9][a-z0-9][a-z0-9]_u42) ;;
     [a-z0-9][a-z0-9][a-z0-9]_osf) ;;
-       [a-z][a-z0-9][a-z0-9]_bos) ;;
-       [a-z][a-z0-9][a-z0-9]_vme) ;;
-                         sqs_ptx) ;;
+    [a-z0-9][a-z0-9][a-z0-9]_osx) ;;
+    [a-z0-9][a-z0-9][a-z0-9]_lnx) ;;
+    [a-z0-9][a-z0-9][a-z0-9]_sol) ;;
                            *_kit) ;;
                                *) echo "$CMD: Bad config string: $conf"
                                   echo "Usage:" ; echo " $CMD $usage"

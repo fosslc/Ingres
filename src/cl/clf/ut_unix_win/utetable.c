@@ -21,12 +21,14 @@
 **	    Properly prototyped UTemodtype().
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Changed argument of UTetable for prototyping purposes.
 */
 
 ModDict *
 UTetable(modname, dict)
 char			*modname;
-ArrayOf(ModDict *)	*dict;
+ArrayModDictP		*dict;
 {
 	int	i;
 	ModDict	*d;

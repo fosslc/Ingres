@@ -181,6 +181,10 @@
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
 **	04-Nov-2010 (miket) SIR 124685
 **	    Prototype cleanup. Add cast to silence sigaction type warning.
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    sigaction handler just takes int.
+**	1-Dec-2010 (kschendel)
+**	    Compiler warning fix (incorrect cast).
 */
 
 # include	<compat.h>
@@ -220,11 +224,16 @@ static  struct  sigaction               newaction;
 static  bool    firsttime = TRUE;
 # endif
 
+# ifdef xCL_011_USE_SIGVEC
 static TYPESIG
 alarmhdlr(signum, code, scp)
 int signum;
 EX_SIGCODE SIGCODE(code);
 EX_SIGCONTEXT SIGCONTEXT(scp);
+#else
+static TYPESIG
+alarmhdlr(int signum)
+#endif
 {
 
 # ifdef xCL_011_USE_SIGVEC
@@ -242,34 +251,22 @@ EX_SIGCONTEXT SIGCONTEXT(scp);
     (void)sigsetmask(scp->sc_mask);
 # endif /* ris_u64 */
 
-# else
-# if defined(xCL_068_USE_SIGACTION)
+# elif defined(xCL_068_USE_SIGACTION)
     /*
      ** restore original signal mask.
      */
-# if defined(dol_us5) || defined(sqs_ptx) || defined(dg8_us5) \
-  || defined(dgi_us5) || defined(sos_us5) || defined(axp_osf) \
-  || defined(thr_hpux) || defined(any_aix) || defined(LNX) \
-  || defined(OSX)
-	{
+    {
 	sigset_t mask;
 	sigemptyset(&mask);
 	sigaddset(&mask,signum);
 	sigprocmask(SIG_UNBLOCK, &mask, (sigset_t *)0);
-	}
-# else
-     sigprocmask(SIG_SETMASK, &(scp->uc_sigmask), (sigset_t *)0);
-# endif /* dol_us5 */
-
-# else
-# if defined(xCL_086_USE_SIGSET)
+    }
+# elif defined(xCL_086_USE_SIGSET)
      	/*
      	** Released SIGALRM from blocked signals.
      	*/
      	(void) sigrelse(SIGALRM);
 
-# endif /* xCL_086_USE_SIGSET */
-# endif /* xCL_068_USE_SIGACTION */
 # endif /* not xCL_011_USE_SIGVEC */
 
     longjmp(context, TIMEEXPR);
@@ -288,11 +285,7 @@ i4	seconds;
     struct	sigvec		oldvec;
 # else
 # ifdef xCL_068_USE_SIGACTION
-# if defined(rux_us5)
-        TYPESIG (*oldvec)();
-# else
         struct     sigaction               oldaction;
-# endif
 # endif	/* xCL_068_USE_SIGACTION */
 # endif	/* xCL_011_USE_SIGVEC */
     register i4  c;
@@ -339,7 +332,7 @@ i4	seconds;
 # ifdef xCL_068_USE_SIGACTION
             if (firsttime)
             {
-                newaction.sa_handler = (VOID *)alarmhdlr;
+                newaction.sa_handler = alarmhdlr;
                 sigemptyset(&(newaction.sa_mask));
                 newaction.sa_flags = 0;
 
@@ -357,11 +350,7 @@ i4	seconds;
 		sigvec(SIGALRM, &oldvec, NULL);
 # else
 # ifdef xCL_068_USE_SIGACTION
-#  if defined(rux_us5)
-                signal(SIGALRM, oldvec);
-#  else
                 sigaction(SIGALRM, &oldaction, (struct sigaction *)0);
-#  endif
 # endif	/* xCL_068_USE_SIGACTION */
 # endif	/* xCL_011_USE_SIGVEC */
 		return(TE_TIMEDOUT);
@@ -375,11 +364,7 @@ i4	seconds;
 	    sigvec(SIGALRM, &newvec, &oldvec);
 # else
 # ifdef xCL_068_USE_SIGACTION
-#  if defined(rux_us5)
-            oldvec = signal(SIGALRM, alarmhdlr);
-#  else
             sigaction(SIGALRM, &newaction, &oldaction);
-#  endif
 # endif	/* xCL_068_USE_SIGACTION */
 # endif	/* xCL_011_USE_SIGVEC */
 	    alarm(seconds);

@@ -132,6 +132,8 @@
 #	17-Jul-2009 (kschendel) SIR 122138
 #	    Only do the iquote thing for gcc 4.x.y on linux.  Other gcc users
 #	    (e.g. osx) can pick up the iquote fix on an as-needed basis.
+#	22-Nov-2010 (kschendel) SIR 124685
+#	    Drop a few more obsolete ports.
 #
 
 while [ $# != 0 ]
@@ -179,12 +181,8 @@ fi
 [ -f $ING_SRC/tools/port$noise/conf/CONFIG ] || exit 1
 
 case $conf in
-	dr6_us5)	CPP=/usr/ccs/lib/cpp ;;
-	sui_us5)	CPP=/usr/ccs/lib/cpp ;;
 	su4_us5)	CPP=/usr/ccs/lib/cpp ;;
 	su9_us5)	CPP=/usr/ccs/lib/cpp ;;
-	rux_us5)        CPP=/usr/ccs/lib/cpp ;;
-        rmx_us5)        CPP=/usr/ccs/lib/cpp ;;
 	sgi_us5)	CPP=/usr/lib32/cmplrs/cpp ;;
 	int_rpl|\
 	*_lnx)	CPP='/lib/cpp -traditional -Ulinux'

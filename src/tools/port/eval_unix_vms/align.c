@@ -43,6 +43,8 @@ static char rcsid[]="$Header: /cmlib1/ingres63p.lib/unix/tools/port/eval/align.c
 **		platforms that support printf %p format option and added
 **		#include <generic.h> to pick this flag, if defined.
 **		Replace %x with %p for pointer values where necessary.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 typedef	char * ptr;
@@ -374,7 +376,7 @@ main(argc, argv)
 }
 
 void
-buserr(sig)
+buserr(int sig)
 {
 	(void) signal(sig, buserr);
 	errs++;
@@ -389,7 +391,7 @@ buserr(sig)
 
 
 void
-segerr(sig)
+segerr(int sig)
 {
 	(void) signal(sig, segerr);
 	errs++;
@@ -405,7 +407,7 @@ segerr(sig)
 }
 
 void
-illerr(sig)
+illerr(int sig)
 {
 	(void) signal(sig, illerr);
 	errs++;
@@ -421,7 +423,7 @@ illerr(sig)
 }
 
 void
-emterr(sig)
+emterr(int sig)
 {
 	(void) signal(sig, emterr);
 	errs++;
@@ -435,7 +437,7 @@ emterr(sig)
 }
 
 char *
-alignequiv(size)
+alignequiv(int size)
 {
 	if(size == sizeof(char))
 		return("char");

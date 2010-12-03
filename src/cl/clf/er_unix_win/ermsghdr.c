@@ -8,6 +8,7 @@
 #include    <gc.h>
 #include    <st.h>
 #include    <tm.h>
+#include    <er.h>
 
 /**
 **
@@ -28,6 +29,9 @@
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
+*/
 
 
 /*{
@@ -37,21 +41,13 @@
 **      This procedure 
 **
 ** Inputs:
-**	flag
-**	    ER_ERROR_MSG		write message to errlog.log
-**	    ER_AUDIT_MSG		obsolete
-**	    ER_OPER_MSG			write to operator (system log, event
-**					log, or system-configurable log)
-**      message                         Address of buffer containing the message.
-**      msg_length                      Length of the message.
+**	svr_id		A server ID string, eg iidbms
+**	session		The session ID (CS_SID but we'll call it a SCALARP
+**			to avoid circular header references)
+**	msg_header	char[] to put the output into
 **
 ** Outputs:
-**      err_code                        Operating system error code.
-**	Returns:
-**	    OK
-**	    ER_BADOPEN
-**	    ER_BADSEND
-**	    ER_BADPARAM
+**	Fills in msg_header, returns OK
 **	Exceptions:
 **	    none
 **
@@ -62,12 +58,9 @@
 */
 
 STATUS
-ERmsg_hdr( svr_id, session, msg_header)
-char		   *svr_id;
-char		   *session;
-char		   *msg_header;
+ERmsg_hdr( char *svr_id, SCALARP session, char *msg_header)
 {
-    char        host_name[33];
+    char        host_name[65];
     i4		length;
     SYSTIME	stime;
 
@@ -79,4 +72,5 @@ char		   *msg_header;
     length = STlength(msg_header);
     msg_header[length++] = ' ';
     msg_header[length] = EOS;
+    return (OK);
 }

@@ -136,6 +136,8 @@
 **	    replace nat and longnat with i4
 **	15-nov-2010 (stephenb)
 **	    Correctlty define static functions for prototyping.
+**	1-Dec-2010 (kschendel)
+**	    Modernize declaration style for Sun compiler.
 */
 
 static i4	pipe_open(PIPE *);
@@ -144,13 +146,8 @@ static STATUS	swap_pipes(PIPE *, PIPE *, char **);
 
 
 STATUS
-PCsspawn(argc, argv, wait, c_stdin, c_stdout, pid)
-i4	argc;
-char	**argv;
-bool	wait;
-PIPE	*c_stdin;	/* PIPE pointer to be associated with child's stdin */
-PIPE	*c_stdout;	/* PIPE pointer to be associated with child's stdout */
-PID	*pid;		/* process id of spawned child */
+PCsspawn(i4 argc, char **argv, bool wait,
+	PIPE *c_stdin, PIPE *c_stdout, PID *pid)
 {
     PIPE	pipe1[2];
     PIPE	pipe2[2];

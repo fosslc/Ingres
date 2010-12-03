@@ -13,30 +13,16 @@
 #
 # The following things are defined in bzarch.h as needed.
 #
-# Config string machine identifier:
+# VERS related things:
 #
-#	sun.u42 -> sun_u42
-#	3bx_us5 -> x3bx_us5
-#
-# Obsolescent machine identifiers:
-#
-#	VAX
-#	PYRAMID
-#	Power6		(cci tahoe)
-#	ELXSI
-#	CONCEPT32	(gould PN, not NP)
-#	SUN		(really wrong)
-#	BURROUGHS
-#	CT_MEGA
-#	x3B5
-#
-# Machine/OS common flavors:
-#
-#	MEGAFRAME	(burroughs or CT)
-#	UNIPLUS		(A/UX, BT, etc.)
-#	SEQUENT		(Balance or Symmetry)
-#	DOMAINOS	(apollo)
-#	AIX		(ibm)
+#	- config or config32 / config64 from VERS file
+#	- BUILD_ARCH32 or BUILD_ARCH64 for hybrid capables
+#	- conf_BUILD_ARCH_xx (xx is 32, 64, 32+64, or 64+32) (hybrid)
+#	- generic pseudo-config strings for multiple related
+#	  platforms, e.g. sparc_sol, any_hpux, any_aix.
+#	- conf_XXX for all VERS options XXX
+#	- conf_YYY defined with value for all VERS params YYY
+#	  (See the README in tools/port/conf)
 #
 # Things that don't really change on Unix:
 #
@@ -780,6 +766,9 @@
 ##	09-Okt-2009 (frima01) SIR 122138
 ##	   Replace non-existent BUILD_BITS32 by BUILD_ARCH32 to enable raat
 ##	   support for 32bit installations on AIX and HP-UX.
+##	22-Nov-2010 (kschendel) SIR 124685
+##	    Drop a few more ancient / obsolete ports.
+##	    Fix up header comment a wee bit.
 
 header=bzarch.h
 date=`date`
@@ -872,19 +861,7 @@ if [ "$config32" = 'rs4_u5' ] ; then
     echo "#define any_aix"
 fi
 
-#
-# obsolete machine identifiers (predate use of config string)
-#
-# These defines are mostly rehashing of the machine ID defined by the
-# cpp.  They should eventually expire as the references to them in the
-# code are changed to #ifdef's keyed either on some capability determined
-# automatically below or on the config string.
-#
-
-case $vers in
-vax_*)		echo "# define VAX"		;;
-rmx_us5|rux_us5)		echo "# define PYRAMID"		;;
-esac
+# VERS #set: option XXX defines conf_XXX
 
 for o in $opts
 do
@@ -898,11 +875,14 @@ do
 	fi
 done
 
+# VERS #set: param YYY value defines conf_YYY as value
+
 for o in $conf_params
 do
 	eval x='$conf_'$o
 	echo "# define conf_$o $x" 
 done
+
 # Define a symbol so that ccpp / default.h won't try to
 # define all the conf_xxx stuff again.  That annoys the
 # preprocessor.
@@ -1076,11 +1056,8 @@ end_of_invariants
 #			not been enabled for this platform
 
 case $vers in
-sqs_ptx)	echo "# define IEEE_FLOAT"
-		;;
 sqs_*)		echo "# define IEEE_FLOAT"
 		;;
-sui_us5|\
 su4_us5|\
 su9_us5|\
 a64_sol)	echo "# define IEEE_FLOAT"
@@ -1117,33 +1094,11 @@ hp8_us5)	echo "# define IEEE_FLOAT"
 		echo "# define HPUX"
 		echo "# define RAAT_SUPPORT"
 		;;
-sos_us5)	NEED_ZERO_FILL=true
-		echo "# define IEEE_FLOAT"
-		;;
-rmx_us5)        echo "# define IEEE_FLOAT"
-                ;;
-rux_us5)        echo "# define IEEE_FLOAT"
-                echo "# define OS_THREADS_USED"
-                echo "# define POSIX_THREADS"
-                echo "# define DCE_THREADS"
-                echo "# define SIMULATE_PROCESS_SHARED"
-		echo "# define USE_IDLE_THREAD"
-		;;
 sgi_us5)	echo "# define IEEE_FLOAT"
             	echo "# define OS_THREADS_USED"
             	echo "# define POSIX_THREADS"
                 echo "# define LARGEFILE64"
 		;;
-ds3_ulx)        echo "# define IEEE_FLOAT"
-		;;
-dr6_us5)	echo "# define IEEE_FLOAT"
-		;;
-dg8_us5 | dgi_us5)	echo "# define IEEE_FLOAT"
-                echo "# define OS_THREADS_USED"
-                echo "# define POSIX_THREADS"
-                echo "# define _POSIX4A_DRAFT6_SOURCE"
-	        echo "# define _POSIX4_DRAFT_SOURCE"	
-                ;;
 r64_us5|\
 rs4_us5)	echo "# define IEEE_FLOAT"
                 echo "# define OS_THREADS_USED"
@@ -1155,16 +1110,6 @@ rs4_us5)	echo "# define IEEE_FLOAT"
 		echo "# define RAAT_SUPPORT"
 		echo "# endif"
 		## R_MAINWIN_50 not needed any more??
-		;;
-ris_u64)	echo "# define IEEE_FLOAT"
-                echo "# define OS_THREADS_USED"
-                echo "# define POSIX_THREADS"
-        	echo "# define UNSIGNED_CHAR_IN_HASH"
-		echo "# define LARGEFILE64"
-		;;
-ris_us5)	echo "# define IEEE_FLOAT"
-		;;
-nc4_us5)        echo "# define IEEE_FLOAT"
 		;;
 axp_osf)        echo "# define IEEE_FLOAT"
 		echo "# define OS_THREADS_USED"
@@ -1179,8 +1124,6 @@ axp_osf)        echo "# define IEEE_FLOAT"
     echo "# define F4CAST_MACRO(a) (*(f4*)(a))"
     echo "# define F8CAST_MACRO(a) (*(f8*)(a))"
     echo "# define I8CAST_MACRO(a) (*(i8*)(a))"
-                ;;
-ts2_us5)        echo "# define IEEE_FLOAT"
                 ;;
 usl_us5)        echo "# define IEEE_FLOAT"
                 echo "# define OS_THREADS_USED"
@@ -1282,22 +1225,14 @@ main()
 rm -f /tmp/novoid.[co]
 #
 # READONLY - can we use const type with the compiler?
-# Need to have a special case for ris_us5 because of compiler flag
-# conflicts per fredv. (seng)
 #
 case $vers in
-ds3_ulx|ris_us5|axp_osf|sqs_ptx|ris_u64)
+axp_osf)
 	echo "# define READONLY"
 	echo "# define WSCREADONLY"
 	echo "# define GLOBALCONSTDEF"
 	echo "# define GLOBALCONSTREF extern"
 	;;
-dg8_us5|dgi_us5)
-        echo "# define READONLY __const__"
-        echo "# define WSCREADONLY __const__"
-        echo "# define GLOBALCONSTDEF __const__"
-        echo "# define GLOBALCONSTREF extern __const__"
-        ;;
 *)
 	if (
 		cd /tmp
@@ -1324,11 +1259,6 @@ esac
 # The following tests whether the volatile keyword is supported
 # by the compiler.  The volatile keyword prevents some code from
 # being moved when it shouldn't be.
-case $vers in
-dg8_us5|dgi_us5)
-        echo "# define VOLATILE __volatile__"
-        ;;
-*)
 	if (
 		cd /tmp
 		echo '
@@ -1353,15 +1283,13 @@ main()
 		echo "# define VOLATILE"
 	fi
 	rm -f /tmp/volatile*
-	;;
-esac
 
 #
 # Check to see if __setjmp exists.  We check here because the define
 # is needed in the header file ex.h.
 #
 
-if [ "$vers" = "hp8_us5" ] || [ "$vers" = "rtp_us5" ]
+if [ "$vers" = "hp8_us5" ]
 then
     echo "# define xCL_038_BAD_SETJMP"
 else
@@ -1420,12 +1348,11 @@ fi
 #
 
 case $vers in
-brm_us5|alt_u42|btf_us5|dgc_us5|apo_u42)	ALIGN=68010	;;
-su4_u42|su4_cmw|dr6_us5|su4_us5|su9_us5)	ALIGN=SPARC	;;
-ds3_ulx|rmx_us5|ts2_us5|sgi_us5|rux_us5)	ALIGN=MIPS      ;;
-axp_osf)						ALIGN=AXP	;;
-ris_u64|rs4_us5)                                ALIGN=POWER64   ;;
-i64_lnx)                                                ALIGN=IA64   ;;
+su4_us5|su9_us5)		ALIGN=SPARC	;;
+sgi_us5)			ALIGN=MIPS      ;;
+axp_osf)			ALIGN=AXP	;;
+rs4_us5)			ALIGN=POWER64   ;;
+i64_lnx)			ALIGN=IA64   ;;
 esac
 
 #	Evaluation section.  Automatically determined defines.
@@ -1458,7 +1385,6 @@ fi
 #
 case $ALIGN in
 SPARC)	ALIGN_I2=2 ALIGN_I4=4 ALIGN_I8=8 ALIGN_F4=4 ALIGN_F8=8 ;;
-68010)	ALIGN_I2=2 ALIGN_I4=4 ALIGN_I8=4 ALIGN_F4=4 ALIGN_F8=4 ;;
 MIPS)   ALIGN_I2=2 ALIGN_I4=4 ALIGN_I8=8 ALIGN_F4=4 ALIGN_F8=8 ;;
 AXP)    ALIGN_I2=2 ALIGN_I4=4 ALIGN_I8=8 ALIGN_F4=4 ALIGN_F8=8 ;;
 POWER64)    ALIGN_I2=2 ALIGN_I4=4 ALIGN_I8=8 ALIGN_F4=4 ALIGN_F8=8 ;;
@@ -1609,9 +1535,6 @@ fi
 if [ "$conf_B64" ]
 then
 case $vers in
-dgi_us5)
-        echo "# define _FILE_OFFSET_BITS  64"  
-	;;
 axp_osf|\
   *_lnx|\
 int_rpl)

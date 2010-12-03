@@ -1,7 +1,6 @@
 /*
 ** Copyright (c) 2004, 2010 Ingres Corporation
 **
-NO_OPTIM = sui_us5 rmx_us5 rux_us5 i64_aix
 */
 
 # include    <compat.h>
@@ -19,19 +18,13 @@ NO_OPTIM = sui_us5 rmx_us5 rux_us5 i64_aix
 # include    <nm.h>
 # include    <si.h>
 # include    <tr.h>
+# include    <errno.h>
 
 /* don't want to go through LGKrundown PCatexit glorp */
 # define PCexit(s)      exit(s)
 
 #if defined(VMS)
 static i4 fork(void) {return (0);}
-#endif
-
-#ifdef ds3_ulx
-#include <sys/time.h>
-struct timeval   st_delay;
-#define usleep(x)       { st_delay.tv_usec = (x); st_delay.tv_sec = 0; \
-                          select(32, NULL, NULL, NULL, &st_delay); }
 #endif
 
 /**
@@ -159,6 +152,10 @@ struct timeval   st_delay;
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete dg ports.
 **/
 
 /* Testing constants */
@@ -166,17 +163,6 @@ struct timeval   st_delay;
 /* Number of spins for which to waste time in critical section */
 # define CS_SPINS	50
 
-/*
-PROGRAM = csmtspintest
-
-NO_OPTIM = sos_us5
-
-OWNER =	INGUSER
-
-MODE = SETUID
-
-NEEDLIBS = COMPATLIB MALLOCLIB
-*/
 
 VOID perror();
 
@@ -189,12 +175,17 @@ typedef struct tally {
 	i4 	set;
 	} TALLY;
 
-extern	int	errno;
+
+static void
+getargs(i4 argc, char **argv, i4 *revolutions, i4 *num_child, i4 *use_tas);
+
+static void
+spin_on_lock(i4 revolutions, i4 lockid, struct tally *result,
+	i4 use_tas, i4 num_child);
 
 /*ARGSUSED*/
-main(argc, argv)
-i4	argc;
-char	**argv;
+int
+main(i4 argc, char **argv)
 {
     STATUS     status = OK; 
     PTR	       address;
@@ -248,9 +239,6 @@ char	**argv;
     {
         if (fork() == 0)		/* In child */
     	{
-#if defined(ds3_ulx) || defined(ris_us5)
-	    shmdt(address);
-#endif
     	    if (status = MEget_pages(ME_MSHARED_MASK,1,"spintst.mem", &address, 
 				     &alloc_pages, &err_code))
     	   {
@@ -269,11 +257,6 @@ char	**argv;
 	 completed += result->slot[x];
     SIprintf("%d out of %d children successfully acquired locks\n",completed,
 				num_child);
-# ifndef OS_THREADS_USED
-    if (!use_tas)
-        SIprintf("Number of collisions (cssp_collide)=%d\n",
-				result->spinbit.cssp_collide);
-# endif /* OS_THREADS_USED */
     MEsmdestroy("spintst.mem", &err_code);     /* cleanup when done */
 #ifdef LNX
     CS_des_installation();
@@ -282,6 +265,8 @@ char	**argv;
         PCexit(0); 
     else
 	PCexit(1);
+    /* NOTREACHED */
+    return (0);
 }
 
 /*
@@ -289,9 +274,9 @@ char	**argv;
 **  spin_on_lock
 **
 */
-spin_on_lock(revolutions, lockid, result, use_tas, num_child)
-i4	revolutions, lockid, use_tas, num_child;
-struct tally * result;
+static void
+spin_on_lock(i4 revolutions, i4 lockid, struct tally *result,
+	i4 use_tas, i4 num_child)
 {
     i4		x;
     i4		y;
@@ -300,15 +285,11 @@ struct tally * result;
     /* Spin until all processes have been forked and all shmem attached */
     while(result->start != num_child)
     {
-#if defined(ds3_ulx) || defined(any_aix) || \
-    defined(pym_us5) || defined(dgi_us5) || defined(axp_osf) || \
+#if defined(any_aix) || defined(axp_osf) || \
     defined(int_lnx) || defined(int_rpl)
         usleep(10L);
 #endif
 
-#if defined(dg8_us5)
-        sleep(1);
-#endif    /* if defined dg8_us5  */
     }
 
     for (x = 0; x < revolutions ; x++)
@@ -337,10 +318,8 @@ struct tally * result;
         result->slot[lockid] = 1;
 }
 
-getargs(argc, argv, revolutions, num_child, use_tas)
-i4	argc;
-char	**argv;
-i4	*revolutions, *num_child, *use_tas;
+static void
+getargs(i4 argc, char **argv, i4 *revolutions, i4 *num_child, i4 *use_tas)
 {
 	i4 	argvpointer; 
  	argvpointer = argc - 1; 

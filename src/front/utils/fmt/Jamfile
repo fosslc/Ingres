@@ -3,12 +3,12 @@
 #
 #    20-Oct-2009 (hweho01)
 #      Remove the IINOOPTIM entries that were generated incorrectly.
+#	23-Nov-2010 (kschendel)
+#	    Drop obsolete dg8 nooptim.
 
 SubDir ING_SRC front utils fmt ;
 
 IISUBSYS front utils fmt ;
-
-IINOOPTIM fmdeffmt.c : dg8_us5 ;
 
 
 IILIBRARY FMTLIB : strutil.c fstring.c fsetfmt.c fnt.c

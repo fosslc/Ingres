@@ -4,10 +4,8 @@
 # ifndef NM_HDR_INCLUDED
 # define NM_HDR_INCLUDED 1
 
-#ifdef CL_PROTOTYPED
 /* needed for the FILE definition */
 #include    <si.h>
-#endif
 #include    <nmcl.h>
 
 /**CL_SPEC
@@ -37,75 +35,59 @@
 **	    Backed out last change for now.
 **	29-mar-2004 (somsa01)
 **	    Added prototype for NMlogOperation().
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 FUNC_EXTERN STATUS  NMf_open(
-#ifdef CL_PROTOTYPED
 	    char	*mode, 
 	    char	*fname, 
 	    FILE	**fptr
-#endif
 );
 
 FUNC_EXTERN char *  NMgetpart(
-#ifdef CL_PROTOTYPED
 	    char	*buf
-#endif
 );
 
 FUNC_EXTERN VOID    NMgtAt(
-#ifdef CL_PROTOTYPED
 	    char	*name, 
 	    char	**ret_val
-#endif
 );
 
 FUNC_EXTERN STATUS  NMgtIngAt(
-#ifdef CL_PROTOTYPED
 	    char	*name, 
 	    char	**ret_val
-#endif
 );
 
 FUNC_EXTERN STATUS  NMloc(
-#ifdef CL_PROTOTYPED
 	    char	which, 
 	    LOCTYPE	what, 
 	    char	*fname, 
 	    LOCATION	*ploc
-#endif
 );
 
 FUNC_EXTERN VOID    NMlogOperation(
-#ifdef CL_PROTOTYPED
 	    char	*oper,
 	    char	*name,
 	    char	*value,
 	    char	*new_value,
 	    STATUS	status
-#endif
 );
 
 FUNC_EXTERN STATUS  NMpathIng(
-#ifdef CL_PROTOTYPED
 	    char	**path
-#endif
 );
 
 FUNC_EXTERN STATUS  NMsetpart(
-#ifdef CL_PROTOTYPED
 	    char	*partname
-#endif
 );
 
 FUNC_EXTERN STATUS  NMt_open(
-#ifdef CL_PROTOTYPED
 	    char	*mode, 
 	    char	*fname, 
 	    char	*suffix,
 	    LOCATION	*t_loc, 
 	    FILE	**fptr
-#endif
 );
 
 #ifdef NT_GENERIC

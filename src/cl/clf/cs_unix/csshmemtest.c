@@ -65,6 +65,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	14-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 
@@ -72,7 +74,7 @@
 **  Forward and/or External function references.
 */
 
-VOID perr();    			/* declaration of external proc */
+static VOID perr(char *string, STATUS ret_val, int errnum);
 static i4	exit_stat = OK;
 
 
@@ -134,7 +136,6 @@ char               *argv[];
     PTR		server_segment, server2_segment;
     STATUS	status;
     i4	*i;
-    u_i4	shmid;
     i4		count;
     u_i4	server_num;
     bool	serv = FALSE, sys = TRUE;
@@ -159,7 +160,7 @@ char               *argv[];
 	goto exit_point;
     }
 
-    CS_get_cb_dbg(&cs_sm_cb);
+    CS_get_cb_dbg((PTR *) &cs_sm_cb);
 
     if (status = CS_map_sys_segment(&err_code))
     {
@@ -168,7 +169,7 @@ char               *argv[];
 	goto exit_point;
     }
 
-    CS_get_cb_dbg(&cs2_sm_cb);
+    CS_get_cb_dbg((PTR *) &cs2_sm_cb);
 
     if ((cs_sm_cb != cs2_sm_cb) &&
 	(MEcmp((PTR) cs_sm_cb, (PTR) cs2_sm_cb, sizeof(CS_SMCNTRL))))
@@ -246,11 +247,8 @@ exit_point:
     PCexit(exit_stat);
 }
 
-VOID
-perr(string, ret_val, errnum)
-char	*string;
-STATUS	ret_val;
-int	errnum;
+static VOID
+perr(char *string, STATUS ret_val, int errnum)
 {
     SIprintf("%s status returned: 0x%x; errno returned: %d\n",
 			string, ret_val, errnum);
