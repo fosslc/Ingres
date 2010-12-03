@@ -464,6 +464,10 @@ IIcgc_term()
 **      26-Nov-2009 (hanal04) Bug 122938
 **          Different GCA protocol levels can handle different levels
 **          of decimal precision.
+**      30-Nov-2010 (hanal04) Bug 124758
+**          Different GCA protocol levels expect different object name
+**          lengths for example table and owner names in an SQL call to
+**          resolve_table().
 */
 
 STATUS
@@ -897,8 +901,16 @@ char		*rem_passwd;
                 {
                     adf_cb->adf_max_decprec = CL_MAX_DECPREC_31;
                 }
+
                 if (cgc->cgc_version >= GCA_PROTOCOL_LEVEL_68)
+                {
                     adf_cb->adf_proto_level |= AD_BOOLEAN_PROTO;
+                    adf_cb->adf_max_namelen = DB_GW1_MAXNAME;
+                }
+                else
+                {
+                    adf_cb->adf_max_namelen = DB_OLDMAXNAME_32;
+                }
 
 	    } /* If we are a child process - saved name */
 

@@ -2088,6 +2088,11 @@ typedef struct _ADK_CONST_BLK
 **      12-Oct-2010 (maspa05) b124551
 **          Removed char * arg and added PTR arg to adu_valuetomystr
 **          Also it now returns a STATUS
+**      30-Nov-2010 (hanal04) Bug 124758
+**          Different GCA protocol levels expect different object name
+**          lengths for example table and owner names in an SQL call to
+**          resolve_table(). Added adf_max_namelen to hold the associated
+**          length.
 */
 
 typedef struct _ADF_CB
@@ -2159,6 +2164,7 @@ typedef struct _ADF_CB
 # define                AD_ANSIDATE_PROTO    0x00000020 /* Supports "ansidate" data type */
 #define                 AD_BOOLEAN_PROTO     0x00000040 /* Supports boolean */
     i4              adf_max_decprec;    /* Max precision for decimal */
+    i4              adf_max_namelen;    /* Max name length for objects */
     i4		    adf_lo_context;	/* Context area for large objects */
     ADF_STRTRUNC_OPT adf_strtrunc_opt;
     i4		    adf_year_cutoff;	/* II_DATE_CENTURY_BOUNDARY */

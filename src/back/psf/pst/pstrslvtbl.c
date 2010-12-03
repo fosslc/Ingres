@@ -162,6 +162,12 @@ i4 pst_resolve_table(
 **	    Compiler warning fixes.
 **	19-Jun-2010 (kiria01) b123951
 **	    Add extra parameter to psl0_rngent for WITH support.
+**      30-Nov-2010 (hanal04) Bug 124758
+**          If the session is from an old client that does not have long (256)
+**          object names the client will expect 64 characters where the first 
+**          32 are for the owner and the second 32 are for the table name.
+**          Use the length established in the ADF control block when
+**          establishing the result and performing the initial error check.
 */
 DB_STATUS
 pst_resolve_table(
@@ -190,6 +196,12 @@ pst_resolve_table(
 #define		NAME_NOT_RESOLVED	2
 #define		ABNORMAL_ERROR		3
 #define		BAD_PARAMETERS		4
+    i4                      obj_maxname;
+    
+    /* first we must obtain the session control block */
+
+    sess_cb = psf_sesscb();
+    obj_maxname = ((ADF_CB *)sess_cb->pss_adfcb)->adf_max_namelen;
 
     /*
     ** if obj_owner or obj_name or out is NULL, or
@@ -201,9 +213,9 @@ pst_resolve_table(
     if (   obj_owner		    == (DB_TEXT_STRING *) NULL
         || obj_name		    == (DB_TEXT_STRING *) NULL
 	|| out			    == (DB_TEXT_STRING *) NULL
-	|| obj_owner->db_t_count    >  DB_OWN_MAXNAME
+	|| obj_owner->db_t_count    >  obj_maxname
 	|| obj_name->db_t_count     <  1
-	|| obj_name->db_t_count     >  DB_TAB_MAXNAME
+	|| obj_name->db_t_count     >  obj_maxname
        )
     {
 	status = E_DB_ERROR;
@@ -219,10 +231,6 @@ pst_resolve_table(
     **   definition but simply return the owner name and object name as
     **	 described in the prolog
     */
-
-    /* first we must obtain the session control block */
-
-    sess_cb = psf_sesscb();
 
     sess_cb->pss_auxrng.pss_maxrng = -1;
 
@@ -529,13 +537,13 @@ wrapup:
     {
 	case NAME_RESOLVED:
 	{
-	    MEfill(2 * DB_GW1_MAXNAME, (u_char) ' ',
+	    MEfill(2 * obj_maxname, (u_char) ' ',
 		(PTR) out->db_t_text);
-	    out->db_t_count = 2 * DB_GW1_MAXNAME;
+	    out->db_t_count = 2 * obj_maxname;
 
 	    MEcopy((PTR) &own_name, sizeof(own_name), (PTR) out->db_t_text);
 	    MEcopy((PTR) &tab_name, sizeof(tab_name),
-		(PTR) (out->db_t_text + DB_GW1_MAXNAME));
+		(PTR) (out->db_t_text + obj_maxname));
 	    return(E_DB_OK);
 	}
 	case NAME_NOT_RESOLVED:	

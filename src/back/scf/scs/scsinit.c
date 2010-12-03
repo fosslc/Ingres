@@ -1376,6 +1376,10 @@ GLOBALREF DU_DATABASE	      dbdb_dbtuple;
 **	    Moved SC930 SESSION BEGINS here from PSQ so that we get a session
 **          begin even when no query is issued, as can happen with XA 
 **          operations
+**      30-Nov-2010 (hanal04) Bug 124758
+**          Different GCA protocol levels expect different object name
+**          lengths for example table and owner names in an SQL call to
+**          resolve_table().
 */
 i4
 scs_initiate(SCD_SCB *scb )
@@ -3171,8 +3175,17 @@ scs_initiate(SCD_SCB *scb )
                 {
                     adf_cb->adf_max_decprec = CL_MAX_DECPREC_31;
                 }
+
                 if (scb->scb_cscb.cscb_version >= GCA_PROTOCOL_LEVEL_68)
+                {
                     adf_cb->adf_proto_level |= AD_BOOLEAN_PROTO;
+                    adf_cb->adf_max_namelen = DB_GW1_MAXNAME;
+                }
+                else
+                {
+                    adf_cb->adf_max_namelen = DB_OLDMAXNAME_32;
+                }
+
 	    }
 
 	    if (date_alias_recd == FALSE)
