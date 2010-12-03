@@ -778,6 +778,8 @@
 ##	    Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
 ##	21-Sept-2010 (troal01)
 ##	    If conf_WITH_GEO is set, make sure we link to libgeos and libproj
+##	24-Nov-2010 (bonro01)
+##	    Fix syntax error when conf_WITH_GEO is not defined.
 
 TMP=/tmp/libc.nm
 trap 'rm -f $TMP' 0 1 2 13 15
@@ -791,7 +793,7 @@ for o in $opts
   echo "#define conf_$o TRUE"
 }
 
-if [ ! -n ${conf_WITH_GEO} ] ; then
+if [ ! -n "${conf_WITH_GEO}" ] ; then
     WITH_GEO="-D_WITH_GEO"
 fi
 

@@ -1476,6 +1476,9 @@
 #	01-Nov-2010 (bonro01)
 #	    Add rule ADDDIRCCFLAGS and IISUBDIRCCFLAGS to allow
 #	    adding compiler flags to specific directory trees.
+#	24-Nov-2010 (bonro01)
+#	    Fix typo from Geospatial change which used the wrong
+#	    compile flags for Hybrid builds.
 #
 #####
 # VARIABLE DEFINITIONS for LIBBRARY VARIABLE RULES and EXCEPTIONS
@@ -3976,7 +3979,7 @@ rule IINEEDLIBS
 			}
 			if $(VERSHB)
 			{
-				LINKLIBS on $(SUFHB)/$(<) += $(LDLIBMACH) ;
+				LINKLIBS on $(SUFHB)/$(<) += $(LDLIBMACHHB) ;
 			}
 		}
 	}
