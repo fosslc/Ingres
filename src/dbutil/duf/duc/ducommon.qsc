@@ -401,6 +401,9 @@ EXEC SQL include SQLCA;
 **	    Add comment re is_compressed and iitables, no code change.
 **	23-Nov-2010 (troal01)
 **	    Rename srid.dat to sridmap.dat.
+**      06-Dec-2010 (horda03)
+**          Don't access the fields of a LOCATION directly as they are
+**          not the same on all platforms.
 */
 
 
@@ -2160,6 +2163,8 @@ duc_init_iidefault(
 ** History:
 **	8-Mar-2010 (troal01)
 **	   Initial creation.
+**     06-Dec-2010 (horda03)
+**         Removed direct access of a  LOCATION field.
 */
 DB_STATUS
 duc_init_srs()
@@ -2174,7 +2179,7 @@ duc_init_srs()
     NMloc(FILES, FILENAME & PATH, (char *) NULL, &srs_loc);
     LOfaddpath(&srs_loc, "geo", &srs_loc);
     LOfstfile("sridmap.dat", &srs_loc);
-    srs_file = srs_loc.path;
+    LOtos(&srs_loc, &srs_file);
     exec sql copy table spatial_ref_sys(
         srid= c0tab,
         auth_name= varchar(0)tab with null(']^NULL^['),

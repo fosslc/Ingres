@@ -88,6 +88,9 @@
 **          adu_within had the argument order reversed, fixed it.
 **	02-Dec-2010 (gupsh01) SIR 124685
 **	    Prototype cleanup.
+**      06-Dec-2010 (horda03)
+**          Renamed adu_geometrycollection_srid_fromText and
+**          adu_geometrycollection_srid_fromWKB
 */
 
 /*
@@ -1943,7 +1946,7 @@ DB_DATA_VALUE   *dv_out)
  * SRID specified
  */
 DB_STATUS
-adu_geometrycollection_srid_fromWKB(
+adu_geomcollection_srid_fromWKB(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
@@ -2311,7 +2314,7 @@ DB_DATA_VALUE   *dv_out)
  * Speficies SRID
  */
 DB_STATUS
-adu_geometrycollection_srid_fromText(
+adu_geomcollection_srid_fromText(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,

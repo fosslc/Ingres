@@ -210,6 +210,10 @@
 **      23-Nov-2010 (gupsh01) SIR 124685
 **          Protype cleanup. Moved some routines to adf.h eg 
 **	    adu_2prvalue, adu_2strtomny_strict,
+**      06-Dec-2010 (horda03)
+**          Rename adu_geometrycollection_srid_fromText and
+**          adu_geometrycollection_srid_fromWKB to have unique names within
+**          32 characters. A limitation for entries in a VMS object library.
 */
 #ifndef ADU_INT_HDR_INCLUDED
 #define ADU_INT_HDR_INCLUDED
@@ -744,8 +748,8 @@ FUNC_EXTERN ADU_NORM2_FUNC adu_multipolygon_srid_fromText;
 FUNC_EXTERN ADU_NORM2_FUNC adu_multipolygon_srid_fromWKB;
 FUNC_EXTERN ADU_NORM2_FUNC adu_geometry_srid_fromText;
 FUNC_EXTERN ADU_NORM2_FUNC adu_geometry_srid_fromWKB;
-FUNC_EXTERN ADU_NORM2_FUNC adu_geometrycollection_srid_fromText;
-FUNC_EXTERN ADU_NORM2_FUNC adu_geometrycollection_srid_fromWKB;
+FUNC_EXTERN ADU_NORM2_FUNC adu_geomcollection_srid_fromText;
+FUNC_EXTERN ADU_NORM2_FUNC adu_geomcollection_srid_fromWKB;
 
 /* The following functions act on all geospatial types. */
 FUNC_EXTERN ADU_NORM1_FUNC adu_geom_asText; /* Convert a geometry to WKT. */

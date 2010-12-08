@@ -144,6 +144,10 @@
 ;	    Removed old POINT prototype definitions
 ;       19-oct-2010 (maspa05) b124551
 ;           Removed adu_valuetomystr and added adu_sc930prtdataval
+;       06-Dec-2010 (horda03)
+;           Renamed adu_geometrycollection_srid_fromWKB and
+;           adu_geometrycollection_srid_fromText has function names in
+;           a VMS library must be unique within the first 32 characters
 
 EXPORTS
 adb_breakpoint		@1				
@@ -765,7 +769,7 @@ adu_numpoints		@627
 adu_inside			@628
 adu_geom_asTextRaw  @629
 adu_geom_asTextRound @630
-adu_geometrycollection_srid_fromWKB @631
-adu_geometrycollection_srid_fromText @632
+adu_geomcollection_srid_fromWKB @631
+adu_geomcollection_srid_fromText @632
 adu_geometrycollection_fromWKB @633
 adu_geometrycollection_fromText @634
