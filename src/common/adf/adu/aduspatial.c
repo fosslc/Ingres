@@ -91,6 +91,8 @@
 **      06-Dec-2010 (horda03)
 **          Renamed adu_geometrycollection_srid_fromText and
 **          adu_geometrycollection_srid_fromWKB
+**      07-Dec-2010 (horda03)
+**          Move GEOS prototype to within _WITH_GEOS section.
 */
 
 /*
@@ -147,6 +149,12 @@ static DB_STATUS storedGeomToDataValue(
 	storedGeom_t	geomData,
         DB_DATA_VALUE	*dv_out);
 
+static int interleaveBits(int odd, int even);
+
+static int encode(int x, int y);
+
+#ifdef _WITH_GEO
+
 static DB_STATUS geosToStoredGeom( 
 	ADF_CB		*adf_scb, 
 	GEOSGeometry		*geometry, 
@@ -181,12 +189,6 @@ static DB_STATUS geosToDataValue(
 	DB_DATA_VALUE		*dv_out,
 	i4			*combinedLength,
 	bool			includeEnvelope);
-
-static int interleaveBits(int odd, int even);
-
-static int encode(int x, int y);
-
-#ifdef _WITH_GEO
 
 static DB_STATUS geomToGeomComparison( 
     ADF_CB           *adf_scb,
