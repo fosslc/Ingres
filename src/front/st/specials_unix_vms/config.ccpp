@@ -229,6 +229,8 @@
 **          Added dbmsmnyc.hlp
 **	13-Sep-2010 (rajus01) SD issue 146492, Bug 124381
 **	    Added gcfmechloc32.hlp and gcfmechloc64.hlp for hybrid builds.
+**	09-nov-10 (wanfr01) SIR 124714
+**	    Added block_holdfactor help
 */
 
 PART   config
@@ -281,6 +283,7 @@ PART   config
       FILE dbmsacct.hlp
       FILE dbmsalim.hlp
       FILE dbmsambi.hlp
+      FILE dbmsbhld.hlp
       FILE dbmsbufc.hlp
       FILE dbmscach.hlp
       FILE dbmscady.hlp

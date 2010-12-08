@@ -12,6 +12,7 @@
 *.*.*.*.batch_copy_optim:		boolean
 *.*.*.*.blob_data:                      string
 *.*.*.*.blob_len:                     bytes
+*.*.*.*.block_holdfactor:		'scaling factor'
 *.*.*.*.cache_dynamic:			boolean
 *.*.*.*.cache_name:			string
 *.*.*.*.cache_sharing:			boolean

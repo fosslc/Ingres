@@ -96,6 +96,8 @@
 #           Add dbmsmnyc.hlp
 #	09-Sep-2010 (rajus01) SD issue 146492, Bug 124381
 #	    Add gcfmechloc32.hlp, gcfmechloc64.hlp.
+#	15-Nov-2010 (wanfr01)
+#	    Add dbmsbhld.hlp
 
 SubDir ING_SRC front st config ;
 
@@ -175,6 +177,7 @@ File $(INGMSG)$(DFS)dateingres.hlp : dateingres.hlp ;
 File $(INGMSG)$(DFS)dbmsacct.hlp : dbmsacct.hlp ;
 File $(INGMSG)$(DFS)dbmsalim.hlp : dbmsalim.hlp ;
 File $(INGMSG)$(DFS)dbmsambi.hlp : dbmsambi.hlp ;
+File $(INGMSG)$(DFS)dbmsbhld.hlp : dbmsbhld.hlp ;
 File $(INGMSG)$(DFS)dbmsbufc.hlp : dbmsbufc.hlp ;
 File $(INGMSG)$(DFS)dbmscach.hlp : dbmscach.hlp ;
 File $(INGMSG)$(DFS)dbmscady.hlp : dbmscady.hlp ;

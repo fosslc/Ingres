@@ -632,6 +632,8 @@
 --#     11-Aug-2010 (hanal04) Bug 124180
 --#         Added money_compat for backwards compatibility of money
 --#         string constants.
+--#     9-Nov-2010 (wanfr01) SIR 124714
+--#         Added block_holdfactor
 --#     11-Nov-2010 (frima01)
 --#         Correct dbms stack size for LP64 builds.
 --#	19-Nov-2010 (kiria01) SIR 124690
@@ -763,6 +765,7 @@ ii.$.dbms.$.ambig_replace_64compat:
 					OFF	
 				ENDIF;
 
+ii.$.dbms.$.block_holdfactor:   100;
 ii.$.dbms.$.blob_etab_page_size: 8192, VALID={65536,32768,16384,8192,4096,2048,0};
 ii.$.dbms.$.blob_etab_structure: "BTREE", VALID={ "BTREE", "HASH", "ISAM" };
 ii.$.dbms.$.cache_dynamic:	OFF;

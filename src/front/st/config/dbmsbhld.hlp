@@ -1,0 +1,7 @@
+/#-- Copyright 2009 Ingres Corporation
+
+The block_holdfactor parameter adjusts the estimated disk I/O needed to read 
+in table pages.  This value can be increased to increase the cost of table 
+scans and sorts.  
+
+The default value is 100.
