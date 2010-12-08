@@ -345,6 +345,8 @@ extern u_i4  SGN$GL_KSTACKPAG;
 **          Make MMG$GL_PAGE_SIZE and SGN$GL_KSTACKPAG always visible.
 **	11-Nov-2010 (kschendel) SIR 124685
 **	    Prototype / include fixes.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems,
 **/
 
 /*
@@ -363,7 +365,7 @@ FUNC_EXTERN bool
 EXsigarr_sys_report( i4 *sigarr,	/* Report errors, call fr VMS hndlr */
 		    char *buffer );
 
-static STATUS CS_admin_task(i4 mode, CS_ADMIN_CSB *scb,
+static STATUS CS_admin_task(i4 mode, CS_ADMIN_SCB *scb,
 	i4 *next_mode, PTR io_area);
 static void CS_toq_scan(void);		/* Scan timeout queue */
 
@@ -630,8 +632,9 @@ i4		   priority;
 	    else if ((new_scb->cs_state == CS_STACK_WAIT) && (!oo_stacks))
 	    {
 		STATUS		status;
+		CL_ERR_DESC     sys_err;
 
-		status = CS_alloc_stack(new_scb);
+		status = CS_alloc_stack(new_scb, &sys_err);
 		if (status == OK)
 		{
 		    new_scb->cs_state = CS_COMPUTABLE;
@@ -1398,10 +1401,13 @@ CS_toq_scan(void)
 **      22-Aug-2000 (horda03)
 **          Obtain pages for Stack from the P1 area.
 **          (102291)
+**      06-Dec-2010 (horda03)
+**         Changed interfsce to match new prototype (shared with Unix).
 */
 STATUS
 CS_alloc_stack(
-CS_SCB             *scb)
+CS_SCB             *scb,
+CL_ERR_DESC        *sys_err)
 {
     VA_RANGE		mem;		/* memory range requested */
     VA_RANGE		retmem;		/* memory range actually effected */
@@ -1411,7 +1417,6 @@ CS_SCB             *scb)
     i4 size = Cs_srv_block.cs_stksize;
     i4			pages;
     PTR			addr;
-    CL_ERR_DESC		sys_err;
     i4 pagelets;
     i4 alloc_pages;
 #ifdef KPS_THREADS
@@ -1470,7 +1475,7 @@ CS_SCB             *scb)
     {
 	/* We need to allocate a new stack */
 	status = MEget_pages(ME_MZERO_MASK | ME_USE_P1_SPACE, pagelets,
-                             0, &addr, &pages, &sys_err);
+                             0, &addr, &pages, sys_err);
 	if (status)
 	    return(status);
 	/* change guard pages to be writable only in supervisor mode */
@@ -2312,7 +2317,7 @@ CS_SCB		*scb;
 **	    CS_ssprsm() now takes a single parameter -- just restore context.
 */
 static STATUS
-CS_admin_task(i4 mode, CS_ADMIN_CSB *scb, i4 *next_mode, PTR io_area)
+CS_admin_task(i4 mode, CS_ADMIN_SCB *scb, i4 *next_mode, PTR io_area)
 {
     STATUS              status = OK;
     CS_SCB		*dead_scb;

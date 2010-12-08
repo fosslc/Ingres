@@ -330,6 +330,8 @@ CS_verify_sid(
 **          Added "SHOW SERVER CAPABILITIES".
 **	15-Nov-2010 (kschendel) SIR 124685
 **	    Prototype / include fixes.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems, 
 */
 STATUS
 IICSmonitor(
@@ -338,7 +340,7 @@ CS_SCB	*scb_temp,
 i4	*nmode,
 char	*command,
 i4	powerful,
-TR_OUTPUT_FCN *output_fcn
+TR_OUTPUT_FCN *output_fcn)
 {
     STATUS              status;
     i4			count;
@@ -723,7 +725,7 @@ CS_ACCNTING,CS_CPUSTAT,CS_REPENTING,CS_LONGQUANTUM",
                     if (status)
                     {
                         TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
-                               "Show sampling failed.";
+                               "Show sampling failed.");
                     }
                 }
             }

@@ -88,6 +88,10 @@
 **	    Increase BUFSIZ to 16384.
 **      30-Dec-2009 (horda03) Bug 123091/123092
 **          Added flush_mutex to FILE.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems. Overloading of typedef FILE between SI and
+**          stdio.h means we need to stop stdio.h from trying to declare FILE
+**          if this header file has already been included.
 **/
 
 
@@ -179,6 +183,8 @@ typedef	struct _FILE
         PTR     flush_mutex;
 #endif
 } FILE;
+
+#define __FILE_T Prevent VMS stdio.h from defining FILE too
 
 
 extern		FILE	*SI_iobptr;

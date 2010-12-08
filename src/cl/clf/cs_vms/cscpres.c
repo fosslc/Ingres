@@ -32,6 +32,9 @@
 #include    <csinternal.h>
 #include    <astjacket.h>
 
+#include    <clconfig.h>
+#include    <csev.h>
+
 /*
 ** Name: CSCPRES.C	- Cross-process resume support
 **
@@ -136,6 +139,9 @@
 **         Remove cpres_catch exception handler on i64_vms.
 **	11-Nov-2010 (kschendel) SIR 124685
 **	    Delete CS_SYSTEM ref, get from csinternal.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems
+**          Added required .h files.
 */
 
 

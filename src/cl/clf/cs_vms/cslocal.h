@@ -38,6 +38,8 @@
 **              array. Added CS_NO_SCHED.
 **	11-Nov-2010 (kschendel) SIR 124685
 **	    Prototype / include fixes.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems,
 **/
 
 /*
@@ -61,7 +63,7 @@ GLOBALREF i4          CS_sched_quantum [];
 
 /* func externs -- should be prototyped later */
 
-FUNC_EXTERN CS_SCB *CS_xchng_thread(CS_SCB *);
+FUNC_EXTERN CS_SCB *CS_xchng_thread(CS_SCB *, i4 priority);
 FUNC_EXTERN STATUS CS_event_shutdown(void);
 FUNC_EXTERN STATUS CS_rcv_request(void);
 FUNC_EXTERN STATUS CS_setup(void);

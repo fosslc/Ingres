@@ -716,6 +716,8 @@
 **          Use VAXC$ESTABLISH to set up exception handlers.
 **	12-Nov-2010 (kschendel) SIR 124685
 **	    Prototype / include fixes.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems,
 **/
 
 /*
@@ -735,7 +737,6 @@ FUNC_EXTERN i4  TRdisplay( char *, ... );
 FUNC_EXTERN STATUS  TRdisplay();
 #endif
 
-FUNC_EXTERN void CS_rcv_request();
 FUNC_EXTERN void CS_scb_attach();
 FUNC_EXTERN STATUS CS_alloc_stack();
 FUNC_EXTERN STATUS CS_cp_mbx_create();
@@ -2641,7 +2642,7 @@ IICSdispatch()
 		   Cs_admin_scb.csa_scb.cs_username );
 	    Cs_admin_scb.csa_scb.cs_next = &Cs_repent_scb;
 
-	    ret_val = CS_alloc_stack(&Cs_admin_scb.csa_scb, error);
+	    ret_val = CS_alloc_stack(&Cs_admin_scb.csa_scb, &error);
 	    if (ret_val != OK)
 	    {
 		EXdelete();
@@ -2674,7 +2675,7 @@ IICSdispatch()
 	    /*	when this happens, we recover by trashing the offending	    */
 	    /*	thread, and letting nature take its course.		    */
 
-	    ret_val = CS_alloc_stack(&Cs_idle_scb, error);
+	    ret_val = CS_alloc_stack(&Cs_idle_scb, &error);
 	    if (ret_val != OK)
 	    {
 		EXdelete();
@@ -2702,7 +2703,7 @@ IICSdispatch()
 	    /* Extra help for new "show internal sessions" monitor command. */
 	    Cs_repent_scb.cs_next = &Cs_idle_scb;
 
-	    ret_val = CS_alloc_stack(&Cs_repent_scb, error);
+	    ret_val = CS_alloc_stack(&Cs_repent_scb, &error);
 	    if (ret_val != OK)
 	    {
 		EXdelete();

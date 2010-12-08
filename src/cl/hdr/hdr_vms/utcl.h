@@ -2,6 +2,9 @@
 ** Copyright (c) 1985, Ingres Corporation
 */
 
+#ifndef UTCL_DEFINED
+#define UTCL_DEFINED
+
 /**
 ** Name: UT.H - Global definitions for the UT compatibility library.
 **
@@ -26,9 +29,12 @@
 **	01-dec-2000	(kinte01)
 **	    Bug 103393 - removed nat, longnat, u_nat, & u_longnat
 **	    from VMS CL as the use is no longer allowed
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems.
 **/
 
 # include	<array.h>
+# include       <ds.h>
 
 
 /*
@@ -124,3 +130,4 @@ typedef struct {
         char                    *modDictLoc;    /* file name (LOCATION?) */
 } ModDictDesc;
 
+#endif

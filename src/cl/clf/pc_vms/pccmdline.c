@@ -130,6 +130,8 @@
 **          Replace READONLY/WSCREADONLY by const.
 **      22-dec-2008 (stegr01)
 **          Itanium VMS port
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems, 
 **/
 
 /* Note:  DCLCOMLINE is the size of the mailbox buffer used to communicate with
@@ -197,7 +199,6 @@ static int	write();
 static int	read(II_VMS_CHANNEL chan, char *buf, int *size);
 static int	trnlog();
 static int	mailbox();
-static int	PCcleanup();
 static int	PCexith();
 static STATUS	getprocdets();	
 static STATUS	PCfewrite();
@@ -569,6 +570,7 @@ CL_ERR_DESC	*error)	/* Error return */
 	char		is_param_specifier = FALSE;
 	char		prev_was_white = FALSE;
 	char            *cp;	
+        EX              ex;
 
 	CL_CLEAR_ERR(error);
 	if (log != 0)
@@ -597,7 +599,7 @@ CL_ERR_DESC	*error)	/* Error return */
 		*/
 		if ( mbxchan != 0 )
 		{
-			PCcleanup();
+			PCcleanup(ex);
 		}
 		flag = 0;
 
@@ -1005,7 +1007,7 @@ CL_ERR_DESC	*error)	/* Error return */
 	** Bad error.  Cancel timer, free event flags.
 	*/
    errreturn:
-	PCcleanup();
+	PCcleanup(ex);
 	EXinterrupt(EX_ON);
 	return error->error = rval;
 }
@@ -1144,6 +1146,8 @@ char	*buf)
 static
 PCitimer()
 {
+        EX ex;
+
 	sys$setast(0);
 	if (incom)
 	{
@@ -1151,7 +1155,7 @@ PCitimer()
 	}
 	else
 	{
-		PCcleanup();
+		PCcleanup(ex);
 	}
 	sys$setast(1);
 }
@@ -1255,8 +1259,8 @@ PCexith()
 ** Description:
 **	Close mail box and terminate sub-process.
 */
-static
-PCcleanup()
+void
+PCcleanup(EX except)
 {
 	sys$cantim(timerid, 0);
 	sys$dassgn(statchan);
