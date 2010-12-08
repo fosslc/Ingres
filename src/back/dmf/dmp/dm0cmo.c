@@ -698,11 +698,13 @@ dm0c_mo_init( void )
 ** History:
 **	11-Oct-2010 (jonj) SIR 124738
 **	    Created
+**	06-Dec-2010 (jonj)
+**	    Take out return.
 */
 VOID
 dm0c_mo_attach( DM0C_CNF *cnf )
 {
-    return(dm0c_mo((DMP_DCB*)NULL, cnf));
+    dm0c_mo((DMP_DCB*)NULL, cnf);
 }
 
 
@@ -729,11 +731,13 @@ dm0c_mo_attach( DM0C_CNF *cnf )
 ** History:
 **	11-Oct-2010 (jonj) SIR 124738
 **	    Created
+**	06-Dec-2010 (jonj)
+**	    Take out return.
 */
 VOID
 dm0c_mo_detach( DMP_DCB *dcb )
 {
-    return(dm0c_mo(dcb, (DM0C_CNF*)NULL));
+    dm0c_mo(dcb, (DM0C_CNF*)NULL);
 }
 
 
