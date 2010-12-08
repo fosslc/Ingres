@@ -184,6 +184,8 @@
 **	4-Jun-2009 (kschendel) b122118
 **	    Add open-and-link, close-and-unlink utilities.  Renamed
 **	    qen-sort to qen-inner-sort, fix here.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 **/
 
 /*	static functions	*/
@@ -230,11 +232,9 @@ QEN_SHD    *shd,
 QEE_DSH    *dsh )
 {
 
-    GLOBALREF QEF_S_CB *Qef_s_cb;   
     QEF_CB    *qcb = dsh->dsh_qefcb;
     ULM_RCB   ulm_rcb;
     DMR_CB    *dmrcb;
-    DMT_CB    *dmtcb;
     DB_STATUS status = E_DB_OK;
     i4	      j, k, l;
 
@@ -615,7 +615,6 @@ QEN_SHD    *shd )
 {
 
     DMR_CB	*dmrcb;
-    DB_STATUS	status = E_DB_OK;
 
      if(hold->hold_medium)
      {
@@ -775,7 +774,6 @@ u_i4	   *tidp )
 {
 
     DMR_CB	*dmrcb;
-    DB_STATUS	status = E_DB_OK;
 
     if(hold->hold_medium)
     {     
@@ -817,7 +815,6 @@ QEN_HOLD   *hold,
 QEE_DSH	   *dsh,
 QEN_SHD    *shd )
 {
-    DMR_CB    *dmrcb;
     DB_STATUS status = E_DB_OK;
 
     if(hold->hold_status != HFILE2_AT_EOF &&
@@ -866,7 +863,6 @@ QEN_HOLD   *hold,
 QEE_DSH	   *dsh,
 QEN_SHD    *shd )
 {
-    GLOBALREF QEF_S_CB *Qef_s_cb;   
     QEF_CB    *qcb;
     DMR_CB    *dmrcb;
     DB_STATUS status = E_DB_OK;
@@ -1003,8 +999,6 @@ QEE_DSH	   *dsh,
 QEN_SHD    *shd )
 {
 
-    DB_STATUS status = E_DB_OK;
-
     if(hold->hold_medium != HMED_IN_MEMORY)
 	return(E_DB_OK);
 
@@ -1120,7 +1114,6 @@ QEN_SHD    *shd,
 QEE_DSH	   *dsh )
 {
 
-    GLOBALREF QEF_S_CB *Qef_s_cb;   
     DB_STATUS status = E_DB_OK;
     QEF_CB    *qcb = dsh->dsh_qefcb;
     ULM_RCB   ulm_rcb;
@@ -1463,7 +1456,6 @@ QEN_HOLD    *hold,
 QEE_DSH	   *dsh,
 QEN_SHD	    *shd )
 {
-    GLOBALREF QEF_S_CB *Qef_s_cb;   
     QEF_CB    *qcb = dsh->dsh_qefcb;
     ULM_RCB   ulm_rcb;
     DMR_CB    *dmrcb = hold->hold_dmr_cb;

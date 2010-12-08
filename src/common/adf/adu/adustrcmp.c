@@ -215,6 +215,8 @@
 **	19-Nov-2010 (kiria01) SIR 124690
 **	    Add support for UCS_BASIC collation. Don't allow UTF8 strings with it
 **	    to use UCS2 CEs for comparison related actions.
+**      02-Dec-2010 (gupsh01) SIR 124685
+**          Prototype cleanup.
 **/
 
 
@@ -309,6 +311,10 @@ static DB_STATUS ad0_lklmatch(ADF_CB  *adf_scb,
 			      bool    bignore,
 			      i4      *rcmp);
 
+static i4 cmicmpcaselen( char *str1,
+    			 char *endstr1,
+    			 char *str2,
+    			 char *endstr2);
 
 /* integrated from 6500db_su4_us42 14-mar-95 peeje01 */
 /* special hack for Bug #54559 - the BAAN bug (kirke) */
@@ -321,12 +327,12 @@ static DB_STATUS ad0_lklmatch(ADF_CB  *adf_scb,
 # endif
 # define CMcmpcaselen_SB(str1, endstr1, str2, endstr2) CMcmpcase_SB(str1, str2)
 
-i4
-cmicmpcaselen(str1, endstr1, str2, endstr2)
-char *str1;
-char *endstr1;
-char *str2;
-char *endstr2;
+static i4
+cmicmpcaselen(
+char *str1,
+char *endstr1,
+char *str2,
+char *endstr2)
 {
     int result;
 
@@ -3550,7 +3556,7 @@ adu_collweight(
             comp.db_data = sptr;
 
             adf_scb->adf_uninorm_flag = AD_UNINORM_NFC;
-            if (db_stat = adu_nvchr_fromutf8(adf_scb, str_dv, &comp, 1))
+            if (db_stat = adu_nvchr_fromutf8(adf_scb, str_dv, &comp))
             {
                  adf_scb->adf_uninorm_flag = saved_uninorm_flag;
                  break;

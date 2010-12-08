@@ -247,7 +247,6 @@ SYSTIME	*stime;
         struct timeval  t;
 	struct timezone tz;
 	int		gettimeofday();
-# endif
 
 # if defined(xCL_GETTIMEOFDAY_TIMEONLY)
 	gettimeofday(&t);

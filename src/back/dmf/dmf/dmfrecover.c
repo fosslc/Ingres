@@ -567,6 +567,8 @@
 **          Minor change to TRdisplay
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Remove table name,owner from log records.
+**      06-Dec-2010 (horda03) b124691
+**          Correct value used to detect if VMS' AST enabled.
 **/
 /*
 ** Forward function references and global definitions
@@ -9695,7 +9697,7 @@ EX_ARGS		    *ex_args)
     ulx_exception( ex_args, DB_DMF_ID, err_code, FALSE );
 
 #ifdef VMS
-    if (status == 9)
+    if (status == SS$_WASSET)
 	sys$setast(1);
 #endif
 

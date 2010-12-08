@@ -94,6 +94,8 @@
 **	    replace nat and longnat with i4
 **	24-feb-04 (inkdo01)
 **	    Changed dsh_ddb_cb from QEE_DDB_CB instance to ptr.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 
@@ -258,8 +260,6 @@ QEE_DSH		*i_dsh_p )
     bool	    log_qry_55 = FALSE,
                     log_err_59 = FALSE;
     i4         i4_1, i4_2;
-    TPR_CB	    tpr,
-		    *tpr_p = & tpr;
     RQR_CB	    rqr,
 		    *rqr_p = & rqr;
 
@@ -369,8 +369,6 @@ QEE_DSH	    *i_dsh_p )
     bool	    log_qry_55 = FALSE,
                     log_err_59 = FALSE;
     i4         i4_1, i4_2;
-    TPR_CB	    tpr,
-		    *tpr_p = & tpr;
     RQR_CB	    rqr,
 		    *rqr_p = & rqr;
 
@@ -404,22 +402,6 @@ QEE_DSH	    *i_dsh_p )
 	v_qer_p->error.err_code = E_QE0015_NO_MORE_ROWS;
 	return(E_DB_WARN);
     }
-
-/*
-    ** 1.  set up to call TPF for read operation **
-
-    MEfill(sizeof(tpr), '\0', (PTR) & tpr);
-    tpr_p->tpr_session = dds_p->qes_d2_tps_p;	** TPF session id **
-    tpr_p->tpr_rqf = dds_p->qes_d3_rqs_p;	** RQF session id **
-    tpr_p->tpr_lang_type = qss_p->qes_q2_lang;
-    tpr_p->tpr_site = & qee_p->qee_d11_ldbdesc;
-
-    status = qed_u17_tpf_call(TPF_READ_DML, tpr_p, v_qer_p);
-    if (status)
-    {
-	return(status);
-    }
-*/
 
     /* 2.  set up to call RQF to load data */
 
@@ -533,7 +515,6 @@ QEE_DSH		*v_dsh_p )
     QEQ_D1_QRY	    *sub_p = (QEQ_D1_QRY *) NULL;
     bool	    read_b = FALSE,
 		    last_b = FALSE,
-		    val_qp_51 = FALSE,
 		    log_qry_55 = FALSE,
                     log_err_59 = FALSE;
     i4         i4_1, i4_2;
@@ -713,8 +694,6 @@ QEE_DSH	    *i_dsh_p )
     bool	    log_qry_55 = FALSE,
                     log_err_59 = FALSE;
     i4         i4_1, i4_2;
-    TPR_CB	    tpr,
-		    *tpr_p = & tpr;
     RQR_CB	    rqr,
 		    *rqr_p = & rqr;
 

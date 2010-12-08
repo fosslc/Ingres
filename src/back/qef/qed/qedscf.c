@@ -133,6 +133,8 @@
 **          Fix buffers that are dependent on DB_MAXNAME
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 **/
 
 
@@ -194,9 +196,6 @@ QEF_RCB         *v_qer_p )
 {
     DB_STATUS	    status;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
-    DD_DDB_DESC	    *ddb_p = v_qer_p->qef_r3_ddb_req.qer_d1_ddb_p;
-    DD_LDB_DESC	    *cdb_p = & ddb_p->dd_d3_cdb_info.dd_i1_ldb_desc;
-    QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
     TPR_CB	    tp_cb,
 		    *tpr_p = & tp_cb;
 
@@ -281,7 +280,6 @@ QEF_RCB         *v_qer_p )
     RQR_CB	    rq_cb,
 		    *rqr_p = & rq_cb;
     RQB_BIND	    rq_bind[QEK_2_COL_COUNT];	    /* for 2 columns */
-    i4		    dxlog_cnt = 0;
     bool	    log_qry_55 = FALSE,
 		    log_err_59 = FALSE;
     i4         i4_1, 
@@ -514,7 +512,6 @@ QEF_RCB         *v_qer_p )
 		    *rqr_p = & rq_cb;
     RQB_BIND	    rq_bind[QEK_4_COL_COUNT],	    /* for 4 columns */
 		    *bind_p = rq_bind;
-    i4		    dxlog_cnt = 0;
     bool	    log_qry_55 = FALSE,
 		    log_err_59 = FALSE;
     i4         i4_1, 
@@ -823,8 +820,6 @@ QEF_RCB		*v_qer_p )
 			& ddr_p->qer_d2_ldb_info_p->dd_i1_ldb_desc;
     DD_0LDB_PLUS    *plus_p = 
 			& ddr_p->qer_d2_ldb_info_p->dd_i2_ldb_plus;
-    TPR_CB	    tp_cb,
-		    *tpr_p = & tp_cb;
     RQR_CB	    rq_cb,
 		    *rqr_p = & rq_cb;
     bool	    log_qry_55 = FALSE,
@@ -875,20 +870,6 @@ QEF_RCB		*v_qer_p )
     rqr_p->rqr_msg.dd_p1_len = (i4) STlength(qrytxt);
     rqr_p->rqr_msg.dd_p2_pkt_p = qrytxt;
     rqr_p->rqr_msg.dd_p3_nxt_p = (DD_PACKET *) NULL;
-/*
-    ** 2.2.  inform TPF of read intention **
-
-    MEfill(sizeof(tp_cb), '\0', & tp_cb);
-    tpr_p->tpr_session = dds_p->qes_d2_tps_p;
-    tpr_p->tpr_site = ldb_p;
-    tpr_p->tpr_lang_type = DB_SQL;
-
-    status = qed_u17_tpf_call(TPF_READ_DML, tpr_p, v_qer_p);
-    if (status)
-    {
-	return(status);
-    }
-*/
     if (log_qry_55)
     {
 	qed_w8_prt_qefqry(v_qer_p, qrytxt, ldb_p);
@@ -1035,8 +1016,6 @@ QEF_RCB         *v_qer_p )
     DD_LDB_DESC	    *iidbdb_p = 
 		    & v_qer_p->qef_r3_ddb_req.qer_d2_ldb_info_p->dd_i1_ldb_desc;
     DD_USR_DESC	    *usr_p = v_qer_p->qef_r3_ddb_req.qer_d8_usr_p;
-    TPR_CB	    tp_cb,
-		    *tpr_p = & tp_cb;
     RQR_CB	    rq_cb,
 		    *rqr_p = & rq_cb;
     bool	    log_qry_55 = FALSE,
@@ -1090,20 +1069,6 @@ QEF_RCB         *v_qer_p )
     rqr_p->rqr_msg.dd_p1_len = (i4) STlength(qrytxt);
     rqr_p->rqr_msg.dd_p2_pkt_p = qrytxt;
     rqr_p->rqr_msg.dd_p3_nxt_p = (DD_PACKET *) NULL;
-/*
-    ** 3.  inform TPF of read intention **
-
-    MEfill(sizeof(tp_cb), '\0', & tp_cb);
-    tpr_p->tpr_session = dds_p->qes_d2_tps_p;
-    tpr_p->tpr_site = iidbdb_p;
-    tpr_p->tpr_lang_type = DB_SQL;
-
-    status = qed_u17_tpf_call(TPF_READ_DML, tpr_p, v_qer_p);
-    if (status)
-    {
-	return(status);
-    }
-*/
     if (log_qry_55)
     {
 	qed_w8_prt_qefqry(v_qer_p, qrytxt, iidbdb_p);
@@ -1250,8 +1215,6 @@ QEF_RCB		*v_qer_p )
     DD_0LDB_PLUS    *plus_p = 
 			& ddr_p->qer_d2_ldb_info_p->dd_i2_ldb_plus;
     DD_CAPS	    *caps_p = & plus_p->dd_p3_ldb_caps;
-    TPR_CB	    tp_cb,
-		    *tpr_p = & tp_cb;
     RQR_CB	    rq_cb,
 		    *rqr_p = & rq_cb;
     bool	    log_qry_55 = FALSE,
@@ -1320,20 +1283,6 @@ QEF_RCB		*v_qer_p )
     rqr_p->rqr_msg.dd_p1_len = (i4) STlength(qrytxt);
     rqr_p->rqr_msg.dd_p2_pkt_p = qrytxt;
     rqr_p->rqr_msg.dd_p3_nxt_p = (DD_PACKET *) NULL;
-/*
-    ** 3.  inform TPF of read intention **
-
-    MEfill(sizeof(tp_cb), '\0', & tp_cb);
-    tpr_p->tpr_session = dds_p->qes_d2_tps_p;
-    tpr_p->tpr_site = ldb_p;
-    tpr_p->tpr_lang_type = DB_SQL;
-
-    status = qed_u17_tpf_call(TPF_READ_DML, tpr_p, v_qer_p);
-    if (status)
-    {
-	return(status);
-    }
-*/
     if (log_qry_55)
     {
 	qed_w8_prt_qefqry(v_qer_p, qrytxt, ldb_p);
@@ -1730,10 +1679,7 @@ qed_s8_cluster_info(
 QEF_RCB		*v_qer_p )
 {
     DB_STATUS	    status;
-    QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
-    DD_LDB_DESC	    *ldb_p = 
-			& ddr_p->qer_d2_ldb_info_p->dd_i1_ldb_desc;
     RQR_CB	    rq_cb,
 		    *rqr_p = & rq_cb;
 

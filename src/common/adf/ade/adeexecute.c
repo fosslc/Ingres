@@ -494,6 +494,8 @@ NO_OPTIM = rs4_us5 su4_u42 su4_cmw i64_aix r64_us5
 **	    get to ADE_MXVLTS which is the max supported in the CXHEAD.
 **	    To handle this memory will be allocated temporarily to extend
 **	    the workspace.
+**	09-nov-2010 (gupsh01) SIR 124685
+**	    Protype cleanup.
 **/
 
 
@@ -620,7 +622,6 @@ static	VOID        ad0_fltchk(f8             tempf,
 **	    arose.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 ade_vlt_space(
 ADF_CB             *adf_scb,
@@ -628,15 +629,6 @@ PTR                ade_cx,
 i4                 ade_nbases,
 PTR                ade_bases[],
 i4                 *ade_needed)
-# else
-DB_STATUS
-ade_vlt_space( adf_scb, ade_cx, ade_nbases, ade_bases, ade_needed)
-ADF_CB             *adf_scb;
-PTR                ade_cx;
-i4                 ade_nbases;
-PTR                ade_bases[];
-i4                 *ade_needed;
-# endif
 {
     ADE_CXHEAD          *cxhead = (ADE_CXHEAD *) ade_cx;
     ADE_VLT_WS_STRUCT   _vlt_ws[ADE_MXVLTS_SOFT];
@@ -1383,17 +1375,10 @@ i4                 *ade_needed;
 static void fltovf() {EXsignal(EXFLTOVF, 0);}
 
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 ade_execute_cx(
 ADF_CB             *adf_scb,
 ADE_EXCB           *ade_excb)
-# else
-DB_STATUS
-ade_execute_cx( adf_scb, ade_excb)
-ADF_CB             *adf_scb;
-ADE_EXCB           *ade_excb;
-# endif
 {
     i4			cx_value = ADE_TRUE;
     i4			pm_quel;
@@ -7051,20 +7036,12 @@ ADE_VLT_WS_STRUCT  **pvlt_ws)
 */
 
 
-#ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 ade_countstar_loc(
 ADF_CB             *adf_scb,
 ADE_EXCB           *ade_excb,
 PTR                *data,
 i4		   *instr_cnt)
-#else
-DB_STATUS ade_countstar_loc( adf_scb, ade_excb, data, instr_cnt)
-ADF_CB             *adf_scb;
-ADE_EXCB           *ade_excb;
-PTR                *data;
-i4                 *instr_cnt;
-#endif
 {
     ADE_CXHEAD      *cxhead = (ADE_CXHEAD *) ade_excb->excb_cx;
     PTR             cxbase = ade_excb->excb_bases[ADE_CXBASE];

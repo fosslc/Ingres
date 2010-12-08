@@ -107,16 +107,13 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **	25-aug-93 (ed)
 **	    remove dbdbms.h
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adg_release(
 ADF_CB  *adf_scb)
-# else
-DB_STATUS adg_release(adf_scb)
-ADF_CB  *adf_scb;
-# endif
 {
     return(E_DB_OK);
 }

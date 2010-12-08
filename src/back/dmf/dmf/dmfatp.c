@@ -4819,6 +4819,8 @@ DMF_ATP		*atp)
 **	    might be the cause of occasional dm1215 message garblings.
 **	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    dmf_tbl_info(), dmf_last_id() prototyped in dml.h
+**	30-Nov-2010 (gupsh01) SIR 124685
+**	    Fixed the call to adg_shutdown(). It does not take any arguments.
 */
 static DB_STATUS
 atp_prepare(
@@ -5653,7 +5655,7 @@ DMP_DCB	    *dcb)
 	{
 	    /* Print text. */
 	    SETDBERR(&jsx->jsx_dberr, 0, E_DM120C_ATP_ADF_ERROR);
-	    status = adg_shutdown(&adf_cb);
+	    status = adg_shutdown();
 	    break;
 	}
 

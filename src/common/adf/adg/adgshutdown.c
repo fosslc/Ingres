@@ -119,10 +119,12 @@ GLOBALREF     i4                             adg_startup_instances;
 **      to free memory.
 **	16-Jun-2005 (gupsh01)
 **	    Moved adg_clean_unimap to adgstartup.c.
+**	29-Nov-2010 (gupsh01)
+**	    Prototype cleanup changes.
 */
 
 DB_STATUS
-adg_shutdown()
+adg_shutdown(void)
 {
     STATUS stat = OK;
 	adg_startup_instances--;
@@ -219,7 +221,7 @@ adg_shutdown()
 */
 
 DB_STATUS
-adg_clean_unimap()
+adg_clean_unimap(void)
 {
     STATUS stat = OK;
 

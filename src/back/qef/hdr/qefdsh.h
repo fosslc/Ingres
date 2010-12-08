@@ -2,6 +2,9 @@
 **Copyright (c) 2010 Ingres Corporation
 */
 
+#ifndef QEFDSH_H_INCLUDED
+#define QEFDSH_H_INCLUDED
+
 /**
 ** Name: QEFDSH.H - Data segment header
 **
@@ -139,6 +142,8 @@
 **	    Rework DSH-side resource list structures to help tprocs and for
 **	    general sanity, eliminate waste and confusion.  Drop QEE_VALID
 **	    entirely, keep validated tproc DSH and cursor-ID in proc entry.
+**	2-Dec-2010 (kschendel)
+**	    Multi-include protection.
 **/
 
 /* The defines for ADE_1x2 are used by many join routines when the result of
@@ -2226,3 +2231,5 @@ struct	_QEE_DSH
     i4		dsh_qef_remnull;
     DB_ERROR	dsh_error;
 };
+
+#endif /* QEFDSH_H_INCLUDED */

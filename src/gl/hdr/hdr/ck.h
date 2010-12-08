@@ -4,6 +4,7 @@
 # ifndef CK_HDR_INCLUDED
 # define CK_HDR_INCLUDED
 
+#include    <pc.h>
 #include    <ckcl.h>
 
 /**CL_SPEC
@@ -31,6 +32,8 @@
 **	    replace nat and longnat with i4
 **	29-Nov-2010 (frima01) SIR 124685
 **	    Added prototype for CK_spawnnow.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems
 **/
 
 FUNC_EXTERN STATUS  CKbegin(

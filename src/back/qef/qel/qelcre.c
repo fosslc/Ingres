@@ -108,6 +108,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 
@@ -616,7 +618,6 @@ QEF_RCB		*v_qer_p,
 QEC_LINK	*v_lnk_p )
 {
     DB_STATUS		status;
-    QED_DDL_INFO	*ddl_p = & v_qer_p->qef_r3_ddb_req.qer_d7_ddl_info;
     DD_2LDB_TAB_INFO	*tabinfo_p = 
 			    v_lnk_p->qec_1_ddl_info_p->qed_d6_tab_info_p;
 
@@ -1086,7 +1087,6 @@ QEF_RCB		    *v_qer_p,
 QEC_LINK	    *v_lnk_p )
 {
     DB_STATUS	    status;
-    QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     DD_LDB_DESC	    *ldb_p = v_lnk_p->qec_19_ldb_p;
     QEC_D2_LDBIDS   *ldbids_p = v_lnk_p->qec_7_ldbids_p;
     QEC_L1_DBCONSTANTS

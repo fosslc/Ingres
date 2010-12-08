@@ -323,23 +323,16 @@
 **          system dependent (defined in compat.h) but the prototype
 **          needs to be known/shared with user code for OME.
 **          Therefore, we make it a i4  (== int for users).
+**	09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_lenchk(
 ADF_CB             *adf_scb,
 i4                 adc_is_usr,
 DB_DATA_VALUE      *adc_dv,
 DB_DATA_VALUE	   *adc_rdv)
-# else
-DB_STATUS
-adc_lenchk( adf_scb, adc_is_usr, adc_dv, adc_rdv)
-ADF_CB             *adf_scb;
-i4                 adc_is_usr;
-DB_DATA_VALUE      *adc_dv;
-DB_DATA_VALUE	   *adc_rdv;
-# endif
 {
     i4		   	bdt = abs((i4) adc_dv->db_datatype);
     DB_STATUS		db_stat;

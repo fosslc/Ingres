@@ -38,9 +38,14 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      30-nov-2010 (gupsh01) SIR 124685
+**          Prototype cleanup.
 **/
 
-i4		adi_tyname();
+FUNC_EXTERN DB_STATUS adi_tyname(ADF_CB       *adf_scb,
+                                 DB_DT_ID     adi_did,
+                                 ADI_DT_NAME  *adi_dname);
+
 DB_STATUS	adc_lenchk();
 
 /*{

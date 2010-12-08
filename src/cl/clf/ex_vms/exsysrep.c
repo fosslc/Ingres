@@ -13,9 +13,10 @@
 # include	<chfdef.h>
 # include       <evset.h>
 # include	<lib$routines.h>
+# include	<clconfig.h>
 # include	<exinternal.h>
 
-GLOBALDEF void (*Ex_print_stack)(CS_SCB *, void *, PTR, TR_OUTPUT_FCN *, i4);
+GLOBALDEF void (*Ex_print_stack)(struct _CS_SCB *, void *, PTR, TR_OUTPUT_FCN *, i4);
 GLOBALDEF       i4      Ex_core_enabled = 0;      /* 1 = allow core          */
 FUNC_EXTERN	VOID	EXdump();
 
@@ -59,6 +60,8 @@ static volatile bool  in_sysrep = FALSE;      /* Used to prevent recursion
 **	    from VMS CL as the use is no longer allowed
 **      07-sep-2010 (joea)
 **          For i64_vms, move EXsetclient to exsignal.c.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems, 
 */
 static STATUS
 ex_print_error(PTR arg1, i4 msg_length, char *msg_buffer)
@@ -66,7 +69,7 @@ ex_print_error(PTR arg1, i4 msg_length, char *msg_buffer)
     CL_ERR_DESC err_code;
 
     ERsend( ER_ERROR_MSG, msg_buffer, msg_length, &err_code );
-    RETURN (OK);
+    return (OK);
 }
 
 /*{

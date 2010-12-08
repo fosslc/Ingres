@@ -18,6 +18,9 @@
 **          Added dbdb stuff
 **      12-Apr-2004 (stial01)
 **          Define db_length as SIZE_TYPE.
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Add SCV_NODBMO_MASK to prevent making MO objects for
+**	    database, typically when fetching iidbdb information.
 [@history_template@]...
 **/
 
@@ -29,6 +32,7 @@
 **      Function codes for dbopen()
 */
 #define                 SCV_NOOPEN_MASK 0x0001
+#define                 SCV_NODBMO_MASK 0x0002
 
 /*}
 ** Name: SCV_LOC - DMF locations for a database

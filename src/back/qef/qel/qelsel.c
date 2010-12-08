@@ -181,14 +181,6 @@ QEF_RCB		*v_qer_p,
 QEC_LINK	*o1_lnk_p,
 QEQ_1CAN_QRY	*o2_sel_p )
 {
-    QES_DDB_SES		*dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
-    QED_DDL_INFO	*ddl_p = & v_qer_p->qef_r3_ddb_req.qer_d7_ddl_info;
-/*
-    DD_LDB_DESC		*ldb_p = & ddl_p->qed_d6_tab_info_p->
-			    dd_t9_ldb_p->dd_i1_ldb_desc,
-			*cdb_p = & dds_p->qes_d4_ddb_p->
-			    dd_d3_cdb_info.dd_i1_ldb_desc;
-*/
     
     MEfill( sizeof(QEC_LINK), '\0', (PTR) o1_lnk_p);
     MEfill( sizeof(QEQ_1CAN_QRY), '\0', (PTR) o2_sel_p);
@@ -277,6 +269,8 @@ QEQ_1CAN_QRY	*o2_sel_p )
 **	    Added reltcpri (table cache priority) to iitables.
 **	5-May-2002 (bonro01)
 **	    Fix overlay caused by using wrong stucture fields.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Fix array overruns.
 */
 
 
@@ -851,13 +845,19 @@ QEC_LINK	*v_lnk_p )
 	    /* select * from iidd_ddb_ldb_columns where ldb_node = <node> and
 	    ** ldb_dbms = <dbms> and ldb_database = <ldb>; */
 
-		ldb_p->dd_l2_node_name[DB_NODE_MAXNAME] = EOS;
+	/* *********** FIXME!  it appears that these char arrays were defined
+	** one too small, but fixing / untangling would require lots of
+	** digging through ddb.h and friends.  For now, at least don't
+	** overrun the arrays.  STtrmnwhite is unavailing because it doesn't
+	** guarantee null termination, and we'll use %s below.
+	*/
+		ldb_p->dd_l2_node_name[DB_NODE_MAXNAME-1] = EOS;
 		STtrmwhite(ldb_p->dd_l2_node_name);
 
-		ldb_p->dd_l4_dbms_name[DB_TYPE_MAXLEN] = EOS;
+		ldb_p->dd_l4_dbms_name[DB_TYPE_MAXLEN-1] = EOS;
 		STtrmwhite(ldb_p->dd_l4_dbms_name);
 
-		ldb_p->dd_l3_ldb_name[DD_256_MAXDBNAME] = EOS;
+		ldb_p->dd_l3_ldb_name[DD_256_MAXDBNAME-1] = EOS;
 		STtrmwhite(ldb_p->dd_l3_ldb_name);
 
 	    STprintf(

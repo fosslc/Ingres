@@ -743,6 +743,9 @@ GLOBALREF i4	ME_align_table[];
 **      02-Feb-2001 (fanra01)
 **              Bug 103864
 **              Update MEcalloc macro to use MEreqmem.
+**	02-Dec-2010 (miket) BUG 124798
+**		Until overlapping dest/src MEcopy calls are found and
+**		fixed, map MEcopy to memmove() rather than memcpy().
 **/
 
 /*
@@ -763,22 +766,10 @@ GLOBALREF i4	ME_align_table[];
 # define MECOPY_CONST_4_MACRO( s, d ) \
 { M1(s,0,d); M1(s,1,d); M1(s,2,d); M1(s,3,d); }
 
-/* These all exists on su4_us5, su9_us5 */
-
-#if defined(i64_hpu) || defined(any_aix) || defined(i64_lnx) || \
-    defined(a64_sol)
 #define MEcopy(source, n, dest)		memmove(dest, source, n)
-#else
-#define MEcopy(source, n, dest)		memcpy(dest, source, n)
-#endif
 
-#if defined(i64_lnx) || defined (i64_hpu)
 #define MECOPY_CONST_MACRO(s,n,d)	memmove(d,s,n)
 #define MECOPY_VAR_MACRO(s,n,d)		memmove(d,s,n)
-#else
-#define MECOPY_CONST_MACRO(s,n,d)	memcpy(d,s,n)
-#define MECOPY_VAR_MACRO(s,n,d)		memcpy(d,s,n)
-#endif
 
 #define MEmemcpy			memcpy
 #define MEmemccpy			memccpy

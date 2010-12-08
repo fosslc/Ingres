@@ -168,6 +168,8 @@ static DB_STATUS openTempTable(
 **	    thanks to the parallel query changes.)
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 /*{
@@ -777,7 +779,6 @@ static DB_STATUS openTempTable(
 	bool		gttparm
 )
 {
-    QEF_CB	    *qef_cb = rcb->qef_cb;
     QEE_TEMP_TABLE  *tempTable = dsh->dsh_tempTables[ tempTableNumber ];
     DMT_CB	    *dmt = tempTable->tt_dmtcb;
     DMR_CB	    *dmr = tempTable->tt_dmrcb;

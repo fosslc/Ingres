@@ -155,19 +155,14 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **	25-aug-93 (ed)
 **	    remove dbdbms.h
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adf_agbegin(
 ADF_CB             *adf_scb,
 ADF_AG_STRUCT      *adf_agstruct)
-# else
-DB_STATUS
-adf_agbegin( adf_scb, adf_agstruct)
-ADF_CB             *adf_scb;
-ADF_AG_STRUCT      *adf_agstruct;
-# endif
 {
     ADI_FI_ID		fid = adf_agstruct->adf_agfi;
     ADI_FI_DESC		*fidesc;

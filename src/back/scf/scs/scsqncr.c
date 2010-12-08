@@ -1226,6 +1226,8 @@
 **           for both sc930_xatrace and scs_xatrace
 **	12-Nov-2010 (kschendel) SIR 124685
 **	    Refine CS prototypes.
+**      16-Nov-2010 (horda03) b124691
+**          Correct AST handling on VMS (use SS$_WASSET to detect if ASTs were enabled)
 **/
 
 /*
@@ -11304,7 +11306,7 @@ scs_input(SCD_SCB *scb,
     ** Ingres is built on VMS with /NOMEMBER_ALIGNMENT.
     */
 
-    int ast_enabled = sys$setast(0);
+    int ast_enabled = (sys$setast(0) == SS$_WASSET);
 
     gca_status = scb->scb_cscb.cscb_gci.gca_status;
 

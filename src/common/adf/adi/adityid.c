@@ -140,21 +140,15 @@
 **	    Added support for searching alias date.
 **	13-feb-2007
 **	    Fixed searching for the date alias.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_tyid(
 ADF_CB             *adf_scb,
 ADI_DT_NAME        *adi_dname,
 DB_DT_ID           *adi_did)
-# else
-DB_STATUS
-adi_tyid( adf_scb, adi_dname, adi_did)
-ADF_CB             *adf_scb;
-ADI_DT_NAME        *adi_dname;
-DB_DT_ID           *adi_did;
-# endif
 {
     i4                  s;
     i4                  n;

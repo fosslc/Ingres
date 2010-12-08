@@ -8,6 +8,9 @@
 #include    <sicl.h>
 /* get LOCATION type if prototyped */
 #include    <lo.h>
+#ifdef VMS
+# include   <stdarg.h>
+#endif
 
 /**CL_SPEC
 ** Name:	SI.h	- Define SI function externs
@@ -269,7 +272,12 @@ FUNC_EXTERN STATUS SIstd_write(
 	char		*str
 );
 
+#ifdef VMS
+VOID
+SIdofrmt(FILE *outarg, const char *fmt, STATUS (*flfunc)(), va_list ap);
+#else
 VOID
 SIdofrmt(i4, void *, const char *, va_list);
+#endif
 
 #endif /*SI_INCLUDE*/

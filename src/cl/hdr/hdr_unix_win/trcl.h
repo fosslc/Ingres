@@ -95,6 +95,8 @@
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
 **	23-Nov-2010 (kschendel)
 **	    Drop obsolete ports.
+**	3-Dec-2010 (kschendel)
+**	    Turns out DESKTOP was on for windows, fix.
 **/
 
 /*
@@ -150,7 +152,7 @@
 
 #endif	/* VMS */
 
-#if defined (UNIX)
+#if defined (UNIX) || defined(NT_GENERIC)
 
 #define			TR_OUTPUT	"stdio"
 #define			TR_L_OUTPUT	5

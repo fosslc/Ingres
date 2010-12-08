@@ -2,6 +2,11 @@
 ** Copyright (c) 1987, 2008 Ingres Corporation
 */
 
+# ifndef CS_H_INCLUDED
+# define CS_H_INCLUDED
+
+# include <ssdef.h>
+
 /**CL_SPEC
 ** Name: CS.H - Control System CL Module Global Header
 **
@@ -567,12 +572,12 @@
 **          csnormal.h.
 **	10-Nov-2010 (kschendel) SIR 124685
 **	    Prototype fixes.
+**      16-Nov-2010 (horda03) b124691
+**          Add ssdef.h so that SS$_WASSET is available. Also, moved location
+**          of CS_H_INCLUDED.
 */
 
 
-# ifndef CS_H_INCLUDED
-# define CS_H_INCLUDED
-
 /*
 **  Forward and/or External typedef/struct references.
 */

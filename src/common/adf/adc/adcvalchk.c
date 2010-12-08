@@ -189,19 +189,14 @@
 **	    Bug fix; did not look for NULL values, and call them OK.  Instead,
 **          it just passed them as non-nullable values and had the low level
 **          routines check them.  This caused random failures.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_valchk(
 ADF_CB             *adf_scb,
 DB_DATA_VALUE      *adc_dv)
-# else
-DB_STATUS
-adc_valchk( adf_scb, adc_dv)
-ADF_CB             *adf_scb;
-DB_DATA_VALUE      *adc_dv;
-# endif
 {
     i4		   	bdt = (i4) ADF_BASETYPE_MACRO(adc_dv);
     DB_STATUS		db_stat;

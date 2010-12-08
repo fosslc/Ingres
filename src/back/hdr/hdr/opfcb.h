@@ -174,6 +174,8 @@
 **	28-Jun-2010 (smeke01) b123969
 **	    Added diagnostic tracepoint OP217 which forces optimiser to use
 **	    hash joins. Requires xDEBUG to be defined in opjjoinop.c.
+**	09-Nov-2010 (wanfr01) SIR 124714
+**	    Add ops_holdfactor
 **/
 
 /*}
@@ -774,6 +776,7 @@ typedef struct _OPF_CB
 					** join in parallel query */
     f4		    opf_greedy_factor;	/* adjust ops_cost/jcost comparison
 					** in opn_corput() for greedy enum */
+    f4		    opf_holdfactor;	/* Disk I/O adjustment */
 } OPF_CB;
 
 /*}

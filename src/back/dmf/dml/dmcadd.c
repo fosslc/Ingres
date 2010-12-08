@@ -253,6 +253,10 @@ NO_OPTIM=dr6_us5 i64_aix
 **	    Change cmptlvl to an integer.
 **	09-aug-2010 (maspa05) b123189, b123960
 **	    Pass flag for readonlydb through to dm2d_add_db
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Add DMC2_NODBMO to prevent making MO objects for
+**	    database, typically when fetching iidbdb information.
+**	    Pass along to dm2d as DM2D_NODBMO.
 */
 
 static const DMM_LOC_LIST    loc_list[4] =
@@ -363,6 +367,14 @@ DMC_CB    *dmc_cb)
 
         if (dmc->dmc_flags_mask2 & DMC2_READONLYDB)
             flags |= DM2D_READONLYDB;
+
+	/* No MO objects if so requested */
+	if ( dmc->dmc_flags_mask2 & DMC2_NODBMO ||
+	     mode == DMC_A_CREATE || mode == DMC_A_DESTROY )
+	{
+	    flags |= DM2D_NODBMO;
+	}
+
 	/*
 	** It is an error to specify Fast Commit without specifying to
 	** use a single buffer manager.

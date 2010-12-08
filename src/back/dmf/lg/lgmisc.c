@@ -1458,7 +1458,10 @@ LG_check_dead(CL_ERR_DESC *sys_err)
     ** ...
     */
 
+#  ifdef OS_THREADS_USED
     CS_check_dead();
+#  endif
+
 #endif
 
     if (lgd->lgd_lwlxb.lwq_count != 1)
@@ -2001,7 +2004,9 @@ get_critical_sems(void)
     }
 
 #ifndef NT_GENERIC
+#  ifdef OS_THREADS_USED
     CS_get_critical_sems();
+#  endif
 #endif
 
     return (ret_status);
@@ -2054,7 +2059,9 @@ rel_critical_sems(void)
     i4	i;
 
 #ifndef NT_GENERIC
+#   ifdef OS_THREADS_USED
     CS_rel_critical_sems();
+#   endif
 #endif
 
     /*

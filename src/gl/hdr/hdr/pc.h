@@ -8,6 +8,7 @@
 #include    <lo.h>
 /* for EX definition */
 #include    <ex.h>
+#include    <si.h>
 #include    <pccl.h>
 
 /**CL_SPEC
@@ -59,6 +60,8 @@
 **	   Added prototype for PCreap to eliminate gcc 4.3 warnings.
 **	1-Dec-2010 (kschendel) SIR 124685
 **	    Kill CL_PROTOTYPED (always on now).
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems, 
 **/
 
 VOID PCatexit(

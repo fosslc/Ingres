@@ -117,6 +117,8 @@
 **	14-May-2010 (kschendel) b123565
 **	    qen-nthreads is now zero except under an exchange, make
 **	    the necessary minor adjustments here.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 */
 
 /* Reservation state information structure.
@@ -2360,8 +2362,6 @@ qee_hashaggInit(
 {
     QEN_HASH_AGGREGATE *haggp = dsh->dsh_hashagg[qepp->u1.s2.ahd_agcbix];
     QEF_QP_CB	*qp = dsh->dsh_qp_ptr;
-    QEF_CB	*qefcb = qef_rcb->qef_cb;
-    DB_CMP_LIST	*lastcmp;
     i4		orowsz;
     i4		i, ix, htsize;
     i4		aggest, available;
@@ -2381,19 +2381,19 @@ qee_hashaggInit(
 	return (E_DB_OK);
 
     /* Set buffer sizes (agg. work, hash, overflow). */
-    globalbase = (dsh->dsh_qp_ptr->qp_status & QEQP_GLOBAL_BASEARRAY) != 0;
+    globalbase = (qp->qp_status & QEQP_GLOBAL_BASEARRAY) != 0;
     ix = (globalbase) ? qepp->u1.s2.ahd_agwbuf :
 	qepp->ahd_current->qen_base[
 		qepp->u1.s2.ahd_agwbuf-ADE_ZBASE].qen_index;
-    haggp->hshag_wbufsz = dsh->dsh_qp_ptr->qp_row_len[ix];
+    haggp->hshag_wbufsz = qp->qp_row_len[ix];
     ix = (globalbase) ? qepp->u1.s2.ahd_aghbuf :
 	qepp->ahd_by_comp->qen_base[
 		qepp->u1.s2.ahd_aghbuf-ADE_ZBASE].qen_index;
-    haggp->hshag_hbufsz = dsh->dsh_qp_ptr->qp_row_len[ix];
+    haggp->hshag_hbufsz = qp->qp_row_len[ix];
     ix = (globalbase) ? qepp->u1.s2.ahd_agobuf :
 	qepp->u1.s2.ahd_agoflow->qen_base[
 		qepp->u1.s2.ahd_agobuf-ADE_ZBASE].qen_index;
-    orowsz = dsh->dsh_qp_ptr->qp_row_len[ix];
+    orowsz = qp->qp_row_len[ix];
     /* Must be aligned to HASH-DUP row length multiple (opc should have done
     ** that already), and additionally ensure that it's pointer aligned.
     */

@@ -35,12 +35,24 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      30-nov-2010 (gupsh01) SIR 124685
+**          Prototype cleanup.
 **/
 
-DB_STATUS    adi_ficoerce();
-DB_STATUS    adi_fidesc();
-DB_STATUS    adi_0calclen();
+FUNC_EXTERN DB_STATUS adi_ficoerce(ADF_CB     *adf_scb,
+                                   DB_DT_ID   adi_from_did,
+                                   DB_DT_ID   adi_into_did,
+                                   ADI_FI_ID  *adi_fid);
 
+FUNC_EXTERN DB_STATUS adi_fidesc(ADF_CB       *adf_scb,
+                                 ADI_FI_ID    adi_fid,
+                                 ADI_FI_DESC  **adi_fdesc);
+
+FUNC_EXTERN DB_STATUS adi_0calclen(ADF_CB             *adf_scb,
+                                   ADI_LENSPEC        *adi_lenspec,
+                                   i4                 adi_numops,
+                                   DB_DATA_VALUE      *adi_dv[],
+                                   DB_DATA_VALUE      *adi_dvr);
 /*{
 ** Name:	afe_ficoerce() -	Get Function Instance ID and
 **						Result Length for a Coercion.

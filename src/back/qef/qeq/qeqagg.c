@@ -77,6 +77,8 @@
 **          qeq_a1_doagg().
 **	24-feb-04 (inkdo01)
 **	    Changed dsh_ddb_cb from QEE_DDB_CB instance to ptr.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 
@@ -135,13 +137,10 @@ QEF_AHD		*i_act_p )
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     QEE_DSH	    *dsh_p = (QEE_DSH *)(v_qer_p->qef_cb->qef_dsh);
     QEE_DDB_CB	    *qee_p = dsh_p->dsh_ddb_cb;
-    QEF_QP_CB	    *qp_p = dsh_p->dsh_qp_ptr;
-    QEQ_DDQ_CB	    *ddq_p = & qp_p->qp_ddq_cb;
-    QES_QRY_SES	    *qqs_p = & dds_p->qes_d8_union.u2_qry_ses;
     QEQ_D1_QRY	    *sub_p = & i_act_p->qhd_obj.qhd_d1_qry;
     RQR_CB	    rqr,
 		    *rqr_p = & rqr;
-    i4		    n, size;
+    i4		    n;
     DB_DATA_VALUE   *dv_p;
     char	    **pp,
 		    *attr_p;

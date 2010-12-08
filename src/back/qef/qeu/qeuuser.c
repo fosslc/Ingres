@@ -160,6 +160,8 @@
 **	    Revise DMF qualification interface
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 /*
@@ -286,8 +288,6 @@ QEUQ_CB		    *qeuq_cb)
     i4	    	error;
     bool	    	transtarted = FALSE;	    
     bool	    	tbl_opened = FALSE;
-    i4		    	i;		
-    QEF_DATA	    	*next;		
     QEU_CB	    	tranqeu;
     QEU_CB	    	qeu;
     QEF_DATA	    	qef_data;
@@ -998,8 +998,6 @@ QEUQ_CB		    *qeuq_cb)
     i4	    	error;
     bool	    	transtarted = FALSE;	    
     bool	    	tbl_opened = FALSE;
-    i4		    	i;		
-    QEF_DATA	    	*next;		
     QEU_CB	    	tranqeu;
     QEU_CB	    	qeu;
     QEF_DATA	    	qef_data;
@@ -1533,8 +1531,6 @@ QEUQ_CB		*qeuq_cb)
     DB_ERROR		e_error;
     i4	    	error;
     i2			gtype;		/* For purging iidbpriv tuples */
-    char		*tempstr;
-    i4		alen;
 
     QEU_CB		dbqeu;		/* For iidatabase table */
     bool	    	db_opened = FALSE;

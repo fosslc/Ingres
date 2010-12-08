@@ -423,10 +423,9 @@
 **	    parallel query fixup.
 **	10-Sep-2010 (kschendel) b124341
 **	    SEjoin replaced kcompare with cvmat CX's, fix a couple places here.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 **/
-/*
-NO_OPTIM = a64_sol
-*/
 
 static DB_STATUS qee_ade(
 	QEE_DSH            *dsh,
@@ -901,7 +900,6 @@ qee_destroy(
 	i4	    val_1, val_2;
 	bool	    trace_50;
 	QEQ_DDQ_CB  *ddq_p = & qp->qp_ddq_cb;
-	QES_DDB_SES *dds_p = & qef_cb->qef_c2_ddb_ses;
 	i4	    sav_rowcount = qef_rcb->qef_rowcount;
 					    /* must save row count before
 					    ** commiting the CDB association
@@ -1257,8 +1255,6 @@ qee_destroy(
 **	    .qef_cb		session control block
 **	    .qef_qp		query plan id
 **	    .qef_qso_handle	query plan handle if not zero.
-**	page_count		number of pages in set input table parameter.
-**				-1 if this is not for a set input procedure.
 **	qsf_rcb
 **	    qsf_obj_id.qso_handle  QSF object handle to QP
 **	is_tproc		TRUE if DSH is to be used for a table procedure
@@ -1425,13 +1421,14 @@ qee_destroy(
 **	    Init the "stats are inited" flag.
 **	18-Jun-2010 (kschendel) b123775
 **	    Put tproc DSH's on the odsh list for cleanup purposes.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes;  delete unused page-count param.
 */
 DB_STATUS
 qee_fetch(
 	QEF_RCB		*qef_rcb,
 	QEF_QP_CB	*qp,
 	QEE_DSH		**dsh,
-	i4		page_count,
 	QSF_RCB		*qsf_rcb,
 	bool		is_tproc
         )
@@ -1449,7 +1446,6 @@ qee_fetch(
     ULM_RCB	    ulm;
     ULH_RCB	    ulh_rcb;
     bool	    ddb_b;
-    bool	    is_set_input = page_count >=0;
 
 #ifdef xDEBUG
     QEF_AHD	    *act;
@@ -2181,7 +2177,6 @@ qee_create(
     GCA_TD_DATA	    *gca_p;
     QEQ_DDQ_CB	    *ddq_p;	
     QEE_DDB_CB	    *qee_p = dsh->dsh_ddb_cb;
-    QEF_DDB_REQ	    *ddr_p = & qef_rcb->qef_r3_ddb_req;
     QEF_AHD	    **eobptr;
     ULM_RCB	    eob_ulm;
     i4		    i, j, np;
@@ -2801,7 +2796,6 @@ qee_cract(
     bool            key_by_position = FALSE;
     bool	    hash_reserved = FALSE;
     QEF_KEY         *qef_pkey;
-    QEN_PART_INFO   *partp;
 
     if (bgn_act == (QEF_AHD *)NULL)
 	return (E_DB_OK);
@@ -4402,9 +4396,6 @@ qee_joinTempTables(
     QEN_TEMP_TABLE  *tempTable;
     QEE_TEMP_TABLE  *dshTempTable;
     DMT_CB	    *dmt_cb;
-    DMF_ATTR_ENTRY  **attr_entry;
-    DMT_KEY_ENTRY   **keyArray;
-    DMT_KEY_ENTRY   *key;
     DB_STATUS	    status = E_DB_OK;
 
     for (;;)	/* the usual and customary code block */
@@ -5339,7 +5330,6 @@ qee_return_dbparam(
     i4		    pcount, uindex, i, j;
     i4		    actuals_used;	/* Number of actual parameters used */
     DB_DATA_VALUE   row_dbv;    
-    DB_DATA_VALUE   *byref_dbvp;    
 
 
     /* If this is from the front end, just return - we're not interested. */
@@ -5587,7 +5577,7 @@ qee_update_nested_byrefs(
     DB_STATUS	    status;
     i4	    err;
     i4		    pcount, i;
-    DB_DATA_VALUE   row_dbv, callers_dbv;
+    DB_DATA_VALUE   row_dbv;
     DB_DATA_VALUE   *callers_dbvp;
 
     pcount = qp->qp_ndbp_params;    /* count of formal parameters in QP */
@@ -5673,7 +5663,6 @@ qee_build_byref_tdata(
 	QEE_DSH		*dsh)
 {
     QEF_QP_CB	    	*qp = dsh->dsh_qp_ptr;
-    DB_STATUS	    	status;
     i4			uindex;
     i4			ucount = qef_rcb->qef_pcount;
     char		*data_area = qef_rcb->qef_output->dt_data;

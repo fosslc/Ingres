@@ -113,10 +113,10 @@
 **	    the join, and simple RLL compression can improve space usage
 **	    and reduce spillage.  Row compression implies variable length
 **	    rows, with attendant changes throughout.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 **/
 
-
-GLOBALREF QEF_S_CB *Qef_s_cb;
 
 
 /*	local structures 	*/
@@ -127,6 +127,7 @@ typedef struct _FREE_CHUNK {
 
 /*	static functions	*/
 
+/* Only used for debug, ignore "defined but not used" warnings */
 static VOID qen_hash_verify(QEN_HASH_BASE *hbase);
 
 static DB_STATUS
@@ -426,7 +427,7 @@ void
 qen_hash_value( QEF_HASH_DUP *rowptr, i4 length)
 {
     u_i4 a,b,c;				/* internal state */
-    u_char *key = &rowptr->hash_key[0];
+    u_char *key = (u_char *) &rowptr->hash_key[0];
     const u_i4 *k = (const u_i4 *)key;	/* read 32-bit chunks */
 
     /* Set up the internal state */
@@ -1033,7 +1034,7 @@ QEN_HASH_BASE	*hbase)
     QEN_HASH_LINK	*hlink;
     QEN_HASH_PART	*hpptr;
     QEN_HASH_PART	*prev_hpptr;
-    i4			hbucket, emptyps;
+    i4			emptyps;
     QEF_CB		*qcb = dsh->dsh_qefcb;
     QEF_HASH_DUP	*brptr;
     FREE_CHUNK		*free;		/* Head of free chunk list */
@@ -1426,7 +1427,7 @@ QEN_HASH_BASE	*hbase)
 	    /* What we can do in the one-side-loaded case is to use
 	    ** not-done partitions with buffers, but no rows.  This can
 	    ** only happen if recursion created the buffer.
-	    /* We can't drop or end the partition (yet), but we do know
+	    ** We can't drop or end the partition (yet), but we do know
 	    ** that any probes for the to-be-loaded side will either
 	    ** not join or will OJ; either way we don't need the buffer.
 	    */
@@ -2274,7 +2275,6 @@ QEF_HASH_DUP	*brptr)
     i4		hbucket, cmpres;
     QEF_HASH_DUP **htable;
     QEF_HASH_DUP *hchain, *hprev;
-    DB_STATUS	status;
 
 
     /* Compute bucket number (from hash number). Then insert into 
@@ -2453,8 +2453,8 @@ QEN_HASH_BASE	*hbase)
     /* First, check for one having all rows with same hashno. This
     ** is the ugly case which requires cross product joining on 
     ** the partition pair. */
-    if (hpptr->hsp_flags & HSP_BALLSAME && hpptr->hsp_brcount ||
-	hpptr->hsp_flags & HSP_PALLSAME && hpptr->hsp_prcount)
+    if ((hpptr->hsp_flags & HSP_BALLSAME && hpptr->hsp_brcount) ||
+	(hpptr->hsp_flags & HSP_PALLSAME && hpptr->hsp_prcount) )
     {
 	QEN_HASH_CARTPROD	*hcpptr;
 	bool	leftas, rightas, leftjoin, rightjoin;
@@ -5493,7 +5493,6 @@ QEN_HASH_BASE	*hbase,
 QEN_HASH_PART	*hpptr)
 
 {
-    DMH_CB	*dmhcb;
     i4		spillmask, flushmask;
     DB_STATUS	status;
  

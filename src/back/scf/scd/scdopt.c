@@ -378,6 +378,8 @@ NO_OPTIM=dr6_us5
 **	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    Delete sca.h include. Function prototypes moved to
 **	    scf.h for exposure to DMF.
+**	09-Nov-2010 (wanfr01) SIR 124714
+**	    Added block_holdfactor
 **	19-Nov-2010 (kiria01) SIR 124690
 **	    Add support for setting installation wide collation defaults
 **	    .default_collation & .default_unicode_collation.
@@ -658,6 +660,7 @@ struct _SCD_OPT {
 #define		SCO_MONEY_COMPAT            220
 #define		SCO_DEFAULT_COLL	    221 /* Default collation */
 #define		SCO_DEFAULT_UNI_COLL        222 /* Default Unicode collation */
+#define         SCO_BLOCK_HOLDFACTOR        223 
 static SCD_OPT scd_opttab[] =
 {
     /* echoing first so the rest get echoed */
@@ -747,6 +750,7 @@ static SCD_OPT scd_opttab[] =
     /* remaining random parameters */
     SCO_SECURE_LEVEL,		'g',	' ',	"ii.$.secure.level",
     SCO_ASSOC_TIMEOUT,          'o',    ' ',    "!.association_timeout",
+    SCO_BLOCK_HOLDFACTOR,	'F',	' ',	"!.block_holdfactor",
     SCO_LOCK_CACHE,		't',	'3',	"!.cache_lock",
     SCO_CHECK_DEAD,		'o',	'3',	"!.check_dead",
     SCO_CORE_ENABLED,		't',	' ',	"!.core_enabled",
@@ -2474,12 +2478,16 @@ scd_options(
             case SCO_QEF_NO_DEPENDENCY_CHK:
                 qef_cb->qef_nodep_chk = TRUE;
                 break; 
-                
+
+            case SCO_BLOCK_HOLDFACTOR:
+                opf_cb->opf_holdfactor = scd_dvalue;
+                break;
+            
 	    case SCO_BATCH_COPY_OPTIM:
 		/* batch copy optimization off */
 		Sc_main_cb->sc_batch_copy_optim = FALSE;
 		break;
- 
+
 	    default:
 		sc0e_put( E_SC0232_INVALID_STARTUP_CODE, (CL_ERR_DESC *)0, 2,
 		    sizeof( scdopt->sco_index ), (PTR)&scdopt->sco_index,

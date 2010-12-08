@@ -144,6 +144,10 @@ typedef ULT_VECTOR_MACRO(OPT_BMGLOBAL, OPT_GVALUES) OPT_GLOBAL;
 **          Add .ops_qep_flag for displaying QEPs in segments.
 **	14-Oct-2010 (kschendel) SIR 124544
 **	    Delete result-structure stuff, all done in PSF now.
+**	09-Nov-2010 (wanfr01) SIR 124714
+**	    Add ops_holdfactor
+**	13-Nov-2010 (wanfr01) SIR 124714
+**	    Removed unneeded opg_holdfactor
 */
 typedef struct _OPS_ALTER
 {
@@ -258,6 +262,7 @@ typedef struct _OPS_ALTER
     f4		    ops_greedy_factor;	/* adjust ops_cost/jcost comparison
 					** in opn_corput() for greedy enum */
     bool	ops_nocardchk;		/* Set if in legacy 'ignore' mode */
+    f4		    ops_holdfactor;	/* holdfactor adjustment */
 }   OPS_ALTER;
 
 /*}

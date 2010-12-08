@@ -556,6 +556,9 @@
 #       15-Jul-2010 (smeke01) b123950
 #           Add function instance ADFI_1475_NORM_DATE_HASH / adu_norm_date_hash
 #           for operator ADI_DATEHASH_OP / norm_date_hash.
+#       06-Dec-2010 (horda03)
+#           Renamed adu_geometrycollection_srid_fromWKB and
+#           adu_geometrycollection_srid_fromText
 
 
 group ADI_COMPARISON
@@ -10336,7 +10339,7 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_GEOMC_TYPE
 	    operands DB_LVCH_TYPE DB_INT_TYPE
-	    routine adu_geometrycollection_srid_fromText
+	    routine adu_geomcollection_srid_fromText
         
 	fi ADFI_1700_GEOMC_S_FROM_WKB
 	    description geomcbin    : geomcollfromwkb(geom, int)
@@ -10344,7 +10347,7 @@ group ADI_NORM_FUNC
 	    null_preinst ADE_1CXI_SET_SKIP
 	    result DB_GEOMC_TYPE
 	    operands DB_LBYTE_TYPE DB_INT_TYPE
-	    routine adu_geometrycollection_srid_fromWKB
+	    routine adu_geomcollection_srid_fromWKB
         
 
 

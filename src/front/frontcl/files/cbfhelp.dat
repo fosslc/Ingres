@@ -214,6 +214,10 @@ dbms.active_limit.title:		'DBMS Active Connection Limit'
 recovery.active_limit.title:		'Recovery Active Connection Limit'
 rms.active_limit.title:			'RMS Active Connection Limit'
 
+*.block_holdfactor.file:		dbmsbhld.hlp
+dbms.block_holdfactor.title:		'DBMS I/O QEP scaling factor'
+star.block_holdfactor.title:		'Star I/O QEP scaling factor'
+
 dbms.buf_caches.file:			dbmsbufc.hlp
 dbms.buf_caches.title:    		'DBMS Buffer Caches'
 

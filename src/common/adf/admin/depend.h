@@ -25,5 +25,8 @@ extern II_STATUS usop_midpoint();
 extern II_STATUS usop_xcoord();
 extern II_STATUS usop_ycoord();
 extern II_STATUS usop_ordpair();
-extern II_STATUS usop_trace();
+extern II_STATUS usop_trace(II_SCB          *scb ,
+            		    II_DATA_VALUE         *dispose_mask ,
+            		    II_DATA_VALUE         *trace_string ,
+            		    II_DATA_VALUE         *result ); 
 extern II_STATUS (*Ingres_trace_function)();

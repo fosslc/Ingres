@@ -154,6 +154,8 @@ static i4  compcount;
 **	    Remove incorrect u_i2 casts.
 **	14-Dec-2005 (kschendel)
 **	    Use new ADF CB pointer in dsh.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 */
 /*
 
@@ -739,15 +741,13 @@ qes_heapalloc(
 {
     GLOBALREF QEF_S_CB	*Qef_s_cb;
     QEF_CB		*qef_cb = dsh->dsh_qefcb;
-    DM_MDATA		*dt;
     DM_MDATA		*free;
-    DB_STATUS		status;
+    DB_STATUS		status = E_DB_OK;
     ULM_RCB		ulm_rcb;
     QEN_NODE            *node = shd->shd_node;
     i4		buffalign;
     i4                  i, j, k, l;
     i4                  max_array_size;
-    PTR                 *p_ptr;
    
 
     dsh->dsh_error.err_code = E_QE0000_OK;
@@ -907,7 +907,6 @@ qes_put(
 	QEN_SHD		*shd)
 {
     GLOBALREF QEF_S_CB	*Qef_s_cb;
-    QEF_CB		*qef_cb = dsh->dsh_qefcb;
     DM_MDATA		*dt;
     DB_STATUS		status;
     PTR                 *p_ptr;
@@ -994,7 +993,7 @@ qes_putheap(
     DM_MDATA		*dt;
     DB_STATUS		status;
     PTR                 *p_ptr;
-    i4			i, j, k, cmpres;
+    i4			i, j, cmpres;
 
     dsh->dsh_error.err_code = E_QE0000_OK;
     adf_cb->adf_errcb.ad_errcode = 0;
@@ -1144,7 +1143,7 @@ qes_getheap(
     ADF_CB		*adf_cb = dsh->dsh_adf_cb;
     DB_STATUS		status;
     PTR			*p_ptr;
-    i4			i, j, k;
+    i4			i, j;
     bool		gotadup;
 			
 			
@@ -1163,9 +1162,9 @@ qes_getheap(
 	{
 	    /* Pick smaller of j, j+1 */
 	    if (j < shd->shd_tup_cnt && (p_ptr[j-1] == NULL ||
-		p_ptr[j] != NULL && (compcount++,
-		adt_sortcmp(adf_cb, sortkey,
-		kcount, p_ptr[j-1], p_ptr[j], 0) > 0))) j++;
+		(p_ptr[j] != NULL && (compcount++,
+		 adt_sortcmp(adf_cb, sortkey,
+			kcount, p_ptr[j-1], p_ptr[j], 0) > 0)))) j++;
 
 	    if (adf_cb->adf_errcb.ad_errcode != 0)
 	    {
@@ -1361,11 +1360,9 @@ qes_sorter(
     ADF_CB		*adf_cb = dsh->dsh_adf_cb;
     PTR			*vector;
     PTR			tmpptr;
-    DB_STATUS		status;
     i4			heapsize = shd->shd_tup_cnt;
     i4			last = heapsize - 1;
     i4			current_node, parent, child, i, j;
-    ULM_RCB		ulm_rcb;
     i4			compare_count = 0;   /* temp for comparing sorts */
 			/* FIXME remove all references to compare_count */
 

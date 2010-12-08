@@ -110,6 +110,8 @@
 **	    additions have been isolated in service routines that handle the
 **	    generation of literals or set data.
 **	    to use UCS2 CEs for comparison related actions.
+**      02-Dec-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
 
 #include <compat.h>
@@ -325,6 +327,11 @@ static i4 cmp_simple   (PTR, const u_i1*, u_i4, const u_i1*, u_i4);
 static i4 cmp_collating(PTR, const u_i1*, u_i4, const u_i1*, u_i4);
 static i4 cmp_unicode  (PTR, const u_i1*, u_i4, const u_i1*, u_i4);
 static i4 cmp_unicodeCE(PTR, const u_i1*, u_i4, const u_i1*, u_i4);
+static bool pat_set_add(PAT_SET **listp, const u_char *ch, u_i4 len, bool range, 
+			i4 (*cmp)(PTR, const u_i1*, u_i4, const u_i1*, u_i4), 
+			PTR arg);
+static u_i1 * trace_op(u_i1 *pc, bool uni);
+
 
 /*
 ** Name: find_op() - Look for an operator

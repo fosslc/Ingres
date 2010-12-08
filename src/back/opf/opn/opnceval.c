@@ -351,6 +351,12 @@ opn_mhandler(
 **	    Add code to do quick exit for where-less idiot queries.
 **	13-Feb-2007 (kschendel)
 **	    Replace CSswitch with better CScancelCheck.
+**      21-sept-2010 (huazh01)
+**          Flag 'OPS_IDIOT_NOWHERE' can also be set for a query having
+**          only constant restrictions in its right branch of the query
+**          tree. After we got the first qep, do not immediately timeout 
+**          such type of query, otherwise, plans using secondary index 
+**          won't be considered. (b124342)
 [@history_template@]...
 */
 bool
@@ -361,7 +367,16 @@ opn_timeout(
                                         ** currently active user */
     OPS_STATE       *global;            /* ptr to global state variable */
 
-    if (subquery->ops_mask & OPS_IDIOT_NOWHERE && subquery->ops_bestco) return(TRUE);
+    /* OPS_IDIOT_NOWHERE can also be set for a query having only constant
+    ** restrictions in its right branch of the query tree. Do not immediately
+    ** time out such type of query, otherwise, plans using secondary index
+    ** won't be considered. (b124342)
+    */
+    if (subquery->ops_mask & OPS_IDIOT_NOWHERE && 
+        (subquery->ops_root->pst_right == NULL || 
+	subquery->ops_root->pst_right->pst_sym.pst_type == PST_QLEND ) &&
+        subquery->ops_bestco) 
+        return(TRUE);
 					    /* if idiot query (join, but no where)
 					    ** and we have valid plan, quit now */
 

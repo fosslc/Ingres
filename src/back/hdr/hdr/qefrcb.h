@@ -3,6 +3,9 @@
 **
 */
 
+#ifndef QEFRCB_H_INCLUDED
+#define QEFRCB_H_INCLUDED
+
 /* Make sure we have QSO_NAME defined */
 #include <qsf.h>
 
@@ -155,7 +158,8 @@
 **      23-jun-2010 (stephenb)
 **          Add QEF_COL_DATA and QEF_INS_DATA structures to support
 **          buffering of insert rows for batch copy optimization
-{@history_template@}
+**	2-Dec-2010 (kschendel)
+**	    Multi-include protection.
 **/
 
 typedef struct _QEF_ALT QEF_ALT;
@@ -1056,3 +1060,4 @@ typedef struct	_QEF_TUPLE_PACKER	{
     i4			qtp_mode;
 }	QEF_TUPLE_PACKER;
 
+#endif /* QEFRCB_H_INCLUDED */

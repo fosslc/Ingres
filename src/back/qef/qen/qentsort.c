@@ -134,6 +134,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 /*	static functions	*/
@@ -345,11 +347,9 @@ i4		    function )
     i4		rowno;
     i4		out_func = NO_FUNC;
     DM_MDATA	dm_mdata;
-    ULM_RCB	ulm_rcb;    
     i4	val1;
     i4	val2;
     TIMERSTAT	timerstat;
-    DMT_CB	*dmt_cb;
     i4          loop_cntr = 0;
 
     if (function != 0)
@@ -443,7 +443,6 @@ i4		    function )
 
     for (;;)	    /* to break off in case of error */
     {
-loop_reset:
 	if (reset && qen_status->node_status != QEN0_INITIAL)
 	{
 	    status = qen_ts_reset(dsh, node, qen_status);
@@ -890,7 +889,6 @@ qen_ts_reset(QEE_DSH *dsh, QEN_NODE *node, QEN_STATUS *qen_status)
     PTR		*cbs = dsh->dsh_cbs;
     DMT_CB	*dmt = (DMT_CB *)cbs[node->node_qen.qen_tsort.tsort_create];
     DMR_CB	*dmr_load = (DMR_CB*)cbs[node->node_qen.qen_tsort.tsort_load];
-    DMR_CB	*dmr_get = (DMR_CB*) cbs[node->node_qen.qen_tsort.tsort_get];
     DB_STATUS	status;
     QEN_SHD	*shd = dsh->dsh_shd[node->node_qen.qen_tsort.tsort_shd];
 

@@ -190,18 +190,14 @@
 **	    Added support for new decimal exceptions.
 **	11-Apr-2008 (kschendel)
 **	    Quick check for no warnings if warncount is zero.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 [@history_template@]...
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adx_chkwarn(
 ADF_CB             *adf_scb)
-# else
-DB_STATUS
-adx_chkwarn( adf_scb)
-ADF_CB             *adf_scb;
-# endif
 {
     DB_STATUS		db_stat;
 

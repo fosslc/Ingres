@@ -58,10 +58,16 @@
 **	27-feb-2001 (somsa01)
 **	    In afe_fdesc(), changed ffound to be a boolean, and corrected
 **	    its setting.
+**	30-nov-2010 (gupsh01) SIR 124685
+**	    Prototype cleanup.
 **/
+FUNC_EXTERN DB_STATUS adi_fitab(ADF_CB      *adf_scb,
+                                ADI_OP_ID   adi_oid,
+                                ADI_FI_TAB  *adi_ftab);
 
-DB_STATUS	adi_fitab();
-DB_STATUS	adi_resolve();
+FUNC_EXTERN DB_STATUS adi_resolve(ADF_CB        *adf_scb,
+                                  ADI_RSLV_BLK  *adi_rslv_blk,
+                                  bool          varchar_precedence);
 
 static DB_STATUS	_error();
 static DB_STATUS	coplength();

@@ -1,4 +1,25 @@
-/* C code produced by gperf version 3.0.2 */
+/*{ Prototype Cleanup (Bug 124685) (gupsh01)
+** Add the following lines between begin 
+** prototypes and end prototypes to adudtab.h 
+** if this file is regerated by running 
+** gperf on adudtab.txt. 
+*/
+
+/* Begin Prototypes */
+
+static unsigned int
+adu_dttemplate_hash (
+     register const char *str,
+     register unsigned int len);
+
+const struct _ANSIDATETMPLT *
+adu_dttemplate_lookup (
+     register const char *str,
+     register unsigned int len);
+
+/* End Prototypes }*/
+
+/* ANSI-C code produced by gperf version 3.0.1 */
 /* Command-line: gperf -m 50 adudtab.txt  */
 /* Computed positions: -k'1-4,7,9,12,14' */
 
@@ -26,7 +47,7 @@
       && ('w' == 119) && ('x' == 120) && ('y' == 121) && ('z' == 122) \
       && ('{' == 123) && ('|' == 124) && ('}' == 125) && ('~' == 126))
 /* The character set is not based on ISO-646.  */
-error "gperf generated tables don't work with this execution character set. Please report a bug to <bug-gnu-gperf@gnu.org>."
+#error "gperf generated tables don't work with this execution character set. Please report a bug to <bug-gnu-gperf@gnu.org>."
 #endif
 
 /* maximum key range = 156, duplicates = 0 */
@@ -39,9 +60,7 @@ inline
 #endif
 #endif
 static unsigned int
-adu_dttemplate_hash (str, len)
-     register const char *str;
-     register unsigned int len;
+adu_dttemplate_hash (register const char *str, register unsigned int len)
 {
   static const unsigned char asso_values[] =
     {
@@ -114,9 +133,7 @@ adu_dttemplate_hash (str, len)
 __inline
 #endif
 const struct _ANSIDATETMPLT *
-adu_dttemplate_lookup (str, len)
-     register const char *str;
-     register unsigned int len;
+adu_dttemplate_lookup (register const char *str, register unsigned int len)
 {
   enum
     {
@@ -130,257 +147,257 @@ adu_dttemplate_lookup (str, len)
   static const struct _ANSIDATETMPLT wordlist[] =
     {
       {""}, {""}, {""}, {""}, {""}, {""}, {""}, {""},
-#line 248 "adudtab.txt"
+#line 253 "adudtab.txt"
       {"Yn",		"Y", DB_DTE_TYPE, DT_TYP},
       {""}, {""}, {""},
-#line 151 "adudtab.txt"
+#line 156 "adudtab.txt"
       {"An",			"y",		DB_INYM_TYPE,	DT_I },
       {""}, {""}, {""},
-#line 247 "adudtab.txt"
+#line 252 "adudtab.txt"
       {"Yn-n",		"md", DB_DTE_TYPE, DT_TYP},
       {""},
-#line 244 "adudtab.txt"
+#line 249 "adudtab.txt"
       {"Yn-n-n",		"ymd", DB_DTE_TYPE, DT_CHK},
-#line 157 "adudtab.txt"
+#line 162 "adudtab.txt"
       {"Ann",			"dh",		DB_INDS_TYPE,	DT_I|DT_T},
-#line 152 "adudtab.txt"
+#line 157 "adudtab.txt"
       {"An-n",			"yq",		DB_INYM_TYPE,	DT_I },
-#line 155 "adudtab.txt"
+#line 160 "adudtab.txt"
       {"A-n",			"x",		DB_INYM_TYPE,	DT_I },
-#line 138 "adudtab.txt"
+#line 143 "adudtab.txt"
       {"An-n-n",			"ymd",		DB_ADTE_TYPE,	DT_0 },
-#line 283 "adudtab.txt"
+#line 288 "adudtab.txt"
       {"Xn-n-n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 158 "adudtab.txt"
+#line 163 "adudtab.txt"
       {"Ann:n",			"dhi",		DB_INDS_TYPE,	DT_I|DT_T},
-#line 165 "adudtab.txt"
+#line 170 "adudtab.txt"
       {"A-nn",			"eh",		DB_INDS_TYPE,	DT_I|DT_T},
-#line 241 "adudtab.txt"
+#line 246 "adudtab.txt"
       {"Yn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 166 "adudtab.txt"
+#line 171 "adudtab.txt"
       {"A-nn:n",			"ehi",		DB_INDS_TYPE,	DT_I|DT_T},
-#line 156 "adudtab.txt"
+#line 161 "adudtab.txt"
       {"A-n-n",			"xq",		DB_INYM_TYPE,	DT_I },
-#line 159 "adudtab.txt"
+#line 164 "adudtab.txt"
       {"Ann:n:n",		"dhis",		DB_INDS_TYPE,	DT_I|DT_T},
       {""},
-#line 282 "adudtab.txt"
+#line 287 "adudtab.txt"
       {"Xn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 167 "adudtab.txt"
+#line 172 "adudtab.txt"
       {"A-nn:n:n",		"ehis",		DB_INDS_TYPE,	DT_I|DT_T},
-#line 139 "adudtab.txt"
+#line 144 "adudtab.txt"
       {"An-n-nn:n:n",		"ymdhis",	DB_TSWO_TYPE,	DT_T},
-#line 160 "adudtab.txt"
+#line 165 "adudtab.txt"
       {"Ann:n:n.n",		"dhisl",	DB_INDS_TYPE,	DT_I|DT_T},
-#line 153 "adudtab.txt"
+#line 158 "adudtab.txt"
       {"A+n",			"y",		DB_INYM_TYPE,	DT_I },
       {""},
-#line 168 "adudtab.txt"
+#line 173 "adudtab.txt"
       {"A-nn:n:n.n",		"ehisl",	DB_INDS_TYPE,	DT_I|DT_T},
-#line 140 "adudtab.txt"
+#line 145 "adudtab.txt"
       {"An-n-nn:n:n.n",		"ymdhisl",	DB_TSWO_TYPE,	DT_T},
-#line 161 "adudtab.txt"
+#line 166 "adudtab.txt"
       {"A+nn",			"dh",		DB_INDS_TYPE,	DT_I|DT_T},
-#line 249 "adudtab.txt"
+#line 254 "adudtab.txt"
       {"Yz",		"f", DB_DTE_TYPE, DT_0},
-#line 162 "adudtab.txt"
+#line 167 "adudtab.txt"
       {"A+nn:n",			"dhi",		DB_INDS_TYPE,	DT_I|DT_T},
-#line 154 "adudtab.txt"
+#line 159 "adudtab.txt"
       {"A+n-n",			"yq",		DB_INYM_TYPE,	DT_I },
       {""},
-#line 180 "adudtab.txt"
+#line 185 "adudtab.txt"
       {"Un",		"K", DB_DTE_TYPE, DT_TYP},
-#line 141 "adudtab.txt"
+#line 146 "adudtab.txt"
       {"An-n-nn:n:n-n:n",	"ymdhiscv",	DB_TSW_TYPE,	DT_T },
-#line 163 "adudtab.txt"
+#line 168 "adudtab.txt"
       {"A+nn:n:n",		"dhis",		DB_INDS_TYPE,	DT_I|DT_T},
-#line 142 "adudtab.txt"
+#line 147 "adudtab.txt"
       {"An-n-nn:n:n.n-n:n",	"ymdhislcv",	DB_TSW_TYPE,	DT_T },
-#line 246 "adudtab.txt"
+#line 251 "adudtab.txt"
       {"Yn/n",		"md", DB_DTE_TYPE, DT_0},
       {""},
-#line 242 "adudtab.txt"
+#line 247 "adudtab.txt"
       {"Yn/n/n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 164 "adudtab.txt"
+#line 169 "adudtab.txt"
       {"A+nn:n:n.n",		"dhisl",	DB_INDS_TYPE,	DT_I|DT_T},
-#line 179 "adudtab.txt"
+#line 184 "adudtab.txt"
       {"Un-n",		"md", DB_DTE_TYPE, DT_TYP},
       {""},
-#line 176 "adudtab.txt"
+#line 181 "adudtab.txt"
       {"Un-n-n",		"mdy", DB_DTE_TYPE, DT_CHK},
-#line 193 "adudtab.txt"
+#line 198 "adudtab.txt"
       {"Nn",		"K", DB_DTE_TYPE, DT_TYP},
-#line 262 "adudtab.txt"
+#line 267 "adudtab.txt"
       {"Mn",		"M", DB_DTE_TYPE, DT_TYP},
       {""},
-#line 250 "adudtab.txt"
+#line 255 "adudtab.txt"
       {"Yr",		"r", DB_DTE_TYPE, DT_0},
-#line 144 "adudtab.txt"
+#line 149 "adudtab.txt"
       {"An-n-nn:n:n+n:n",	"ymdhisbv",	DB_TSW_TYPE,	DT_T },
-#line 220 "adudtab.txt"
+#line 225 "adudtab.txt"
       {"In",		"J", DB_DTE_TYPE, DT_TYP},
-#line 143 "adudtab.txt"
+#line 148 "adudtab.txt"
       {"An-n-nn:n:n.n+n:n",	"ymdhislbv",	DB_TSW_TYPE,	DT_T },
-#line 173 "adudtab.txt"
+#line 178 "adudtab.txt"
       {"Un_n_n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 192 "adudtab.txt"
+#line 197 "adudtab.txt"
       {"Nn-n",		"md", DB_DTE_TYPE, DT_TYP},
-#line 261 "adudtab.txt"
+#line 266 "adudtab.txt"
       {"Mn-n",		"md", DB_DTE_TYPE, DT_TYP},
-#line 189 "adudtab.txt"
+#line 194 "adudtab.txt"
       {"Nn-n-n",		"mdy", DB_DTE_TYPE, DT_CHK},
-#line 258 "adudtab.txt"
+#line 263 "adudtab.txt"
       {"Mn-n-n",		"mdy", DB_DTE_TYPE, DT_CHK},
-#line 234 "adudtab.txt"
+#line 239 "adudtab.txt"
       {"Gn",		"G", DB_DTE_TYPE, DT_TYP},
-#line 219 "adudtab.txt"
+#line 224 "adudtab.txt"
       {"In-n",		"md", DB_DTE_TYPE, DT_TYP},
       {""},
-#line 216 "adudtab.txt"
-      {"In-n-n",		"mdy", DB_DTE_TYPE, DT_CHK},
-#line 206 "adudtab.txt"
-      {"Fn",		"K", DB_DTE_TYPE, DT_TYP},
-#line 276 "adudtab.txt"
-      {"Dn",		"D", DB_DTE_TYPE, DT_TYP},
-#line 186 "adudtab.txt"
-      {"Nn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 255 "adudtab.txt"
-      {"Mn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 233 "adudtab.txt"
-      {"Gn-n",		"md", DB_DTE_TYPE, DT_TYP},
-#line 181 "adudtab.txt"
-      {"Uz",		"f", DB_DTE_TYPE, DT_0},
-#line 230 "adudtab.txt"
-      {"Gn-n-n",		"mdy", DB_DTE_TYPE, DT_CHK},
-#line 213 "adudtab.txt"
-      {"In_n_n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 205 "adudtab.txt"
-      {"Fn-n",		"md", DB_DTE_TYPE, DT_TYP},
-#line 275 "adudtab.txt"
-      {"Dn-n",		"dm", DB_DTE_TYPE, DT_TYP},
-#line 202 "adudtab.txt"
-      {"Fn-n-n",		"ymd", DB_DTE_TYPE, DT_CHK},
-#line 272 "adudtab.txt"
-      {"Dn-n-n",		"dmy", DB_DTE_TYPE, DT_CHK},
-#line 243 "adudtab.txt"
-      {"Yn-m-n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 178 "adudtab.txt"
-      {"Un/n",		"md", DB_DTE_TYPE, DT_0},
-#line 227 "adudtab.txt"
-      {"Gn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 174 "adudtab.txt"
-      {"Un/n/n",		"mdy", DB_DTE_TYPE, DT_0},
-#line 194 "adudtab.txt"
-      {"Nz",		"f", DB_DTE_TYPE, DT_0},
-#line 263 "adudtab.txt"
-      {"Mz",		"f", DB_DTE_TYPE, DT_0},
-#line 199 "adudtab.txt"
-      {"Fn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 269 "adudtab.txt"
-      {"Dn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 245 "adudtab.txt"
-      {"Yn.n.n",		"ymd", DB_DTE_TYPE, DT_0},
 #line 221 "adudtab.txt"
+      {"In-n-n",		"mdy", DB_DTE_TYPE, DT_CHK},
+#line 211 "adudtab.txt"
+      {"Fn",		"K", DB_DTE_TYPE, DT_TYP},
+#line 281 "adudtab.txt"
+      {"Dn",		"D", DB_DTE_TYPE, DT_TYP},
+#line 191 "adudtab.txt"
+      {"Nn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
+#line 260 "adudtab.txt"
+      {"Mn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
+#line 238 "adudtab.txt"
+      {"Gn-n",		"md", DB_DTE_TYPE, DT_TYP},
+#line 186 "adudtab.txt"
+      {"Uz",		"f", DB_DTE_TYPE, DT_0},
+#line 235 "adudtab.txt"
+      {"Gn-n-n",		"mdy", DB_DTE_TYPE, DT_CHK},
+#line 218 "adudtab.txt"
+      {"In_n_n",		"ymd", DB_DTE_TYPE, DT_0},
+#line 210 "adudtab.txt"
+      {"Fn-n",		"md", DB_DTE_TYPE, DT_TYP},
+#line 280 "adudtab.txt"
+      {"Dn-n",		"dm", DB_DTE_TYPE, DT_TYP},
+#line 207 "adudtab.txt"
+      {"Fn-n-n",		"ymd", DB_DTE_TYPE, DT_CHK},
+#line 277 "adudtab.txt"
+      {"Dn-n-n",		"dmy", DB_DTE_TYPE, DT_CHK},
+#line 248 "adudtab.txt"
+      {"Yn-m-n",		"ymd", DB_DTE_TYPE, DT_0},
+#line 183 "adudtab.txt"
+      {"Un/n",		"md", DB_DTE_TYPE, DT_0},
+#line 232 "adudtab.txt"
+      {"Gn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
+#line 179 "adudtab.txt"
+      {"Un/n/n",		"mdy", DB_DTE_TYPE, DT_0},
+#line 199 "adudtab.txt"
+      {"Nz",		"f", DB_DTE_TYPE, DT_0},
+#line 268 "adudtab.txt"
+      {"Mz",		"f", DB_DTE_TYPE, DT_0},
+#line 204 "adudtab.txt"
+      {"Fn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
+#line 274 "adudtab.txt"
+      {"Dn_n_n",		"ymd", DB_DTE_TYPE, DT_0},
+#line 250 "adudtab.txt"
+      {"Yn.n.n",		"ymd", DB_DTE_TYPE, DT_0},
+#line 226 "adudtab.txt"
       {"Iz",		"f", DB_DTE_TYPE, DT_0},
       {""},
-#line 182 "adudtab.txt"
-      {"Ur",		"r", DB_DTE_TYPE, DT_0},
-#line 191 "adudtab.txt"
-      {"Nn/n",		"md", DB_DTE_TYPE, DT_0},
-#line 260 "adudtab.txt"
-      {"Mn/n",		"md", DB_DTE_TYPE, DT_0},
 #line 187 "adudtab.txt"
+      {"Ur",		"r", DB_DTE_TYPE, DT_0},
+#line 196 "adudtab.txt"
+      {"Nn/n",		"md", DB_DTE_TYPE, DT_0},
+#line 265 "adudtab.txt"
+      {"Mn/n",		"md", DB_DTE_TYPE, DT_0},
+#line 192 "adudtab.txt"
       {"Nn/n/n",		"dmy", DB_DTE_TYPE, DT_0},
-#line 256 "adudtab.txt"
+#line 261 "adudtab.txt"
       {"Mn/n/n",		"mdy", DB_DTE_TYPE, DT_0},
-#line 235 "adudtab.txt"
+#line 240 "adudtab.txt"
       {"Gz",		"f", DB_DTE_TYPE, DT_0},
-#line 218 "adudtab.txt"
+#line 223 "adudtab.txt"
       {"In/n",		"md", DB_DTE_TYPE, DT_0},
       {""},
-#line 214 "adudtab.txt"
+#line 219 "adudtab.txt"
       {"In/n/n",		"mdy", DB_DTE_TYPE, DT_0},
-#line 207 "adudtab.txt"
+#line 212 "adudtab.txt"
       {"Fz",		"f", DB_DTE_TYPE, DT_0},
-#line 277 "adudtab.txt"
+#line 282 "adudtab.txt"
       {"Dz",		"f", DB_DTE_TYPE, DT_0},
-#line 195 "adudtab.txt"
+#line 200 "adudtab.txt"
       {"Nr",		"r", DB_DTE_TYPE, DT_0},
-#line 264 "adudtab.txt"
+#line 269 "adudtab.txt"
       {"Mr",		"r", DB_DTE_TYPE, DT_0},
-#line 232 "adudtab.txt"
+#line 237 "adudtab.txt"
       {"Gn/n",		"md", DB_DTE_TYPE, DT_0},
       {""},
-#line 228 "adudtab.txt"
+#line 233 "adudtab.txt"
       {"Gn/n/n",		"mdy", DB_DTE_TYPE, DT_0},
-#line 222 "adudtab.txt"
+#line 227 "adudtab.txt"
       {"Ir",		"r", DB_DTE_TYPE, DT_0},
-#line 204 "adudtab.txt"
+#line 209 "adudtab.txt"
       {"Fn/n",		"md", DB_DTE_TYPE, DT_0},
-#line 274 "adudtab.txt"
+#line 279 "adudtab.txt"
       {"Dn/n",		"dm", DB_DTE_TYPE, DT_0},
-#line 200 "adudtab.txt"
+#line 205 "adudtab.txt"
       {"Fn/n/n",		"mdy", DB_DTE_TYPE, DT_0},
-#line 270 "adudtab.txt"
+#line 275 "adudtab.txt"
       {"Dn/n/n",		"dmy", DB_DTE_TYPE, DT_0},
       {""}, {""},
-#line 236 "adudtab.txt"
+#line 241 "adudtab.txt"
       {"Gr",		"r", DB_DTE_TYPE, DT_0},
       {""},
-#line 175 "adudtab.txt"
+#line 180 "adudtab.txt"
       {"Un-m-n",		"dmy", DB_DTE_TYPE, DT_0},
       {""},
-#line 208 "adudtab.txt"
+#line 213 "adudtab.txt"
       {"Fr",		"r", DB_DTE_TYPE, DT_0},
-#line 278 "adudtab.txt"
+#line 283 "adudtab.txt"
       {"Dr",		"r", DB_DTE_TYPE, DT_0},
       {""}, {""}, {""}, {""},
-#line 177 "adudtab.txt"
+#line 182 "adudtab.txt"
       {"Un.n.n",		"ymd", DB_DTE_TYPE, DT_0},
       {""}, {""},
-#line 188 "adudtab.txt"
+#line 193 "adudtab.txt"
       {"Nn-m-n",		"dmy", DB_DTE_TYPE, DT_0},
-#line 257 "adudtab.txt"
+#line 262 "adudtab.txt"
       {"Mm-n-n",		"mdy", DB_DTE_TYPE, DT_0},
-#line 145 "adudtab.txt"
+#line 150 "adudtab.txt"
       {"An:n:n",			"his",		DB_TMWO_TYPE,	DT_T },
       {""}, {""},
-#line 215 "adudtab.txt"
+#line 220 "adudtab.txt"
       {"In-m-n",		"dmy", DB_DTE_TYPE, DT_0},
       {""},
-#line 146 "adudtab.txt"
+#line 151 "adudtab.txt"
       {"An:n:n.n",		"hisl",		DB_TMWO_TYPE,	DT_T },
-#line 190 "adudtab.txt"
+#line 195 "adudtab.txt"
       {"Nn.n.n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 259 "adudtab.txt"
+#line 264 "adudtab.txt"
       {"Mn.n.n",		"mdy", DB_DTE_TYPE, DT_0},
       {""}, {""},
-#line 229 "adudtab.txt"
+#line 234 "adudtab.txt"
       {"Gn-m-n",		"dmy", DB_DTE_TYPE, DT_0},
-#line 217 "adudtab.txt"
+#line 222 "adudtab.txt"
       {"In.n.n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 149 "adudtab.txt"
+#line 154 "adudtab.txt"
       {"An:n:n-n:n",		"hiscv",	DB_TMW_TYPE,	DT_T },
       {""},
-#line 201 "adudtab.txt"
+#line 206 "adudtab.txt"
       {"Fn-m-n",		"dmy", DB_DTE_TYPE, DT_0},
-#line 271 "adudtab.txt"
+#line 276 "adudtab.txt"
       {"Dn-m-n",		"dmy", DB_DTE_TYPE, DT_0},
       {""},
-#line 150 "adudtab.txt"
+#line 155 "adudtab.txt"
       {"An:n:n.n-n:n",		"hislcv",	DB_TMW_TYPE,	DT_T },
-#line 231 "adudtab.txt"
+#line 236 "adudtab.txt"
       {"Gn.n.n",		"dmy", DB_DTE_TYPE, DT_0},
       {""}, {""}, {""},
-#line 203 "adudtab.txt"
+#line 208 "adudtab.txt"
       {"Fn.n.n",		"ymd", DB_DTE_TYPE, DT_0},
-#line 273 "adudtab.txt"
+#line 278 "adudtab.txt"
       {"Dn.n.n",		"dmy", DB_DTE_TYPE, DT_0},
       {""}, {""},
-#line 147 "adudtab.txt"
+#line 152 "adudtab.txt"
       {"An:n:n+n:n",		"hisbv",	DB_TMW_TYPE,	DT_T },
       {""}, {""}, {""}, {""},
-#line 148 "adudtab.txt"
+#line 153 "adudtab.txt"
       {"An:n:n.n+n:n",		"hislbv",	DB_TMW_TYPE,	DT_T }
     };
 
@@ -398,5 +415,5 @@ adu_dttemplate_lookup (str, len)
     }
   return 0;
 }
-#line 284 "adudtab.txt"
+#line 289 "adudtab.txt"
 

@@ -106,7 +106,8 @@
 **	    even though hash agg doesn't use two-sided spill.
 **	    Use simple RLL compression on rows being spilled, to reduce
 **	    spill size for giant aggregations.  Tidy up code a little.
-[@history_template@]...
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 **/
 
 
@@ -120,7 +121,6 @@
 **	passed to the other local functions. It reduces the parameter
 **	passing overhead to these functions.
 **
-[@history_template@]...
 **/
 
 typedef struct _HSHAG_STATE {
@@ -152,14 +152,12 @@ typedef struct _HSHAG_STATE {
 
 GLOBALREF QEF_S_CB *Qef_s_cb;
 
-static DB_STATUS
-qea_haggf_init(
+static DB_STATUS qea_haggf_init(
 QEE_DSH		*dsh,
 QEN_HASH_AGGREGATE *haptr,
 QEF_QEP		*qp);
 
-static DB_STATUS
-qea_haggf_load1(
+static DB_STATUS qea_haggf_load1(
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
 QEF_AHD		*action,
@@ -167,52 +165,44 @@ QEN_HASH_AGGREGATE *haptr,
 HSHAG_STATE	*hstp,
 i4		function);
 
-static DB_STATUS
-qea_haggf_load2(
+static DB_STATUS qea_haggf_load2(
 QEE_DSH		*dsh,
 QEF_AHD		*action,
 QEN_HASH_AGGREGATE *haptr,
 HSHAG_STATE	*hstp);
 
-static DB_STATUS
-qea_haggf_insert(
+static DB_STATUS qea_haggf_insert(
 QEE_DSH		*dsh,
 QEN_HASH_AGGREGATE *haptr,
 HSHAG_STATE	*hstp);
 
-static DB_STATUS
-qea_haggf_overflow(
+static DB_STATUS qea_haggf_overflow(
 QEE_DSH		*dsh,
 QEN_HASH_AGGREGATE *haptr,
 HSHAG_STATE	*hstp,
 u_i4		hashno);
 
-static DB_STATUS
-qea_haggf_recurse(
+static DB_STATUS qea_haggf_recurse(
 QEE_DSH		*dsh,
 QEN_HASH_AGGREGATE *haptr);
 
-static DB_STATUS
-qea_haggf_write(
+static DB_STATUS qea_haggf_write(
 QEE_DSH		*dsh,
 QEN_HASH_AGGREGATE *haptr,
 QEN_HASH_FILE	*hfptr,
 PTR		buffer);
 
-static DB_STATUS
-qea_haggf_read(
+static DB_STATUS qea_haggf_read(
 QEN_HASH_AGGREGATE *haptr,
 QEN_HASH_FILE	*hfptr,
 PTR		buffer);
 
-static DB_STATUS
-qea_haggf_open(
+static DB_STATUS qea_haggf_open(
 QEE_DSH		*dsh,
 QEN_HASH_AGGREGATE *haptr,
 QEN_HASH_PART	*hpptr);
  
-static DB_STATUS
-qea_haggf_close(
+static DB_STATUS qea_haggf_close(
 QEN_HASH_AGGREGATE *haptr,
 QEN_HASH_FILE	**hfptr,
 i4		flag);
@@ -221,8 +211,7 @@ i4		flag);
 #define CLOSE_DESTROY	2
 
 
-static DB_STATUS
-qea_haggf_flush(
+static DB_STATUS qea_haggf_flush(
 QEE_DSH		*dsh,
 QEN_HASH_AGGREGATE *haptr);
 
@@ -321,7 +310,6 @@ QEE_DSH		    *dsh,
 i4		    function,
 bool		    first_time )
 {
-    QEN_NODE	*node = action->qhd_obj.qhd_qep.ahd_qep;
     DB_STATUS	status = E_DB_OK;
     ADF_CB	*adfcb = dsh->dsh_adf_cb;
     PTR		*cbs = dsh->dsh_cbs;
@@ -573,7 +561,6 @@ QEF_QEP		*qp)
     DMH_CB	*dmhcb = (DMH_CB *)haptr->hshag_dmhcb;
     QEN_HASH_LINK *hlink;
     i4		i;
-    i4		hbufsz = haptr->hshag_hbufsz;
     i4		obufsz = haptr->hshag_obufsz;
 
     if (dsh->dsh_hash_debug)
@@ -605,7 +592,7 @@ QEF_QEP		*qp)
 			sizeof(PTR) * haptr->hshag_htsize
 			+ haptr->hshag_chsize
 			+ obufsz + obufsz
-			+ (sizeof(PTR) + DB_ALIGN_SZ -1) & (~(DB_ALIGN_SZ -1)),
+			+ DB_ALIGN_MACRO(sizeof(PTR)),
 			&haptr->hshag_1stchunk,
 			&dsh->dsh_error, "ht_ptrs+1stchunk");
 	if (status != E_DB_OK)
@@ -1733,7 +1720,6 @@ QEN_HASH_AGGREGATE *haptr)
     QEF_CB	*qef_cb = dsh->dsh_qefcb;
     QEN_HASH_LINK *hlink = haptr->hshag_currlink;
     QEN_HASH_LINK *prevlink;
-    QEN_HASH_PART *hpptr;
     i4		i;
 
 
@@ -2114,7 +2100,6 @@ QEN_HASH_AGGREGATE *haptr)
 
     QEN_HASH_LINK  *hlink = haptr->hshag_currlink;
     QEN_HASH_PART  *hpptr;
-    DMH_CB	*dmhcb;
     QEN_HASH_FILE  *fptr;
     i4		i;
     DB_STATUS	status = E_DB_OK;
@@ -2316,7 +2301,6 @@ qea_haggf_palloc(QEF_CB *qefcb, QEN_HASH_AGGREGATE *haptr,
 {
     DB_STATUS status;		/* Usual status thing */
     i4 naptime;			/* Milliseconds delayed so far */
-    SIZE_TYPE sess_max;		/* Session limit (qef_hash_mem sort-of) */
     ULM_RCB ulm;		/* ULM request block */
 
 #ifdef xDEBUG

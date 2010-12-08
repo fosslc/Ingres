@@ -266,9 +266,10 @@
 **	25-nov-2009 (kiria01, wanfr01) b122960
 **	    Consolidate pattern matching characters here, rather than in adu
 **	    so that consolidation only happens once per query.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_pm_encode(
 ADF_CB		*adf_scb,
@@ -276,14 +277,6 @@ i4		adi_pm_reqs,
 DB_DATA_VALUE	*adi_patdv,
 i4		*adi_line_num,
 bool		*adi_pmchars)
-# else
-DB_STATUS adi_pm_encode( adf_scb, adi_pm_reqs, adi_patdv, adi_line_num, adi_pmchars)
-ADF_CB		*adf_scb;
-i4		adi_pm_reqs;
-DB_DATA_VALUE	*adi_patdv;
-i4		*adi_line_num;
-bool		*adi_pmchars;
-# endif
 {
     register u_char	*from;
     register u_char	*to;

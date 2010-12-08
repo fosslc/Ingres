@@ -580,33 +580,30 @@
 **	18-Jun-2010 (kschendel) b123775
 **	    Various changes in resource validation data structures, mostly
 **	    so that table procs get validated the right way.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 */
 
 
 /*	static	functions	*/
 
-static PTR
-qeq_lqen(
+static PTR qeq_lqen(
 PTR	p );
 
-static PTR
-qeq_rqen(
+static PTR qeq_rqen(
 PTR	p );
 
-static i4
-qeq_tr_callback(
+static i4 qeq_tr_callback(
 	char		*nl,
 	i4		length,
 	char		*buffer
 );
 
-static VOID
-qeq_prqen(
+static VOID qeq_prqen(
 PTR	p,
 PTR	control );
 
-static void
-qeq_restore(
+static void qeq_restore(
         QEF_RCB         *qeq_rcb,
         QEF_RCB         *qef_rcb,
         QEE_DSH         *dsh,
@@ -617,8 +614,7 @@ qeq_restore(
         PTR             **cbs,
         i4              **iirowcount);
 
-static void
-qeq_setup(
+static void qeq_setup(
 QEF_CB		*qef_cb,
 QEE_DSH		**dsh,
 QEF_QP_CB	**qp,
@@ -780,7 +776,6 @@ QEF_RCB		    *qef_rcb )
 	dsh = (QEE_DSH *) qef_cb->qef_dsh;
 	if (dsh == NULL)
 	{
-	    i4 local_err;
 	    qef_error(E_QE0002_INTERNAL_ERROR, 0, status, &err,
 		&qef_rcb->error, 0);
 	    return (E_DB_ERROR);
@@ -4287,6 +4282,8 @@ bool		care_if_smaller)
 **	    execute procedure, which runs the query with the dbp QP directly
 **	    rather than executing a callproc.)
 **	    This routine is called a lot, do some minor optimizing.
+**	2-Dec-2010 (kschendel)
+**	    Compiler caught possibly uninitialized qp use, fix.
 */
 DB_STATUS
 qeq_dsh(
@@ -4328,6 +4325,7 @@ qeq_dsh(
 	    return (E_DB_OK);
 	}
     }
+    qp = NULL;
     if (dsh == NULL)
     {
 	/* DSH not in the list, or caller doesn't know the handle.
@@ -4430,7 +4428,7 @@ qeq_dsh(
     ** call a SET OF proc with a scalar parm list (instead of a global temp
     ** table) get caught in OPF (opc). Only rules have to be checked here. */
 
-    if (qp->qp_setInput != NULL && !is_set_input)
+    if (qp != NULL && qp->qp_setInput != NULL && !is_set_input)
     {
 	qef_cb->qef_dsh = (PTR)NULL;
 	err = E_QE030B_RULE_PROC_MISMATCH;
@@ -4462,7 +4460,7 @@ qeq_dsh(
 	do
 	{
 	    /* allocate a new DSH */
-	    status = qee_fetch(qef_rcb, qp, &dsh, page_count, &qsf_rcb,
+	    status = qee_fetch(qef_rcb, qp, &dsh, &qsf_rcb,
 			(qptype == QEQDSH_TPROC) );
 	    err = qef_rcb->error.err_code;
 	    if (status != E_DB_OK)
@@ -5521,7 +5519,6 @@ bool	    release )
     char	    *cbuf = qef_rcb->qef_cb->qef_trfmt;
     i4		    cbufsize = qef_rcb->qef_cb->qef_trsize;
     i4		    c_err = qef_rcb->error.err_code;
-    i4              open_count = 0;
 
     if (qef_rcb->qef_cb->qef_c1_distrib & DB_3_DDB_SESS)
 	ddb_b = TRUE;

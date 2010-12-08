@@ -300,9 +300,10 @@
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value DB_ERROR structure.
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 */
 
-GLOBALREF   QEF_S_CB	*Qef_s_cb;
 GLOBALREF   char	*IIQE_53_lo_qef_tab[];
 GLOBALREF   char	*IIQE_54_hi_qef_tab[];
 
@@ -721,7 +722,7 @@ void *	    rcb )
 #endif
 
 	/* Do we have a session control block? */
-	if (qef_cb = *hqef_cb)
+	if ((qef_cb = *hqef_cb) != NULL)
 	{
 	    /* abort the query/transaction */
 	    if (qef_cb->qef_stat != QEF_NOTRAN)
@@ -2188,13 +2189,11 @@ qef_handler(
 	EX_ARGS            *ex_args)
 {
     i4             error;
-    i4             err;
     QEE_DSH		*dsh;
     ERR_CB		*err_cb;
     QEF_CB		*qef_cb;
     DB_STATUS		status = E_DB_OK;
     STATUS		ret_val = EXDECLARE;
-    DB_ERROR		err_blk;
     EX_CONTEXT		context;
     bool		adf_error;
     CS_SID		sid;

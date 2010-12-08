@@ -52,6 +52,8 @@
 **	    replace nat and longnat with i4
 **	07-mar-2001 (somsa01)
 **	    Changed maxcharwidth from 10000 to FE_FMTMAXCHARWIDTH.
+**      30-nov-2010 (gupsh01) SIR 124685
+**          Prototype cleanup.
 */
 
 # include	<compat.h>
@@ -70,7 +72,10 @@ FUNC_EXTERN	ADF_CB		*FEadfcb();
 FUNC_EXTERN	STATUS		fmt_areasize();
 FUNC_EXTERN	STATUS		fmt_setfmt();
 FUNC_EXTERN	STATUS		fmt_kind();
-FUNC_EXTERN	DB_STATUS	adi_tycoerce();
+FUNC_EXTERN DB_STATUS adi_tycoerce(ADF_CB          *adf_scb,
+                                   DB_DT_ID        adi_did,
+                                   ADI_DT_BITMASK  *adi_dmsk);
+
 
 bool	vfchkSize();
 char	FDtypeChar();

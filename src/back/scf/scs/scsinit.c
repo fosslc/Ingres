@@ -5895,6 +5895,8 @@ scs_icsxlate(SCD_SCB	*scb ,
 **          Set DMC2_READONLYDB for true readonly database (DU_RDONLY) so
 **          we can tell the difference between a readonlydb and one opened
 **          for read-only access
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Do not create MO objects for iidbdb.
 */
 DB_STATUS
 scs_dbdb_info(SCD_SCB *scb ,
@@ -6039,13 +6041,16 @@ scs_dbdb_info(SCD_SCB *scb ,
 	    ** use it instead of the hard-coded dbdb_dbtuple,
 	    ** since the real iidbdb dbtuple may have different
 	    ** case-translation semantics than the hard-coded one
+	    **
+	    ** Do -not- create MO objects for iidbdb; that will
+	    ** happen if iidbdb is added as the session's database.
 	    */
 	    status = scs_dbopen((DB_DB_NAME  *)DB_DBDB_NAME,
 				(DB_DB_OWNER *)DB_INGRES_NAME,
 				(SCV_LOC *) Sc_main_cb->sc_dbdb_loc,
 				scb,
 				error,
-				0,
+				SCV_NODBMO_MASK,
 				dmc,
 				(Sc_main_cb->sc_dbdb_dbtuple ?
 				   (DU_DATABASE *)Sc_main_cb->sc_dbdb_dbtuple :

@@ -109,6 +109,9 @@
 **          Added DM2D_READONLYDB as flag for a readonly database
 **	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    Prototype dm2d_unextend_db(), dm2d_check_dir()
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Add DM2D_NODBMO to prevent making MO objects for added
+**	    database, typically when fetching iidbdb information.
 **/
 
 /*
@@ -176,6 +179,9 @@
                                                 ** for this DB in this DBMS
                                                 */
 #define         DM2D_READONLYDB     0x02000000L /* readonly database */
+#define         DM2D_NODBMO	    0x04000000L /* Make no MO objects
+						** (dm2d_add_db)
+						*/
 
 /*
 **  The following constants depend on values in the logical interface and

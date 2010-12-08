@@ -98,6 +98,9 @@
 **          Add proto for PCspawn.
 **	1-Dec-2010 (kschendel) SIR 124685
 **	    Kill CL_PROTOTYPED (always on now).
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Include unistd.h for getpgrp() on linux.  unistd.h probably
+**	    should be included in compat, todo for later.
 */
 
 # ifndef	PID
@@ -136,6 +139,8 @@ typedef enum
 # else
 # define	PID		i4
 # ifdef LNX
+/* FIXME unistd.h probably should be included in compat.h -- do here for now. */
+#include <unistd.h>
 # define        PCpid(pid)     *pid = getpgrp()
                 /* For Uniqueness on Linux, we may need to avoid the abiguity of the above macro 
                 */ 

@@ -345,6 +345,13 @@ extern u_i4  SGN$GL_KSTACKPAG;
 **          Make MMG$GL_PAGE_SIZE and SGN$GL_KSTACKPAG always visible.
 **	11-Nov-2010 (kschendel) SIR 124685
 **	    Prototype / include fixes.
+**      16-Nov-2010 (horda03)
+**          Control when ASTs can be delivered in a server. Only want ASTs to be
+**          delivered when the server is idle (sys$hiber) or switching threads.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems,
+**      07-Dec-2010 (horda03) SIR 124685
+**          Fix more VMS build problems
 **/
 
 /*
@@ -363,7 +370,7 @@ FUNC_EXTERN bool
 EXsigarr_sys_report( i4 *sigarr,	/* Report errors, call fr VMS hndlr */
 		    char *buffer );
 
-static STATUS CS_admin_task(i4 mode, CS_ADMIN_CSB *scb,
+static STATUS CS_admin_task(i4 mode, CS_ADMIN_SCB *scb,
 	i4 *next_mode, PTR io_area);
 static void CS_toq_scan(void);		/* Scan timeout queue */
 
@@ -572,6 +579,8 @@ CSvms_uic(void)
 **          ben waiting for over 2 quantums, then a thread from
 **          the highest priority queue that has been waiting the longest
 **          will be chosen.
+**      16-Nov-2010 (horda03)
+**          Process queued ASTs before selecting the new thread.
 */
 
 CS_SCB	*
@@ -588,17 +597,27 @@ i4		   priority;
     i4			oo_stacks = 0;
 #endif
     i4                 nevents, tim;
-    i4			reenableasts;
     i4                  new_priority;
     i4                  oldest_quantum;
+
+    /* B124691: ASTs should be diasbled. Allow queued ASTs to
+    **          be delivered before exchanging threads.
+    */
+    
 
     /*
     ** Make sure AST's are disabled, so an AST delivered
     ** CSresume will not see queues & cs_state in a
     ** transient state. (bug 102014).
     */
-    reenableasts = (sys$setast(0) != SS$_WASCLR);
+    /* Turn on ASTs to allow delivery */
+    sys$setast(1);
 
+    /* Turn off ASTs we don't want any AST messing with 
+    ** values. Non-CS code isn't AST savvy.
+    */
+    sys$setast(0);
+    
     /*
     ** If the idle thread is the only thing on the ready queues,
     ** don't waste time scanning for that which won't be found.
@@ -630,8 +649,9 @@ i4		   priority;
 	    else if ((new_scb->cs_state == CS_STACK_WAIT) && (!oo_stacks))
 	    {
 		STATUS		status;
+		CL_ERR_DESC     sys_err;
 
-		status = CS_alloc_stack(new_scb);
+		status = CS_alloc_stack(new_scb, &sys_err);
 		if (status == OK)
 		{
 		    new_scb->cs_state = CS_COMPUTABLE;
@@ -702,7 +722,6 @@ i4		   priority;
 	*/
 	(*Cs_srv_block.cs_elog)(E_CS0007_RDY_QUE_CORRUPT, NULL, 0, 0);
 	Cs_srv_block.cs_state = CS_ERROR;
-	if (reenableasts) sys$setast(1);
 	return(scb);
     }
 
@@ -736,8 +755,6 @@ i4		   priority;
 	pri_scb->cs_rw_q.cs_q_prev->cs_rw_q.cs_q_next = pri_scb;
 	pri_scb->cs_rw_q.cs_q_next->cs_rw_q.cs_q_prev = pri_scb;
     }
-
-    if (reenableasts) sys$setast(1);
 
     /*
     ** If the old or new thread needs to collect CPU statistics, then we need
@@ -1398,10 +1415,13 @@ CS_toq_scan(void)
 **      22-Aug-2000 (horda03)
 **          Obtain pages for Stack from the P1 area.
 **          (102291)
+**      06-Dec-2010 (horda03)
+**         Changed interfsce to match new prototype (shared with Unix).
 */
 STATUS
 CS_alloc_stack(
-CS_SCB             *scb)
+CS_SCB             *scb,
+CL_ERR_DESC        *sys_err)
 {
     VA_RANGE		mem;		/* memory range requested */
     VA_RANGE		retmem;		/* memory range actually effected */
@@ -1411,7 +1431,6 @@ CS_SCB             *scb)
     i4 size = Cs_srv_block.cs_stksize;
     i4			pages;
     PTR			addr;
-    CL_ERR_DESC		sys_err;
     i4 pagelets;
     i4 alloc_pages;
 #ifdef KPS_THREADS
@@ -1470,7 +1489,7 @@ CS_SCB             *scb)
     {
 	/* We need to allocate a new stack */
 	status = MEget_pages(ME_MZERO_MASK | ME_USE_P1_SPACE, pagelets,
-                             0, &addr, &pages, &sys_err);
+                             0, &addr, &pages, sys_err);
 	if (status)
 	    return(status);
 	/* change guard pages to be writable only in supervisor mode */
@@ -1982,18 +2001,21 @@ CS_SID  sid)
 **	    scb's ready/wait queue links.
 **	24-jan-1996 (dougb) bug 71590
 **	    CS_ssprsm() now takes a single parameter -- just restore context.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 */
 void
 CS_eradicate()
 {
     CS_SCB              *scb = Cs_srv_block.cs_current;
+    i4                  asts_enabled;
 
     CSp_semaphore(TRUE, &Cs_admin_scb.csa_sem);
     if (scb->cs_state == CS_COMPUTABLE &&
         scb->cs_thread_type != CS_INTRNL_THREAD)
         Cs_srv_block.cs_num_active--;
 
-    sys$setast(0);	/* make sure we are not interrupted */
+    asts_enabled = (sys$setast(0) == SS$_WASSET);	/* make sure we are not interrupted */
 
     scb->cs_state = CS_FREE;
     /* remove from whatever queue(s) it is on */
@@ -2027,7 +2049,8 @@ CS_eradicate()
     Cs_srv_block.cs_ready_mask |= (CS_PRIORITY_BIT >> CS_PADMIN);
     CSv_semaphore(&Cs_admin_scb.csa_sem);
     Cs_srv_block.cs_current = NULL;	/* BEWARE of this window in which   */
-    sys$setast(1);
+
+    if (asts_enabled) sys$setast(1);
 
 #ifdef KPS_THREADS
     exe$kp_end(scb->kpb);
@@ -2310,9 +2333,11 @@ CS_SCB		*scb;
 **	    mask values instead.
 **	24-jan-1996 (dougb) bug 71590
 **	    CS_ssprsm() now takes a single parameter -- just restore context.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 */
 static STATUS
-CS_admin_task(i4 mode, CS_ADMIN_CSB *scb, i4 *next_mode, PTR io_area)
+CS_admin_task(i4 mode, CS_ADMIN_SCB *scb, i4 *next_mode, PTR io_area)
 {
     STATUS              status = OK;
     CS_SCB		*dead_scb;
@@ -2321,6 +2346,7 @@ CS_admin_task(i4 mode, CS_ADMIN_CSB *scb, i4 *next_mode, PTR io_area)
     i4			uic;
     i4			size;
     i4			task_added;
+    i4                  asts_enabled;
 
     if (scb != &Cs_admin_scb)
     {
@@ -2392,10 +2418,10 @@ CS_admin_task(i4 mode, CS_ADMIN_CSB *scb, i4 *next_mode, PTR io_area)
 	    **	be set just after the test.  If there are no current threads,
 	    **	then admin task will never be called again...
 	    */
-	    sys$setast(0);
+	    asts_enabled = (sys$setast(0) == SS$_WASSET);
 	    if (scb->csa_mask & CSA_ADD_THREAD)
 	    {
-		sys$setast(1);
+		if (asts_enabled) sys$setast(1);
 		continue;
 	    }
 
@@ -2405,7 +2431,7 @@ CS_admin_task(i4 mode, CS_ADMIN_CSB *scb, i4 *next_mode, PTR io_area)
 	    */
 	    scb->csa_scb.cs_state = CS_UWAIT;
 	    Cs_srv_block.cs_ready_mask &= ~(CS_PRIORITY_BIT >> CS_PADMIN);
-	    sys$setast(1);
+	    if (asts_enabled) sys$setast(1);
 #ifdef KPS_THREADS
             exe$kp_stall_general(((CS_SCB *)scb)->kpb);
 #else
@@ -2566,6 +2592,8 @@ i4                handler;
 ** History:
 **      02-Apr-1987 (fred)
 **          Created.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 */
 void
 CS_fmt_scb(CS_SCB *scb, i4 iosize, char *area)
@@ -2573,13 +2601,14 @@ CS_fmt_scb(CS_SCB *scb, i4 iosize, char *area)
     i4                 length = 0;
     char		*buf = area;
     CS_STK_CB		*stk_hdr;
+    i4                 asts_enabled;
 
     if (iosize < 512)
     {
 	STprintf(buf, "Insufficient space\r\n");
 	return;
     }
-    sys$setast(0);
+    asts_enabled = (sys$setast(0) == SS$_WASSET);
     for (;;)
     {
 	STprintf(buf, "---Dump of scb for session %x---\r\n", scb);
@@ -2649,10 +2678,10 @@ CS_fmt_scb(CS_SCB *scb, i4 iosize, char *area)
 	buf += STlength(buf);
 	break;
     }
-    sys$setast(1);
+    if (asts_enabled) sys$setast(1);
 }
 
-STATUS
+void
 CS_breakpoint(void)
 {
 	return(OK);
@@ -3278,7 +3307,7 @@ s    pc: %x    sp: %x%s",
 void
 CS_dump_stack( CS_SCB    *scb,
 	      void	 *notused,
-	      void	 *output_arg,
+	      PTR 	 output_arg,
 	      TR_OUTPUT_FCN *output_fcn,
 	      i4	 verbose )
 {

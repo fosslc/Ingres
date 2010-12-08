@@ -86,6 +86,13 @@
 **          spatial is not supported.
 **      18-Oct-2010 (troal01)
 **          adu_within had the argument order reversed, fixed it.
+**	02-Dec-2010 (gupsh01) SIR 124685
+**	    Prototype cleanup.
+**      06-Dec-2010 (horda03)
+**          Renamed adu_geometrycollection_srid_fromText and
+**          adu_geometrycollection_srid_fromWKB
+**      07-Dec-2010 (horda03)
+**          Move GEOS prototype to within _WITH_GEOS section.
 */
 
 /*
@@ -116,8 +123,128 @@ typedef struct _geomNBR
     i4 y_hi;
 } geomNBR_t;
 
+/* STATIC function declarations */
+static void printHEX(const unsigned char *bytes, size_t n);
+
+static DB_STATUS adu_long_to_cstr( 
+	ADF_CB	*adf_scb,
+	DB_DATA_VALUE *dv_in,
+	unsigned char **output,
+	i4		*length);
+
+static DB_STATUS
+adu_wkbDV_to_long( 
+	ADF_CB	 *adf_scb,
+	DB_DATA_VALUE *dv_in,
+	DB_DATA_VALUE *dv_out);
+
+static DB_STATUS dataValueToStoredGeom( 
+	ADF_CB		*adf_scb, 
+	DB_DATA_VALUE	*dv_in, 
+        storedGeom_t	*geomData, 
+	bool		isWKB);
+
+static DB_STATUS storedGeomToDataValue( 
+	ADF_CB		*adf_scb, 
+	storedGeom_t	geomData,
+        DB_DATA_VALUE	*dv_out);
+
+static int interleaveBits(int odd, int even);
+
+static int encode(int x, int y);
+
+#ifdef _WITH_GEO
+
+static DB_STATUS geosToStoredGeom( 
+	ADF_CB		*adf_scb, 
+	GEOSGeometry		*geometry, 
+        GEOSContextHandle_t	handle, 
+	storedGeom_t		*geomData,
+        bool			includeEnvelope);
+
+static DB_STATUS storedGeomToGeos( 
+	ADF_CB		*adf_scb, 
+	GEOSContextHandle_t	handle,
+        storedGeom_t		*geomData, 
+	GEOSGeometry		**geometry,
+	bool			getEnv);
+
+static DB_STATUS adu_nbrToGeos( 
+	ADF_CB 			*adf_scb, 
+	GEOSContextHandle_t	handle, 
+	geomNBR_t		*nbr,
+        GEOSGeometry		**geometry);
+
+static DB_STATUS dataValueToGeos( 
+	ADF_CB			*adf_scb,
+	DB_DATA_VALUE 		*dv1, 
+	GEOSContextHandle_t 	handle,
+	GEOSGeometry 		**geometry,
+	bool 			isWKB);
+
+static DB_STATUS geosToDataValue( 
+	ADF_CB			*adf_scb,
+	GEOSGeometry 		*geometry,
+	GEOSContextHandle_t	handle,
+	DB_DATA_VALUE		*dv_out,
+	i4			*combinedLength,
+	bool			includeEnvelope);
+
+static DB_STATUS geomToGeomComparison( 
+    ADF_CB           *adf_scb,
+    DB_DATA_VALUE    *dv1,
+    DB_DATA_VALUE    *dv2,
+    DB_DATA_VALUE    *rdv,
+    /* GEOS function to call */
+    char (*GEOSFunction) (GEOSContextHandle_t, const GEOSGeometry *, 
+                      const GEOSGeometry *));
+
+static DB_STATUS geomToGeomReturnsGeom(
+    ADF_CB        *adf_scb,
+    DB_DATA_VALUE *dv1,
+    DB_DATA_VALUE *dv2,
+    DB_DATA_VALUE *rdv,
+    /* GEOS function to call */
+    GEOSGeometry * (*GEOSFunction) (GEOSContextHandle_t, const GEOSGeometry *,
+                const GEOSGeometry *));
+
+static DB_STATUS adu_geo_fromWKB(
+    ADF_CB          *adf_scb,
+    DB_DATA_VALUE   *dv_in,
+    DB_DATA_VALUE   *dv_srid,
+    DB_DATA_VALUE   *dv_out,
+    i4 expectedGeoType);
+
+static DB_STATUS adu_geo_fromText(
+    ADF_CB          *adf_scb,
+    DB_DATA_VALUE   *dv_in,
+    DB_DATA_VALUE   *dv_srid,
+    DB_DATA_VALUE   *dv_out,
+    i4 expectedGeoType);
+
+static i4 coordSeq_cmp(
+    GEOSContextHandle_t handle, const GEOSGeometry *g1,
+                const GEOSGeometry *g2);
+
+static i4 polygon_cmp(
+    GEOSContextHandle_t handle, const GEOSGeometry *g1, 
+               const GEOSGeometry *g2);
+
+static i4 geom_cmp(
+    GEOSContextHandle_t handle, const GEOSGeometry *g1, 
+            const GEOSGeometry *g2, i4 g1Type, i4 g2Type);
+
+#endif /* _WITH_GEO */
+
+static DB_STATUS geom_to_text(
+ADF_CB          *adf_scb,
+DB_DATA_VALUE   *dv_in,
+DB_DATA_VALUE   *dv_out,
+i4 trim,
+i4 precision);
+
 /* Debuging function that will make WKB more human readable */
-void
+static void
 printHEX(const unsigned char *bytes, size_t n)
 {
     static char hex[] = "0123456789ABCDEF";
@@ -129,6 +256,11 @@ printHEX(const unsigned char *bytes, size_t n)
     }
     TRdisplay("\n");
 }
+
+void
+geos_Notice(const char *fmt, ...);
+void
+geos_Error(const char *fmt, ...);
 
 /* This function allows GEOS to display notification messages. */
 void
@@ -172,11 +304,12 @@ bool db_datatype_is_geom(i4 db_datatype)
     return FALSE;
 }
 
+
 /* 
  * Combine a blob into a char*
  * output is allocated here but is the responsibility of the caller to free.
 */
-DB_STATUS
+static DB_STATUS
 adu_long_to_cstr(
 ADF_CB *adf_scb,
 DB_DATA_VALUE *dv_in,
@@ -360,7 +493,7 @@ i4 *length)
 }
 
 /* Take a wkb stream in data value form and turn it into a segmented blob.*/
-DB_STATUS
+static DB_STATUS
 adu_wkbDV_to_long(
 ADF_CB *adf_scb,
 DB_DATA_VALUE *dv_in,
@@ -590,7 +723,7 @@ DB_DATA_VALUE *dv_out)
 }
 
 /* Convert a blob stream into a stored geometry structure. */
-DB_STATUS
+static DB_STATUS
 dataValueToStoredGeom(ADF_CB *adf_scb, DB_DATA_VALUE *dv_in, 
                       storedGeom_t *geomData, bool isWKB)
 {
@@ -697,7 +830,7 @@ dataValueToStoredGeom(ADF_CB *adf_scb, DB_DATA_VALUE *dv_in,
 }
 
 /* Convert a stored geometry structure into a blob stream. */
-DB_STATUS
+static DB_STATUS
 storedGeomToDataValue(ADF_CB *adf_scb, storedGeom_t geomData,
                       DB_DATA_VALUE *dv_out)
 {
@@ -771,7 +904,7 @@ storedGeomToDataValue(ADF_CB *adf_scb, storedGeom_t geomData,
 
 #ifdef _WITH_GEO
 /* Convert a geos geometry into a stored geometry structure. */
-DB_STATUS
+static DB_STATUS
 geosToStoredGeom(ADF_CB *adf_scb, GEOSGeometry *geometry, 
                  GEOSContextHandle_t handle, storedGeom_t *geomData,
                  bool includeEnvelope)
@@ -932,7 +1065,7 @@ geosToStoredGeom(ADF_CB *adf_scb, GEOSGeometry *geometry,
 /*
  ** Convert a storedGeometry into a GEOS geometry
  */
-DB_STATUS
+static DB_STATUS
 storedGeomToGeos(ADF_CB *adf_scb, GEOSContextHandle_t handle,
         storedGeom_t *geomData, GEOSGeometry **geometry, bool getEnv)
 {
@@ -988,7 +1121,7 @@ storedGeomToGeos(ADF_CB *adf_scb, GEOSContextHandle_t handle,
     return E_DB_OK;
 }
 
-DB_STATUS
+static DB_STATUS
 adu_nbrToGeos(ADF_CB *adf_scb, GEOSContextHandle_t handle, geomNBR_t *nbr,
               GEOSGeometry **geometry)
 {
@@ -1040,7 +1173,7 @@ adu_nbrToGeos(ADF_CB *adf_scb, GEOSContextHandle_t handle, geomNBR_t *nbr,
  * isWKB should be set to true if the data in dv1 is in WKB format and not
  *   Ingres' internal combinedWKB format.
  */
-DB_STATUS
+static DB_STATUS
 dataValueToGeos(
 ADF_CB *adf_scb,
 DB_DATA_VALUE *dv1,
@@ -1106,7 +1239,7 @@ bool isWKB)
  *   in dv_out->db_data. If the data is to be directly inserted it should
  *   be included.
  */
-DB_STATUS
+static DB_STATUS
 geosToDataValue(
 ADF_CB *adf_scb,
 GEOSGeometry *geometry,
@@ -1330,7 +1463,7 @@ DB_DATA_VALUE   *dv_out)
  * @param even integer holding bit values for even bit positions
  * @return the integer that results from interleaving the input bits
  */ 
-int interleaveBits(int odd, int even)
+static int interleaveBits(int odd, int even)
 {
     int val = 0;
     int m = (odd >= even) ? odd:even;
@@ -1363,7 +1496,7 @@ int interleaveBits(int odd, int even)
  * rows and cols)
  * @return Hilbert order 
  */ 
-int encode(int x, int y)
+static int encode(int x, int y)
 {
     int r = 24;
     int mask = (1 << r) - 1;
@@ -1452,7 +1585,7 @@ DB_DATA_VALUE   *dv_out)
 }
 
 #ifdef _WITH_GEO
-DB_STATUS
+static DB_STATUS
 geomToGeomComparison(
 ADF_CB           *adf_scb,
 DB_DATA_VALUE    *dv1,
@@ -1514,7 +1647,7 @@ char (*GEOSFunction) (GEOSContextHandle_t, const GEOSGeometry *,
     return status;
 }
 
-DB_STATUS
+static DB_STATUS
 geomToGeomReturnsGeom(
 ADF_CB        *adf_scb,
 DB_DATA_VALUE *dv1,
@@ -1815,7 +1948,7 @@ DB_DATA_VALUE   *dv_out)
  * SRID specified
  */
 DB_STATUS
-adu_geometrycollection_srid_fromWKB(
+adu_geomcollection_srid_fromWKB(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
@@ -1853,7 +1986,7 @@ DB_DATA_VALUE   *dv_out)
  * Accept a geometry specified with WKB as input.  Compute a bounding box
  * (envelope) and convert it to WKB.  Stream both WKB into storage.
  */
-DB_STATUS
+static DB_STATUS
 adu_geo_fromWKB(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
@@ -2183,7 +2316,7 @@ DB_DATA_VALUE   *dv_out)
  * Speficies SRID
  */
 DB_STATUS
-adu_geometrycollection_srid_fromText(
+adu_geomcollection_srid_fromText(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_srid,
@@ -2222,7 +2355,7 @@ DB_DATA_VALUE   *dv_out)
  * Compute a bounding box (envelope) and convert it to WKB.  Stream both WKB
  * into storage.
  */
-DB_STATUS
+static DB_STATUS
 adu_geo_fromText(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
@@ -2425,7 +2558,7 @@ DB_DATA_VALUE   *dv_out)
 #endif
 }
 
-DB_STATUS geom_to_text(
+static DB_STATUS geom_to_text(
 ADF_CB          *adf_scb,
 DB_DATA_VALUE   *dv_in,
 DB_DATA_VALUE   *dv_out,
@@ -4981,7 +5114,7 @@ DB_DATA_VALUE   *rdv)
  * Used for rtree indexing.  Returns 1 is g1 > g2, 0 if g1 = g2, -1 if g1< g2.
  * Each point is compared to get the final result.
  */
-i4
+static i4
 coordSeq_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1,
                 const GEOSGeometry *g2)
 {
@@ -5039,7 +5172,7 @@ coordSeq_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1,
  * Compares two polygons by breaking them up into their linear ring pieces and
  * called coordSeq_cmp
  */
-i4 
+static i4 
 polygon_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1, 
                const GEOSGeometry *g2)
 {
@@ -5078,7 +5211,7 @@ polygon_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1,
  * Multpolygon call polygon_cmp for each polygon contained
  * Geometry collections recursively call geom_cmp for each geometry contained.
  */
-i4 
+static i4 
 geom_cmp(GEOSContextHandle_t handle, const GEOSGeometry *g1, 
             const GEOSGeometry *g2, i4 g1Type, i4 g2Type)
 {

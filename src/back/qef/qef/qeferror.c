@@ -561,6 +561,8 @@ GLOBALREF QEF_ERR_MAP Qef_err_map[];
 **	29-Oct-2008 (jonj)
 **	    SIR 120874: Add non-variadic macros and functions for
 **	    compilers that don't support them.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Shush a compiler warning.
 */
 
 VOID
@@ -584,8 +586,6 @@ i4 		num_parms,
     QEE_DSH		*dsh;
     i4		ulecode;
     i4		msglen;
-    i4		lparam1;
-    i4		*lparam2;
     DB_SQLSTATE		sqlstate;
     i4			eflag;
     SCF_CB		scf_cb;
@@ -710,6 +710,7 @@ i4 		num_parms,
 	else if ((DBerror->err_code >> 16) > DB_MAX_FACILITY)  /* if bad error code */
 	{
 	    SETDBERR(&qefError, 0, E_QE0018_BAD_PARAM_IN_CB);
+	    uletype = ULE_LOG;
 	}
 	else					/* error from other facility */
 	{

@@ -495,6 +495,8 @@ SQLSTATE_MAPPING_REQUIRED
 **	19-Nov-2010 (kiria01) SIR 124690
 **	    Add support for UCS_BASIC collation - E_US1918_6424_COLL_NOT_FOUND
 **	    should not be specific to CREATE/ALTER TABLE.
+**	23-Nov-2010 (wanfr01) b124752
+**	    Corrected error message for E_US0EDB
 */
 
 #define _US_CLASS   0
@@ -3377,8 +3379,12 @@ E_US0EDA_3802:SS42000_SYN_OR_ACCESS_ERR
 */
 E_US0EDB_3803:SS42000_SYN_OR_ACCESS_ERR
 "Line %0d, syntax error on '%1c'.  The correct syntax is:
-\n REGISTER TABLE tablename (col_name col_format {, col_name col_format})
-\n      AS IMPORT FROM 'source' with_clause."
+\n REGISTER TABLE table_name
+\n      ( column_name col_type [IS 'external_name'] 
+\n        {, ... }
+\n      )
+\n      AS IMPORT FROM 'security_log_file_name'
+\n                   | 'CURRENT' WITH DBMX=SXA [, ROWS = integer_value]"
 E_US0EDC_3804:SS42000_SYN_OR_ACCESS_ERR
 "Line %0d, syntax error on '%1c'.  The correct syntax is:
 \n REGISTER [UNIQUE] INDEX indexname

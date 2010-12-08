@@ -294,6 +294,8 @@
 **          Changes for Long IDs
 **      15-Sep-2010 (thaju02) B124344
 **          Directory may contain spaces. Created qea_findpathlen().
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.  Make most routines static.
 **/
 
 /*
@@ -313,14 +315,6 @@ typedef	struct	_DM_COLUMN	QEA_ATTRIBUTE;
 #define	EXIT_CODE_BLOCK		break;
 #define	END_CODE_BLOCK		break; }
 
-/*
-[@forward_type_references@]
-[@forward_function_references@]
-[@group_of_defined_constants@]...
-[@type_definitions@]
-[@global_variable_definitions@]
-*/
-
 static void qea_mk_dmmcb(
     QEE_DSH		*dsh,
     DMM_CB		*dmm_cb);
@@ -332,25 +326,92 @@ static void qea_make_dmucb(
     DMU_KEY_ENTRY	**key);
 
 
-static DB_STATUS
-qea_14_error( 
+static DB_STATUS qea_0list_file(
+    QEF_RCB            	*qef_rcb,
+    QEF_DBP_PARAM	*db_parm,
+    QEE_DSH		*dsh );
+
+static DB_STATUS qea_1drop_file(
+    QEF_RCB            	*qef_rcb,
+    QEF_DBP_PARAM	*db_parm,
+    QEE_DSH		*dsh );
+
+static DB_STATUS qea_2create_db(
+    QEF_RCB            	*qef_rcb,
+    QEF_DBP_PARAM	*db_parm,
+    QEE_DSH		*dsh );
+
+static DB_STATUS qea_3destroy_db(
+    QEF_RCB            	*qef_rcb,
+    QEF_DBP_PARAM	*db_parm,
+    QEE_DSH		*dsh );
+
+static DB_STATUS qea_4alter_db(
+    QEF_RCB            	*qef_rcb,
+    QEF_DBP_PARAM	*db_parm,
+    QEE_DSH		*dsh );
+
+static DB_STATUS qea_5add_location(
+    QEF_RCB            	*qef_rcb,
+    QEF_DBP_PARAM	*db_parm,
+    QEE_DSH		*dsh );
+
+static DB_STATUS qea_5del_location(
+    QEF_RCB	*qef_rcb,
+    QEF_DBP_PARAM *db_parm,
+    QEE_DSH *dsh );
+
+static DB_STATUS qea_67_check_patch(
+    QEF_RCB            	*qef_rcb,
+    QEF_DBP_PARAM	*db_parm,
+    QEE_DSH		*dsh,
+    i4			patch_flag );
+
+static DB_STATUS qea_8_finddbs(
+    QEF_RCB            	*qef_rcb,
+    QEF_DBP_PARAM	*db_parm,
+    QEE_DSH		*dsh );
+
+static DB_STATUS qea_12alter_extension(
+    QEF_RCB            	*qef_rcb,
+    QEF_DBP_PARAM	*db_parm,
+    QEE_DSH		*dsh );
+
+static DB_STATUS qea_9_readconfig(
+			QEF_RCB		*qef_rcb,
+			QEF_DBP_PARAM	*db_parm,
+			QEE_DSH		*dsh);
+
+static DB_STATUS qea_10_updconfig(
+			QEF_RCB		*qef_rcb,
+			QEF_DBP_PARAM	*db_parm,
+			QEE_DSH		*dsh);
+
+static DB_STATUS qea_11_deldmp_config(
+			QEF_RCB		*qef_rcb,
+			QEF_DBP_PARAM	*db_parm,
+			QEE_DSH		*dsh);
+
+static DB_STATUS qea_13_convert_table(
+    QEF_RCB            	*qef_rcb,
+    QEF_DBP_PARAM	*db_parm,
+    QEE_DSH		*dsh );
+
+static DB_STATUS qea_14_error( 
 	QEF_DBP_PARAM           *db_parm,
 	QEE_DSH                 *dsh);
 
-static DB_STATUS
-qea_15_make_udt_defaults(
+static DB_STATUS qea_15_make_udt_defaults(
 QEF_RCB            	*qef_rcb,
 QEF_DBP_PARAM		*db_parm,
 QEE_DSH			*dsh );
 
-static DB_STATUS
-UDTsieve(
+static DB_STATUS UDTsieve(
 void		*dummy,
 QEU_QUAL_PARAMS	*qparams
 );
 
-static DB_STATUS
-constructUDTdefaultTuple(
+static DB_STATUS constructUDTdefaultTuple(
     QEE_DSH		*dsh,
     QEA_ATTRIBUTE	*attribute,
     DB_IIDEFAULT	*IIDEFAULTtuple,
@@ -358,15 +419,13 @@ constructUDTdefaultTuple(
     DB_TEXT_STRING	*unquotedDefaultValue
 );
 
-static DB_STATUS
-get_loc_tuple(
+static DB_STATUS get_loc_tuple(
 QEE_DSH			*dsh,
 DB_LOC_NAME             *locname,
 DU_LOCATIONS            *loctup
 );
 
-static DB_STATUS
-get_extent_info(
+static DB_STATUS get_extent_info(
 QEE_DSH			*dsh,
 i4                 phase,
 #define GET_EXTENT_COUNT      1
@@ -376,8 +435,11 @@ DMM_LOC_LIST            **loc_list,
 i4                 *ext_countp
 );
 
-i4
-qea_findpathlen(
+static i4 qea_findlen(
+char	    *parm,
+i4	    len );
+
+static i4 qea_findpathlen(
 char		*parm,
 i4		len);
 
@@ -521,7 +583,6 @@ i4		len);
 **	    names from the internal table is cast into an appropriate case for
 **	    regular identifiers before performing the comparison
 **
-[@history_template@]...
 */
 
 DB_STATUS
@@ -650,7 +711,9 @@ static const struct
 	    },
 	    /* DESTROY_DB */
 	    {	1,
-		{ "dbname", DB_CHA_TYPE }
+		{
+		    { "dbname", DB_CHA_TYPE }
+		}
 	    },
 	    /* ALTER_DB */
 	    {	6,
@@ -1066,7 +1129,6 @@ static const struct
 ** History:
 **      14-apr-1989  (teg)
 **	    Initial Creation.
-[@history_template@]...
 */
 static void
 qea_mk_dmmcb(
@@ -1112,9 +1174,8 @@ DMM_CB		   *dmm_cb )
 ** History:
 **      21-apr-1989 (teg)
 **	    created for Internal Procedures.
-[@history_template@]...
 */
-i4
+static i4
 qea_findlen(
 char	    *parm,
 i4	    len )
@@ -1153,7 +1214,7 @@ i4	    len )
 **      15-Sep-2010 (thaju02) B124344
 **	    Created.
 */
-i4
+static i4
 qea_findpathlen(
 char  *parm,
 i4    len)
@@ -1251,9 +1312,8 @@ i4    len)
 **	    Initial Creation.
 **      15-Sep-2010 (thaju02) B124344
 **          Directory may contain spaces. Use qea_findpathlen().
-[@history_template@]...
 */
-DB_STATUS
+static DB_STATUS
 qea_0list_file(
 QEF_RCB            	*qef_rcb,
 QEF_DBP_PARAM		*db_parm,
@@ -1398,9 +1458,8 @@ QEE_DSH			*dsh )
 **	    Initial Creation.
 **      15-Sep-2010 (thaju02) B124344
 **          Directory may contain spaces. Use qea_findpathlen().
-[@history_template@]...
 */
-DB_STATUS
+static DB_STATUS
 qea_1drop_file(
 QEF_RCB            	*qef_rcb,
 QEF_DBP_PARAM		*db_parm,
@@ -1589,7 +1648,7 @@ QEE_DSH			*dsh )
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    cmptlvl is now an integer.
 */
-DB_STATUS
+static DB_STATUS
 qea_2create_db(
 QEF_RCB            	*qef_rcb,
 QEF_DBP_PARAM		*db_parm,
@@ -2148,9 +2207,8 @@ QEE_DSH			*dsh )
 **	    been populated; be more forgiving if the
 **	    delete doesn't delete anything (qeu_count == 0) but 
 **	    otherwise succeeds.
-[@history_template@]...
 */
-DB_STATUS
+static DB_STATUS
 qea_3destroy_db(
 QEF_RCB            	*qef_rcb,
 QEF_DBP_PARAM		*db_parm,
@@ -2840,9 +2898,8 @@ QEE_DSH			*dsh )
 **      06-mar-1996 (nanpr01)
 **	    Fixed Bin's change. Parameter should be sizeof -1 rather than sizeof
 **          BUG # 65937
-[@history_template@]...
 */
-DB_STATUS
+static DB_STATUS
 qea_4alter_db(
 QEF_RCB            	*qef_rcb,
 QEF_DBP_PARAM		*db_parm,
@@ -2859,7 +2916,6 @@ QEE_DSH			*dsh )
     DMR_ATTR_ENTRY	*key_ptr = &key;
     QEU_CB		qeu;
     STATUS		local_status;
-    DB_ERROR		error;
     QEF_CB		*qef_cb = dsh->dsh_qefcb;
     int			access_on, access_off;
     int			service_on, service_off;
@@ -3240,9 +3296,8 @@ QEE_DSH			*dsh )
 **      23-Jun-2010 (coomi01) b123763 
 **          Do not allow iidbdb locations to be extended
 **	   
-[@history_template@]...
 */
-DB_STATUS
+static DB_STATUS
 qea_5add_location(
 QEF_RCB            	*qef_rcb,
 QEF_DBP_PARAM		*db_parm,
@@ -3936,7 +3991,7 @@ QEE_DSH			*dsh )
 **          Do not allow iidbdb locations to be adjusted
 */
 
-DB_STATUS 
+static DB_STATUS 
 qea_5del_location(
     QEF_RCB	*qef_rcb,
     QEF_DBP_PARAM *db_parm,
@@ -4543,7 +4598,7 @@ qea_5del_location(
 **	13-Oct-2010 (kschendel) SIR 124544
 **	    dmu_char_array replaced with DMU_CHARACTERISTICS, dmu_action.
 */
-DB_STATUS
+static DB_STATUS
 qea_67_check_patch(
 QEF_RCB            	*qef_rcb,
 QEF_DBP_PARAM		*db_parm,
@@ -4729,9 +4784,8 @@ i4			patch_flag )
 **	    Initial Creation.
 **      30-Dec-92 (jhahn)
 **          Fixed dsh_row casting.
-[@history_template@]...
 */
-DB_STATUS
+static DB_STATUS
 qea_8_finddbs(
 QEF_RCB            	*qef_rcb,
 QEF_DBP_PARAM		*db_parm,
@@ -4879,9 +4933,8 @@ QEE_DSH			*dsh )
 **	    for data and work/aux work, and then allows the work/aux work
 **	    location to be altered to aux work/work. This change fixes bug
 **	    102500, problem INGSRV 1263.
-[@history_template@]...
 */
-DB_STATUS
+static DB_STATUS
 qea_12alter_extension(
 QEF_RCB            	*qef_rcb,
 QEF_DBP_PARAM		*db_parm,
@@ -5408,7 +5461,7 @@ DMU_KEY_ENTRY	   **key)
 **	    Compiler caught typo in compat-minor fetch, guess we never do that.
 **	
 */
-DB_STATUS
+static DB_STATUS
 qea_9_readconfig(
 			QEF_RCB		*qef_rcb,
 			QEF_DBP_PARAM	*db_parm,
@@ -5610,7 +5663,7 @@ qea_9_readconfig(
 **	29-Dec-2004 (schka24)
 **	    Allow updating of dsc_c_version.
 */
-DB_STATUS
+static DB_STATUS
 qea_10_updconfig(	QEF_RCB		*qef_rcb,
 			QEF_DBP_PARAM	*db_parm,
 			QEE_DSH		*dsh)
@@ -5825,7 +5878,7 @@ qea_10_updconfig(	QEF_RCB		*qef_rcb,
 **	19-oct-1993 (rachael) Bug 55767
 **	    Don't convert the location name to lowercase.
 */
-DB_STATUS
+static DB_STATUS
 qea_11_deldmp_config(	QEF_RCB		*qef_rcb,
 			QEF_DBP_PARAM	*db_parm,
 			QEE_DSH		*dsh)
@@ -5963,7 +6016,7 @@ qea_11_deldmp_config(	QEF_RCB		*qef_rcb,
 **	13-Oct-2010 (kschendel) SIR 124544
 **	    dmu_char_array replaced with DMU_CHARACTERISTICS.
 */
-DB_STATUS
+static DB_STATUS
 qea_13_convert_table(
 QEF_RCB            	*qef_rcb,
 QEF_DBP_PARAM		*db_parm,
@@ -6079,7 +6132,6 @@ QEE_DSH			*dsh )
 ** History:
 **      30-October-1992 (Jhahn)
 **          Initial creation.
-[@history_template@]...
 */
 static DB_STATUS
 qea_14_error( 
@@ -6190,7 +6242,6 @@ qea_14_error(
 ** History:
 **	11-mar-93 (rickh)
 **	    Am Anfang war die Tat.
-[@history_template@]...
 */
 
 #define	UNQUOTED_DEFAULT_LENGTH	\

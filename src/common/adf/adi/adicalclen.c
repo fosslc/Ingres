@@ -1133,9 +1133,10 @@ i4                 *adi_rlen;
 **	    nvl2 length calculation needs to take account of the fact that
 **	    a string result from some non-string input types will require
 **	    length expansion (bug 124605)
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_0calclen(
 ADF_CB             *adf_scb,
@@ -1143,15 +1144,6 @@ ADI_LENSPEC        *adi_lenspec,
 i4		   adi_numops,
 DB_DATA_VALUE      *adi_dv[ADI_MAX_OPERANDS],
 DB_DATA_VALUE      *adi_dvr)
-# else
-DB_STATUS
-adi_0calclen( adf_scb, adi_lenspec, adi_numops, adi_dv, adi_dvr)
-ADF_CB             *adf_scb;
-ADI_LENSPEC        *adi_lenspec;
-i4		   adi_numops;
-DB_DATA_VALUE      *adi_dv[ADI_MAX_OPERANDS];
-DB_DATA_VALUE      *adi_dvr;
-# endif
 {
     i4			len[ADI_MAX_OPERANDS];
     register i4		extra;

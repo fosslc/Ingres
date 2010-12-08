@@ -433,9 +433,10 @@
 **          Store blank trimmed names in DMT_ATT_ENTRY
 **	12-Oct-2010 (kschendel) SIR 124544
 **	    dmu_char_array replaced with DMU_CHARACTERISTICS.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
-FUNC_EXTERN char	    *STskipblank();
 static DB_STATUS
 qeu_new_prot_tuple(
 QEF_CB	    *qef_cb,
@@ -1500,10 +1501,12 @@ QEUQ_CB		*qeuq_cb)
     }
     /* call qef_error to handle error messages, if any */
     if (DB_FAILURE_MACRO(status))
+    {
 	if (!err_already_reported)
 	    (VOID) qef_error(error, 0L, status, &error, &qeuq_cb->error, 0);
 	else
 	    err_already_reported = FALSE;
+    }
     
     /* Close off all the tables. */
     if (dbp_opened)
@@ -2142,8 +2145,8 @@ QEUQ_CB		*qeuq_cb)
 	    dmt_cb.dmt_id.db_tab_index = qeuq_cb->qeuq_tbl_id[i].db_tab_index;
 
 	    /* Skip over derived tables (tabl_id = {0, 0}). */
-	    if (dmt_cb.dmt_id.db_tab_base == 0 &&
-		dmt_cb.dmt_id.db_tab_index == 0 ||
+	    if ((dmt_cb.dmt_id.db_tab_base == 0 &&
+		dmt_cb.dmt_id.db_tab_index == 0) ||
 		qeuq_cb->qeuq_tbl_type[i] == PST_TPROC)
 		continue;
 
@@ -3375,14 +3378,14 @@ QEUQ_CB		*qeuq_cb)
 	    ** and store a number one higher in hi_priv_descr_no
 	    */
 	    if (   indep_privs 
-	        && (new_ptuple->dbp_popset & DB_DELETE &&
-	    	    !newperm_info.qeu_descr_nums[QEU_DELETE_DESCR]
+	        && ((new_ptuple->dbp_popset & DB_DELETE &&
+	    	    !newperm_info.qeu_descr_nums[QEU_DELETE_DESCR])
 		    ||    
-		    new_ptuple->dbp_popset & DB_APPEND &&
-		    !newperm_info.qeu_descr_nums[QEU_INSERT_DESCR]
+		    (new_ptuple->dbp_popset & DB_APPEND &&
+		    !newperm_info.qeu_descr_nums[QEU_INSERT_DESCR])
 		    ||
-		    new_ptuple->dbp_popset & DB_REPLACE &&
-		    !newperm_info.qeu_descr_nums[QEU_UPDATE_DESCR]
+		    (new_ptuple->dbp_popset & DB_REPLACE &&
+		    !newperm_info.qeu_descr_nums[QEU_UPDATE_DESCR])
     	           )
 		)
 	    {
@@ -3472,8 +3475,8 @@ QEUQ_CB		*qeuq_cb)
 		    for (priv_start = (char *) qtuple->dbq_text.db_t_text,
 			 qtext_end = (char *) qtuple->dbq_text.db_t_text +
 			    qtuple->dbq_text.db_t_count;
-			 (priv_start < qtext_end && CMcmpcase(priv_start, "?"));
-			 priv_start = CMnext(priv_start)
+			 (priv_start < qtext_end && *priv_start != '?');
+			 CMnext(priv_start)
 			)
 		    ;
 
@@ -11357,7 +11360,6 @@ DMT_TBL_ENTRY	*tbl_entry)
     DB_STATUS	    status, local_status;
     DB_TAB_ID	    view_ubt_id;
     i4	    error = E_QE0000_OK;
-    i4		    zero_cons_number = 0;
     bool	    transtarted;	    
     bool	    tbl_opened;
     bool	    view_opened;
@@ -31428,7 +31430,6 @@ qeu_v_finddependency(
     DB_STATUS		unfix_status = E_DB_OK;
     i4		error = 0;
     i4		i;
-    RDF_CB		subrdfcb, *subrdf_cb = &subrdfcb;
     PST_QNODE           *qtunion;
     DMT_SHW_CB          dmt_show;
     DMT_TBL_ENTRY       dmt_tbl_entry;

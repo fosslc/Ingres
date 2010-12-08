@@ -46,7 +46,7 @@ adu_ucs2_to_utf8 (
                 const UTF8*       targetEnd,
                 i2                *reslen);
 
-static bool check_utf8();
+static bool check_utf8(void);
 
 static DB_STATUS
 adu_nvchr_chartouni(
@@ -180,6 +180,8 @@ ad0_nvchr_casemap(
 **      21-Jun-2010 (horda03) b123926
 **          Because adu_unorm() and adu_utf8_unorm() are also called via 
 **          adu_lo_filter() change parameter order.
+**      02-Dec-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
 /*{
@@ -4588,7 +4590,7 @@ const    UCS4   halfBase = 0x0010000UL, halfMask = 0x3FFUL,
 **	    X-integration negated above fix, re-fix.
 */
 static bool
-check_utf8()
+check_utf8(void)
 {
     char        chname[CM_MAXATTRNAME+1];
     static	bool inited = FALSE;

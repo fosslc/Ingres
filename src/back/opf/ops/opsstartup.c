@@ -283,6 +283,8 @@ opg_getfunc(
 **          Set ops_parallel based on opf_pq_dop which now defaults to 0 (OFF).
 **	15-Oct-2010 (kschendel) SIR 124544
 **	    Remove default storage structure passing, goes to PSF now.
+**	09-Nov-2010 (wanfr01) SIR 124714
+**	    add ops_holdfactor
 */
 DB_STATUS
 ops_startup(
@@ -599,6 +601,7 @@ ops_startup(
 	opg_cbp->opg_alter.ops_nocardchk = TRUE;
 
     opg_cbp->opg_alter.ops_greedy_factor = opf_cb->opf_greedy_factor;
+    opg_cbp->opg_alter.ops_holdfactor = opf_cb->opf_holdfactor;
     opg_cbp->opg_check = FALSE;           /* TRUE if any of the global trace
                                         ** or timing flags are set
                                         */

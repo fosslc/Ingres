@@ -1342,6 +1342,8 @@ opc_cnst_expr(
 **	    as otherwise ascending sorted data is the worst case.
 **	02-Dec-2009 (kiria01) b122952
 **	    Build real range key for sorted inlist if over the threshold.
+**      29-jul-2010 (huazh01)
+**          reset opn_ncomps if we build a range key. (b124150)
 [@history_template@]...
 */
 static VOID
@@ -1391,7 +1393,7 @@ opc_cvclause(
 	    if (cnt > global->ops_cb->ops_alter.ops_inlist_thresh)
 	    {
 		/* We're expected to build a range key */
-		cnf_and->opc_curcomp += 1;
+		cnf_and->opc_ncomps = cnf_and->opc_curcomp += 1;
 		cnf_comp = &cnf_and->opc_comps[cnf_and->opc_curcomp];
 
 		qvar = root->pst_left;

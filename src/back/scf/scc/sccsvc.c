@@ -241,6 +241,8 @@
 **	    Update GCA API to LEVEL 5
 **	12-Nov-2010 (kschendel) SIR 124685
 **	    Fix prototypes, CS expects CS_SCB *, xlate to SCD_SCB * here.
+**      16-Nov-2010 (horda03) b124691
+**          Correct AST handling on VMS (use SS$_WASSET to detect if ASTs were enabled)
 **/
 
 /*
@@ -1510,7 +1512,7 @@ scc_recv( CS_SCB *csscb, i4  sync )
 	return(E_CS001E_SYNC_COMPLETION);
     }
 #ifdef VMS
-    ast_enabled = sys$setast(0);
+    ast_enabled = (sys$setast(0) == SS$_WASSET);
 #endif
 
     if (   rparms->gca_status != E_GCFFFF_IN_PROCESS
@@ -1561,7 +1563,7 @@ scc_recv( CS_SCB *csscb, i4  sync )
     }
 
 #ifdef VMS
-    ast_enabled = sys$setast(0);
+    ast_enabled = (sys$setast(0) == SS$_WASSET);
 #endif
 
     /* If we are in the middle of a read then continue with it now */
@@ -1604,7 +1606,7 @@ scc_recv( CS_SCB *csscb, i4  sync )
 	    CScancelled(0); /* mark as nothing complete */
     }
 #ifdef VMS
-    ast_enabled = sys$setast(0);
+    ast_enabled = (sys$setast(0) == SS$_WASSET);
 #endif
     if ((rparms->gca_status != E_GCFFFF_IN_PROCESS) &&
 	(rparms->gca_status != E_GC0000_OK) &&

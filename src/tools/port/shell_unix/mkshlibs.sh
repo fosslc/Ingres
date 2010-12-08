@@ -582,6 +582,9 @@
 #	23-Feb-2010 (hanje04)
 #	    SIR 123296
 #	    Add support for LSB builds which use versioned shared libraries
+#	12-may-2010 (wanfr01) Bug 123718
+#	    Order solaris shared library object files via lorder/tsort to
+#	    improve code locality and avoid iTLB misses.
 #	21-May-2010 (bonro01)
 #	    Remove ICE from builds
 #	30-Sep-2010 (troal01)
@@ -997,6 +1000,12 @@ then
 	-framework Security -prebind -install_name lib(PROG0PRFX)compat.1.$SLSFX
         ;;
 
+    a64_sol|\
+    sui_us5|\
+    su9_us5|\
+    su4_us5)
+           $shlink_cmd -o $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX `lorder *.o | tsort` $shlink_opts
+           ;;
     *)
            $shlink_cmd -o $INGLIB/lib(PROG0PRFX)compat.1.$SLSFX *.o $shlink_opts
            ;;
@@ -1107,7 +1116,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX *.o \
+	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)q.1.$SLSFX `lorder *.o | tsort` \
 	$shlink_opts 
 	;;
     *_lnx|int_rpl)
@@ -1204,7 +1213,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX *.o \
+	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)frame.1.$SLSFX `lorder *.o | tsort` \
 	-L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)q.1 \
 	$shlink_opts 
 	;;
@@ -1316,7 +1325,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX *.o \
+	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)interp.1.$SLSFX `lorder *.o | tsort` \
 	$shlink_opts 
 	;;
     usl_us5 )
@@ -1444,7 +1453,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX *.o \
+	$shlink_cmd -o $INGLIB/lib(PROG1PRFX)api.1.$SLSFX `lorder *.o | tsort` \
 	$shlink_opts 
 	;;
     r64_us5|\
@@ -1569,7 +1578,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-        $shlink_cmd -o $INGLIB/oiicens.1.$SLSFX *.o \
+        $shlink_cmd -o $INGLIB/oiicens.1.$SLSFX `lorder *.o | tsort` \
         $shlink_opts -lelf -L $INGLIB -l(PROG0PRFX)compat.1
         ;;
     r64_us5|\
@@ -1680,7 +1689,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-        $shlink_cmd -o $INGLIB/oiiceap.1.$SLSFX *.o \
+        $shlink_cmd -o $INGLIB/oiiceap.1.$SLSFX `lorder *.o | tsort` \
         $shlink_opts -lelf -L $INGLIB -l(PROG0PRFX)compat.1 -lcuf \
         -lsocket -lnsl -lresolv -lposix4
         ;;
@@ -1803,7 +1812,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-        $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL *.o \
+        $shlink_cmd -o $INGLIB/${SLDDIHEAD}oiddi.$SLDDITAIL `lorder *.o | tsort` \
         $shlink_opts -lelf -L $INGLIB -l(PROG0PRFX)frame.1 -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1
         ;;
     r64_us5|\
@@ -1924,7 +1933,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-        $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX *.o \
+        $shlink_cmd -o $ING_BUILD/lib/liboinodesmgr.$SLSFX `lorder *.o | tsort` \
 	-L$ING_BUILD/lib -lcompat.1 -lq.1 -lframe.1 \
         $shlink_opts -lelf
         ;;
@@ -2004,7 +2013,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-        $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX *.o \
+        $shlink_cmd -o $ING_BUILD/lib/liboijniquery.$SLSFX `lorder *.o | tsort` \
 	-L$ING_BUILD/lib -lcompat.1 -lq.1 -lframe.1 \
         $shlink_opts -lelf
         ;;
@@ -2090,7 +2099,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-        $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 *.o \
+        $shlink_cmd -o $ING_BUILD/files/dynamic/${LPHB}/libplay_NewOrder.$SLSFX.2.0 `lorder *.o | tsort` \
         $shlink_opts -lelf
         ;;
     r64_us5|\
@@ -2206,7 +2215,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX *.o \
+        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbcdriver$RO.1.$SLSFX `lorder *.o | tsort` \
         $shlink_opts -lelf -lsocket -L$INGLIB \
                      -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1
 #                    -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1 -ladf -lgcf -lcuf
@@ -2348,7 +2357,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX *.o \
+        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbc.1.$SLSFX `lorder *.o | tsort` \
         $shlink_opts -lelf -lsocket -L$INGLIB \
         -l(PROG0PRFX)q.1 -l(PROG0PRFX)compat.1 -l(PROG1PRFX)api.1 
         ;;
@@ -2482,7 +2491,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX *.o \
+        $shlink_cmd -o $INGLIB/lib(PROG1PRFX)odbctrace.1.$SLSFX `lorder *.o | tsort` \
         $shlink_opts -lelf -lsocket -L$INGLIB \
         -l(PROG0PRFX)compat.1
         ;;
@@ -2594,7 +2603,7 @@ then
     a64_sol|\
     su9_us5|\
     su4_us5)
-	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX *.o \
+	$shlink_cmd -o $INGLIB/lib(PROG0PRFX)oiutil.1.$SLSFX `lorder *.o | tsort` \
 	$shlink_opts -L$INGLIB -l(PROG0PRFX)compat.1 -l(PROG0PRFX)frame.1 \
 	                       -l(PROG0PRFX)q.1 -lgcf -lutil -linstall
 	;;

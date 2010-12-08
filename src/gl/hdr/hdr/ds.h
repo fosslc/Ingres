@@ -1,6 +1,9 @@
 /*
 **	Copyright (c) 2004 Ingres Corporation
 */
+#ifndef DS_INCLUDE
+#define DS_INCLUDE
+
 #include    <dscl.h>
 
 /**CL_SPEC
@@ -37,6 +40,8 @@
 **	    include r64_us5.
 **	1-Dec-2010 (kschendel) SIR 124685
 **	    Kill CL_PROTOTYPED (always on now).
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems
 **/
 
 FUNC_EXTERN VOID DSbegin(
@@ -72,3 +77,5 @@ FUNC_EXTERN STATUS DSinit(
 ** because it might confuse the compiler.  (kschendel)
 */
 FUNC_EXTERN STATUS DSwrite();
+
+#endif

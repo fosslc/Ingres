@@ -2,6 +2,9 @@
 **Copyright (c) 2004 Ingres Corporation
 */
 
+#ifndef QEFACT_H_INCLUDED
+#define QEFACT_H_INCLUDED
+
 /* Make sure we have QSO_NAME */
 #include <qsf.h>
 
@@ -132,7 +135,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_line@]...
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes: recursive include protection, avoid psfparse.h.
 **/
 
 /*
@@ -144,6 +148,7 @@ typedef struct _QEQ_LDB_DESC	QEQ_LDB_DESC;
 typedef struct _QEF_EXEC_IMM	QEF_EXEC_IMM;
 typedef	struct _QEF_RELATED_OBJECT	QEF_RELATED_OBJECT;
 typedef struct _QEF_SCROLL	QEF_SCROLL;
+struct _PST_INFO;
 
 
 /*}
@@ -1927,7 +1932,7 @@ struct _QEF_EXEC_IMM
    DB_TEXT_STRING   *ahd_text;       /* pointer to query text which needs
                                      ** to be parsed
                                      */
-   PST_INFO     *ahd_info;           /* pst_info pointer copied to 
+   struct _PST_INFO *ahd_info;       /* pst_info pointer copied to 
 				     ** ahd_info
 				     */
 };
@@ -2484,3 +2489,7 @@ struct _QEF_AHD
 	QEQ_D10_REGPROC qed_regproc;	/* execute a registed procedure */
     } qhd_obj;
 };
+
+
+
+#endif /* QEFACT_H_INCLUDED */

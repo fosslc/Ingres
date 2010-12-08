@@ -208,7 +208,8 @@
 **	    Support global base array for sagg result.
 **	4-Jun-2009 (kschendel) b122118
 **	    Minor dead code removal.
-[@history_template@]...
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 */
 DB_STATUS
 qea_sagg(
@@ -231,7 +232,6 @@ i4		    function )
     PTR           data = NULL;
     DMR_CB        *dmr_cb; 
     ADF_ERROR	  *adf_errcb;
-    ADF_AG_STRUCT *agstruct_ptr;
     bool	  origagg = FALSE;
     i4  	  instr_cnt = 0;
 
@@ -253,10 +253,13 @@ i4		    function )
 
 
     if (qen_adf->qen_uoutput > -1)
-     if (dsh->dsh_qp_ptr->qp_status & QEQP_GLOBAL_BASEARRAY)
-	dsh->dsh_row[qen_adf->qen_uoutput] = dsh->dsh_qef_output->dt_data;
-     else ade_excb->excb_bases[ADE_ZBASE + qen_adf->qen_uoutput] =
-		dsh->dsh_qef_output->dt_data;
+    {
+	if (dsh->dsh_qp_ptr->qp_status & QEQP_GLOBAL_BASEARRAY)
+	    dsh->dsh_row[qen_adf->qen_uoutput] = dsh->dsh_qef_output->dt_data;
+	else
+	    ade_excb->excb_bases[ADE_ZBASE + qen_adf->qen_uoutput] =
+				dsh->dsh_qef_output->dt_data;
+    }
 
     status = ade_execute_cx(adfcb, ade_excb);
     if (status != E_DB_OK)
