@@ -287,6 +287,8 @@
 **          function definitions.
 **	23-Nov-2010 (kschendel)
 **	    Drop obsolete ports.
+**	3-Dec-2010 (kschendel)
+**	    Turns out DESKTOP was on for windows, fix.
 */
 
 # ifndef CLCONFIG_H_INCLUDED
@@ -296,6 +298,10 @@
 
 #if defined(sparc_sol) || defined(xCL_075_SYS_V_IPC_EXISTS)
 #define SYS_V_SHMEM
+#endif
+
+#ifdef NT_GENERIC
+typedef long key_t;
 #endif
 
 # ifdef xCL_094_TLS_EXISTS

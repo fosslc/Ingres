@@ -211,6 +211,8 @@
 **	    /usr/include/endian.h on Linux.
 **	23-Nov-2010 (kschendel)
 **	    Drop obsolete ports.
+**	3-Dec-2010 (kschendel)
+**	    Turns out DESKTOP was on for windows, fix.
 */
 
 # ifndef CVGCCCL_HDR_INCLUDED
@@ -237,7 +239,7 @@
 
 # endif /* usl_us5 */
 
-# if	defined(PMFE)
+# if	defined(PMFE) || defined(NT_GENERIC)
 
 # define CV_NCSJ_TYPE	CV_PC_NCSJ
 # define CV_NCSN_TYPE	CV_PC_NCSN

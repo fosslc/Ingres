@@ -38,6 +38,7 @@ GLOBALDEF       CS_SYNCH	fcvt_mutex ZERO_FILL;
 	extern int h_errno;
 # endif
 
+#ifndef NT_GENERIC
 /*
 ** iireaddir.c -- MT-safe call to readdir.  
 **
@@ -141,6 +142,8 @@ GLOBALDEF       CS_SYNCH	fcvt_mutex ZERO_FILL;
 **	    so causes problems on OSX.
 **	1-Dec-2010 (kschendel)
 **	    Drop obsolete ports.
+**	3-Dec-2010 (kschendel)
+**	    Turns out DESKTOP was on for windows, fix.
 */
  
 struct dirent
@@ -398,6 +401,7 @@ struct passwd
 # endif /* ! have_getpwuid_r */
  
 }
+#endif /* !NT_GENERIC */
 
 
 /*
