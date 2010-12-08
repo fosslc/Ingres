@@ -130,6 +130,8 @@
 **          Replace READONLY/WSCREADONLY by const.
 **      22-dec-2008 (stegr01)
 **          Itanium VMS port
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 **      06-Dec-2010 (horda03) SIR 124685
 **          Fix VMS build problems, 
 **/
@@ -1147,8 +1149,8 @@ static
 PCitimer()
 {
         EX ex;
+	i4 asts_enabled = (sys$setast(0) == SS$_WASSET);
 
-	sys$setast(0);
 	if (incom)
 	{
 		sys$setimr(EFN$C_ENF, deltim, PCitimer, timerid, 0);
@@ -1157,7 +1159,7 @@ PCitimer()
 	{
 		PCcleanup(ex);
 	}
-	sys$setast(1);
+	if (asts_enabled) sys$setast(1);
 }
 
 static int

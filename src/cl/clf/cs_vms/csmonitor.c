@@ -330,6 +330,8 @@ CS_verify_sid(
 **          Added "SHOW SERVER CAPABILITIES".
 **	15-Nov-2010 (kschendel) SIR 124685
 **	    Prototype / include fixes.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 **      06-Dec-2010 (horda03) SIR 124685
 **          Fix VMS build problems, 
 **      07-Dec-2010 (horda03) SIR 124685
@@ -353,12 +355,17 @@ TR_OUTPUT_FCN *output_fcn)
     CS_MNTR_SCB		*scb;
     CS_SEMAPHORE	*mutex;
     i4                 format = 1, verbose = 0;
+    i4                 asts_enabled;
 
     scb_temp->cs_thread_type = CS_MONITOR;
     scb = (CS_MNTR_SCB *)scb_temp;
     *nmode = CS_EXCHANGE;
+
+    asts_enabled = (sys$setast(0) == SS$_WASSET);
+
     if (EXdeclare(CS_null_handler, &ex_context))
     {
+	if (asts_enabled) sys$setast(1);
 	EXdelete();
 	return(FAIL);
     }
@@ -758,7 +765,6 @@ CS_ACCNTING,CS_CPUSTAT,CS_REPENTING,CS_LONGQUANTUM",
                         }
 		    }
 		}
-		sys$setast(1);
 	    }
 	    else if (STscompare("suspend", 7, command, 7) == 0)
 	    {
@@ -973,6 +979,8 @@ CS_ACCNTING,CS_CPUSTAT,CS_REPENTING,CS_LONGQUANTUM",
 	    break;
     }
     EXdelete();
+
+    if (asts_enabled) sys$setast(1);
     return(OK);
 }
 
@@ -1237,7 +1245,6 @@ show_sessions(
 	return 0;
     }
 
-    sys$setast(0);
     for ( ;
 	 an_scb && an_scb != Cs_srv_block.cs_known_list;
 	 an_scb = an_scb->cs_next )
@@ -1378,7 +1385,6 @@ show_sessions(
 	    }
 	}
     }
-    sys$setast(1);
 
     return 1;
 }

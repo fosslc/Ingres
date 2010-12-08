@@ -331,6 +331,8 @@
 **          DIget_directio_align(). 
 **	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
 **	    Fixed dmf_sxf_djc() prototype.
+**      16-Nov-2010 (horda03) b124691
+**          Correct AST handling on VMS (use SS$_WASSET to detect if ASTs were enabled)
 [@history_template@]...
 **/
 
@@ -1818,9 +1820,9 @@ ex_handler(
 EX_ARGS		    *ex_args)
 {
     i4	    err_code;
+#ifdef VMS
     i4	    status;
 
-#ifdef VMS
     status = sys$setast(0);
 #endif
     
@@ -1840,8 +1842,8 @@ EX_ARGS		    *ex_args)
 
     dmf_svcb->svcb_status |= SVCB_CHECK;
 #ifdef VMS
-    if (status == SS$_WASSET) 
-        sys$setast(1);
+    if (status == SS$_WASSET)
+	sys$setast(1);
 #endif
     return (EXDECLARE);
 }

@@ -716,6 +716,8 @@
 **          Use VAXC$ESTABLISH to set up exception handlers.
 **	12-Nov-2010 (kschendel) SIR 124685
 **	    Prototype / include fixes.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 **      06-Dec-2010 (horda03) SIR 124685
 **          Fix VMS build problems,
 **/
@@ -2094,6 +2096,8 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
 **            its thread_type, transfer the mask to the cs_cs_mask.
 **            These threads will be terminated and allowed to finish
 **            processing before any other system threads exit.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 */
 STATUS
 IICSterminate(
@@ -2103,6 +2107,7 @@ i4      *active_count)
     i4                 status = 0;
     CS_SCB		*scb;
     CS_SCB		*scb_next;
+    i4                 asts_enabled;
 
     switch (mode)
     {
@@ -2131,7 +2136,7 @@ i4      *active_count)
             ** Turn off AST's so the scb list will not be mucked with
             ** while we are cycling through it.
             */
-	    sys$setast(0);
+	    asts_enabled = (sys$setast(0) == SS$_WASSET);
 
             for (scb = Cs_srv_block.cs_known_list->cs_prev;
                 scb != Cs_srv_block.cs_known_list;
@@ -2140,7 +2145,7 @@ i4      *active_count)
                 if (scb->cs_cs_mask & CS_CLEANUP_MASK)
                 {
                     CSattn(CS_SHUTDOWN_EVENT, scb->cs_self);
-                    sys$setast(1);
+                    if (asts_enabled) sys$setast(1);
                     return (E_CS0003_NOT_QUIESCENT);
                 }
             }
@@ -2163,7 +2168,7 @@ i4      *active_count)
 	    ** any reference to the cs_mask shouldbe protected by in_kernel or
 	    ** having AST's off
 	    */
-	    sys$setast(1);
+	    if (asts_enabled) sys$setast(1);
 
 	    /*
 	    ** Return and wait for server tasks to terminate before shutting
@@ -2429,6 +2434,8 @@ CS_CB              *ccb;
 **	    Correct prototype for CS_last_chance().  Don't set cs_registers[]
 **	    in this module -- that's done for us by CS_alloc_stack().
 **	    CS_ssprsm() now takes a single parameter -- just restore context.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 **
 **  Design:
 **
@@ -2473,6 +2480,8 @@ IICSdispatch()
     CS_INFO_CB		csib;
     FUNC_EXTERN int	CS_last_chance();
     bool		recovery_server = FALSE;
+    i4                  asts_enabled;
+
 
 
     if (Cs_srv_block.cs_process == 0)
@@ -2880,7 +2889,7 @@ TRdisplay("->->->->\n");
 	** Turn off ast's before calling CS_quantum so that quantum AST
 	** will not be handled until we are ready for it.
 	*/
-	sys$setast(0);
+	asts_enabled = (sys$setast(0) == SS$_WASSET);
 	ret_val = CS_quantum(0);
 	if (ret_val)
 	    break;
@@ -2900,7 +2909,7 @@ TRdisplay("->->->->\n");
 	*/
 	Cs_srv_block.cs_current = NULL;
 	Cs_srv_block.cs_state = CS_IDLING;
-    	sys$setast(1);	    /* Turn AST's on */
+    	if (asts_enabled) sys$setast(1);	    /* Turn AST's on */
 
 	/* Committed; set up right semaphores for MU */
 	MUset_funcs( MUcs_sems() );
@@ -3472,6 +3481,9 @@ PTR     ecb)
         ** before it is suspended.
         */
 
+        /* This is a non-threaded program, so ASTs will be enabled outside
+        ** of CS code.
+        */
         sys$setast(0);
 
         if (process_wait_state != CS_PROCESS_WOKEN)
@@ -4727,25 +4739,6 @@ CS_SEMAPHORE       *sem)
                     if (lib$ast_in_prog() != 0)
                     {
                         lib$signal(SS$_DEBUG);
- 
-                        /* EJLFIX: Make a new error message for this */
-                        return(E_CS0017_SMPR_DEADLOCK);
-                    }
- 
-                    /* if AST's are disabled then signal the debugger for the 
-                    ** same reason as above.
-                    */
-                    enbflg = 1;
-                    if (sys$setast(enbflg) == SS$_WASCLR)
-                    {
-                        lib$signal(SS$_DEBUG);
- 
-                        /* now reset the AST level to the way it was. We 
-                        ** don't want to turn off AST's when someone has 
-                        ** turned them on.
-                        */
-                        enbflg = 0;
-                        sys$setast(enbflg);
  
                         /* EJLFIX: Make a new error message for this */
                         return(E_CS0017_SMPR_DEADLOCK);
@@ -6176,8 +6169,7 @@ CL_ERR_DESC     *error)
     ** during server initialization - when AST's must be kept off until
     ** the server is ready to do task switching.
     */
-    status = sys$setast(0);
-    asts_enabled = (status == SS$_WASSET);
+    asts_enabled = (sys$setast(0) == SS$_WASSET);
 
     status = CS_alloc_stack(scb, error);
     if (status != OK)
@@ -6284,6 +6276,8 @@ CL_ERR_DESC     *error)
 **      09-may-2003 (horda03) Bug 104254
 **          Delete via ipm of a session waiting on a mutex results in
 **          SIGSEGV. Removed reference to scb->cs_sm_root.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 */
 STATUS
 IICSremove(
@@ -6291,12 +6285,13 @@ CS_SID  sid)
 {
     CS_SCB              *scb;
     CS_SCB		*cscb;
+    i4                  asts_enabled;
 
-    sys$setast(0);
+    asts_enabled = (sys$setast(0) == SS$_WASSET);
     scb = CS_find_scb(sid);
     if (scb == 0)
     {
-	sys$setast(1);
+	if (asts_enabled) sys$setast(1);
 	return(E_CS0004_BAD_PARAMETER);
     }
     scb->cs_mask |= CS_DEAD_MASK;
@@ -6361,7 +6356,7 @@ CS_SID  sid)
 		sys$wake(0, 0);
 	}
     }
-    sys$setast(1);
+    if (asts_enabled) sys$setast(1);
     return(OK);
 }
 /*{
@@ -7091,8 +7086,7 @@ CS_SID  sid)
     */
     if (lib$ast_in_prog() == 0)
     {
-	status = sys$setast(0);
-	asts_enabled = (status == SS$_WASSET);
+	asts_enabled = (sys$setast(0) == SS$_WASSET);
     }
 
     if (sid != (CS_SID)0)
@@ -7104,7 +7098,11 @@ CS_SID  sid)
 	** handled by DMF and should be ignored here.
 	*/
 	if ( eid == CS_RCVR_EVENT && (*Cs_srv_block.cs_attn)(eid, scb) )
+        {
+            if (asts_enabled) sys$setast(1);
+
 	    return;
+        }
 	
 	if ((scb->cs_state != CS_COMPUTABLE) &&
 		(scb->cs_mask & CS_INTERRUPT_MASK))
@@ -8244,21 +8242,29 @@ CSaccept_connect()
 **          For all non-internal threads, call CS_ssprsm each time.
 **      23-Jul-2008 (horda03) Bug 120474
 **          Only call CS_ssprsm on threaded servers.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server enable ASTs while in this function.
 */
 void
 IICSswitch()
 {
-    if ( (Cs_srv_block.cs_state != CS_INITIALIZING) &&
-           ((Cs_srv_block.cs_current->cs_thread_type != CS_INTRNL_THREAD) ||
-	    (Cs_lastquant > ALLOWED_QUANTUM_COUNT) ) )
+    if (Cs_srv_block.cs_state != CS_INITIALIZING)
     {
+       if ((Cs_srv_block.cs_current->cs_thread_type != CS_INTRNL_THREAD) ||
+           (CS_lastquant > ALLOWED_QUANTUM_COUNT) )
+       {
 #ifdef KPS_THREADS
-        CS_SCB* scb = Cs_srv_block.cs_current;
-        if (scb)
-            exe$kp_stall_general(scb->kpb);
+           CS_SCB* scb = Cs_srv_block.cs_current;
+           if (scb)
+               exe$kp_stall_general(scb->kpb);
 #else
-	CS_ssprsm( FALSE );
+	   CS_ssprsm( FALSE );
 #endif
+       }
+       else if (sys$setast(1) == SS$_WASCLR)
+       {
+          sys$setast(0);
+       }
     }
 }
 
