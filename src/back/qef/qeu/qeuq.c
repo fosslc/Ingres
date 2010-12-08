@@ -143,6 +143,8 @@
 **	    by mistake.
 **	4-Jun-2009 (kschendel) b122118
 **	    Make sure dmt-cb doesn't have junk in it.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 /*{
@@ -1054,7 +1056,7 @@ QEU_CB          *qeu_cb)
     DB_STATUS		    status;
     GLOBALREF QEF_S_CB	    *Qef_s_cb;
     ULM_RCB		    ulm;
-    i4			    (*repl_func)();
+    i4			    (*repl_func)(void *, void *);
     bool		    position_all=FALSE;
     bool		    mem_opened=FALSE;
 
@@ -1075,7 +1077,7 @@ QEU_CB          *qeu_cb)
 	}
     }
     else if (qeu_cb->qeu_klen==0 &&  
-	    (repl_func = (i4 (*)()) qeu_cb->qeu_f_qual) &&
+	    (repl_func = qeu_cb->qeu_f_qual) != NULL &&
 	    qeu_cb->qeu_qual)
     {
 	position_all=TRUE;
@@ -1107,7 +1109,7 @@ QEU_CB          *qeu_cb)
 	    status = E_DB_ERROR;
 	}
     }
-    else if (!(repl_func = (i4 (*)()) qeu_cb->qeu_f_qual))
+    else if ((repl_func = qeu_cb->qeu_f_qual) == NULL)
     {
 	/*
 	** if caller supplied a key, must specify the function which
@@ -1224,7 +1226,7 @@ QEU_CB          *qeu_cb)
     {
         if (qeu_cb->qeu_klen || position_all)
 	{
-	    i4		ret_val;
+	    i4	ret_val;
 
             /* get the tuple */
             dmr_cb.dmr_flags_mask = DMR_NEXT;
@@ -1259,7 +1261,7 @@ QEU_CB          *qeu_cb)
 	    dmr_cb.dmr_flags_mask = DMR_CURRENT_POS;
 	}
 
-	dmr_cb.dmr_attset = (char *)0;
+	dmr_cb.dmr_attset = NULL;
 	status = dmf_call(DMR_REPLACE, &dmr_cb);
 	if (status != E_DB_OK)
 	{

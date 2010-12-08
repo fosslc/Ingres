@@ -2,6 +2,22 @@
 **
 **
 */
+#ifndef QEFPROTOS_H_INCLUDED
+#define QEFPROTOS_H_INCLUDED
+
+#include <dmtcb.h>
+#include <dmrcb.h>
+#include <dmucb.h>
+#include <qefrcb.h>
+#include <qefnode.h>
+#include <qefact.h>
+#include <qefqeu.h>
+#include <qeuqcb.h>
+#include <qefdsh.h>
+#include <qefkon.h>
+#include <qefqry.h>
+#include <qefcat.h>
+
 
 /**
 ** Name: QEFPROTOS.H - Prototypes for external QEF functions
@@ -253,7 +269,19 @@
 **	    Make close-temp-tables utility global for tprocs.
 **	21-Jun-2010 (kschendel) b123775
 **	    Combine qeq-dsh in progress and is-tproc flags into an enum.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 */
+
+/* Forward declarations so we don't always need some of the more obscure .h's */
+struct _ADE_EXCB;
+struct _DU_USER;
+struct _DU_PROFILE;
+struct _PST_INFO;
+struct _QEF_S_CB;
+struct _RQB_BIND;
+struct _RQR_CB;
+struct _TPR_CB;
 
 /*	QEC functions	*/
 
@@ -341,6 +369,8 @@ DMT_ATT_ENTRY	**atts );
 FUNC_EXTERN VOID
 qec_mfunc(
 QEF_FUNC        qef_func[] ); 
+
+FUNC_EXTERN void qec_psr(struct _QEF_S_CB *);
 
 /*	QED functions	*/
 
@@ -483,7 +513,7 @@ DB_ERROR    *o_dberr_p );
 FUNC_EXTERN DB_STATUS
 qed_u3_rqf_call(
 i4	i_call_id,
-RQR_CB	*v_rqr_p,
+struct _RQR_CB	*v_rqr_p,
 QEF_RCB	*v_qer_p );
 
 FUNC_EXTERN DB_STATUS
@@ -515,18 +545,20 @@ FUNC_EXTERN DB_STATUS
 qed_u9_log_forgiven(
 QEF_RCB	    *i_qer_p );
 
+FUNC_EXTERN void qed_u10_trap(void);
+
 FUNC_EXTERN DB_STATUS
 qed_u11_ddl_commit(
 QEF_RCB         *qer_p );
 
 FUNC_EXTERN VOID
 qed_u12_map_rqferr(
-RQR_CB		*i_rqr_p,
+struct _RQR_CB	*i_rqr_p,
 DB_ERROR	*o_err_p );
 
 FUNC_EXTERN VOID
 qed_u13_map_tpferr(
-TPR_CB		*i_tpr_p,
+struct _TPR_CB	*i_tpr_p,
 DB_ERROR	*o_err_p );
 
 FUNC_EXTERN DB_STATUS
@@ -545,7 +577,7 @@ QEF_RCB         *qer_p );
 FUNC_EXTERN DB_STATUS
 qed_u17_tpf_call(
 i4	i_call_id,
-TPR_CB	*v_tpr_p,
+struct _TPR_CB	*v_tpr_p,
 QEF_RCB	*v_qer_p );
 
 FUNC_EXTERN DB_STATUS
@@ -561,13 +593,13 @@ FUNC_EXTERN VOID
 qed_w2_prt_rqferr(
 QEF_RCB		*v_qer_p,
 i4		i1_call_id,
-RQR_CB		*i2_rqr_p );
+struct _RQR_CB	*i2_rqr_p );
 
 FUNC_EXTERN VOID
 qed_w3_prt_tpferr(
 QEF_RCB		*v_qer_p,
 i4		i1_call_id,
-TPR_CB		*i2_tpr_p );
+struct _TPR_CB	*i2_tpr_p );
 
 FUNC_EXTERN VOID
 qed_w4_prt_qefcall(
@@ -607,7 +639,7 @@ i4		i2_txtlen );
 /*	QEE functions	*/
 
 FUNC_EXTERN	DB_STATUS
-qee_shutdown();
+qee_shutdown(void);
 
 FUNC_EXTERN	DB_STATUS 
 qee_cleanup(
@@ -625,7 +657,6 @@ qee_fetch(
 	QEF_RCB		*qef_rcb,
 	QEF_QP_CB	*qp,
 	QEE_DSH		**dsh,
-	i4		page_count,
 	QSF_RCB		*qsf_rcb,
         bool            is_tproc);
 
@@ -1220,7 +1251,7 @@ QEC_LINK	*v_lnk_p );
 FUNC_EXTERN DB_STATUS
 qel_s0_setup(
 i4		i1_canned_id,
-RQB_BIND	*i2_rq_bind_p,
+struct _RQB_BIND *i2_rq_bind_p,
 DD_LDB_DESC	*i3_ldb_p,
 QEF_RCB		*v_qer_p,
 QEC_LINK	*o1_lnk_p,
@@ -1492,7 +1523,7 @@ QEN_SHD    *shd );
 FUNC_EXTERN DB_STATUS
 qen_execute_cx(
 	QEE_DSH *dsh,
-	ADE_EXCB *excb);
+	struct _ADE_EXCB *excb);
 
 FUNC_EXTERN DB_STATUS
 qen_u31_release_mem(
@@ -1724,88 +1755,6 @@ qea_iproc(
 QEF_AHD		*qea_act,
 QEF_RCB		*qef_rcb );
 
-FUNC_EXTERN i4
-qea_findlen(
-char	    *parm,
-i4	    len );
-
-FUNC_EXTERN DB_STATUS
-qea_0list_file(
-QEF_RCB            	*qef_rcb,
-QEF_DBP_PARAM		*db_parm,
-QEE_DSH			*dsh );
-
-FUNC_EXTERN DB_STATUS
-qea_1drop_file(
-QEF_RCB            	*qef_rcb,
-QEF_DBP_PARAM		*db_parm,
-QEE_DSH			*dsh );
-
-FUNC_EXTERN DB_STATUS
-qea_2create_db(
-QEF_RCB            	*qef_rcb,
-QEF_DBP_PARAM		*db_parm,
-QEE_DSH			*dsh );
-
-FUNC_EXTERN DB_STATUS
-qea_3destroy_db(
-QEF_RCB            	*qef_rcb,
-QEF_DBP_PARAM		*db_parm,
-QEE_DSH			*dsh );
-
-FUNC_EXTERN DB_STATUS
-qea_4alter_db(
-QEF_RCB            	*qef_rcb,
-QEF_DBP_PARAM		*db_parm,
-QEE_DSH			*dsh );
-
-FUNC_EXTERN DB_STATUS
-qea_5add_location(
-QEF_RCB            	*qef_rcb,
-QEF_DBP_PARAM		*db_parm,
-QEE_DSH			*dsh );
-
-FUNC_EXTERN DB_STATUS
-qea_67_check_patch(
-QEF_RCB            	*qef_rcb,
-QEF_DBP_PARAM		*db_parm,
-QEE_DSH			*dsh,
-i4			patch_flag );
-
-FUNC_EXTERN DB_STATUS
-qea_8_finddbs(
-QEF_RCB            	*qef_rcb,
-QEF_DBP_PARAM		*db_parm,
-QEE_DSH			*dsh );
-
-FUNC_EXTERN DB_STATUS
-qea_12alter_extension(
-QEF_RCB            	*qef_rcb,
-QEF_DBP_PARAM		*db_parm,
-QEE_DSH			*dsh );
-
-FUNC_EXTERN DB_STATUS
-qea_9_readconfig(
-			QEF_RCB		*qef_rcb,
-			QEF_DBP_PARAM	*db_parm,
-			QEE_DSH		*dsh);
-
-FUNC_EXTERN DB_STATUS
-qea_10_updconfig(	QEF_RCB		*qef_rcb,
-			QEF_DBP_PARAM	*db_parm,
-			QEE_DSH		*dsh);
-
-FUNC_EXTERN DB_STATUS
-qea_11_deldmp_config(	QEF_RCB		*qef_rcb,
-			QEF_DBP_PARAM	*db_parm,
-			QEE_DSH		*dsh);
-
-FUNC_EXTERN DB_STATUS
-qea_13_convert_table(
-QEF_RCB            	*qef_rcb,
-QEF_DBP_PARAM		*db_parm,
-QEE_DSH			*dsh );
-
 FUNC_EXTERN DB_STATUS
 qea_message(
 QEF_AHD		    *action,
@@ -1925,7 +1874,7 @@ QEF_AHD		*act,
 QEF_RCB		*qef_rcb,
 QEE_DSH		*dsh,
 DB_TEXT_STRING	*text,
-PST_INFO	*qea_info);
+struct _PST_INFO *qea_info);
 
 FUNC_EXTERN void 
 qea_scontext(
@@ -1950,7 +1899,7 @@ FUNC_EXTERN DB_STATUS
 qea_cobj(
 	QEF_RCB         *qef_rcb,
 	QEE_DSH		*dsh,
-        PST_INFO        *qea_info,
+        struct _PST_INFO *qea_info,
         DB_TEXT_STRING  *text,
 	QSF_RCB		*qsf_rb);
 
@@ -2603,6 +2552,12 @@ QEF_CB          *qef_cb,
 QEUQ_CB		    *qeuq_cb);
 
 FUNC_EXTERN DB_STATUS
+qeu_fcomment(
+QEF_CB	*qef_cb,
+QEUQ_CB	*qeuq_cb,
+DB_IICOMMENT **outBufPtr);
+
+FUNC_EXTERN DB_STATUS
 qeu_cdbacc(
 QEF_CB          *qef_cb,
 QEUQ_CB		    *qeuq_cb);
@@ -3026,7 +2981,7 @@ QEF_CB          *qef_cb,
 QEUQ_CB		*qeuq_cb,
 char		*user,
 char		*group,
-DU_USER		*ustuple);
+struct _DU_USER		*ustuple);
 
 FUNC_EXTERN VOID
 qeu_rdfcb_init(
@@ -3108,30 +3063,30 @@ qeu_gprofile(
 QEF_CB          *qef_cb,
 QEUQ_CB		*qeuq_cb,
 char		*profile,
-DU_PROFILE	*protuple);
+struct _DU_PROFILE	*protuple);
 
 FUNC_EXTERN DB_STATUS
 qeu_merge_user_profile(
 QEF_CB          *qef_cb,
 QEUQ_CB		*qeuq_cb,
-DU_USER		*user,
-DU_PROFILE	*profile
+struct _DU_USER		*user,
+struct _DU_PROFILE	*profile
 );
 
 FUNC_EXTERN DB_STATUS
 qeu_unmerge_user_profile(
 QEF_CB          *qef_cb,
 QEUQ_CB		*qeuq_cb,
-DU_USER		*user,
-DU_PROFILE	*profile
+struct _DU_USER		*user,
+struct _DU_PROFILE	*profile
 );
 
 FUNC_EXTERN DB_STATUS
 qeu_profile_user(
 QEF_CB          *qef_cb,
 QEUQ_CB		*qeuq_cb,
-DU_PROFILE	*old_ptuple,
-DU_PROFILE	*new_ptuple
+struct _DU_PROFILE	*old_ptuple,
+struct _DU_PROFILE	*new_ptuple
 );
 
 FUNC_EXTERN DB_STATUS
@@ -3237,6 +3192,9 @@ i4 		num_parms, ...);
 
 /* Variadic macros not supported */
 #define qef_error qef_errorNV
+#define qefError qefErrorNV
+
+#endif /* HAS_VARIADIC_MACROS */
 
 FUNC_EXTERN VOID 
 qef_errorNV(
@@ -3247,7 +3205,6 @@ i4 		*err_code,
 DB_ERROR 	*err_blk,
 i4 		num_parms, ...);
 
-#define qefError qefErrorNV
 
 FUNC_EXTERN VOID 
 qefErrorNV(
@@ -3259,7 +3216,6 @@ i4 		*err_code,
 DB_ERROR 	*err_blk,
 i4 		num_parms, ...);
 
-#endif /* HAS_VARIADIC_MACROS */
 
 FUNC_EXTERN DB_STATUS
 qen_tproc(
@@ -3277,3 +3233,5 @@ FUNC_EXTERN VOID
 qeq_rcbtodsh(
 QEF_RCB         *qef_rcb,
 QEE_DSH         *dsh);
+
+#endif /* QEFPROTOS_H_INCLUDED */

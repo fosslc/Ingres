@@ -103,6 +103,8 @@
 **	    replace nat and longnat with i4
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 
@@ -194,7 +196,6 @@ qeu_d1_cre_tab(
 QEF_RCB		*v_qer_p)
 {
     DB_STATUS		status;
-    QES_DDB_SES		*dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     QEF_DDB_REQ	    	*ddr_p = & v_qer_p->qef_r3_ddb_req;
     QED_QUERY_INFO	*ddq_p = & ddr_p->qer_d4_qry_info;
     QED_DDL_INFO	*ddl_p = & ddr_p->qer_d7_ddl_info;
@@ -759,18 +760,13 @@ DMT_CB		*i_dmt_p)
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     DD_LDB_DESC	    *cdb_p = 
 			& dds_p->qes_d4_ddb_p->dd_d3_cdb_info.dd_i1_ldb_desc;
-/*
-    QED_DDL_INFO    *ddl_p = & v_qer_p->qef_r3_ddb_req.qer_d7_ddl_info;
-*/
     QEC_D9_TABLEINFO	
 		    tabinfo;			/* dummy part of link */
     QEC_D6_OBJECTS  objects,
 		    *objs_p = & objects;
     QEC_L16_TABLES  tables,
 		    *tabs_p = & tables;
-    QEQ_1CAN_QRY    sel,
-		    *sel_p = & sel,
-		    upd,
+    QEQ_1CAN_QRY    upd,
 		    *upd_p = & upd;
     QEC_LINK	    link,
 		    *lnk_p = & link; 
@@ -821,36 +817,6 @@ DMT_CB		*i_dmt_p)
     status = qet_t5_register(v_qer_p, cdb_p, DB_SQL, xact_mode);
     if (status)
 	return(status);
-/*
-    * 3.  retrieve the table's name and owner *
-
-    STRUCT_ASSIGN_MACRO(i_dmt_p->dmt_id, objs_p->d6_3_obj_id);
-    sel_p->qeq_c1_can_id = SEL_035_DD_DDB_OBJECTS_BY_ID;
-    sel_p->qeq_c2_rqf_bind_p = rq_bind;
-    sel_p->qeq_c3_ptr_u.d6_objects_p = objs_p;
-    sel_p->qeq_c4_ldb_p = cdb_p;
-
-    lnk_p->qec_6_select_p = sel_p;
-
-    status = qel_s4_prepare(v_qer_p, lnk_p);    
-    if (status)
-	return(status);
-
-    if (! sel_p->qeq_c5_eod_b)
-    {
-	status = qel_s3_flush(v_qer_p, lnk_p);    
-	if (status)
-	    return(status);
-    }
-
-    * 5.  set up to update TABLE_STATS and MODIFY_DATE of IIDD_TABLES *
-
-    qed_u0_trimtail( objs_p->d6_1_obj_name, DB_OBJ_MAXNAME,
-	tabs_p->l16_1_tab_name);
-
-    qed_u0_trimtail( objs_p->d6_2_obj_owner, DB_OWN_MAXNAME, 
-	tabs_p->l16_2_tab_owner);
-*/
 
     /* 3.  set up to update TABLE_STATS and MODIFY_DATE of IIDD_TABLES */
 
@@ -875,9 +841,6 @@ DMT_CB		*i_dmt_p)
     status = qel_u1_update(v_qer_p, lnk_p);    
     if (status)
     {
-/*
-	v_qer_p->qef_cb->qef_abort = TRUE;
-*/
 	return(status);
     }
 
@@ -1390,7 +1353,6 @@ QEF_RCB     *qef_rcb)
 {
     DB_STATUS		status = E_DB_OK;
     QEF_CB		*qef_cb = qef_rcb->qef_cb;
-    QEF_DDB_REQ		*ddr_p = & qef_rcb->qef_r3_ddb_req;
     QES_DDB_SES		*dds_p = & qef_rcb->qef_cb->qef_c2_ddb_ses;
 
 
@@ -1447,8 +1409,6 @@ QEF_RCB     *qef_rcb)
 {
     DB_STATUS	    status = E_DB_OK;
     QEF_CB	    *qef_cb = qef_rcb->qef_cb;
-    QEF_DDB_REQ	    *ddr_p = & qef_rcb->qef_r3_ddb_req;
-    QES_DDB_SES	    *dds_p = & qef_rcb->qef_cb->qef_c2_ddb_ses;
 
 
     status = qed_u16_rqf_cleanup(qef_rcb);

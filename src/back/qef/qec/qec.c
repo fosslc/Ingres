@@ -265,6 +265,8 @@
 **          sort and DSH memory pools.
 **	11-Jun-2010 (kiria01) b123908
 **	    Init ulm_streamid_p for ulm_openstream to fix potential segvs.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 **/
 
 
@@ -653,8 +655,6 @@ QEF_SRCB       *qef_srcb )
     ULH_RCB		ulh_rcb;
     ULM_RCB		ulm_rcb;
     bool		ddb_svr_b;
-    SCF_CB		scf_cb;
-    i4     	err;
 
     if (Qef_s_cb->qef_v1_distrib & DB_2_DISTRIB_SVR)
 	ddb_svr_b = TRUE;
@@ -1733,9 +1733,6 @@ qec_trace_immediate(QEF_CB *qef_cb, i4 val_count, i4 val1, i4 val2)
 {
     i4	status = E_DB_OK;
     ULM_RCB     ulm_rcb;
-    EX_CONTEXT	context;
-    char	*cp;
-    i4		i;
 
     if (val_count < 1)
 	return(E_DB_ERROR);

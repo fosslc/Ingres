@@ -118,6 +118,8 @@
 **	    thanks to the parallel query changes.)
 **	12-Jan-2006 (kschendel)
 **	    Update CX execution calls.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 /*	static functions	*/
@@ -458,7 +460,6 @@ QEE_DSH		*dsh,
 i4		function )
 {
     QEF_CB	    *qef_cb = dsh->dsh_qefcb;
-    DMR_CB	    *dmrcb;
     QEN_NODE	    *out_node = node->node_qen.qen_sjoin.sjn_out;
     QEN_NODE	    *in_node = node->node_qen.qen_sjoin.sjn_inner;
     QEE_XADDRS	    *node_xaddrs = dsh->dsh_xaddrs[node->qen_num];
@@ -729,8 +730,8 @@ loop_reset:
 	    if (status != E_DB_OK)
 	    {
 		if (dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS ||
-		    dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION &&
-		    node->qen_flags & QEN_PART_SEPARATE)
+		    (dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION &&
+		    node->qen_flags & QEN_PART_SEPARATE))
 		{
 		    /* If no outer rows were read and we're doing partition
 		    ** grouping, skip the next inner partition to re-sync. */
@@ -1022,8 +1023,8 @@ loop_reset:
 		        if (status != E_DB_OK)
 		        {
 			    if (dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS ||
-				dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION
-				&& (node->qen_flags & QEN_PART_SEPARATE))
+				(dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION
+				&& (node->qen_flags & QEN_PART_SEPARATE)) )
 			    {
 			        qen_hold->hold_buffer_status = HFILE6_BUF_EMPTY;
 

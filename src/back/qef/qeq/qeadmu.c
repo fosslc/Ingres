@@ -254,7 +254,8 @@
 **	    dm0p_close_pages. (B120208)
 **	4-Jun-2009 (kschendel) b122118
 **	    Use close-and-unlink utility.
-[@history_line@]...
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 */
 DB_STATUS
 qea_dmu(
@@ -272,7 +273,7 @@ QEE_DSH		*dsh )
     i4		operation;
     i4		error;
     i4		errcode;
-    DMT_CB		*dmt2_cb,*dmt3_cb,*dmt4_cb;
+    DMT_CB		*dmt2_cb;
     DMT_CB		*next;
     i4			cb_no;
     PTR                 *cbs;

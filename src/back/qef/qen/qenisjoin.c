@@ -109,6 +109,8 @@
 **	    thanks to the parallel query changes.)
 **	11-Nov-2009 (kiria01) SIR 121883
 **	    Scalar sub-query - Pick up on cardinality errors if requested.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 /*
@@ -497,7 +499,6 @@ QEE_DSH		*dsh,
 i4		function )
 {
     QEF_CB	    *qef_cb = dsh->dsh_qefcb;
-    DMR_CB	    *dmrcb;
     QEN_NODE	    *out_node = node->node_qen.qen_sjoin.sjn_out;
     QEN_NODE	    *in_node = node->node_qen.qen_sjoin.sjn_inner;
     QEE_XADDRS	    *node_xaddrs = dsh->dsh_xaddrs[node->qen_num];
@@ -762,8 +763,8 @@ loop_reset:
 	    if (status != E_DB_OK)
 	    {
 		if (dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS ||
-		    dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION &&
-		    node->qen_flags & QEN_PART_SEPARATE)
+		    (dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION &&
+		    node->qen_flags & QEN_PART_SEPARATE))
                 {
 
 		    qen_status->node_access |= QEN_OUTER_HAS_JOINED;
@@ -972,8 +973,8 @@ loop_reset:
 		    if (status != E_DB_OK)
 		    {
 			if (dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS ||
-			    dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION &&
-			    node->qen_flags & QEN_PART_SEPARATE)
+			    (dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION &&
+			    node->qen_flags & QEN_PART_SEPARATE))
 			{
 			    if ( qen_hold )
 			    {

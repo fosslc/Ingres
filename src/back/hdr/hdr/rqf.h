@@ -103,8 +103,10 @@ typedef struct _RQF_HEADER
 **      05-Dec-2001 (hanal04) Bug 105723, INGSTR 42.
 **          Added rqb_prec and rqb_r_prec to provide support for 
 **          DB_DEC_TYPE in rqf_t_fetch().
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Name the struct for proper external ref matching.
 */
-typedef  struct
+typedef  struct _RQB_BIND
 {
   PTR	    rqb_addr;	    /* store address of a column */
   i4   rqb_length;	    /* expected length of column */

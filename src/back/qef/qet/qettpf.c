@@ -44,8 +44,6 @@
 #include    <sxf.h>
 #include    <qefprotos.h>
 
-GLOBALREF   QEF_S_CB	    *Qef_s_cb;
-
 
 /**
 **
@@ -109,6 +107,8 @@ GLOBALREF   QEF_S_CB	    *Qef_s_cb;
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 
@@ -709,7 +709,6 @@ qet_t7_p1_recover(
 QEF_RCB         *v_qer_p)
 {
     DB_STATUS	    status= E_DB_OK;
-    QEF_CB	    *qef_cb = v_qer_p->qef_cb;
     QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     DD_LDB_DESC	    *iidbdb_p =  & v_qer_p->qef_r3_ddb_req.qer_d2_ldb_info_p->
@@ -787,8 +786,6 @@ qet_t8_p2_recover(
 QEF_RCB         *v_qer_p)
 {
     DB_STATUS	    status= E_DB_OK;
-    QEF_CB	    *qef_cb = v_qer_p->qef_cb;
-    QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     DD_LDB_DESC	    *iidbdb_p =  & v_qer_p->qef_r3_ddb_req.qer_d2_ldb_info_p->
 			dd_i1_ldb_desc;
@@ -860,8 +857,6 @@ bool		*o1_ok_p)
 		    status_u = E_DB_OK;		
     DB_ERROR	    ulm_err,
 		    tpf_err;
-    QEF_CB	    *qef_cb = v_qer_p->qef_cb;
-    QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     TPR_CB	    tpr_cb,
 		    *tpr_p = & tpr_cb;
@@ -1045,10 +1040,8 @@ qet_t10_is_ddb_open(
 QEF_RCB         *v_qer_p)
 {
     DB_STATUS	    status= E_DB_OK;
-    QEF_CB	    *qef_cb = v_qer_p->qef_cb;
     QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
-    DD_DDB_DESC	    *ddb_p = v_qer_p->qef_r3_ddb_req.qer_d1_ddb_p;
     TPR_CB	    tpr_cb,
 		    *tpr_p = & tpr_cb;
 
@@ -1106,19 +1099,15 @@ QEF_RCB		*v_qer_p,
 bool		*o1_ok_p)
 {
     DB_STATUS	    status = E_DB_OK;
-    DB_ERROR	    tpf_err;
-    QEF_CB	    *qef_cb = v_qer_p->qef_cb;
-    QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
-    TPR_CB	    tpr_cb,
-		    *tpr_p = & tpr_cb;
+    TPR_CB	    tpr_cb;
     TPR_W_LDB	    wldb,
 		    *wldb_p = & wldb;
 
 
     MEfill(sizeof(tpr_cb), '\0', (PTR) & tpr_cb);
-    tpr_p->tpr_session = dds_p->qes_d2_tps_p;	/* TPF session CB ptr */
-    tpr_p->tpr_rqf = dds_p->qes_d3_rqs_p;	/* RQF session CB ptr */
+    tpr_cb.tpr_session = dds_p->qes_d2_tps_p;	/* TPF session CB ptr */
+    tpr_cb.tpr_rqf = dds_p->qes_d3_rqs_p;	/* RQF session CB ptr */
     tpr_cb.tpr_15_w_ldb_p = wldb_p;
 
     wldb_p->tpr_3_ldb_p = i1_ldb_p;
@@ -1184,8 +1173,6 @@ qet_t20_recover(
 QEF_RCB         *v_qer_p)
 {
     DB_STATUS	    status= E_DB_OK;
-    QEF_CB	    *qef_cb = v_qer_p->qef_cb;
-    QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     DD_LDB_DESC	    *iidbdb_p =  & v_qer_p->qef_r3_ddb_req.qer_d2_ldb_info_p->
 			dd_i1_ldb_desc;

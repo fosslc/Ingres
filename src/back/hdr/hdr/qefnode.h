@@ -2,6 +2,9 @@
 **Copyright (c) 2004 Ingres Corporation
 */
 
+#ifndef QEFNODE_H_INCLUDED
+#define QEFNODE_H_INCLUDED
+
 /**
 ** Name: QEFNODE.H - Describe the nodes of a Query Execution Plan (QEP)
 **
@@ -118,6 +121,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes in function pointer declarations.
 **/
 
 /*
@@ -2131,6 +2136,8 @@ struct _QEN_NKEY
 **	14-May-2010 (kschendel) b123565
 **	    Update nthreads comment.  Delete high/low, not used.
 */
+struct _QEE_DSH;	/* external ref if not compiling in QEF */
+
 struct _QEN_NODE
 {
     i4                  qen_num;        /* node number. This should be
@@ -2141,7 +2148,9 @@ struct _QEN_NODE
 					** types defined in QEF_FUNC
 					*/
     QEN_NODE           *qen_postfix;    /* next node in postfix list */
-    DB_STATUS	       (*qen_func)();	/* function to compute this node 
+    DB_STATUS	       (*qen_func)(struct _QEN_NODE *, QEF_RCB *,
+				struct _QEE_DSH *, i4);
+					/* function to compute this node 
 					** QEF fills in this value. the
 					** compiler does not.
 					*/
@@ -2231,3 +2240,7 @@ struct _QEN_NODE
         QEN_TPROC       qen_tproc;
     } node_qen;
 };
+
+
+
+#endif /* QEFNODE_H_INCLUDED */

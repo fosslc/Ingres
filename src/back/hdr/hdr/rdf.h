@@ -1197,6 +1197,8 @@ struct RDF_QT_PACK_RCB_
 **          Add RDR2_DBDEPENDS to access iidbdepends by key.
 **	6-Jul-2006 (kschendel)
 **	    Unique dbid should be an i4, clarify db id's.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes: prototype function pointers.
 */
 typedef struct _RDR_RB
 {
@@ -1453,7 +1455,7 @@ typedef struct _RDR_RB
 					** a map of attributes of a specified
 					** underlying table or view 
 					*/
-	DB_STATUS	(*rdr_v2b_col_xlate)();
+	DB_STATUS	(*rdr_v2b_col_xlate)(DB_TAB_ID *, i4 *, DB_TAB_ID *, i4 *);
 					/*
 					** function pointer to be passed to QEF
 					** when processing REVOKE - this
@@ -1463,7 +1465,7 @@ typedef struct _RDR_RB
 					** updateable view which is defined on
 					** top of that table or view
 					*/
-	DB_STATUS	(*rdr_b2v_col_xlate)();
+	DB_STATUS	(*rdr_b2v_col_xlate)(DB_TAB_ID *, i4 *, DB_TAB_ID *, i4 *);
 
 					/*
 					** ULM_RCB supplied by the caller (must

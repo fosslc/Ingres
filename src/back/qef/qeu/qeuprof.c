@@ -96,6 +96,8 @@
 **	    Update DMF row qualification calls.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes: tighten function-pointer prototypes.
 **/
 
 /*
@@ -112,9 +114,7 @@ static DB_STATUS qual_user_profile(
 	void		*toss,
 	QEU_QUAL_PARAMS	*qparams);
 
-static i4  update_user_profile(
-    DU_USER *utuple,
-    QEU_PROF_OLD_NEW_PROF *oldnew);
+static i4  update_user_profile( void *, void * );
 
 /*
 ** Default profile name, all blanks currently
@@ -185,18 +185,13 @@ QEUQ_CB		    *qeuq_cb)
     i4	    	error;
     bool	    	transtarted = FALSE;	    
     bool	    	tbl_opened = FALSE;
-    i4		    	i;		
-    QEF_DATA	    	*next;		
     QEU_CB	    	tranqeu;
     QEU_CB	    	qeu;
     QEF_DATA	    	qef_data;
     DMR_ATTR_ENTRY  	ukey_array[2];
     DMR_ATTR_ENTRY  	*ukey_ptr_array[2];
 
-    DB_USERGROUP	ugtuple;
     bool		group_specified;
-    QEUQ_CB		qeuq_group;
-    QEF_DATA		qef_qrygroup;
 
     ptuple = (DU_PROFILE *)qeuq_cb->qeuq_uld_tup->dt_data;
 
@@ -619,18 +614,13 @@ QEUQ_CB		    *qeuq_cb)
     i4	    	error;
     bool	    	transtarted = FALSE;	    
     bool	    	tbl_opened = FALSE;
-    i4		    	i;		
-    QEF_DATA	    	*next;		
     QEU_CB	    	tranqeu;
     QEU_CB	    	qeu;
     QEF_DATA	    	qef_data;
     DMR_ATTR_ENTRY  	ukey_array[2];
     DMR_ATTR_ENTRY  	*ukey_ptr_array[2];
 
-    DB_USERGROUP	ugtuple;
     bool		group_specified;
-    QEUQ_CB		qeuq_group;
-    QEF_DATA		qef_qrygroup;
 
     bool		def_priv_all=FALSE;
 
@@ -1056,12 +1046,8 @@ QEUQ_CB		*qeuq_cb)
     DB_STATUS	    	status=E_DB_OK, local_status;
     DB_ERROR		e_error;
     i4	    	error;
-    char		*tempstr;
-    i4		alen;
 
     bool	    	usr_opened = FALSE;
-    PTR			usrqual_parms[2];
-    DU_USER		usrqual_tuple;
     DU_USER		usr_tuple;
     QEF_DATA		usrqef_data;
     QEU_CB		usrqeu;
@@ -1673,13 +1659,10 @@ DU_PROFILE	*new_ptuple
     DB_STATUS	    status = E_DB_OK, local_status;
     QEU_CB	    qeu;
     QEU_QUAL_PARAMS qparams;
-    QEF_DATA	    qef_data;
-    DU_USER	    utuple, qualtuple;
     DMR_ATTR_ENTRY  key_array[1];
     DMR_ATTR_ENTRY  *key_ptr_array[1];
     bool	    tbl_opened=FALSE;
     QEU_PROF_OLD_NEW_PROF oldnewtuple;
-    i4		    update_user_profile();
     i4	    error=0; 
     
     key_ptr_array[0] = &key_array[0];
@@ -1717,8 +1700,8 @@ DU_PROFILE	*new_ptuple
 	*/
 	qeu.qeu_klen=0;
 	qeu.qeu_flag=0;
-	qeu.qeu_f_qual=(PTR)update_user_profile;
-	qeu.qeu_f_qarg= (PTR)&oldnewtuple;
+	qeu.qeu_f_qual = update_user_profile;
+	qeu.qeu_f_qarg = &oldnewtuple;
 	qparams.qeu_qparms[0] = (PTR) old_ptuple;
 	qeu.qeu_qual=qual_user_profile;
 	qeu.qeu_qarg= &qparams;
@@ -1836,10 +1819,11 @@ qual_user_profile(
 */
 static i4  
 update_user_profile(
-	DU_USER    *utuple,
-	QEU_PROF_OLD_NEW_PROF *oldnew
+	void *parm1, void *parm2
 )
 {
+    DU_USER	*utuple = (DU_USER *) parm1;
+    QEU_PROF_OLD_NEW_PROF *oldnew = (QEU_PROF_OLD_NEW_PROF *) parm2;
     QEF_CB      *qef_cb;
     QEUQ_CB	*qeuq_cb;
     DU_PROFILE 	*old_ptuple;

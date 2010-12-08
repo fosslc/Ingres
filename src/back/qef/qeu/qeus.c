@@ -57,10 +57,6 @@
 #include    <qefprotos.h>
 #include    <spatial.h>
 
-/*
-** NO_OPTIM = rs4_us5 ris_u64 i64_aix
-*/
-
 /**
 **
 **  Name: QEUS.C - set utility functions for QEF
@@ -434,7 +430,8 @@
 **	    Add support for column encryption.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
-[@history_template@]...
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 
@@ -1089,7 +1086,6 @@ i4		caller )
     DB_TAB_ID	    *newPersistentIndexIDs;
     i4		    numberOfPersistentIndices;
     ULM_RCB         ulm;
-    GLOBALREF	    QEF_S_CB	  *Qef_s_cb;
     bool	    memoryStreamOpened = FALSE;
     i4	    	    NumofIndices, j;
     bool	    dmu_atbl_addcol  = FALSE;
@@ -2902,7 +2898,6 @@ QEF_CB  *qef_cb)
     QEUQ_CB	qeuq_cb;
     DB_STATUS	status;
     ULM_RCB     ulm;
-    GLOBALREF	    QEF_S_CB	  *Qef_s_cb;
 
     /*
     **  Check if we have a REGISTER TABLE/INDEX command for a gateway.  If so,
@@ -3792,7 +3787,6 @@ qeu_modify_prep(QEU_CB *qeucb, DMU_CB *dmucb, ULM_RCB *ulm,
     DMT_TBL_ENTRY *tbl;			/* Table info from show */
     DMU_CB cre_dmucb;			/* DMU cb for creating tables */
     DMU_PHYPART_CHAR *ppc_base;		/* Base of physical partition directives */
-    DMU_PHYPART_CHAR *phypart_ptr;	/* Ptr to one phys-partition directive */
     i4 dim;				/* A dimension index */
     i4 natts;				/* Count of attributes */
     i4 nametot;				/* size of all attribute names */

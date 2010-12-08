@@ -94,6 +94,8 @@
 **	    Rework DMF row qualification interface.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 /*
@@ -158,8 +160,6 @@ QEUQ_CB		    *qeuq_cb)
     bool	    tbl_opened = FALSE;
     QEU_CB	    tranqeu;
     QEU_CB	    qeu;
-    char	    *tempstr;
-    i4	    glen, mlen;
     SCF_CB	    scf_cb;
     SCF_SCI	    sci_list[3];
     i4		    user_status;
@@ -457,15 +457,12 @@ QEF_CB          *qef_cb,
 QEUQ_CB		*qeuq_cb,
 QEU_CB		*qeu_cb)
 {
-    DB_ROLEGRANT    *rgrtuple, rantuple;
+    DB_ROLEGRANT    *rgrtuple;
     DB_STATUS	    status = E_DB_OK;
-    DB_ERROR	    err;
     i4	    error = 0;
     i4		    i;
-    QEF_DATA	    qef_data;
     DMR_ATTR_ENTRY  key_array[1];
     DMR_ATTR_ENTRY  *key_ptr_array[1];
-    DB_ERROR	     e_error;
     DB_APPLICATION_ID aptuple;
     
     for (i=0; i< 1; i++)
@@ -618,12 +615,8 @@ QEU_CB		*qeu_cb)
 {
     DB_ROLEGRANT    *rgrtuple;
     DB_STATUS	    status = E_DB_OK;
-    DB_ERROR	    e_error;
     i4	    error = 0;
     i4		    i;
-    bool	    purge;
-    bool	    drop;
-    QEF_DATA	    qef_data;
     DMR_ATTR_ENTRY  key_array[2];
     DMR_ATTR_ENTRY  *key_ptr_array[2];
     DB_APPLICATION_ID aptuple;
@@ -751,14 +744,10 @@ QEUQ_CB		*qeuq_cb,
 char		*grantee,
 char		*rolename)
 {
-    i4		    i;
     DB_STATUS	    status = E_DB_OK, local_status;
     QEU_CB	    qeu;
     QEU_QUAL_PARAMS qparams;
-    DB_ROLEGRANT    qualtuple;
-    PTR		    qual_parms[5];
     i4		    audit;
-    i4	    error;
     DB_ROLEGRANT    rgrtuple;
     QEF_DATA	    qef_data;
 
@@ -915,8 +904,6 @@ qeu_qrolegrant(
     char	    *grantee;
     char            *rolename;
     i4		    *audit;
-    i4	    error = 0;
-    DB_ERROR	    err;
     DB_STATUS	    status;
 
     rgr_tuple = (DB_ROLEGRANT *) qparams->qeu_rowaddr;

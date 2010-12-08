@@ -1576,6 +1576,8 @@ rdu_qrytext_to_tuple(
 **	    Add privileges for sequences.
 **	21-mar-03 (inkdo01)
 **	    Add revoke support for sequence.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 */
 DB_STATUS
 rdf_update( RDF_GLOBAL	    *global,
@@ -2216,8 +2218,7 @@ rdf_update( RDF_GLOBAL	    *global,
 		qeuq_cb.qeuq_permit_mask |= QEU_PERM;
 		operation = QEU_DPROT;
 		qeuq_cb.qeuq_flag_mask |= QEU_FORCE_QP_INVALIDATION;
-		qeuq_cb.qeuq_v2b_col_xlate = qeuq_cb.qeuq_b2v_col_xlate =
-		    (DB_STATUS (*)()) NULL;
+		qeuq_cb.qeuq_v2b_col_xlate = qeuq_cb.qeuq_b2v_col_xlate = NULL;
 
 		if (rdfcb->rdf_rb.rdr_types_mask & RDR_DROP_ALL)
 		{

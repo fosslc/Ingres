@@ -212,6 +212,8 @@ static void qen_exch_pqual_init(
 **          Exception occurs if the cut_read_buf returns a WARNING and
 **          there are no (<0) cells to process. In this circumstance, 
 **          terminate the child.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 */
 
 DB_STATUS
@@ -1276,7 +1278,6 @@ qen_exchange_child(SCF_FTX *ftxcb)
     ADE_EXCB	*ade_excb;
     QEN_NODE	*out_node = exch->exch_out;
     ULM_RCB	ulm;
-    TIMERSTAT	timerstat;
     DB_STATUS	status;
     DB_STATUS	call_status;
     DB_ERROR	error;
@@ -1284,8 +1285,6 @@ qen_exchange_child(SCF_FTX *ftxcb)
     i4		num_io_cells;
     i4		exch_command;		/* Next command from Parent */
     PTR		ExchCommand = (PTR)&exch_command;
-    i4		val1;
-    i4		val2;
     CUT_RCB	cut_rcb[2];
     CUT_RCB	*CommRcb = &cut_rcb[0];
     CUT_RCB	*DataRcb = &cut_rcb[1];
@@ -1742,7 +1741,7 @@ qen_exchange_child(SCF_FTX *ftxcb)
 	** Close all tables opened by this thread, destroy
 	** all temp tables created by this thread.
 	*/
-	while ( dmt_cb = dsh->dsh_open_dmtcbs )
+	while ( (dmt_cb = dsh->dsh_open_dmtcbs) != NULL )
 	{
 	    dsh->dsh_open_dmtcbs = (DMT_CB*)(dmt_cb->q_next);
 
@@ -2075,7 +2074,6 @@ DB_ERROR	*error)
 {
     QEF_QP_CB	*qp;
     QEE_DSH	*ParentDSH, *ChildDSH;
-    QEF_RCB	*rcb = exch_cb->rcb;
     QEN_NODE	*node = exch_cb->node;
     ULM_RCB	ulm;
     ADE_EXCB	*excbp, *Dexcbp;
@@ -2972,7 +2970,6 @@ i4		    function )
     TIMERSTAT	timerstat;
     EXCH_CB	*exch_cb = (EXCH_CB *) cbs[exch->exch_exchcb];
     DB_STATUS	status = E_DB_OK;
-    i4		i;
     i4		NodeNum = node->qen_num;
     char	*OutNode = NodeType[out_node->qen_type];
     QEN_ADF 	*qen_adf;

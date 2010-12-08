@@ -268,6 +268,10 @@
 **	    Added support for rename table /columns.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.  CMcpychar is not to be used with
+**	    single character constant strings, causes "out of array bounds"
+**	    errors, and is unnecessary.
 **/
 
 /*	definitions needed by the static function declarations	*/
@@ -835,10 +839,10 @@ makeObjectName(
 #define	CHECK_CONSTRAINT		1
 #define	REFERENTIAL_CONSTRAINT		2
 
-static	char	*constraintTypes[ ] =	{
-	"U",			/* unique constraint */
-	"C",			/* check constraint */
-	"R"			/* referential constraint */
+static	char	constraintTypes[ ] =	{
+	'U',			/* unique constraint */
+	'C',			/* check constraint */
+	'R'			/* referential constraint */
 };
 
 #define	TABLE_STUB_LENGTH	5
@@ -863,14 +867,11 @@ qea_constructConstraintName(
     u_i4	untranslatedStringLength, translatedStringLength;
     char	*limit;
 
-    CMcpychar("$", p);
-    CMnext(p);
+    *p++ = '$';
     for ( j = 0; j < TABLE_STUB_LENGTH; j++ )
     {	CMcpyinc( tableName, p ); }
-    CMcpychar("_", p);
-    CMnext(p);
-    CMcpychar( constraintTypes[ constraintType ], p );
-    CMnext(p);
+    *p++ = '_';
+    *p++ = constraintTypes[ constraintType ];
 
     /* turn CONSTRAINT ID into a string of hex digits */
 
@@ -898,10 +899,10 @@ qea_constructConstraintName(
     else { status = E_DB_OK; }
 
     /* blank pad */
-    for ( p = constraintName + translatedStringLength,
-	  limit = constraintName + DB_MAXNAME;
-	 p < limit;
-	 CMnext( p ) )	{	CMcpychar( " ", p ); }
+    p = constraintName + translatedStringLength;
+    limit = constraintName + DB_MAXNAME;
+    while (p < limit)
+	*p++ = ' ';
 
     return( status );
 }	/* qea_constructConstraintName */
@@ -964,20 +965,14 @@ qea_co_obj_name(
     char	*limit;
     char	id_str[20], *id_p = id_str;
 
-    CMcpychar("$", p);
-    CMnext(p);
+    *p++ = '$';
     for (j = 0; j < TABLE_STUB_LENGTH; j++)
 	CMcpyinc(vname, p);
-    CMcpychar("_", p);
-    CMnext(p);
-    CMcpychar("C", p);
-    CMnext(p);
-    CMcpychar("O", p);
-    CMnext(p);
-    CMcpychar(obj_type, p);
-    CMnext(p);
-    CMcpychar("_", p);
-    CMnext(p);
+    *p++ = '_';
+    *p++ = 'C';
+    *p++ = '0';
+    *p++ = *obj_type;
+    *p++ = '_';
 
     /* convert view id into a hex string */
     seedToDigits(view_id, id_str);
@@ -995,12 +990,10 @@ qea_co_obj_name(
 	return(status);
 
     /* blank pad */
-    for (p = obj_name + len_trans, limit = obj_name + DB_MAXNAME;
-	 p < limit;
-	 CMnext(p))
-    {
-	CMcpychar(" ", p);
-    }
+    p = obj_name + len_trans;
+    limit = obj_name + DB_MAXNAME;
+    while (p < limit)
+	*p++ = ' ';
 
     return(E_DB_OK);
 }	/* qea_co_obj_name */

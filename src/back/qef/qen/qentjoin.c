@@ -105,6 +105,8 @@
 **	    Missing include of me.h, sparc build failed.
 **	11-May-2010 (kschendel) b123565
 **	    Rename dsh-root to dsh-parent.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 **/
 
 /*	static functions	*/
@@ -246,7 +248,6 @@ i4		    function)
     i4		    tid4;
     i4		    totparts;		/* Number of inner phys partitions */
     DB_STATUS	    status = E_DB_OK;
-    i4	    offset;
     bool	    reset = FALSE;
     i4		    out_func = NO_FUNC;
     i4	    val1;

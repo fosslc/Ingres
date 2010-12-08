@@ -71,6 +71,8 @@
 **	Added support for scanning the iipriv catalog to rule out any
 **	dependent views and procedures on the table/column being
 **	renamed.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 */
 DB_STATUS
 qeu_renameValidate(
@@ -87,7 +89,7 @@ DMF_ATTR_ENTRY  **dmf_attr)
    DB_STATUS	   status = E_DB_ERROR;
    DB_STATUS	   local_status;
    i4		   error;
-   bool		   exit_loop, exit_loop2, exit_loop3;
+   bool		   exit_loop, exit_loop2;
    DB_TAB_ID	   *dbtable;
 
    /* Variables used for iidbdepends */
@@ -120,7 +122,6 @@ DMF_ATTR_ENTRY  **dmf_attr)
    /* Variables used for Procedures */
    QEU_CB          xdbpqeu;                /* for iixprocedure tuples */
    QEU_CB          dbpqeu;                 /* for iiprocedure tuples */
-   QEU_CB          pqeu_cb;                /* for iiprotect tuples */
    bool            dbp_opened = FALSE;
    bool            xdbp_opened = FALSE;
    QEF_DATA        dbpqef_data;
@@ -169,9 +170,7 @@ DMF_ATTR_ENTRY  **dmf_attr)
 
    /* For column rename need to get the tree tuples in certain cases */
    QEU_CB	    tqeu;                 /* for tree tuples */
-   QEF_DATA         tqef_data;
    DB_SECALARM	    *ttuple;
-   bool		    found_tree = FALSE;
    bool             tree_opened = FALSE;
    DMR_ATTR_ENTRY   tkey_array[3];
    DMR_ATTR_ENTRY  *tkey_ptr_array[3];
@@ -501,7 +500,6 @@ DMF_ATTR_ENTRY  **dmf_attr)
         /* Check the dependency based on type */
         if (dtuple->dbv_dtype == DB_VIEW)
 	{
-	    DMT_CHAR_ENTRY              char_array[2];
             DMT_SHW_CB                  dmt_show;
 	    DMT_TBL_ENTRY               dmt_tbl_entry;
 
@@ -805,7 +803,6 @@ DMF_ATTR_ENTRY  **dmf_attr)
 	    if (prtuple->db_dep_obj_type == DB_VIEW)
             {
 		/* Found a dependent view */
-	        DMT_CHAR_ENTRY              char_array[2];
                 DMT_SHW_CB                  dmt_show;
 	        DMT_TBL_ENTRY               dmt_tbl_entry;
 
@@ -1020,8 +1017,6 @@ DMF_ATTR_ENTRY  **dmf_attr)
 	   ** with non grant style grants. Grants are transferred to the new
 	   ** object. 
 	   */
-	   int i = 0;
-
            pqeu.qeu_type = QEUCB_CB;
            pqeu.qeu_length = sizeof(QEUCB_CB);
            pqeu.qeu_db_id = qeuq_cb->qeuq_db_id;

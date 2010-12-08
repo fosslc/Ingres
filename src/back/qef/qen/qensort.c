@@ -124,6 +124,8 @@
 **	07-Dec-2009 (troal01)
 **	    Consolidated DMU_ATTR_ENTRY, DMT_ATTR_ENTRY, and DM2T_ATTR_ENTRY
 **	    to DMF_ATTR_ENTRY. This change affects this file.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 /*	static functions	*/
@@ -316,7 +318,6 @@ i4		   function )
     bool	heap_sort = TRUE, no_qef = FALSE;
     i4		rowno;
     DM_MDATA	dm_mdata;
-    ULM_RCB	ulm_rcb;
     i4	val1;
     i4	val2;
     TIMERSTAT	    timerstat;

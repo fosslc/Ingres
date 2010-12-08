@@ -363,6 +363,8 @@
 **	    sub-structure, simplifies code generation.
 **	08-Nov-2010 (kiria01) SIR 124685
 **	    Rationalise function prototypes
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Delete incorrect u_i2 casts on MEcopy while I'm in here.
 **/
 
 /* TABLE OF CONTENTS */
@@ -7534,7 +7536,7 @@ allocateAndCopyStruct(
     else
     {
 	*target = opu_qsfmem( global, size );
-	MEcopy( source, ( u_i2 ) size, *target );
+	MEcopy( source, size, *target );
     }
 }
 
@@ -7628,7 +7630,8 @@ allocateAndCopyColumnList(
 **	    Copy the physical partition characteristics list.
 **	20-Feb-2004 (schka24)
 **	    Some clown got the name wrong, s/physical/logical/
-**
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes: remove well-meaning but incorrect NULL casts.
 */
 
 static VOID
@@ -7643,7 +7646,7 @@ allocate_and_copy_QEUCB(
 
     qeu_cb = ( QEU_CB * ) opu_qsfmem( global, sizeof( QEU_CB ) );
     *target = qeu_cb;
-    MEcopy( ( PTR ) source, ( u_i2 ) sizeof( QEU_CB ), ( PTR ) qeu_cb );
+    MEcopy( ( PTR ) source, sizeof( QEU_CB ), ( PTR ) qeu_cb );
 
     qeu_cb->qeu_owner	    = (PTR)DB_OPF_ID;
 
@@ -7653,7 +7656,7 @@ allocate_and_copy_QEUCB(
 
     qeu_cb->qef_next = ( QEU_CB * ) NULL;
     qeu_cb->qeu_prev = ( QEU_CB * ) NULL;
-    qeu_cb->qeu_acc_id = ( PTR ) NULL;
+    qeu_cb->qeu_acc_id = NULL;
     qeu_cb->qeu_input = ( QEF_DATA * ) NULL;
     qeu_cb->qeu_param = ( QEF_PARAM * ) NULL;
     qeu_cb->qeu_output = ( QEF_DATA * ) NULL;
@@ -7661,9 +7664,9 @@ allocate_and_copy_QEUCB(
     qeu_cb->qeu_qual = NULL;
     qeu_cb->qeu_qarg = ( QEU_QUAL_PARAMS * ) NULL;
     qeu_cb->qeu_mem = ( ULM_RCB * ) NULL;
-    qeu_cb->qeu_f_qual = ( PTR ) NULL;
-    qeu_cb->qeu_f_qarg = ( PTR ) NULL;
-    qeu_cb->qeu_qso = ( PTR ) NULL;	/* FIXME */
+    qeu_cb->qeu_f_qual = NULL;
+    qeu_cb->qeu_f_qarg = NULL;
+    qeu_cb->qeu_qso = NULL;	/* FIXME */
 
     /*
     ** we also assume that the database id and session id point to stable
@@ -8597,7 +8600,7 @@ allocate_and_copy_DMUCB(
 
     dmu_cb = ( DMU_CB * ) opu_qsfmem( global, sizeof( DMU_CB ) );
     *target = dmu_cb;
-    MEcopy( ( PTR ) source, ( u_i2 ) sizeof( DMU_CB ), ( PTR ) dmu_cb );
+    MEcopy( ( PTR ) source, sizeof( DMU_CB ), ( PTR ) dmu_cb );
 
     /* now we have to find every field in the DMUCB that is a pointer, and
     ** copy what it points to to our memory stream.  sheesh!
@@ -8689,7 +8692,7 @@ allocate_and_copy_a_dm_data(
 	target->data_address =
 		opu_qsfmem( global, source->data_in_size );
 	MEcopy( ( PTR ) source->data_address,
-	        ( u_i2 ) source->data_in_size,
+	        source->data_in_size,
 	        ( PTR ) target->data_address );
     }	/* endif */
 }
@@ -8763,7 +8766,7 @@ allocate_and_copy_a_dm_ptr(
 	{
 	    targetObjectAddress[ i ] = targetObjects;
 	    MEcopy( ( PTR ) sourceObjectAddress[ i ],
-		    ( u_i2 ) objectSize,
+		    objectSize,
 		    ( PTR ) targetObjects);
 	    targetObjects += objectSize;
 
@@ -8783,7 +8786,7 @@ allocate_and_copy_a_dm_ptr(
 			opu_qsfmem( global, sizeof( DB_IIDEFAULT ) );
 
 		    MEcopy( ( PTR ) sourceAttr->attr_defaultTuple,
-			    ( u_i2 ) sizeof( DB_IIDEFAULT ),
+			    sizeof( DB_IIDEFAULT ),
 			    ( PTR ) targetAttr->attr_defaultTuple );
 
 		}	/* end if  there's a default tuple */
@@ -8794,7 +8797,7 @@ allocate_and_copy_a_dm_ptr(
                         opu_qsfmem( global, sizeof( DB_IISEQUENCE ) );
 
                     MEcopy( ( PTR ) sourceAttr->attr_seqTuple,
-                            ( u_i2 ) sizeof( DB_IISEQUENCE ),
+                            sizeof( DB_IISEQUENCE ),
                             ( PTR ) targetAttr->attr_seqTuple );
 
                 }       /* end if  there's a default tuple */

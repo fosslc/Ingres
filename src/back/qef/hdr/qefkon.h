@@ -2,6 +2,9 @@
 **Copyright (c) 2004 Ingres Corporation
 */
 
+#ifndef QEFKON_H_INCLUDED
+#define QEFKON_H_INCLUDED
+
 /**
 **
 **  Name: QEFKON.H - Internal QEF constants 
@@ -35,6 +38,8 @@
 **	    replace nat and longnat with i4
 **	28-Jan-2009 (kibro01) b121521
 **	    Add 910 capability level
+**	2-Dec-2010 (kschendel)
+**	    Multi-include protection.
 **/
 
 
@@ -273,3 +278,6 @@ typedef struct _QEK_K1_STR_CODE
     char	*qek_s1_str_p;	    /* string */
     i4		 qek_s2_code;	    /* associated code */
 }   QEK_K1_STR_CODE;
+
+
+#endif /* QEFKON_H_INCLUDED */
