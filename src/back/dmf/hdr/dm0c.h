@@ -143,6 +143,10 @@
 **          Changes for Long IDs
 **	29-APr-2010 (kschendel)
 **	    Bump the config version for long ID's.
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Add a bunch of new DM0C_MO_? structures, dm0c_mo_attach(),
+**	    dm0c_mo_detach() function prototypes 
+**	    for .cnf managed objects, added useful typdefs.
 **/
 
 /*
@@ -164,6 +168,16 @@ typedef struct _DM0C_V4DMP	DM0C_V4DMP;
 typedef struct _DM0C_DMP	DM0C_DMP;
 typedef struct _DM0C_TAB	DM0C_TAB;
 typedef struct _DM0C_RELATION	DM0C_RELATION;
+typedef struct _JNL_CKP		JNL_CKP;
+typedef struct _JNL_CNODE_INFO	JNL_CNODE_INFO;
+typedef struct _DMP_CKP		DMP_CKP;
+typedef struct _DMP_CNODE_INFO	DMP_CNODE_INFO;
+typedef struct _DM0C_MO_DSC	DM0C_MO_DSC;
+typedef struct _DM0C_MO_EXT	DM0C_MO_EXT;
+typedef struct _DM0C_MO_JCKP	DM0C_MO_JCKP;
+typedef struct _DM0C_MO_JNODE	DM0C_MO_JNODE;
+typedef struct _DM0C_MO_DCKP	DM0C_MO_DCKP;
+typedef struct _DM0C_MO_DNODE	DM0C_MO_DNODE;
 
 
 /*
@@ -1172,6 +1186,83 @@ struct _DM0C_TAB
 #define                 DM0C_T_TAB	3L
     DM0C_RELATION   tab_relation;
 };
+
+ 
+/*}
+** Name: DM0C_MO_? - Structure for DB config file managed objects.
+**
+** Description:
+**	These structures are used to create persistent managed objects for
+**	a database from its .cnf file, which is not persistent.
+**
+**	They are created from a database's .cnf file by dm0c_mo_attach(),
+**	exist in the memory chunk dcb->dcb_mo when a DB is added to the
+**	server, and detached and deallocated when the DB is deleted from
+**	the server.
+**
+**	Note that all are keyed on the database's dbid.
+**
+** History:
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Added.
+*/
+struct _DM0C_MO_DSC
+{
+    DMP_DCB		*dcb_ptr;	/* Pointer to DCB */
+    /* Copy of cnf's DSC */
+    DM0C_DSC		dsc;
+    /* Extracted from DM0C_JNL: */
+    i4			jnl_count;	/* Count of DM0C_MO_JCKP */
+    i4			jnl_node_count;	/* Count of DM0C_MO_JNODE */
+    i4			jnl_ckp_seq;
+    i4			jnl_fil_seq;
+    i4			jnl_blk_seq;
+    i4			jnl_bksz;
+    i4			jnl_blkcnt;
+    i4			jnl_maxcnt;
+    LG_LA		jnl_la;
+    i4			jnl_first_jnl_seq;
+    /* Extracted from DM0C_DMP: */
+    i4			dmp_count;	/* Count of DM0C_MO_DCKP */
+    i4			dmp_node_count;	/* Count of DM0C_MO_DNODE */
+    i4			dmp_ckp_seq;
+    i4			dmp_fil_seq;
+    i4			dmp_blk_seq;
+    i4			dmp_bksz;
+    i4			dmp_blkcnt;
+    i4			dmp_maxcnt;
+    LG_LA		dmp_la;
+};
+
+struct _DM0C_MO_EXT
+{
+    i4			dbid;
+    DMP_LOC_ENTRY	ext;
+};
+
+struct _DM0C_MO_JCKP
+{
+    i4			dbid;
+    JNL_CKP		jckp;
+};
+
+struct _DM0C_MO_JNODE
+{
+    i4			dbid;
+    JNL_CNODE_INFO	jnode;
+};
+
+struct _DM0C_MO_DCKP
+{
+    i4			dbid;
+    DMP_CKP		dckp;
+};
+
+struct _DM0C_MO_DNODE
+{
+    i4			dbid;
+    DMP_CNODE_INFO	dnode;
+};
 
 /*
 ** Function Prototypes
@@ -1191,4 +1282,8 @@ FUNC_EXTERN DB_STATUS	dm0c_open(
 FUNC_EXTERN DB_STATUS	dm0c_mk_consistnt(DM0C_CNF  *cnf);
 FUNC_EXTERN DB_STATUS	dm0c_extend(DM0C_CNF *config, DB_ERROR *dberr);
 FUNC_EXTERN VOID	dm0c_dmp_filename(i4 sequence, char *filename);
+
+/* Functions to attach, detach a database's .cnf MO objects */
+FUNC_EXTERN VOID	dm0c_mo_attach(DM0C_CNF *cnf);
+FUNC_EXTERN VOID	dm0c_mo_detach(DMP_DCB *dcb);
 

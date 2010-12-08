@@ -208,6 +208,9 @@
 **          Changes for Long IDs
 **      09-aug-2010 (maspa05) b123189, b123960
 **          Added DMC2_READONLYDB to indicate a readonly database
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Add DMC2_NODBMO to prevent making MO objects for
+**	    database, typically when fetching iidbdb information.
 **/
 
 
@@ -490,6 +493,8 @@ typedef struct _DMC_CB
                         /* Database must be logged when access from this DBMS */
 #define                 DMC2_READONLYDB     0x00000004L
                         /* readonlydb */
+#define                 DMC2_NODBMO	    0x00000008L
+                        /* Don't make MO objects when adding DB */
 
     DM_DATA         dmc_char_array;	/* Pointer to an array of 
 					** configuration variables. */

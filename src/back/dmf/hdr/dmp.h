@@ -840,6 +840,8 @@ typedef struct _DMP_PINFO		DMP_PINFO;
 **      07-Oct-2010 (horda03) b124559
 **          Add DCB_S_RO_INCREMENTAL_RFP to indicate a DB which is opened in
 **          READ mode only (WRITE downgraded).
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Add dcb_mo, pointer to persistent MO for database, if any.
 */
 
 struct _DMP_DCB
@@ -1013,6 +1015,7 @@ ROOT,DATA,JOURNAL,CHECKPOINT,ALIAS,WORK,DUMP,AWORK,RAW,SKIP"
     i4	    dcb_dbservice;	   /* FIPS related translation flags */
 
     DML_SEQ	    *dcb_seq;	   	    /* List of DML_SEQ's */
+    PTR		    dcb_mo;		    /* Pointer to amorphous MO memory */
 };
 
 /*}

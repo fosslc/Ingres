@@ -128,6 +128,10 @@
 ##          Increase client_info in ima_server_sessions from 62 to 200. Note, the
 ##          the theoretical maximum for this parameter is IIsqpMAX_PARM_SIZE (see
 ##          IIsqParms()) for the GCA_GW_PARM message.
+##  17-Nov-2010 (jonj) SIR 124738
+##	Added ima_db_config, ima_db_extent, ima_db_jckp,
+##	ima_db_jnode, ima_db_dckp, ima_db_dnode tables
+##	and ima_db_refresh procedure for database .cnf file objects.
 */
 
 set autocommit on;
@@ -2381,4 +2385,287 @@ key = (server);
 \p\g
 grant select on ice_trace to public with grant option;\p\g
 
-\q
+
+
+/*
+** Tables, procedures for database .cnf objects
+*/
+
+/*
+** IMA_DB_CONFIG - configuration information about a database
+*/
+drop table ima_db_config;
+\p\g
+
+register table ima_db_config (
+    server varchar(64) not null not default 
+        is 'SERVER',
+    dbid integer4 not null not default
+        is 'exp.dmf.dm0c.dsc_dbid',
+    dbname varchar(32) not null not default
+        is 'exp.dmf.dm0c.dsc_name',
+    dbowner varchar(32) not null not default
+        is 'exp.dmf.dm0c.dsc_owner',
+    version integer4 not null not default
+        is 'exp.dmf.dm0c.dsc_cnf_version',
+    cat_version integer4 not null not default
+        is 'exp.dmf.dm0c.dsc_c_version',
+    status_num integer4 not null not default
+        is 'exp.dmf.dm0c.dsc_status_num',
+    status varchar(64) not null not default
+        is 'exp.dmf.dm0c.dsc_status',
+    dcb_status varchar(64) not null not default
+        is 'exp.dmf.dm0c.dcb_status',
+    extent_count integer4 not null not default
+        is 'exp.dmf.dm0c.dsc_ext_count',
+    last_table_id integer4 not null not default
+        is 'exp.dmf.dm0c.dsc_last_table_id',
+    dbaccess_num integer4 not null not default
+        is 'exp.dmf.dm0c.dsc_dbaccess_num',
+    dbaccess varchar(64) not null not default
+        is 'exp.dmf.dm0c.dsc_dbaccess',
+    dbservice_num integer4 not null not default
+        is 'exp.dmf.dm0c.dsc_dbservice_num',
+    dbservice varchar(64) not null not default
+        is 'exp.dmf.dm0c.dsc_dbservice',
+    collation varchar(64) not null not default
+        is 'exp.dmf.dm0c.dsc_collation',
+    unicode_collation varchar(64) not null not default
+        is 'exp.dmf.dm0c.dsc_ucollation',
+    unicode_normalization varchar(8) not null not default
+        is 'exp.dmf.dm0c.dsc_unormalization',
+    inconsistent varchar(16) not null not default
+        is 'exp.dmf.dm0c.dsc_inconsistent',
+    jnl_ckp_count integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_count',
+    jnl_node_count integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_node_count',
+    jnl_checkpoint integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_ckp_seq',
+    jnl_filseq integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_fil_seq',
+    jnl_block integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_blk_seq',
+    jnl_block_size integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_bksz',
+    jnl_block_count integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_blkcnt',
+    jnl_max_count integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_maxcnt',
+    jnl_last_la varchar(30) not null not default
+        is 'exp.dmf.dm0c.jnl_la',
+    jnl_last_la_seq integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_la_seq',
+    jnl_last_la_block integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_la_block',
+    jnl_last_la_offset integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_la_offset',
+    jnl_first_seq integer4 not null not default
+        is 'exp.dmf.dm0c.jnl_first_jnl_seq',
+    dmp_ckp_count integer4 not null not default
+        is 'exp.dmf.dm0c.dmp_count',
+    dmp_node_count integer4 not null not default
+        is 'exp.dmf.dm0c.dmp_node_count',
+    dmp_checkpoint integer4 not null not default
+        is 'exp.dmf.dm0c.dmp_ckp_seq',
+    dmp_filseq integer4 not null not default
+        is 'exp.dmf.dm0c.dmp_fil_seq',
+    dmp_block integer4 not null not default
+        is 'exp.dmf.dm0c.dmp_blk_seq',
+    dmp_block_size integer4 not null not default
+        is 'exp.dmf.dm0c.dmp_bksz',
+    dmp_block_count integer4 not null not default
+        is 'exp.dmf.dm0c.dmp_blkcnt',
+    dmp_max_count integer4 not null not default
+        is 'exp.dmf.dm0c.dmp_maxcnt',
+    dmp_last_la varchar(30) not null not default
+        is 'exp.dmf.dm0c.dmp_la',
+    dmp_last_la_seq integer4 not null not default
+        is 'exp.dmf.dm0c.dmp_la_seq',
+    dmp_last_la_block integer4 not null not default
+        is 'exp.dmf.dm0c.dmp_la_block',
+    dmp_last_la_offset integer4 not null not default
+        is 'exp.dmf.dm0c.dmp_la_offset'
+)
+as import from 'tables'
+with dbms = IMA, structure = unique sortkeyed,
+key = (server, dbid)
+\p\g
+
+/*
+** IMA_DB_EXTENT - information about a database extent
+*/
+drop table ima_db_extent;
+\p\g
+
+register table ima_db_extent (
+    server varchar(64) not null not default 
+        is 'SERVER',
+    dbid integer4 not null not default
+        is 'exp.dmf.dm0c.ext_index',
+    flags_num integer4 not null not default
+        is 'exp.dmf.dm0c.ext_flags_num',
+    flags varchar(32) not null not default
+        is 'exp.dmf.dm0c.ext_flags',
+    location varchar(32) not null not default
+        is 'exp.dmf.dm0c.ext_location',
+    path_length integer4 not null not default
+        is 'exp.dmf.dm0c.ext_phys_length',
+    path varchar(128) not null not default
+        is 'exp.dmf.dm0c.ext_path'
+)
+as import from 'tables'
+with dbms = IMA, structure = unique sortkeyed,
+key = (server, dbid)
+\p\g
+
+/*
+** IMA_DB_JCKP - information about a database journal checkpoint
+*/
+drop table ima_db_jckp;
+\p\g
+
+register table ima_db_jckp (
+    server varchar(64) not null not default 
+        is 'SERVER',
+    dbid integer4 not null not default
+        is 'exp.dmf.dm0c.jckp_index',
+    sequence integer4 not null not default
+        is 'exp.dmf.dm0c.jckp_sequence',
+    date varchar(32) not null not default
+        is 'exp.dmf.dm0c.jckp_date',
+    first_jnl integer4 not null not default
+        is 'exp.dmf.dm0c.jckp_f_jnl',
+    last_jnl integer4 not null not default
+        is 'exp.dmf.dm0c.jckp_l_jnl',
+    valid integer4 not null not default
+        is 'exp.dmf.dm0c.jckp_jnl_valid',
+    mode varchar(16) not null not default
+        is 'exp.dmf.dm0c.jckp_mode'
+)
+as import from 'tables'
+with dbms = IMA, structure = unique sortkeyed,
+key = (server, dbid)
+\p\g
+
+/*
+** IMA_DB_JNODE - information about a node's database journal
+*/
+drop table ima_db_jnode;
+\p\g
+
+register table ima_db_jnode (
+    server varchar(64) not null not default 
+        is 'SERVER',
+    dbid integer4 not null not default
+        is 'exp.dmf.dm0c.jnode_index',
+    filseq integer4 not null not default
+        is 'exp.dmf.dm0c.jnode_fil_seq',
+    blkseq integer4 not null not default
+        is 'exp.dmf.dm0c.jnode_blk_seq',
+    last_la varchar(30) not null not default
+        is 'exp.dmf.dm0c.jnode_la'
+)
+as import from 'tables'
+with dbms = IMA, structure = unique sortkeyed,
+key = (server, dbid)
+\p\g
+
+/*
+** IMA_DB_DCKP - information about a database dump checkpoint
+*/
+drop table ima_db_dckp;
+\p\g
+
+register table ima_db_dckp (
+    server varchar(64) not null not default 
+        is 'SERVER',
+    dbid integer4 not null not default
+        is 'exp.dmf.dm0c.dckp_index',
+    sequence integer4 not null not default
+        is 'exp.dmf.dm0c.dckp_sequence',
+    date varchar(32) not null not default
+        is 'exp.dmf.dm0c.dckp_date',
+    first_dmp integer4 not null not default
+        is 'exp.dmf.dm0c.dckp_f_dmp',
+    last_dmp integer4 not null not default
+        is 'exp.dmf.dm0c.dckp_l_dmp',
+    valid integer4 not null not default
+        is 'exp.dmf.dm0c.dckp_dmp_valid',
+    mode varchar(16) not null not default
+        is 'exp.dmf.dm0c.dckp_mode'
+)
+as import from 'tables'
+with dbms = IMA, structure = unique sortkeyed,
+key = (server, dbid)
+\p\g
+
+/*
+** IMA_DB_DNODE - information about a node's database dump
+*/
+drop table ima_db_dnode;
+\p\g
+
+register table ima_db_dnode (
+    server varchar(64) not null not default 
+        is 'SERVER',
+    dbid integer4 not null not default
+        is 'exp.dmf.dm0c.dnode_index',
+    filseq integer4 not null not default
+        is 'exp.dmf.dm0c.dnode_fil_seq',
+    blkseq integer4 not null not default
+        is 'exp.dmf.dm0c.dnode_blk_seq',
+    last_la varchar(30) not null not default
+        is 'exp.dmf.dm0c.dnode_la'
+)
+as import from 'tables'
+with dbms = IMA, structure = unique sortkeyed,
+key = (server, dbid)
+\p\g
+
+grant select on ima_db_config to public with grant option;
+\p\g
+grant select on ima_db_extent to public with grant option;
+\p\g
+grant select on ima_db_jckp to public with grant option;
+\p\g
+grant select on ima_db_jnode to public with grant option;
+\p\g
+grant select on ima_db_dckp to public with grant option;
+\p\g
+grant select on ima_db_dnode to public with grant option;
+\p\g
+
+/*
+** Procedure to refresh config information
+*/
+drop  procedure ima_db_refresh
+\p\g
+create procedure ima_db_refresh(db_id int not null) as
+declare
+instance varchar(64) not null;
+begin
+
+        select instance into :instance from ima_mib_objects
+        where classid = 'exp.dmf.dm0c.dsc_index'
+	    and value = :db_id
+            and server = dbmsinfo('ima_server');
+
+	if iirowcount <> 0 then
+	    update ima_mib_objects set value = :db_id
+	    where classid = 'exp.dmf.dm0c.dm0c_refresh_config'
+		and instance = :instance
+		and server = dbmsinfo('ima_server');
+	endif;
+
+        if iirowcount = 0 then
+                message 0326 'Database is not opened in the server';
+		return 0326;
+        endif;
+
+        return 0;
+end;
+\p\g
+
+grant execute on procedure ima_db_refresh to public with grant option;
+\p\g

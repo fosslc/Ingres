@@ -1657,6 +1657,9 @@ DB_ERROR	*dberr)
 **          This is so when we call dm0c_open it will know if this is a
 **          readonlydb (cnf in II_DATABASE) as opposed to a database being
 **          opened read-only (e.g. inconsistent or incremental rfwd)
+**	17-Nov-2010 (jonj) SIR 124738
+**	    dm0c_mo_attach(cnf) to make MO objects for
+**	    this database's .cnf file.
 */
 DB_STATUS
 dm2d_add_db(
@@ -1703,6 +1706,9 @@ dm2d_add_db(
 	    (DM_OBJECT **)&dcb, dberr);
 	if (status != E_DB_OK)
 	    break;
+
+	/* NB: DM0M_ZERO does this. Added for clarity */
+	dcb->dcb_mo= NULL;
 
 	/*  Copy root location name into the DCB. */
 
@@ -1770,6 +1776,13 @@ dm2d_add_db(
 
 	    if (status == E_DB_OK)
 	    {
+		/* Attach cnf parts to MO if "normal" db add in the server */
+		if ( !(flag & (DM2D_NODBMO | DM2D_RECOVER | DM2D_JLK | DM2D_RFP |
+			       DM2D_ONLINE_RCP | DM2D_ADMIN_CMD | DM2D_CVCFG)) )
+		{
+		    dm0c_mo_attach(cnf);
+		}
+
 		dcb->dcb_id = cnf->cnf_dsc->dsc_dbid;
 
 		/* Find root location and copy into the DCB. */
@@ -2162,7 +2175,12 @@ dm2d_add_db(
     }
 
     if (dcb)
+    {
+	/* Detach any MO objects for DB */
+	dm0c_mo_detach(dcb);
+
 	dm0m_deallocate((DM_OBJECT **)&dcb);
+    }
 
     return (E_DB_ERROR);
 }
@@ -3111,6 +3129,8 @@ DB_ERROR	*dberr)
 **	    the last user deletes the db.
 **      17-May-1994 (daveb) 59127
 **          Fixed semaphore leaks, named sems.
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Detach MO objects for database.
 */
 DB_STATUS
 dm2d_del_db(
@@ -3162,8 +3182,10 @@ dm2d_del_db(
 
     dm0s_munlock(&dmf_svcb->svcb_dq_mutex);
 
-    /*	Deallocate DCB and return. */
+    /* Detach MO objects */
+    dm0c_mo_detach(dcb);
 
+    /*	Deallocate DCB and return. */
     dm0m_deallocate((DM_OBJECT **)&dcb);
     return (E_DB_OK);
 }
