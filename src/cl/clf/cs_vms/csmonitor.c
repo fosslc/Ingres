@@ -332,6 +332,8 @@ CS_verify_sid(
 **	    Prototype / include fixes.
 **      06-Dec-2010 (horda03) SIR 124685
 **          Fix VMS build problems, 
+**      07-Dec-2010 (horda03) SIR 124685
+**          Fix another VMS build problems
 */
 STATUS
 IICSmonitor(
@@ -829,7 +831,6 @@ CS_ACCNTING,CS_CPUSTAT,CS_REPENTING,CS_LONGQUANTUM",
 		    CS_dump_stack( 0, NULL, NULL, output_fcn, verbose );
 		else
 		    CS_dump_stack( an_scb, NULL, NULL, output_fcn, verbose );
-		}
 	    }
             else if (( 0 !=
 		      ( verbose = !STscompare( "stacksplus", 10, command, 10 ))

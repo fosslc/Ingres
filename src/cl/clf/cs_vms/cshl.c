@@ -347,6 +347,8 @@ extern u_i4  SGN$GL_KSTACKPAG;
 **	    Prototype / include fixes.
 **      06-Dec-2010 (horda03) SIR 124685
 **          Fix VMS build problems,
+**      07-Dec-2010 (horda03) SIR 124685
+**          Fix more VMS build problems
 **/
 
 /*
@@ -2657,7 +2659,7 @@ CS_fmt_scb(CS_SCB *scb, i4 iosize, char *area)
     sys$setast(1);
 }
 
-STATUS
+void
 CS_breakpoint(void)
 {
 	return(OK);
@@ -3283,7 +3285,7 @@ s    pc: %x    sp: %x%s",
 void
 CS_dump_stack( CS_SCB    *scb,
 	      void	 *notused,
-	      void	 *output_arg,
+	      PTR 	 output_arg,
 	      TR_OUTPUT_FCN *output_fcn,
 	      i4	 verbose )
 {
