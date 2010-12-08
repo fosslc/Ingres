@@ -1,3 +1,6 @@
+#ifndef _EVSET_H_INCLUDED
+#define _EVSET_H_INCLUDED
+
 /*
 ** Copyright (c) 1998, 2008 Ingres Corporation
 **
@@ -15,6 +18,8 @@
 **	    from VMS CL as the use is no longer allowed
 **	03-dec-2008 (joea)
 **	    Add II_DIAG_LINK from Unix version.
+**      27-nov-2009 (stegr01)
+**          prevent multiple includes
 **      18-Feb-2009 (horda03)
 **          Add OUTPUT_BUFFER, EVIDENCE_LIMIT and EVSET_SHOW_ENV_CMD.
 */
@@ -152,3 +157,4 @@ typedef struct II_DIAG_LINK{
 	PTR     filename;
 } DIAG_LINK;
 
+#endif
