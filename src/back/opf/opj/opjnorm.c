@@ -1784,6 +1784,10 @@ opj_or2scan(
 **      15-jul-2009 (huazh01)
 **          put constants in IN-list into OPJ_ORSTAT's in_array[]. 
 **          b122313. 
+**      17-aug-2010 (huazh01) 
+**          stop copying the query tree into in_array[]. Let
+**          in_array[] and const_array[] references the same query 
+**          tree. (b124212)
 [@history_template@]...
 */
 static bool
@@ -1794,7 +1798,7 @@ opj_bopscan(
 	int		*count)
 
 {
-    PST_QNODE	*var, *cnst, *dup;
+    PST_QNODE	*var, *cnst, *dup, *ptr;
     int		i;
 
     /* First we perform some simple tests (hard to imagine a query with 
@@ -1865,7 +1869,6 @@ opj_bopscan(
 
             opj_orstatp->in_var = &var->pst_sym.pst_value.pst_s_var;
             opj_orstatp->in_col = opj_orstatp->array_size - 1; 
-            opv_copytree(subquery->ops_global, &dup);
             opj_orstatp->in_array[opj_orstatp->in_count] = dup;
             opj_orstatp->in_count++;
         }
@@ -1917,12 +1920,21 @@ opj_bopscan(
 
                 opj_orstatp->in_var = &var1->pst_sym.pst_value.pst_s_var;
                 opj_orstatp->in_col = i;
-                opv_copytree(subquery->ops_global, &dup);
                 opj_orstatp->in_array[opj_orstatp->in_count] = dup;
                 opj_orstatp->in_count++;
             }
 
-	    cnst->pst_left = opj_orstatp->const_array[i];
+            /* loop to the end of constant chain, then link it
+            ** with const_array[i].
+            */
+            ptr = cnst; 
+            while (ptr && 
+                   ptr->pst_sym.pst_type == PST_CONST &&
+                   ptr->pst_left)
+                  ptr = ptr->pst_left; 
+
+	    ptr->pst_left = opj_orstatp->const_array[i];
+
 	    opj_orstatp->const_array[i] = cnst;
 					/* chain new CONST to head of list */
 	    if (opj_orstatp->const_size[i] < 
@@ -2029,6 +2041,12 @@ opj_scanfail(
 **          opj_orstatp->in_array[] could have a linked list of 
 **          constants now, scan them and put them into constant 
 **          array. (b122313)
+**      17-aug-2009 (huazh01)
+**          in_array[] and const_array[] now references to the same 
+**          query tree. This means we don't need to add PST_QNODEs in
+**          in_array[] into const_array[]. For unprocessed nodes in 
+**          in_array[], whose pst_right is NULL, we just need to set up 
+**          the link for its adjacent column. (b124212)
 **          
 [@history_template@]...
 */
@@ -2052,7 +2070,8 @@ opj_inreplace(
       this = opj_orstatp->in_array[i];
 
       while (this != (PST_QNODE *)NULL && 
-             this->pst_sym.pst_type == PST_CONST)
+             this->pst_sym.pst_type == PST_CONST &&
+             this->pst_right == (PST_QNODE*)NULL)
       {
 	/* Insert current IN-list constant into corresponding list in
 	** const_array. */
@@ -2063,18 +2082,18 @@ opj_inreplace(
 					/* first reset dups flag, if ok */
 
         next = this->pst_left; 
-        this->pst_left = opj_orstatp->const_array[invar];
-        opj_orstatp->const_array[invar] = this;
-					/* link 'em up/down */
 	opj_orstatp->row_count++;
+
 	for (j = 0; j < opj_orstatp->array_size; j++)
 	{
 	    /* Short-circuit if this is IN-list's column. */
 	    if (j == invar)
 	    {
+                cnst = opj_orstatp->const_array[invar]->pst_right;
+                this->pst_right = cnst; 
+
 		if (j > 0)
-		 opj_orstatp->const_array[j-1]->pst_right =
-			opj_orstatp->const_array[j];
+		 opj_orstatp->const_array[j-1]->pst_right = this;
 					/* link 'em sideways, but only
 					** if IN-list col isn't first */
 		continue;
