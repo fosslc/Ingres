@@ -93,6 +93,9 @@
 **	    SIR 123296
 **	    Re-arrange ifndef VMS section so that cktmpl_wrap is correctly
 **	    excluded for VMS after LSB changes.
+**	25-Oct-2010 (hanje04)
+**	    SIR 123296
+**	    Add modifyfe back for VMS, inadvertantly excluded by LSB changes.
 */
 
 PART   dbsupport
@@ -130,8 +133,8 @@ PART   dbsupport
    DIRECTORY usr!libexec!ingres!bin
 # endif
       SCRIPT cktmpl_wrap
-      EXECUTABLE modifyfe
 # endif /* VMS */
+      EXECUTABLE modifyfe
 
 
 /*
