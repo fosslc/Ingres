@@ -248,23 +248,16 @@ static  VOID        ad0_printfatt(char *value, i4  vallen,
 **	    Copied db_prec field into tmp_dv from adc_dv.
 **	13-mar-2001 (somsa01)
 **	    Changed adc_defwid and adc_worstwid to i4's.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_tmlen(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE	    *adc_dv,
 i4		    *adc_defwid,
 i4		    *adc_worstwid)
-# else
-DB_STATUS
-adc_tmlen( adf_scb, adc_dv, adc_defwid, adc_worstwid)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE	    *adc_dv;
-i4		    *adc_defwid;
-i4		    *adc_worstwid;
-# endif
 {
     DB_STATUS		db_stat = E_DB_OK;
     i4      		bdt = abs((i4) adc_dv->db_datatype);
@@ -468,23 +461,16 @@ i4		    *adc_worstwid;
 **	    Support II_MONEY_FORMAT=NONE for Sir 9541.
 **	13-mar-2001 (somsa01)
 **	    Changed defwid and worstwid to i4's.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_tmcvt(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE	    *adc_dv,
 DB_DATA_VALUE	    *adc_tmdv,
 i4		    *adc_outlen)
-# else
-DB_STATUS
-adc_tmcvt( adf_scb, adc_dv, adc_tmdv, adc_outlen)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE	    *adc_dv;
-DB_DATA_VALUE	    *adc_tmdv;
-i4		    *adc_outlen;
-# endif
 {
     DB_STATUS		db_stat = E_DB_OK;
     i4			bdt = abs((i4) adc_dv->db_datatype);

@@ -53,6 +53,9 @@
 **	    the function returns FALSE. 
 **	23-may-2005 (abbjo03)
 **	    Correct check_uuid_mac handling of the result from NMgtAt.
+**	30-nov-2010 (gupsh01) SIR 124685.
+**	    Prototype cleanup.
+**
 **/
 
 /*
@@ -74,7 +77,7 @@ static VOID
 uuid_format(
 DB_DATA_VALUE   *dv,
 UUID		*uuid);
-bool check_uuid_mac();
+bool check_uuid_mac(void);
 
 
 /*

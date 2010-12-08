@@ -9,6 +9,7 @@
 #include <adf.h>
 #include <ulf.h>
 #include <adfint.h>
+#include <aduint.h>
 
 /**
 ** Name: adubool.c - Functions for SQL BOOLEAN operations

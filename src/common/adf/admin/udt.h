@@ -181,6 +181,8 @@ typedef       struct _VARUCS2
 ##	    add seglen and xform routines to LONG ZCHAR.
 ##	29-mar-1995 (wolf) 
 ##	    Add non-prototyped definitions for xform and seglen routines.
+##      02-Dec-2010 (gupsh01) SIR 124685
+##          Protype cleanup.
 [@history_template@]...
 */
 #ifdef __STDC__
@@ -189,6 +191,11 @@ void byte_copy(char	*c_from ,
                int	length ,
                char	*c_to );
 
+II_STATUS
+usop_trace(II_SCB          *scb ,
+            II_DATA_VALUE         *dispose_mask ,
+            II_DATA_VALUE         *trace_string ,
+            II_DATA_VALUE         *result );
 
 void us_error(II_SCB	   *scb ,
               long	   error_code ,
@@ -526,6 +533,18 @@ extern II_STATUS      vucs2_dbtoev();
 extern II_STATUS      vucs2_convert();
 extern II_STATUS      vucs2_size();
 extern II_STATUS      vucs2_concatenate();
+
+/* IIMHpk - packed decimal data type*/ 
+
+extern II_STATUS	IIMHpkint();
+extern II_STATUS	IIMHpkceil();
+extern II_STATUS	IIMHpkabs();
+extern II_STATUS	IIMHpkneg();
+extern II_STATUS	IIMHpkadd();
+extern II_STATUS	IIMHpksub();
+extern II_STATUS	IIMHpkmul();
+extern II_STATUS	IIMHpkdiv();
+extern II_STATUS	IIMHpkcmp();
 
 #endif /* __STDC__ */
 

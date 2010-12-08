@@ -811,6 +811,8 @@
 **	    not supported.
 **	19-Oct-2010 (maspa05) b124551
 **	    adu_valuetomystr has been replaced with adu_sc930prtdataval
+**      23-Nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
 #ifndef ADF_HDR_INCLUDED
@@ -4130,28 +4132,23 @@ FUNC_EXTERN DB_STATUS adc_seglen (ADF_CB         *adf_scb,
 FUNC_EXTERN ADP_SEGLEN_FUNC adc_seglen;
 # endif /* hp8_bls */
 
-# ifdef xDEBUG
-# define ADF_BUILD_WITH_PROTOS TRUE
-# endif /* xDEBUG */
-
-# ifdef ADF_BUILD_WITH_PROTOS
 /* Forward declare structures */
 struct _AD_NEWDTNTRNL;
 
 FUNC_EXTERN DB_STATUS adb_trace(DB_DEBUG_CB  *adb_debug_cb);
-FUNC_EXTERN VOID adb_optab_print();
-FUNC_EXTERN VOID adb_breakpoint();
+FUNC_EXTERN VOID adb_optab_print(void);
+FUNC_EXTERN VOID adb_breakpoint(void);
 FUNC_EXTERN DB_STATUS adg_init(ADF_CB  *adf_scb);
 FUNC_EXTERN DB_STATUS adg_add_fexi(ADF_CB	*adf_scb,
 				   ADI_OP_ID	adg_index_fexi,
 				   DB_STATUS	(*adg_func_addr)());
 FUNC_EXTERN DB_STATUS adg_release(ADF_CB  *adf_scb);
-FUNC_EXTERN i4   adg_srv_size();
+FUNC_EXTERN DB_STATUS adg_srv_size(void);
 FUNC_EXTERN DB_STATUS adg_startup(PTR              adf_srv_cb,
 				  i4          adf_size,
 				  ADF_TAB_DBMSINFO *adf_dbi_tab,
 				  i4		   c2secure);
-FUNC_EXTERN DB_STATUS adg_shutdown();
+FUNC_EXTERN DB_STATUS adg_shutdown(void);
 FUNC_EXTERN DB_STATUS adi_0calclen(ADF_CB             *adf_scb,
 				   ADI_LENSPEC        *adi_lenspec,
 				   i4		      adi_numops,
@@ -4247,7 +4244,30 @@ FUNC_EXTERN DB_STATUS adi_need_dtfamily_resolve(
 				  ADI_FI_DESC         *infidesc,
 				  ADI_RSLV_BLK        *adi_rslv_blk,
 				  i2		      *need);
+FUNC_EXTERN DB_STATUS	adi_coerce_dtfamily_resolve(
+				  ADF_CB		*adf_scb,
+				  ADI_FI_DESC		*oldfidesc,
+				  DB_DT_ID		input,
+				  DB_DT_ID		output,
+				  ADI_FI_DESC		*newfidesc);
+
 FUNC_EXTERN DB_DT_ID adi_dtfamily_retrieve( DB_DT_ID input );
+
+FUNC_EXTERN DB_STATUS adi_calclen(ADF_CB             *adf_scb,
+				  ADI_LENSPEC        *adi_lenspec,
+				  DB_DATA_VALUE      *adi_dv1,
+				  DB_DATA_VALUE      *adi_dv2,
+				  i4                 *adi_rlen);
+FUNC_EXTERN DB_STATUS adt_key_decr(ADF_CB          *adf_scb,
+				  i4              nkatts,
+				  DB_ATTS         **katts,        
+				  i4              klen,
+				  char            *decr_key);
+FUNC_EXTERN DB_STATUS adt_key_incr(ADF_CB          *adf_scb,
+				  i4              nkatts,        
+				  DB_ATTS         **katts,        
+				  i4              klen,
+				  char            *incr_key);
 
 FUNC_EXTERN ADP_COMPARE_FUNC adc_compare;
 FUNC_EXTERN ADP_DBTOEV_FUNC adc_dbtoev;
@@ -4291,25 +4311,77 @@ FUNC_EXTERN DB_STATUS adf_func(ADF_CB      *adf_scb,
 FUNC_EXTERN DB_STATUS adf_exec_quick(ADF_CB	    *adf_scb,
 				     ADI_FI_ID	    fid,
 				     DB_DATA_VALUE  *dvarr);
+
+FUNC_EXTERN VOID adu_2prvalue(i4             (*fcn)(char *, ...),
+                              DB_DATA_VALUE  *db_dv);
+
+FUNC_EXTERN DB_STATUS adu_2strtomny_strict( ADF_CB              *adf_scb,
+                                        DB_DATA_VALUE           *str_dv,
+                                        DB_DATA_VALUE           *mny_dv,
+                                        bool                    strict);
+
+/* Compare data values for 'integer' data. */
+FUNC_EXTERN DB_STATUS adu_isinteger(ADF_CB	  *adf_scb,
+				    DB_DATA_VALUE *dv1,
+				    i4            *rcmp);
+
+/* Routine for coercing nchar and nvarchar types */
+FUNC_EXTERN DB_STATUS adu_nvchr_coerce(ADF_CB           *scb,
+                                       DB_DATA_VALUE    *dv_1,
+                                       DB_DATA_VALUE    *dv_2);
+
+/* Routine to coerce a variety of datatypes into decimal. */
+FUNC_EXTERN DB_STATUS adu_1dec_coerce (ADF_CB         *adf_scb,
+				       DB_DATA_VALUE  *dv1,
+				       DB_DATA_VALUE  *rdv);
+
+/* Routine to coerce a variety of datatypes into the f datatype.*/
+FUNC_EXTERN DB_STATUS adu_1flt_coerce (ADF_CB         *adf_scb,
+				       DB_DATA_VALUE  *dv1,
+				       DB_DATA_VALUE  *rdv);
+
+/* Routine to coerce a variety of datatypes into the i datatype. */
+FUNC_EXTERN DB_STATUS adu_1int_coerce (ADF_CB         *adf_scb,
+				       DB_DATA_VALUE  *dv1,
+				       DB_DATA_VALUE  *rdv);
+
+/* Routine to convert a variety of datatypes into 
+** c, text, char, varchar, or longtext. 
+*/
+FUNC_EXTERN DB_STATUS adu_ascii (ADF_CB         *adf_scb,
+				 DB_DATA_VALUE  *dv1,
+				 DB_DATA_VALUE  *rdv);
+
+/* Routine to format an absolute date (in GMT), 
+** in the form: 'yyyy.mm.dd hh:mm:ss GMT'. 
+*/
+FUNC_EXTERN DB_STATUS adu_dgmt (ADF_CB         *adf_scb,
+				DB_DATA_VALUE  *dv1,
+				DB_DATA_VALUE  *rdv);        
+
 FUNC_EXTERN DB_STATUS adu_nvchr_toutf8(ADF_CB	*adf_scb, 
 					DB_DATA_VALUE *dv,
 					DB_DATA_VALUE *rdv);  
+
 FUNC_EXTERN DB_STATUS adu_nvchr_fromutf8(ADF_CB	*adf_scb, 
 					DB_DATA_VALUE *dv,
 					DB_DATA_VALUE *rdv);
+
 FUNC_EXTERN DB_STATUS adu_unorm(ADF_CB	*adf_scb,
 				DB_DATA_VALUE  *dst_dv,
-				DB_DATA_VALUE  *src_dv,
-				i4              nfc_flag);
+				DB_DATA_VALUE  *src_dv);
+
 FUNC_EXTERN DB_STATUS adu_setnfc(ADF_CB	*adf_scb, 
 					DB_DATA_VALUE *dv,
 					DB_DATA_VALUE *rdv);  
+
 FUNC_EXTERN DB_STATUS adu_checksum(ADF_CB	*adf_scb, 
 					DB_DATA_VALUE *dv,
 					DB_DATA_VALUE *rdv);  
-FUNC_EXTERN DB_STATUS adg_init_unimap();
 
-FUNC_EXTERN DB_STATUS adg_clean_unimap();
+FUNC_EXTERN DB_STATUS adg_init_unimap(void);
+
+FUNC_EXTERN DB_STATUS adg_clean_unimap(void);
 
 FUNC_EXTERN DB_STATUS adu_dtntrnl_pend_date(ADF_CB *adf_scb,
         		      struct _AD_NEWDTNTRNL *inval);
@@ -4325,95 +4397,54 @@ FUNC_EXTERN DB_STATUS adu_6to_dtntrnl(ADF_CB	*adf_scb,
 FUNC_EXTERN DB_STATUS adu_utf8_unorm(ADF_CB	*adf_scb,
 				DB_DATA_VALUE  *dst_dv,
 				DB_DATA_VALUE  *src_dv);
+
+FUNC_EXTERN DB_STATUS adu_readmap(char *charset);
+
+FUNC_EXTERN DB_STATUS adu_deletemap(void);
+
+FUNC_EXTERN DB_STATUS adu_errorNV(ADF_CB	*adf_scb,
+				  i4		adf_errorcode,
+				  i4		pcnt,
+		    		  ...);
+
 # ifdef EX_included
 FUNC_EXTERN DB_STATUS adx_chkwarn(ADF_CB  *adf_scb);
+
 FUNC_EXTERN DB_STATUS adx_handler(ADF_CB   *adf_scb,
 				  EX_ARGS  *adx_exstruct);
+
 # endif /* EX_included */
 FUNC_EXTERN DB_STATUS adu_cmptversion(ADF_CB *adf_scb,
 				DB_DATA_VALUE *idv,
 				DB_DATA_VALUE *rdv);
-# else  /* ADF_BUILD_WITH_PROTOS */
-FUNC_EXTERN DB_STATUS adb_trace();
-FUNC_EXTERN VOID adb_optab_print();
-FUNC_EXTERN VOID adb_breakpoint();
-FUNC_EXTERN DB_STATUS adg_init();
-FUNC_EXTERN DB_STATUS adg_add_fexi();
-FUNC_EXTERN DB_STATUS adg_release();
-FUNC_EXTERN i4   adg_srv_size();
-FUNC_EXTERN DB_STATUS adg_startup();
-FUNC_EXTERN DB_STATUS adg_shutdown();
-FUNC_EXTERN DB_STATUS adi_0calclen();
-FUNC_EXTERN DB_STATUS adi_encode_colspec();
-FUNC_EXTERN DB_STATUS adi_dtinfo();
-FUNC_EXTERN DB_STATUS adi_per_under();
-FUNC_EXTERN DB_STATUS adi_cpficoerce();
-FUNC_EXTERN DB_STATUS adi_ficoerce();
-FUNC_EXTERN DB_STATUS adi_fidesc();
-FUNC_EXTERN DB_STATUS adi_fitab();
-FUNC_EXTERN DB_STATUS adi_opid();
-FUNC_EXTERN DB_STATUS adi_op_info();
-FUNC_EXTERN DB_STATUS adi_opname();
-FUNC_EXTERN DB_STATUS adi_pm_encode();
-FUNC_EXTERN DB_STATUS adi_tycoerce();
-FUNC_EXTERN DB_STATUS adi_tyid();
-FUNC_EXTERN DB_STATUS adi_tyname();
-FUNC_EXTERN DB_STATUS adi_res_type();
-FUNC_EXTERN DB_STATUS adi_resolve();
-FUNC_EXTERN DB_STATUS adi_dtfamily_resolve();
-FUNC_EXTERN DB_STATUS adi_dtfamily_resolve_union();
-FUNC_EXTERN DB_STATUS adi_need_dtfamily_resolve();
-FUNC_EXTERN DB_STATUS adc_compare();
-FUNC_EXTERN DB_STATUS adc_dbtoev();
-FUNC_EXTERN DB_STATUS adc_getempty();
-FUNC_EXTERN DB_STATUS adc_hashprep();
-FUNC_EXTERN DB_STATUS adc_helem();
-FUNC_EXTERN DB_STATUS adc_hg_dtln();
-FUNC_EXTERN DB_STATUS adc_dhmax();
-FUNC_EXTERN DB_STATUS adc_hmax();
-FUNC_EXTERN DB_STATUS adc_dhmin();
-FUNC_EXTERN DB_STATUS adc_hmin();
-FUNC_EXTERN DB_STATUS adc_minmaxdv();
-FUNC_EXTERN DB_STATUS adc_keybld();
-FUNC_EXTERN DB_STATUS adc_isminmax();
-FUNC_EXTERN DB_STATUS adc_klen();
-FUNC_EXTERN DB_STATUS adc_kcvt();
-FUNC_EXTERN DB_STATUS adc_lenchk();
-FUNC_EXTERN DB_STATUS adc_tmlen();
-FUNC_EXTERN DB_STATUS adc_tmcvt();
-FUNC_EXTERN DB_STATUS adc_valchk();
-FUNC_EXTERN DB_STATUS adc_hdec();
-FUNC_EXTERN DB_STATUS adc_cvinto();
-FUNC_EXTERN DB_STATUS adc_isnull();
-FUNC_EXTERN DB_STATUS adf_agbegin();
-FUNC_EXTERN DB_STATUS adf_agend();
-FUNC_EXTERN DB_STATUS adf_agnext();
-FUNC_EXTERN DB_STATUS adf_func();
-FUNC_EXTERN DB_STATUS adf_exec_quick();
-FUNC_EXTERN DB_STATUS adx_chkwarn();
-FUNC_EXTERN DB_STATUS adx_handler();
-FUNC_EXTERN DB_STATUS adc_date_chk();
-FUNC_EXTERN DB_STATUS adc_date_add();
-FUNC_EXTERN DB_STATUS adu_nvchr_toutf8();
-FUNC_EXTERN DB_STATUS adu_nvchr_fromutf8();
-FUNC_EXTERN DB_STATUS adg_init_unimap();
-FUNC_EXTERN DB_STATUS adg_clean_unimap();
-FUNC_EXTERN DB_STATUS adu_unorm();
-FUNC_EXTERN DB_STATUS adg_setnfc();
-FUNC_EXTERN DB_STATUS adu_checksum();
-FUNC_EXTERN DB_STATUS adu_7from_dtntrnl();
-FUNC_EXTERN DB_STATUS adu_dtntrnl_pend_date();
-FUNC_EXTERN DB_STATUS adu_6to_dtntrnl();
-FUNC_EXTERN i4 adu_date_format();
-FUNC_EXTERN char *adu_date_string();
-FUNC_EXTERN DB_STATUS adu_utf8_unorm();
-FUNC_EXTERN DB_STATUS adu_cmptversion();
-# endif  /* ADF_BUILD_WITH_PROTOS */
+FUNC_EXTERN i4 adu_date_format(char    *date_format);
+FUNC_EXTERN char * adu_date_string(i4      date_id);
+
+FUNC_EXTERN DB_STATUS adc_date_chk(ADF_CB        *adf_scb,
+				DB_DATA_VALUE *dateval,
+				i4            *result);
+FUNC_EXTERN DB_STATUS adc_date_add(ADF_CB        *adf_scb,
+				DB_DATA_VALUE  *dv1,
+				DB_DATA_VALUE  *dv2,
+				DB_DATA_VALUE  *rdv);
+FUNC_EXTERN VOID adu_prvalarg(  i4      (*fcn)(), 
+				PTR     arg,
+				DB_DATA_VALUE      *db_dv);
+
 FUNC_EXTERN DB_STATUS adu_0parsedate(ADF_CB	*adf_scb,
 				DB_DATA_VALUE	*str_dv,
 				DB_DATA_VALUE	*date_dv,
 				bool		strict,
 				bool		update_dv);
+
+FUNC_EXTERN DB_STATUS	adg_setnfc( ADF_CB *adf_scb);
+
+FUNC_EXTERN DB_STATUS	adi_coerce_dtfamily_resolve(ADF_CB   	    *adf_scb,
+						    ADI_FI_DESC     *oldfidesc,
+						    DB_DT_ID	    input,
+						    DB_DT_ID        output,
+						    ADI_FI_DESC     *newfidesc);
+
 
 /* Return statii for adu_patcomp_summary() */
 typedef enum _ADU_PAT_IS {
@@ -4431,13 +4462,16 @@ FUNC_EXTERN ADU_PAT_IS adu_patcomp_summary (
 FUNC_EXTERN DB_STATUS adu_decprec (ADF_CB	*adf_scb,
 				DB_DATA_VALUE	*dv1,
 				i2		*ps);
-FUNC_EXTERN DB_STATUS adu_2strtomny();   /* This routine converts a string
-                                            ** data value into a money data
-                                            ** value.
-                                            */
-FUNC_EXTERN DB_STATUS adu_9mnytostr();   /* Routine to coerce a money data
-                                            ** value into a string data value.
-                                            */
+
+/* This routine converts a string data value into a money data value.*/
+FUNC_EXTERN DB_STATUS adu_2strtomny( ADF_CB          *adf_scb,
+				     DB_DATA_VALUE   *str_dv,
+				     DB_DATA_VALUE   *mny_dv);   
+
+/* Routine to coerce a money data value into a string data value.  */
+FUNC_EXTERN DB_STATUS adu_9mnytostr(ADF_CB          *adf_scb,
+				    DB_DATA_VALUE   *mny_dv,
+				    DB_DATA_VALUE   *str_dv);   
 /*
 ** Routine used internally by ADF error handling,
 ** including message formatting.

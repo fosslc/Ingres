@@ -5,6 +5,7 @@
 #ifndef ADE_H_INCLUDED
 #define ADE_H_INCLUDED
 
+#include <adf.h>
 /**
 ** Name: ADE.H - External structures and constants needed for ADE.
 **
@@ -171,6 +172,8 @@
 **	14-Jul-2010 (kschendel) b123104
 **	    Delete settrue, setfalse;  will use ii_true and ii_false FI's
 **	    instead.
+**      23-Nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
 
 /*
@@ -763,7 +766,6 @@ typedef struct
 /*
 **  Forward and/or External function references.
 */
-# ifdef ADF_BUILD_WITH_PROTOS
 FUNC_EXTERN DB_STATUS ade_cx_space(ADF_CB   *adf_scb,
 				   i4       ade_ni,
 				   i4       ade_nop_tot,
@@ -866,31 +868,5 @@ FUNC_EXTERN VOID      afc_cx_print(PTR  cxbases[],
 FUNC_EXTERN VOID      afc_cxbrief_print(PTR   cxbases[],
 					PTR   cx,
 					char  *cxname);
-# else  /* ADF_BUILD_WITH_PROTOS */
-FUNC_EXTERN DB_STATUS ade_cx_space();
-FUNC_EXTERN DB_STATUS ade_bgn_comp();
-FUNC_EXTERN DB_STATUS ade_end_comp();
-FUNC_EXTERN DB_STATUS ade_const_gen();
-FUNC_EXTERN DB_STATUS ade_instr_gen();
-FUNC_EXTERN DB_STATUS ade_cxinfo();
-FUNC_EXTERN DB_STATUS ade_inform_space();
-FUNC_EXTERN DB_STATUS ade_vlt_space();
-FUNC_EXTERN DB_STATUS ade_execute_cx();
-FUNC_EXTERN DB_STATUS ade_countstar_loc();
-FUNC_EXTERN VOID      ade_cx_print();
-FUNC_EXTERN VOID      ade_cxbrief_print();
-FUNC_EXTERN DB_STATUS afc_cx_space();
-FUNC_EXTERN DB_STATUS afc_bgn_comp();
-FUNC_EXTERN DB_STATUS afc_end_comp();
-FUNC_EXTERN DB_STATUS afc_instr_gen();
-FUNC_EXTERN DB_STATUS afc_cxinfo();
-FUNC_EXTERN DB_STATUS afc_inform_space();
-FUNC_EXTERN DB_STATUS afc_cxhead_init();
-FUNC_EXTERN DB_STATUS afc_execute_cx();
-FUNC_EXTERN DB_STATUS afc_countstar_loc();
-FUNC_EXTERN VOID      afc_cx_print();
-FUNC_EXTERN VOID      afc_cxbrief_print();
-# endif /* ADF_BUILD_WITH_PROTOS */
-
 
 #endif /* ADE_H_INCLUDED */

@@ -16,6 +16,7 @@
 #include    <usererror.h>
 #include    <generr.h>
 #include    <sqlstate.h>
+#include    <add.h>
 
 /**
 **

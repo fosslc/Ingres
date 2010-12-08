@@ -50,6 +50,8 @@
 **	    outside the 0..252 range.
 **	19-Nov-2010 (kiria01) SIR 124690
 **	    Add support for UCS_BASIC collation.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
 
 #include <adp.h>
@@ -611,6 +613,13 @@ DB_STATUS adu_patda_get(AD_PAT_DA_CTX *dv_ctx);
 void adu_patda_ucs2_lower_1(ADUUCETAB*, const UCS2**, const UCS2*, UCS2**);
 void adu_patda_ucs2_upper_1(ADUUCETAB*, const UCS2**, const UCS2*, UCS2**);
 void adu_patda_ucs2_minmax_1(ADUUCETAB*, const UCS2**, const UCS2*, UCS2**, UCS2**);
+
+FUNC_EXTERN DB_STATUS	 adu_patcomp_set_pats (
+				AD_PAT_SEA_CTX *sea_ctx);
+
+FUNC_EXTERN VOID adu_patcomp_dump (
+        			PTR     data,
+        			char    *fname);
 
 extern i4 ADU_pat_debug;
 extern u_i4 ADU_pat_cmplx_lim;

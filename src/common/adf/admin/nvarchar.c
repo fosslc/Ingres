@@ -8,6 +8,8 @@
 ##	    Create varucs2 data type from various existing udt's.
 ##     20-feb-2001 (gupsh01)
 ##	    Modified varucs2 to nvarchar.	
+##      02-Dec-2010 (gupsh01) SIR 124685
+##          Protype cleanup.
 */
 #include    <ctype.h>
 #include    <stdio.h>
@@ -111,6 +113,18 @@ static VARUCS2 dummy;
 **	Forward static variable and function declarations
 **
 */
+
+II_STATUS
+convert_from_UTF8(      UTF8**      sourceStart,
+                  const UTF8*       sourceEnd,
+                        UCS2**      targetStart,
+                  const UCS2*       targetEnd);
+
+II_STATUS
+convert_to_UTF8 (       UCS2**	sourceStart,
+                  const UCS2*	sourceEnd,
+                        UTF8**	targetStart,
+                  const UTF8*	targetEnd);
 
 /*{
 ** Name: vucs2_compare	- Compare two VARUCS2s, for use by INGRES internally

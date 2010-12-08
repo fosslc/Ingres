@@ -11,6 +11,7 @@
 #include    <ulf.h>
 #include    <adfint.h>
 #include    <aduucol.h>
+#include    <aduint.h>
 
 /*
 ** Name: ADUUCMP.C - Collation modified string compare for Unicode
@@ -80,6 +81,8 @@
 **	19-Nov-2010 (kiria01) SIR 124690
 **	    Add support for UCS_BASIC collation. Add a 'Basic' option to
 **	    allow the returning of the raw code points as the CE.
+**      02-Dec-2010 (gupsh01) SIR 124685
+**          Prototype cleanup.
 */
 
 /* forward refs */

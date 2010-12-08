@@ -221,19 +221,14 @@
 **	    Added char and varchar support.
 **	19-feb-87 (thurston)
 **	    Added support for nullable datatypes.
+**	09-nov-2010 (gupsh01) SIR 124685
+**	    Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_getempty(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE	    *adc_emptydv)	/* Ptr to empty/null data value */
-# else
-DB_STATUS
-adc_getempty( adf_scb, adc_emptydv)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE	    *adc_emptydv;
-# endif
 {
     i4			bdt = abs((i4) adc_emptydv->db_datatype);
     i4			bdtv;

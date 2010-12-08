@@ -237,6 +237,8 @@
 **	    Added support for nullable datatypes.
 **	13-Jul-2006 (kschendel)
 **	    Do a little code bumming.
+**	09-nov-2010 (gupsh01) SIR 124685
+**	    Protype cleanup.
 */
 
 /* It's not clear that this is the best replacement for NULL, but
@@ -245,19 +247,11 @@
 static char null_hash[] = { '\377', '\377', '\377'};
 
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_hashprep(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE       *adc_dvfrom,
 DB_DATA_VALUE       *adc_dvhp)
-# else
-DB_STATUS
-adc_hashprep( adf_scb, adc_dvfrom, adc_dvhp)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE       *adc_dvfrom;
-DB_DATA_VALUE       *adc_dvhp;
-# endif
 {
     ADI_DATATYPE	*dtptr;
     DB_STATUS   	db_stat;

@@ -6,8 +6,8 @@
 #include    <gl.h>
 #include    <sl.h>
 #include    <iicommon.h>
-#include    <ade.h>
 #include    <adf.h>
+#include    <ade.h>
 #include    <ulf.h>
 #include    <adfint.h>
 #include    <adfhist.h>
@@ -212,21 +212,15 @@
 **	23-jul-93 (rganski)
 **	    Use data type status bits for the data type to determine if
 **	    histograms can be built. Replaces switch statement.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_hg_dtln(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE	    *adc_fromdv,
 DB_DATA_VALUE	    *adc_hgdv)
-# else
-DB_STATUS
-adc_hg_dtln( adf_scb, adc_fromdv, adc_hgdv)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE	    *adc_fromdv;
-DB_DATA_VALUE	    *adc_hgdv;
-# endif
 {
     DB_STATUS		db_stat;
     i4			bdt     = abs((i4) adc_fromdv->db_datatype);

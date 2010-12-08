@@ -216,9 +216,10 @@
 **	31-Aug-2009 (kschendel) b122510
 **	    Long datatypes allow parens, unfortunately, but the only legal
 **	    length value is zero.  Enforce same.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_encode_colspec(
 ADF_CB		    *adf_scb,
@@ -227,16 +228,6 @@ i4		    numnums,
 i4		    nums[],
 i4		    flags,
 DB_DATA_VALUE	    *dv)
-# else
-DB_STATUS
-adi_encode_colspec( adf_scb, name, numnums, nums, flags, dv)
-ADF_CB		    *adf_scb;
-char		    *name;
-i4		    numnums;
-i4		    nums[];
-i4		    flags;
-DB_DATA_VALUE	    *dv;
-# endif
 {
     ADI_DT_NAME		dt_name;
     ADI_DT_NAME		dt_name_num;

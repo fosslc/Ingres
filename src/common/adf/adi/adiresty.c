@@ -159,9 +159,10 @@
 **	    Support SINGLETON aggregate for scalar sub-query support.
 **	28-Jul-2010 (kiria01) b124142
 **	    SINGLETON should always be nullable.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_res_type(
 ADF_CB		*adf_scb,
@@ -169,15 +170,6 @@ ADI_FI_DESC	*adi_fidesc,
 i4		adi_numdts,
 DB_DT_ID	adi_dt[],
 DB_DT_ID	*adi_res_dt)
-# else
-DB_STATUS 
-adi_res_type(adf_scb, adi_fidesc, adi_numdts, adi_dt, adi_res_dt)
-ADF_CB		*adf_scb;
-ADI_FI_DESC	*adi_fidesc;
-i4		adi_numdts;
-DB_DT_ID	adi_dt[];
-DB_DT_ID	*adi_res_dt;
-# endif
 {
     ADI_OP_ID	    op   = adi_fidesc->adi_fiopid;
     i4		    nops = adi_fidesc->adi_numargs;

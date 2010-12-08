@@ -2355,6 +2355,8 @@ DB_DATA_VALUE	*str_dv)
 **	    Added support for BIGINT (i8).
 **      10-May-2010 (horda03) b123704
 **          Convert string data types.
+**	02-Dec-2010 (gupsh01) SIR 124685
+**	    Protype cleanup.
 */
 
 static	DB_STATUS
@@ -2418,7 +2420,7 @@ f8              *money)
 
 #   ifdef xDEBUG
     if (ult_check_macro(&Adf_globs->Adf_trvect,ADF_002_MNYFI_TRACE,&dum1,&dum2))
-        TRdisplay("ad0_makedbl: converted to f8, d=%24.6f\n", d);
+        TRdisplay("ad0_makedbl: converted to f8, d=%24.6f\n", *money);
 #   endif
 
     return (status);

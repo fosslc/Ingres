@@ -22,6 +22,7 @@
 #include    "adu1dates.h"
 #include    "adutime.h"
 #include    "adu2date.h"
+#include    "adudate.h"
 #include    "adumonth.h"
 /*  [@#include@]... */
 
@@ -360,6 +361,8 @@
 **          the date_part function may/may not work on an Interval, it depends on
 **          the 'unit' being requested (for example 'week' will not work on an
 **          interval. For this latter case, added new error E_US10F5.
+**	23-nov-2010 (gupsh01) SIR 124685
+**	    Protype cleanup.
 */
 
 /*  Static variable references	*/
@@ -551,6 +554,17 @@ static bool ad0_dtcvrt(ADF_CB	 *adf_scb,
 static VOID ad0_prelim_norml(DATEVECT  *dv);
 
 static VOID print_date(AD_NEWDTNTRNL *dn);
+
+static DB_STATUS
+adu_tzhour_part( ADF_CB              *adf_scb,
+                 DB_DATA_VALUE       *date_spec,
+                 DB_DATA_VALUE       *result);
+
+static DB_STATUS
+adu_tzminute_part( ADF_CB              *adf_scb,
+                   DB_DATA_VALUE       *date_spec,
+                   DB_DATA_VALUE       *result);
+
 
 /*{
 ** Name: adu_2datetodate() -	convert a date data value into a date
@@ -8911,9 +8925,11 @@ DB_DATA_VALUE       *result)
 ** History:
 **	16-jan-2007 (dougi)
 **	    Written to support timezone hour part extraction functions.
+**	02-dec-2010 (gupsh01) SIR 124685
+**	    Prototype cleanup
 */
 
-DB_STATUS
+static DB_STATUS
 adu_tzhour_part(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE       *date_spec,

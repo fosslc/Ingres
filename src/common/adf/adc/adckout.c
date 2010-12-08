@@ -194,23 +194,16 @@ static char	    ad0_hexchars[16] = { '0','1','2','3','4','5','6','7',
 **      22-mar-91 (jrb)
 **          Put comment markers around "xDEBUG" after #endif's.  This was
 **          causing problems on some compilers.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_klen(
 ADF_CB              *adf_scb,
 i4		    adc_flags,
 DB_DATA_VALUE	    *adc_dv,
 i4		    *adc_width)
-# else
-DB_STATUS
-adc_klen( adf_scb, adc_flags, adc_dv, adc_width)
-ADF_CB              *adf_scb;
-i4		    adc_flags;
-DB_DATA_VALUE	    *adc_dv;
-i4		    *adc_width;
-# endif
 {
     DB_STATUS		db_stat = E_DB_OK;
     i4			bdt = abs((i4) adc_dv->db_datatype);
@@ -377,9 +370,10 @@ i4		    *adc_width;
 **      22-mar-91 (jrb)
 **          Put comment markers around "xDEBUG" after #endif's.  This was
 **          causing problems on some compilers.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_kcvt(
 ADF_CB              *adf_scb,
@@ -387,15 +381,6 @@ i4		    adc_flags,
 DB_DATA_VALUE	    *adc_dv,
 char		    *adc_buf,
 i4		    *adc_buflen)
-# else
-DB_STATUS
-adc_kcvt( adf_scb, adc_flags, adc_dv, adc_buf, adc_buflen)
-ADF_CB              *adf_scb;
-i4		    adc_flags;
-DB_DATA_VALUE	    *adc_dv;
-char		    *adc_buf;
-i4		    *adc_buflen;
-# endif
 {
     DB_STATUS		db_stat = E_DB_OK;
     i4			bdt = abs((i4) adc_dv->db_datatype);

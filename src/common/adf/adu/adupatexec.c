@@ -40,6 +40,8 @@
 **	    to handle the UCS_BASIC UTF8 and renamed adu_pat_execute_uni() to
 **	    adu_pat_execute_uniCE() to highlight use of CEs and added a new
 **	    adu_pat_execute_uni() to handle UCS_BASIC UCS2
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
 
 #include <compat.h>
@@ -126,6 +128,8 @@ REG_PC = _ctx->pc;\
 u_i4 ADU_pat_cmplx_lim = 10;	/* MO:exp.adf.adu.pat_cmplx_lim */
 u_i4 ADU_pat_cmplx_max = 0;	/* MO:exp.adf.adu.pat_cmplx_max */
 
+/*static function */
+static AD_PAT_CTX *alloc_ctx(AD_PAT_CTX *ctx);
 
 /*
 ** Generic operator callout functions common to the date types:

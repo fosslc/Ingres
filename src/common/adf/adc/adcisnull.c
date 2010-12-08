@@ -129,21 +129,15 @@
 **	    be a "common datatype" routine anymore, since the approved
 **	    definition of what constitutes a null value is datatype
 **	    independent.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_isnull(
 ADF_CB             *adf_scb,
 DB_DATA_VALUE      *adc_dv,
 i4                 *adc_null)
-# else
-DB_STATUS
-adc_isnull( adf_scb, adc_dv, adc_null)
-ADF_CB             *adf_scb;
-DB_DATA_VALUE      *adc_dv;
-i4                 *adc_null;
-# endif
 {
     i4		   bdt = abs((i4) adc_dv->db_datatype);
 

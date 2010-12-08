@@ -207,7 +207,12 @@
 **	    Add function adu_norm_date_hash.
 **	19-Nov-2010 (kiria01) SIR 124690
 **	    Add support for UCS_BASIC collation - add adu_patcomp_kbld_uniCE
+**      23-Nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup. Moved some routines to adf.h eg 
+**	    adu_2prvalue, adu_2strtomny_strict,
 */
+#ifndef ADU_INT_HDR_INCLUDED
+#define ADU_INT_HDR_INCLUDED
 
 
 /*
@@ -240,10 +245,6 @@ typedef DB_STATUS ADU_NORM4_FUNC (ADF_CB         *adf_scb,
 				  DB_DATA_VALUE  *dv4,
 				  DB_DATA_VALUE  *rdv);
 
-FUNC_EXTERN ADU_NORM1_FUNC adu_ascii;       /* Routine to convert a variety of
-                                            ** datatypes into c, text, char,
-					    ** varchar, or longtext.
-                                            */
 FUNC_EXTERN ADU_NORM2_FUNC adu_ascii_2arg;  /* Support the two the
     	    	    	    	    	    ** arguments version of c(), 
                                             ** text(), char() and varchar()
@@ -260,15 +261,6 @@ FUNC_EXTERN ADU_NORM1_FUNC adu_bitlength;   /* Length of a bit operation */
 FUNC_EXTERN ADU_NORM1_FUNC adu_bitsize;     /* Provide declared size for bit 
 					    ** types 
 					    */
-FUNC_EXTERN ADU_NORM1_FUNC adu_1flt_coerce; /* Routine to coerce a variety of
-                                            ** datatypes into the f datatype.
-                                            */
-FUNC_EXTERN ADU_NORM1_FUNC adu_1dec_coerce; /* Routine to coerce a variety of
-                                            ** datatypes into decimal.
-                                            */
-FUNC_EXTERN ADU_NORM1_FUNC adu_1int_coerce; /* Routine to coerce a variety of
-                                            ** datatypes into the i datatype.
-                                            */
 FUNC_EXTERN ADU_NORM1_FUNC adu_bool_coerce; /* Routine to coerce a boolean
 					    ** into another boolean.
                                             */
@@ -293,10 +285,6 @@ FUNC_EXTERN ADU_NORM1_FUNC adu_trim;        /*Routine returns a text or varchar
 FUNC_EXTERN ADU_NORM2_FUNC adu_atrim;       /* Same as adu_trim , only using 
 					    ** ANSI semantics (also supports
 					    ** LEADING, TRAILING, BOTH options).
-                                            */
-FUNC_EXTERN ADU_NORM1_FUNC adu_dgmt;        /* Routine to format an absolute
-                                            ** date (in GMT), in the form:
-                                            ** 'yyyy.mm.dd hh:mm:ss GMT  '.
                                             */
 FUNC_EXTERN ADU_NORM1_FUNC adu_1dayofweek;  /* Routine to give the day of the
                                             ** week for a supplied date data
@@ -1159,11 +1147,6 @@ FUNC_EXTERN DB_STATUS adu_lexnumcomp(ADF_CB     *adf_scb,
 				  DB_DATA_VALUE	*dv2,
 				  i4		*rcmp);
 
-/* Compare data values for 'integer' data. */
-FUNC_EXTERN DB_STATUS adu_isinteger(ADF_CB     *adf_scb,
-				  DB_DATA_VALUE	*dv1,
-				  i4		*rcmp);
-
 /* Compare data values for 'decimal' data. */
 FUNC_EXTERN DB_STATUS adu_isdecimal(ADF_CB     *adf_scb,
 				  DB_DATA_VALUE	*dv1,
@@ -1354,11 +1337,6 @@ FUNC_EXTERN DB_STATUS adu_nvchr_trim(ADF_CB           *scb,
                                        DB_DATA_VALUE    *dv_1,
                                        DB_DATA_VALUE    *dv_result);
 
-/* Routine for coercing nchar and nvarchar types */
-FUNC_EXTERN DB_STATUS adu_nvchr_coerce(ADF_CB           *scb,
-                                       DB_DATA_VALUE    *dv_1,
-                                       DB_DATA_VALUE    *dv_2);
-
 /* Support the two argument version of nvarchar() */
 FUNC_EXTERN ADU_NORM2_FUNC adu_nvchr_2args;
 
@@ -1430,9 +1408,6 @@ FUNC_EXTERN VOID adu_prtype(DB_DATA_VALUE  *db_dv);
 
 FUNC_EXTERN VOID adu_prvalue(DB_DATA_VALUE  *db_dv);
 
-FUNC_EXTERN VOID adu_2prvalue(i4	     (*fcn)(char *, ...),
-			      DB_DATA_VALUE  *db_dv);
-
 FUNC_EXTERN VOID adu_prinstr(ADI_FI_ID  *instr);
 
 FUNC_EXTERN DB_STATUS adu_lolk(ADF_CB             *adf_scb,
@@ -1481,10 +1456,12 @@ FUNC_EXTERN DB_STATUS adu_nvchr_utf8_bldkey( ADF_CB          *scb,
 					ADC_KEY_BLK     *key_block);
 FUNC_EXTERN ADU_NORM1_FUNC adu_numeric_norm;
 
-FUNC_EXTERN DB_STATUS adu_2strtomny_strict( ADF_CB		*adf_scb,
-					DB_DATA_VALUE		*str_dv,
-					DB_DATA_VALUE		*mny_dv,
-					bool			strict);
-
+FUNC_EXTERN DB_STATUS adu_bool_istrue( ADF_CB *adf_scb,
+					DB_DATA_VALUE *dv1,
+					i4 *rcmp);
+FUNC_EXTERN DB_STATUS adu_bool_isfalse( ADF_CB *adf_scb,
+					DB_DATA_VALUE *dv1,
+					i4 *rcmp);
 FUNC_EXTERN ADU_NORM2_FUNC adu_aesdecrypt;
 FUNC_EXTERN ADU_NORM2_FUNC adu_aesencrypt;
+#endif /* ADU_INT_HDR_INCLUDED */

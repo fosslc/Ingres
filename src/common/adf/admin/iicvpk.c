@@ -38,6 +38,8 @@
 **	26-Oct-2005 (hanje04)
 **	    Add prototype for IICV0decerr, to prevent compiler errors
 **	    under GCC 4.0 due to conflicts with implicit prototypes.
+**      02-Dec-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
 
 /* local prototypes */
@@ -84,6 +86,96 @@ u_char		*c_to;
 #define     IICMnext(str)         (++(str))
 /* IICMwhite - check white space */
 #define     IICMwhite(str)        (*str == ' ' ? TRUE : FALSE)
+
+II_STATUS
+IICVpka(
+PTR	    pk,
+int	    prec,
+int	    scale,
+char	    decpt,
+int	    field_wid,
+int	    frac_digs,
+int	    options,
+char	    *str,
+int	    *res_wid);
+
+II_STATUS
+IICVapk(
+char	    *string,
+char	    decpt,
+int	    prec,
+int	    scale,
+PTR	    pk);
+
+II_STATUS
+IICVpkf(
+PTR	    pk,
+int	    prec,
+int	    scale,
+f8	    *fnum);
+
+II_STATUS
+IICVpkl(
+PTR         pk,
+int         prec,
+int         scale,
+int         *num);
+
+II_STATUS
+IICVlpk(
+int          num,
+int         prec,
+int         scale,
+PTR         pk);
+
+II_STATUS
+IICVl8pk(
+i8          num,
+int         prec,
+int         scale,
+PTR         pk);
+
+II_STATUS
+IICVfpk(
+f8          fnum,
+int         prec,
+int         scale,
+PTR         pk);
+
+II_STATUS
+IICVpkpk(
+PTR         pk_in,
+int         prec_in,
+int         scale_in,
+int         prec_out,
+int         scale_out,
+PTR         pk_out);
+
+II_STATUS
+IICVfa(
+f8	value,	
+int	width,	
+int	prec,	
+char	format,	
+char	decimal,
+char	*ascii,	
+short	*res_width
+);
+
+II_STATUS
+IICVfcvt
+(f8	value,
+char	*buffer,
+int	*digits,
+int	*exp,
+int	prec);
+
+II_STATUS
+IICVecvt(
+f8	value,
+char	*buffer,
+int	*digits,
+int	*exp);
 
 
 
@@ -265,16 +357,16 @@ u_char		*c_to;
 */
 
 II_STATUS
-IICVpka(pk, prec, scale, decpt, field_wid, frac_digs, options, str, res_wid)
-PTR	    pk;
-int	    prec;
-int	    scale;
-char	    decpt;
-int	    field_wid;
-int	    frac_digs;
-int	    options;
-char	    *str;
-int	    *res_wid;
+IICVpka(
+PTR	    pk,
+int	    prec,
+int	    scale,
+char	    decpt,
+int	    field_wid,
+int	    frac_digs,
+int	    options,
+char	    *str,
+int	    *res_wid)
 {
     char	dpoint = (decpt ? decpt : '.');
     char	*p = pk;
@@ -559,12 +651,12 @@ int	    *res_wid;
 */
 
 II_STATUS
-IICVapk(string, decpt, prec, scale, pk)
-char	    *string;
-char	    decpt;
-int	    prec;
-int	    scale;
-PTR	    pk;
+IICVapk(
+char	    *string,
+char	    decpt,
+int	    prec,
+int	    scale,
+PTR	    pk)
 {
     char	*x = string;		/* for traipsing thru string */
     char	*y;			/* ditto */
@@ -737,11 +829,11 @@ PTR	    pk;
 */
 
 II_STATUS
-IICVpkf(pk, prec, scale, fnum)
-PTR	    pk;
-int	    prec;
-int	    scale;
-f8	    *fnum;
+IICVpkf(
+PTR	    pk,
+int	    prec,
+int	    scale,
+f8	    *fnum)
 {
     f8		val = 0.0;		/* accumulator for fnum */
     f8		npt = 0.1;		/* negative powers of ten */
@@ -869,11 +961,11 @@ int	prec;
 */
 
 II_STATUS
-IICVpkl(pk, prec, scale, num)
-PTR         pk;
-int         prec;
-int         scale;
-int         *num;
+IICVpkl(
+PTR         pk,
+int         prec,
+int         scale,
+int         *num)
 {
     long     val = 0;                /* accumulator for num */
     long     ovrchk;                 /* for checking overflow */
@@ -964,11 +1056,11 @@ int         *num;
  */
  
  II_STATUS
- IICVlpk(num, prec, scale, pk)
- int          num;
- int         prec;
- int         scale;
- PTR         pk;
+ IICVlpk(
+ int          num,
+ int         prec,
+ int         scale,
+ PTR         pk)
  {
      int         pr = scale + 1;         /* no. of nybbles from the left */
      u_char      *p;                     /* points into pk */
@@ -1045,11 +1137,11 @@ int         *num;
 */
  
 II_STATUS
-IICVl8pk(num, prec, scale, pk)
-i8          num;
-int         prec;
-int         scale;
-PTR         pk;
+IICVl8pk(
+i8          num,
+int         prec,
+int         scale,
+PTR         pk)
 {
     int         pr = scale + 1;         /* no. of nybbles from the left */
     u_char      *p;                     /* points into pk */
@@ -1135,11 +1227,11 @@ PTR         pk;
  */
  
  II_STATUS
- IICVfpk(fnum, prec, scale, pk)
- f8          fnum;
- int         prec;
- int         scale;
- PTR         pk;
+ IICVfpk(
+ f8          fnum,
+ int         prec,
+ int         scale,
+ PTR         pk)
  {
      u_char      buff[31+6];
      short       res_wid;
@@ -1201,13 +1293,13 @@ PTR         pk;
 */
 
 II_STATUS
-IICVpkpk(pk_in, prec_in, scale_in, prec_out, scale_out, pk_out)
-PTR         pk_in;
-int         prec_in;
-int         scale_in;
-int         prec_out;
-int         scale_out;
-PTR         pk_out;
+IICVpkpk(
+PTR         pk_in,
+int         prec_in,
+int         scale_in,
+int         prec_out,
+int         scale_out,
+PTR         pk_out)
 {
     u_char      *pi = (u_char *)pk_in;
     u_char      *po = (u_char *)pk_out;
@@ -1304,14 +1396,15 @@ PTR         pk_out;
 # define	N_FORMAT	('n' & 0xf)
 
 II_STATUS
-IICVfa(value, width, prec, format, decimal, ascii, res_width)
-f8	value;		/*	value to be converted			*/
-int	width;		/*	the width of the formatted item		*/
-int	prec;		/*	number of digits of precision		*/
-char	format;		/*	format type (e,f,g,n)			*/
-char	decimal;	/*	decimal character to use		*/
-char	*ascii;		/*	where to put the converted value	*/
-short	*res_width;	/*	where to put width of the output field  */
+IICVfa(
+f8	value,		/*	value to be converted			*/
+int	width,		/*	the width of the formatted item		*/
+int	prec,		/*	number of digits of precision		*/
+char	format,		/*	format type (e,f,g,n)			*/
+char	decimal,	/*	decimal character to use		*/
+char	*ascii,		/*	where to put the converted value	*/
+short	*res_width	/*	where to put width of the output field  */
+)
 {
     char	decchar = (decimal ? decimal : '.');
     int	overflow_width;	    /* # chars to fill with '*' on overflow */
@@ -1585,11 +1678,11 @@ int	prec;
 **          Created new.
 */
 II_STATUS
-IICVecvt(value, buffer, digits, exp)
-f8	value;
-char	*buffer;
-int	*digits;
-int	*exp;
+IICVecvt(
+f8	value,
+char	*buffer,
+int	*digits,
+int	*exp)
 {
 	int	sign;
 	char	*temp;

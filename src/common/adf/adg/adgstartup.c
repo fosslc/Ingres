@@ -465,7 +465,7 @@ static	i4	    ad0_hfinit(ADC_HDEC  *adc_hdec);
 */
 
 i4
-adg_srv_size()
+adg_srv_size(void)
 {
     i4		s = sizeof(ALIGN_RESTRICT);
 
@@ -636,22 +636,16 @@ adg_srv_size()
 **	    Remove double decl of "env" caused by x-integration.
 **	24-oct-2006 (dougi)
 **	    Add function to validate sequence of default FI table entries.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adg_startup(
 PTR		    adf_srv_cb,
 i4		    adf_size,
 ADF_TAB_DBMSINFO    *adf_dbi_tab,
 i4		    c2secure)
-# else
-DB_STATUS adg_startup( adf_srv_cb, adf_size, adf_dbi_tab, c2secure)
-PTR		    adf_srv_cb;
-i4		    adf_size;
-ADF_TAB_DBMSINFO    *adf_dbi_tab;
-i4		    c2secure;
-# endif
 {
     DB_STATUS  		db_stat;
     ADF_SERVER_CB	*scb = (ADF_SERVER_CB *) adf_srv_cb;
@@ -981,19 +975,14 @@ i4		    c2secure;
 **          Added room for FEXI table.
 **	12-july-06 (dougi)
 **	    Replicate earlier hack for type family coercion structures.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 [@history_template@]...
 */
-# ifdef ADF_BUILD_WITH_PROTOS
 i4
 adg_sz_augment(
 ADD_DEFINITION     *new_objects,
 DB_ERROR           *error)
-# else
-i4 
-adg_sz_augment(new_objects, error)
-ADD_DEFINITION     *new_objects;
-DB_ERROR           *error;
-# endif
 {
     i4		current_size;
     i4		size_object;    
@@ -3878,7 +3867,7 @@ ADC_HDEC    *adc_hdec)
 **	    Return the status as promised.
 */
 DB_STATUS
-adg_init_unimap()
+adg_init_unimap(void)
 {
   STATUS db_stat = OK;
   char converter[MAX_LOC];

@@ -153,23 +153,16 @@
 **	    table.
 **	22-Oct-07 (kiria01) b119354
 **	    Split adi_dtcoerce into a quel and SQL version
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_ficoerce(
 ADF_CB              *adf_scb,
 DB_DT_ID            adi_from_did,
 DB_DT_ID            adi_into_did,
 ADI_FI_ID           *adi_fid)
-# else
-DB_STATUS
-adi_ficoerce( adf_scb, adi_from_did, adi_into_did, adi_fid)
-ADF_CB              *adf_scb;
-DB_DT_ID            adi_from_did;
-DB_DT_ID            adi_into_did;
-ADI_FI_ID           *adi_fid;
-# endif
 {
     DB_DT_ID		from_bdt = abs(adi_from_did);
     DB_DT_ID		into_bdt = abs(adi_into_did);
@@ -300,23 +293,16 @@ ADI_FI_ID           *adi_fid;
 **	    routine has been beefed up.
 **	09-Mar-1999 (shero03)
 **	    Support data type array in fidesc
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_cpficoerce(
 ADF_CB              *adf_scb,
 DB_DT_ID            adi_from_did,
 DB_DT_ID            adi_into_did,
 ADI_FI_ID           *adi_fid)
-# else
-DB_STATUS
-adi_cpficoerce( adf_scb, adi_from_did, adi_into_did, adi_fid)
-ADF_CB              *adf_scb;
-DB_DT_ID            adi_from_did;
-DB_DT_ID            adi_into_did;
-ADI_FI_ID           *adi_fid;
-# endif
 {
     DB_DT_ID		from_bdt = abs(adi_from_did);
     DB_DT_ID		into_bdt = abs(adi_into_did);

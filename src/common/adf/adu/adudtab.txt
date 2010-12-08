@@ -109,7 +109,21 @@
 **    The -m 50 option is not essential but it tells gperf to run more
 **    trials.  50 seems plenty to get the smallest output table.
 **
-** 4) Build, verify that the change is OK, and submit both adudtab.txt
+** 4) Prototype Cleanup (Bug 124685) (gupsh01)
+**    Add the following lines between prototypes to 
+**    the begining of adudtab.h 
+**
+static unsigned int
+adu_dttemplate_hash (
+     register const char *str,
+     register unsigned int len);
+
+const struct _ANSIDATETMPLT *
+adu_dttemplate_lookup (
+     register const char *str,
+     register unsigned int len);
+**
+** 5) Build, verify that the change is OK, and submit both adudtab.txt
 **    and adudtab.h back into source control.
 **
 ** Edit History:
@@ -117,8 +131,11 @@
 **	    Create: Speed up date scanning with perfect hash.
 **	    Correct a long-standing error with n-n in YMD format,
 **	    should be ingresdate only, not CHK.
+**	2-Dec-2012 (gupsh01) SIR 124685
+**	    Prototype cleanup.
 */
 
+%language=ANSI-C
 %readonly-tables
 %struct-type
 struct _ANSIDATETMPLT;

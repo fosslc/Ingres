@@ -55,6 +55,8 @@
 **	    replace nat and longnat with i4
 **      12-Apr-2004 (stial01)
 **          Define add_length as SIZE_TYPE.
+**      23-Nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
 /*
 **	NOT CURRENTLY USED -- BUT LEFT AS PLACEHOLDERS
@@ -69,7 +71,8 @@
 /*
 **  Defines of other constants.
 */
-
+#ifndef ADF_ADD_HDR_INCLUDED
+#define ADF_ADD_HDR_INCLUDED
 /*
 **      Lock key for use in managing User defined datatypes
 */
@@ -113,11 +116,15 @@
 **          actually being called.
 [@history_template@]...
 */
-typedef DB_STATUS ADD_ERROR_WRITER(PTR      scb,
-				   i4  err_num,
-				   char     *text);
+typedef DB_STATUS ADD_ERROR_WRITER(PTR		scb,
+				   i4		err_num,
+				   char		*text);
 
-FUNC_EXTERN ADD_ERROR_WRITER adu_ome_error;
+/* FUNC_EXTERN ADD_ERROR_WRITER adu_ome_error; */
+
+FUNC_EXTERN DB_STATUS adu_ome_error(ADF_CB	*scb,
+				    i4		 e_number,
+              			    char	*e_text);
 
 typedef DB_STATUS ADD_LO_HANDLER(i4  op_code,
 				 PTR  pop_cb);
@@ -444,3 +451,5 @@ FUNC_EXTERN DB_STATUS adg_augment(ADD_DEFINITION  *new_objects,
 
 FUNC_EXTERN i4   adg_sz_augment(ADD_DEFINITION     *new_objects,
 				     DB_ERROR           *error);
+
+#endif /* define ADF_ADD_HDR_INCLUDED */

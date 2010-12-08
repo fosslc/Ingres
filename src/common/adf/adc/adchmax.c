@@ -204,21 +204,15 @@
 **	    adc_hg_dtln(), which now uses this length as an input parameter.
 **	19-Nov-2010 (kiria01) SIR 124690
 **	    Ensure whole DBV copied.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_dhmax(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE	    *adc_fromdv,
 DB_DATA_VALUE	    *adc_max_dvdhg)
-# else
-DB_STATUS
-adc_dhmax( adf_scb, adc_fromdv, adc_max_dvdhg)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE	    *adc_fromdv;
-DB_DATA_VALUE	    *adc_max_dvdhg;
-# endif
 {
     DB_STATUS		db_stat = E_DB_OK;
     i4			bdt     = abs((i4) adc_fromdv->db_datatype);
@@ -428,21 +422,15 @@ DB_DATA_VALUE	    *adc_max_dvdhg;
 **	18-jan-93 (rganski)
 **	    Initialized loc_hgdv.db_length before xDEBUG call to
 **	    adc_hg_dtln(), which now uses this length as an input parameter.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_hmax(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE	    *adc_fromdv,
 DB_DATA_VALUE	    *adc_max_dvhg)
-# else
-DB_STATUS
-adc_hmax( adf_scb, adc_fromdv, adc_max_dvhg)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE	    *adc_fromdv;
-DB_DATA_VALUE	    *adc_max_dvhg;
-# endif
 {
     DB_STATUS           db_stat = E_DB_OK;
     i4			bdt     = abs((i4) adc_fromdv->db_datatype);

@@ -155,21 +155,15 @@
 **	    the error status E_AD2010_BAD_FIID instead.
 **      27-jul-86 (ericj)
 **	    Converted for new ADF error handling.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_fidesc(
 ADF_CB		    *adf_scb,
 ADI_FI_ID	    adi_fid,
 ADI_FI_DESC	    **adi_fdesc)
-# else
-DB_STATUS
-adi_fidesc(adf_scb, adi_fid, adi_fdesc)
-ADF_CB		    *adf_scb;
-ADI_FI_ID	    adi_fid;
-ADI_FI_DESC	    **adi_fdesc;
-# endif
 {
     ADI_FI_DESC		*fi;
 
