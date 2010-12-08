@@ -168,21 +168,15 @@
 **	    well as the SQL semantics for aggregates over empty sets.
 **	09-mar-92 (jrb, merged by stevet)
 **	    Handle DB_ALL_TYPE in function instance.  For outer join project.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adf_agend(
 ADF_CB             *adf_scb,
 ADF_AG_STRUCT      *adf_agstruct,
 DB_DATA_VALUE      *adf_dvresult)
-# else
-DB_STATUS
-adf_agend( adf_scb, adf_agstruct, adf_dvresult)
-ADF_CB             *adf_scb;
-ADF_AG_STRUCT      *adf_agstruct;
-DB_DATA_VALUE      *adf_dvresult;
-# endif
 {
     ADI_FI_ID		fid = adf_agstruct->adf_agfi;
     ADI_FI_DESC		*fidesc;

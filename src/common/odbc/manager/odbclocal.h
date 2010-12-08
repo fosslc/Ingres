@@ -43,6 +43,8 @@
 **   08-Oct-2010 (Ralph Loen) Bug 124578
 **      Added  MAX_CONNSTR_OUTLEN for SQLBrowseConnect() and 
 **      SQLBrowseConnectW().
+**   15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**      Changes to eliminate compiler prototype warnings.
 */
 typedef struct
 {
@@ -421,17 +423,17 @@ BOOL initLock( i2, SQLHANDLE );
 BOOL applyLock( i2, SQLHANDLE );
 BOOL releaseLock( i2, SQLHANDLE );
 BOOL deleteLock( i2, SQLHANDLE );
-void IIodbc_initTrace();
-void IIodbc_termTrace();
-BOOL isCLI();
-void IIodbc_initControlBlock();
+void IIodbc_initTrace(void);
+void IIodbc_termTrace(void);
+BOOL isCLI(void);
+void IIodbc_initControlBlock(void);
 BOOL IIodbc_fetchPoolElement (pDBC pdbc, const i2 pool_type, pDBC 
     *pdbcMatch);
-BOOL IIodbc_freeEnvHandles ();
+BOOL IIodbc_freeEnvHandles (void);
 BOOL IIodbc_freePoolHandle (pDBC pdbc);
 BOOL IIodbc_connStringMatches(char *str1, char *str2);
 BOOL IIodbc_formatConnHandle(char *szConnStrIn, pDBC pdbc);
 i4 IIodbc_encode( char *str, char *key, char *buff );
 i4 IIodbc_decode( char *str, char *key, char *buff );
-void IIodbc_timeOutThread();
-BOOL IIodbc_createPoolThread();
+void IIodbc_timeOutThread(void);
+BOOL IIodbc_createPoolThread(void);

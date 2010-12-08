@@ -16,6 +16,7 @@
 # include	<clsocket.h>
 
 # include	<bsi.h>
+# include	"handylocal.h"
 
 # if defined(POSIX_THREADS) && defined(any_hpux)
 # include	<netdb.h>
@@ -138,13 +139,14 @@
 **	    to semicolon (;) since colon is valid in IPv6 addresses.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of handylocal.h.
+**	1-Dec-2010 (kschendel)
+**	    Modernize declaration style to stop Solaris compiler complaints.
 */
 
 STATUS
-BS_tcp_addr( buf, outbound, s )
-char	*buf;
-bool	outbound;
-struct sockaddr_in *s;
+BS_tcp_addr( char *buf, bool outbound, struct sockaddr_in *s )
 {
 	char	*p;
 	char	hostname[ MAXHOSTNAME ];
@@ -297,11 +299,7 @@ struct sockaddr_in *s;
 */
 
 STATUS
-BS_tcp_addrinfo( buf, outbound, ip_family, aiList )
-char	*buf;
-bool	outbound;
-int	ip_family;
-struct addrinfo **aiList;
+BS_tcp_addrinfo( char *buf, bool outbound, int ip_family, struct addrinfo **aiList )
 {
 	char	*p;
 	char	port_zero[] = "0";

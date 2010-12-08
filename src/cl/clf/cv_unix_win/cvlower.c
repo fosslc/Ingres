@@ -5,6 +5,7 @@
 # include	<compat.h>
 # include	<gl.h>
 # include	<cm.h>
+# include	<cv.h>
 
 
 /**
@@ -58,6 +59,8 @@
 **          Will be revisited and submitted at a later date. 
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of cv.h neccessary for CVlower_DB.
 **/
 
 /* # defines */

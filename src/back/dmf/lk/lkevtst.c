@@ -32,13 +32,16 @@ static STATUS	lock_event_tests(VOID);
 static STATUS get_input(i4	    *data);
 
 
-VOID 
+int 
 main(argc, argv)
 i4	argc;
 char	*argv[];
 {
     MEadvise(ME_INGRES_ALLOC);
     PCexit(lock_event_tests());
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 /*{
@@ -95,6 +98,8 @@ char	*argv[];
 **	    For supportability add process info to shared memory.
 **	09-Dec-2008 (jonj)
 **	    SIR 120874: replace uses of CL_SYS_ERR with CL_ERR_DESC
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Change main function to return int, not VOID.
 [@history_template@]...
 */
 static STATUS

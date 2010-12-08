@@ -8,6 +8,7 @@
 #include    <compat.h>
 #include    <gl.h>
 #include    <st.h>
+#include    <ut.h>
 #include    <systypes.h>
 #include    <stdarg.h>
 
@@ -92,6 +93,8 @@
 **	05-Feb-2004 (hanje04)
 **	    Remove first 4 calls to va_arg from II_subst as these arguments
 **	    are now declared explicitly in the function.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of ut.h for prototype include from utcl.h.
 */
 
 /* VARARGS4 */

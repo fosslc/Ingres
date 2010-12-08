@@ -19,12 +19,18 @@ NO_OPTIM=dr6_us5 i64_aix
 #include    <ulf.h>
 #include    <scf.h>
 #include    <dudbms.h>
-#include    <dmccb.h>
 #include    <dmmcb.h>
 #include    <dm.h>
 #include    <dmp.h>
 #include    <dmm.h>
 #include    <dm2d.h>
+/* these to get dml.h */
+#include    <dmccb.h>
+#include    <dmrcb.h>
+#include    <dmscb.h>
+#include    <dmtcb.h>
+#include    <dmxcb.h>
+#include    <dml.h>
 
 /**
 ** Name: DMCADD.C - Functions used to add a database to a server.
@@ -91,6 +97,8 @@ NO_OPTIM=dr6_us5 i64_aix
 **	    dm2d_? functions converted to DB_ERROR *
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dml.h to get dmc_add_db() prototype.
 **/
 
 /*{
@@ -245,6 +253,10 @@ NO_OPTIM=dr6_us5 i64_aix
 **	    Change cmptlvl to an integer.
 **	09-aug-2010 (maspa05) b123189, b123960
 **	    Pass flag for readonlydb through to dm2d_add_db
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Add DMC2_NODBMO to prevent making MO objects for
+**	    database, typically when fetching iidbdb information.
+**	    Pass along to dm2d as DM2D_NODBMO.
 */
 
 static const DMM_LOC_LIST    loc_list[4] =
@@ -355,6 +367,14 @@ DMC_CB    *dmc_cb)
 
         if (dmc->dmc_flags_mask2 & DMC2_READONLYDB)
             flags |= DM2D_READONLYDB;
+
+	/* No MO objects if so requested */
+	if ( dmc->dmc_flags_mask2 & DMC2_NODBMO ||
+	     mode == DMC_A_CREATE || mode == DMC_A_DESTROY )
+	{
+	    flags |= DM2D_NODBMO;
+	}
+
 	/*
 	** It is an error to specify Fast Commit without specifying to
 	** use a single buffer manager.

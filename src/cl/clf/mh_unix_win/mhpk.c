@@ -50,6 +50,8 @@
 **	16-jan-2007 (dougi)
 **	    Changed 31 digit max to 39 digit and replaced constants by
 **	    CL_MAX_DECPREC.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Completed declaration of MH0decexc.
 **/
  
 
@@ -65,7 +67,11 @@
 **  Definition of static variables and forward static functions.
 */
 
-static  VOID	MH0decexc();	    /* exception signaller */
+/* exception signaller */
+static VOID MH0decexc(
+	EX	exc,
+	PTR	pkbuff,
+	i4	prec);
 
 /*
 [@static_variable_or_function_definition@]...

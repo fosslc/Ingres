@@ -56,6 +56,8 @@
 **      Scanning for the first non-zero lead value within the components of
 **      the input value is limited to the maximum number of indexing
 **      components of the Trie data structure.
+**	02-Dec-2010 (gupsh01) SIR 124685
+**	    Protype cleanup.
 */
 
 /*
@@ -169,17 +171,75 @@
 **		.
 */
 
-/* Forward structure declaration typedefs */
+/* Static functions declarations */
 
-/* Defines for mapping table retievals 
-# define 	One_byte 	8
-# define 	Two_byte 	16
-# define 	MaxMultiByte 	2
-# define 	mask1		0x00FF
-# define 	mask2		0xFFFF
-# define 	ILLEGAL 	0xffff;
-# define 	BYTE_SUBCHAR 	0xfffe;
-*/
+static DB_STATUS
+adu_map_append_validity(
+    ADU_MAP_STATETABLE  **vtabptr,
+    ADU_MAP_VALIDITY    *validity);
+
+static DB_STATUS
+adu_map_init_charmap(
+    u_i4        ****Base,
+    u_i4        ***Default2D,
+    u_i4        **Default);
+
+static void
+adu_map_add_charmap(
+    u_i4        ***Base,
+    u_i4        **Default2D,
+    u_i4        *Default,
+    u_i4        bval,
+    u_i2        unicode,
+    u_i2        uhsur);
+
+static void
+adu_map_delete_charmap(
+    u_i4        ****Base,
+    u_i4        ***Default2D,
+    u_i4        **Default);
+
+static DB_STATUS
+adu_initmap(
+    ADU_MAP_HEADER      *header,
+    ADU_MAP_VALIDITY    *validities,
+    ADU_MAP_ASSIGNMENT  *assignments
+);
+
+static void
+adu_map_delete_vldtbl (
+    ADU_MAP_STATETABLE *validity_table);
+
+static DB_STATUS
+adu_map_init_unimap(
+    u_i2 	***UniBase, 
+    u_i2 	**Unidefault, 
+    u_i2 	subchar);
+
+static void 
+adu_map_add_unimap (
+    u_i2 	**UniBase, 
+    u_i2 	*Unidefault, 
+    u_i2 	local, 
+    u_i2 	unicode, 
+    u_i2 	uhsur,
+    u_i2 	subchar);
+
+static void 
+adu_map_delete_unimap(
+    u_i2	***UniBase, 
+    u_i2	**Unidefault);
+
+static DB_STATUS
+adu_initmap(
+    ADU_MAP_HEADER	*header,
+    ADU_MAP_VALIDITY	*validities,
+    ADU_MAP_ASSIGNMENT	*assignments);
+
+static void 
+adu_map_delete_vldtbl (
+    ADU_MAP_STATETABLE *validity_table);
+
 
 /* Name: adu_map_check_validity - checks the validity of a byte sequence against 
 ** 				  the validity table.
@@ -215,7 +275,7 @@
 **      Ensure that the scan through the array inbyte is limited to the bounds
 **      of the array.
 */
-STATUS 
+DB_STATUS 
 adu_map_check_validity(
     ADU_MAP_STATETABLE 	*validitytable, 
     u_i4  		*bval)
@@ -304,7 +364,7 @@ adu_map_check_validity(
 **      04-Feb-2004 (gupsh01)
 **	    Modified strcmp to STbcompare.
 */
-STATUS
+static DB_STATUS
 adu_map_append_validity(
     ADU_MAP_STATETABLE 	**vtabptr, 
     ADU_MAP_VALIDITY 	*validity)
@@ -434,7 +494,7 @@ adu_map_append_validity(
 **      23-Jan-2004 (gupsh01)
 **          Added.
 */
-STATUS 
+static DB_STATUS 
 adu_map_init_charmap(
     u_i4 	****Base, 
     u_i4	***Default2D, 
@@ -481,7 +541,7 @@ adu_map_init_charmap(
 **      23-Jan-2004 (gupsh01)
 **          Added.
 */
-void
+static void
 adu_map_add_charmap(
     u_i4 	***Base, 
     u_i4 	**Default2D, 
@@ -559,7 +619,7 @@ adu_map_get_chartouni(
 **	10-Aug-2005 (gupsh01)
 **	    Free Base and Default2D. (Bug 115022) 
 */
-void 
+static void 
 adu_map_delete_charmap(
     u_i4 	****Base, 
     u_i4 	***Default2D, 
@@ -632,14 +692,14 @@ adu_map_delete_charmap(
 **      23-Jan-2004 (gupsh01)
 **          Added.
 */
-STATUS
+static DB_STATUS
 adu_map_init_unimap(
     u_i2 	***UniBase, 
     u_i2 	**Unidefault, 
     u_i2 	subchar)
 {
     i4 		i=0;
-    STATUS 	stat = E_DB_OK;
+    DB_STATUS 	stat = E_DB_OK;
     if ((UniBase == NULL) || (Unidefault == NULL))
       return (E_DB_ERROR);	/*Error Condition*/
 
@@ -675,7 +735,7 @@ adu_map_init_unimap(
 **      23-Jan-2004 (gupsh01)
 **          Added.
 */
-void 
+static void 
 adu_map_add_unimap (
     u_i2 	**UniBase, 
     u_i2 	*Unidefault, 
@@ -744,7 +804,7 @@ adu_map_get_unitochar(
 **	    of UniBase and Unidefault, so we can free them
 **	    (Bug 115022) 
 */
-void 
+static void 
 adu_map_delete_unimap(
     u_i2	***UniBase, 
     u_i2	**Unidefault)
@@ -799,14 +859,14 @@ adu_map_delete_unimap(
 **	    Compiler warning fixes.
 **
 */
-STATUS
+DB_STATUS
 adu_readmap(char *charset)
 {
     CL_ERR_DESC         syserr;
     char                *buf = NULL;
     char                *bufptr = NULL;
     i4                  bytes_read = 0;
-    STATUS              stat = OK;
+    DB_STATUS              stat = OK;
     ADU_MAP_HEADER      *header;
     ADU_MAP_ASSIGNMENT	*assignments;
     char		*aptr;
@@ -1048,7 +1108,7 @@ adu_readmap(char *charset)
 **	    character 0xFFFD if the unicode code point is not found
 **	    for the char in question in the table.
 */
-STATUS
+static DB_STATUS
 adu_initmap(
     ADU_MAP_HEADER	*header,
     ADU_MAP_VALIDITY	*validities,
@@ -1056,7 +1116,7 @@ adu_initmap(
 )
 {
     ADU_MAP_INFO         *mapinfo;
-    STATUS		 stat;
+    DB_STATUS		 stat;
     u_i4 		***cbase; 
     u_i4		**default2d; 
     u_i4 		*default1d;
@@ -1152,7 +1212,7 @@ adu_initmap(
 **      02-Sep-2004 (gupsh01)
 **          Added.
 */
-void 
+static void 
 adu_map_delete_vldtbl (
     ADU_MAP_STATETABLE *validity_table)
 {
@@ -1213,10 +1273,10 @@ adu_map_delete_vldtbl (
 **	    Free charmapptr and unimapptr.(Bug 115022) 
 **
 */
-STATUS
-adu_deletemap()
+DB_STATUS
+adu_deletemap(void)
 {
-   STATUS		status;
+   DB_STATUS		status;
    ADU_MAP_HEADER 	*header;
    ADU_MAP_CHARMAP	*charmapptr;
    ADU_MAP_UNIMAP	*unimapptr;

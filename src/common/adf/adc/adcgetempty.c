@@ -93,12 +93,12 @@
 **	08-Feb-2008 (kiria01) b119885
 **	    Change dn_time to dn_seconds to avoid the inevitable confusion with
 **	    the dn_time in AD_DATENTRNL.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
 **      10-aug-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1getempty_rti.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **/
@@ -221,19 +221,14 @@
 **	    Added char and varchar support.
 **	19-feb-87 (thurston)
 **	    Added support for nullable datatypes.
+**	09-nov-2010 (gupsh01) SIR 124685
+**	    Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_getempty(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE	    *adc_emptydv)	/* Ptr to empty/null data value */
-# else
-DB_STATUS
-adc_getempty( adf_scb, adc_emptydv)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE	    *adc_emptydv;
-# endif
 {
     i4			bdt = abs((i4) adc_emptydv->db_datatype);
     i4			bdtv;

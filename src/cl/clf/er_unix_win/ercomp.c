@@ -21,38 +21,6 @@
 /*
 **  Forward and/or External function references.
 */
-FUNC_EXTERN 	VOID	check_arg();
-FUNC_EXTERN 	VOID	usage();
-FUNC_EXTERN 	VOID	sort_msg();
-FUNC_EXTERN 	STATUS	parser();
-FUNC_EXTERN	VOID	build_ss_list();
-FUNC_EXTERN	STATUS	validate_sqlstate();
-FUNC_EXTERN 	STATUS  build_fast_index();
-FUNC_EXTERN 	STATUS	build_slow_index();
-FUNC_EXTERN 	STATUS	take();
-FUNC_EXTERN 	char	*scan();
-FUNC_EXTERN	bool	get_record();
-FUNC_EXTERN	bool	open_input_file();
-FUNC_EXTERN	VOID	delete_file();
-VOID	put_record();
-FUNC_EXTERN	STATUS  convert_hex();
-FUNC_EXTERN	i4     convert_esc();
-FUNC_EXTERN	i4     write_fastrec();
-FUNC_EXTERN	i4	er__cmpids();	/* Compare two message ids */
-FUNC_EXTERN	i4	er__cntids();	/* Count message ids in input file */
-FUNC_EXTERN	STATUS	er__qsortids();	/* Quick sort copied from IIugqsort */
-i4	er__bldracc();	/* Writes tmp racc file & msgid arr */ 
-i4	er__wrtids();	/* Write msgs from file using array */
-FUNC_EXTERN	VOID	sctx_init();
-FUNC_EXTERN	VOID	shdr_hdl();
-FUNC_EXTERN	VOID	shdr_flush();
-FUNC_EXTERN	VOID	stxt_hdl();
-FUNC_EXTERN	VOID	stxt_flush();
-FUNC_EXTERN	VOID	scan_slow();
-#ifdef  VMS
-FUNC_EXTERN 	VOID	create_output_file();
-FUNC_EXTERN 	VOID	close_file();
-#endif
 
 /*
 **  Local defines.
@@ -85,14 +53,123 @@ FUNC_EXTERN 	VOID	close_file();
 #define	SS_MAX_CODES	150
 #define END		1
 
+/*	VMS only:
+**      This structure is used in calls to open, create, read, write, and 
+**      close the files used by the ERCOMPILE program.
+*/
+#ifdef  VMS
+typedef struct _FILE_CONTEXT
+{
+    struct FAB      fc_fab;             /* RMS FAB. */
+    struct RAB      fc_rab;		/* RMS RAB. */
+    i4		    *fc_result_size;	/* Location to store result size. */
+    i4		    *fc_line_number;	/* Location to store line number. */
+}   FILE_CONTEXT;
+#else
+# define FILE_CONTEXT FILE
+#endif
+
+/*
+** context information passed down to record handlers while handling
+** slow messages.  We make fp a pointer for the VMS definition so that
+** we can simply set up the address once, and pass ->fp to put_record
+** without an ifdef.
+**
+** dat array is coerced into a character buffer when used for message
+** text.
+*/
+typedef struct
+{
+#ifdef  VMS
+	FILE_CONTEXT *fp;
+#else
+	FILE *fp;
+#endif
+	i4 pages;		/* index page count */
+	i4 pbreak;		/* page break count on current page */
+	i4 mcount;		/* message count on current break */
+	char *textp;		/* text pointer */
+	INDEX_PAGE ip;		/* index page */
+
+	i4 dat[sizeof(INDEX_PAGE)/sizeof(i4)];
+} SLOW_CONTEXT;
+
 /*
 **  Definition of static variables and forward static functions.
 */
 static	    bool	SS_map_req;
 static	    i4		SS_codes = 0;
 static	    char	SS_list[SS_MAX_CODES][SS_MAX_LEN];
-static      bool        get_next_rec();
 
+static void build_fast_index(char *input_file_name,
+	char *output_file_name, i4 flag);
+
+static void build_slow_index(char *infile, char *outfile, i4 flag);
+
+static VOID build_ss_list(char *fn);
+
+static VOID check_arg(i4 argc, char **argv, char *slow, char *fast,
+	char *sqlstate, char *headersuffix, i4 *flag);
+
+static i4 convert_esc(char *buf, i4 length);
+
+static STATUS convert_hex(char *record, i4 record_size, i4 *number);
+
+static VOID delete_file(char *file_name);
+
+static STATUS er__qsortids(char *arr,i4 nel,i4 size,
+	int (*compare)(const char *, const char *) );
+
+static bool get_next_rec(char *buf, char **next_char,
+	i4 *ln, char **fn, FILE *fp);
+
+static bool get_record(char *record, i4 *result_size, i4 record_size,
+	FILE *fp, i4 *line_count);
+
+static bool open_input_file(char *file_name, FILE **fp);
+
+static STATUS parser(i4 argc, char **argv, i4 *flag,
+	bool *fnosort, bool *snosort, char *headersuffix, char *fastfile,
+	char *slowfile, char *ssfile);
+
+static VOID put_record(FILE *file_context, i4 record_number,
+	void *record, i4 record_size);
+
+static char * scan(char *buf, char *stp, i4 *ln, char **fn, FILE *fp);
+
+static VOID scan_slow(char *infile,
+	VOID (*hdl)(MESSAGE_ENTRY *, bool, SLOW_CONTEXT *),
+	SLOW_CONTEXT *ctx);
+
+static VOID sctx_init(char *outfile, SLOW_CONTEXT *ctx);
+
+static VOID shdr_flush(SLOW_CONTEXT *ctx);
+
+static VOID shdr_hdl(MESSAGE_ENTRY *mess,bool pb,SLOW_CONTEXT *ctx);
+
+static VOID sort_msg(char *inf_name, char *outf_name, i4 flag);
+
+static VOID stxt_flush(SLOW_CONTEXT *ctx);
+
+static VOID stxt_hdl(MESSAGE_ENTRY *mess,bool pb,SLOW_CONTEXT *ctx);
+
+static STATUS take(char *buf, char *start_char,
+	char **end_char, char *wordbuf,
+	i4 *ln, char **fn, FILE *fp);
+
+static VOID usage(void);
+
+static STATUS validate_sqlstate(char *ss_code);
+
+static i4 write_fastrec(FILE_CONTEXT *file_context,char *record,i4 recordsize);
+
+#ifdef VMS
+static VOID close_file(FILE_CONTEXT *file_context);
+
+static VOID create_output_file(FILE_CONTEXT *file_context,
+	char *file_name, i4 record_size);
+
+#endif
 /*
 **	MKMFIN Hints
 PROGRAM =	ercompile
@@ -521,11 +598,12 @@ NO_OPTIM =      rs4_us5 dg8_us5 i64_aix
 **	    put_record(), er__bldracc() and er__wrtids() are not externs.
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Fix lots of prototypes.
 */
 
-main(argc, argv)
-i4   argc;
-char *argv[];
+int
+main(i4 argc, char **argv)
 {
     static char	fast[MAX_LOC + 1];
     static char	slow[MAX_LOC + 1];
@@ -583,14 +661,14 @@ char *argv[];
 	        sort_msg(TMPFAST, FASTTXT, flag);
 	        SIprintf("Creating fast message file ...\n");
 	        SIflush(stdout);
-	        _VOID_ build_fast_index(FASTTXT, fast, flag);
+	        build_fast_index(FASTTXT, fast, flag);
 	    }
 	    else
 	    {
 	        SIprintf("No sort needed for fast message file ...\n");
 	        SIprintf("Creating fast message file ...\n");
 	        SIflush(stdout);
-	        _VOID_ build_fast_index(TMPFAST, fast, flag);
+	        build_fast_index(TMPFAST, fast, flag);
 	    }
 	}
 	if ( flag & SON )
@@ -602,14 +680,14 @@ char *argv[];
 	        sort_msg(TMPSLOW, SLOWTXT, flag);
 	        SIprintf("Creating slow message file ...\n");
 	        SIflush(stdout);
-	        _VOID_ build_slow_index(SLOWTXT, slow, flag);
+	        build_slow_index(SLOWTXT, slow, flag);
 	    }
 	    else
 	    {
 	        SIprintf("No sort needed for slow message file ...\n");
 	        SIprintf("Creating slow message file ...\n");
 	        SIflush(stdout);
-	        _VOID_ build_slow_index(TMPSLOW, slow, flag);
+	        build_slow_index(TMPSLOW, slow, flag);
 	    }
 	}
     }
@@ -659,15 +737,9 @@ char *argv[];
 **	    removed support for -g flag and added support for -q flag which can
 **	    be used to specify name of SQLSTATE check file name.
 */
-VOID
-check_arg(argc, argv, slow, fast, sqlstate, headersuffix, flag)
-i4	argc;
-char	**argv;
-char	slow[];
-char	fast[];
-char	sqlstate[];
-char	headersuffix[];
-i4	*flag;
+static VOID
+check_arg(i4 argc, char **argv, char *slow, char *fast,
+	char *sqlstate, char *headersuffix, i4 *flag)
 {
     i4		i, j;
 
@@ -772,8 +844,9 @@ i4	*flag;
 #endif
     return;
 }
-VOID
-usage()
+
+static VOID
+usage(void)
 {
     SIprintf("Usage: ercompile [-a][-l][-o][-h][-t][-f[file]][-s[file]][-gfile] classfiles\n");
     SIprintf("    -a       - Append the new messsages to temporary files.\n");
@@ -845,18 +918,10 @@ usage()
 **	    Fixed ercomp.c to correctly parse the back slash followed by a 
 **	    double byte character.
 */
-STATUS
-parser(argc, argv, flag, fnosort, snosort, headersuffix, fastfile,
-	slowfile, ssfile)
-i4	argc;
-char	**argv;
-i4	*flag;
-bool	*fnosort;
-bool	*snosort;
-char	headersuffix[];
-char	*fastfile;
-char	*slowfile;
-char	*ssfile;
+static STATUS
+parser(i4 argc, char **argv, i4 *flag,
+	bool *fnosort, bool *snosort, char *headersuffix, char *fastfile,
+	char *slowfile, char *ssfile)
 {
     char	buf[MAXLINE+1];
     char	token[MAX_MSG_LINE + 1];
@@ -1655,9 +1720,8 @@ errorexit:
 **	21-oct-92 (andre)
 **	    plagiarized from jrb's build_ge_list.
 */
-VOID
-build_ss_list(fn)
-char *fn;
+static VOID
+build_ss_list(char *fn)
 {
     LOCATION	    ss_loc;
     FILE	    *ss_fp;
@@ -1705,7 +1769,7 @@ char *fn;
     SS_codes = i;
 
     /* sort them by SQLSTATE status code */
-    er__qsortids(SS_list, SS_codes, SS_MAX_LEN, STcompare);
+    er__qsortids((char *) SS_list, SS_codes, SS_MAX_LEN, STcompare);
     
 #ifdef xDEBUG
     SIprintf("The %d SQLSTATE status codes read were:\n", SS_codes);
@@ -1745,9 +1809,8 @@ char *fn;
 **	21-oct-92 (andre)
 **	    plaigiarised from jrb's validate_generr
 */
-STATUS
-validate_sqlstate(ss_code)
-char	*ss_code;
+static STATUS
+validate_sqlstate(char *ss_code)
 {
     i4	    s;
     i4	    left = 0;
@@ -1808,15 +1871,9 @@ char	*ss_code;
 **	    Add support to handle double byte characters.
 **	    correctly.
 */
-STATUS
-take(buf, start_char, end_char, wordbuf, ln, fn, fp)
-char buf[];
-char *start_char;
-char **end_char;
-char *wordbuf;
-i4   *ln;
-char **fn;
-FILE *fp;
+static STATUS
+take(char *buf, char *start_char, char **end_char, char *wordbuf,
+	i4 *ln, char **fn, FILE *fp)
 {
     char	*scan(); 
     char	*next_char;
@@ -1929,13 +1986,8 @@ FILE *fp;
 **	    Add support to handle double byte characters.
 **	    correctly.
 */
-char *
-scan(buf, stp, ln, fn, fp)
-char	buf[];
-char	*stp;
-i4	*ln;
-char	**fn;
-FILE	*fp;
+static char *
+scan(char *buf, char *stp, i4 *ln, char **fn, FILE *fp)
 {
     i4		tokenfound;
     i4		filestatus;
@@ -2075,12 +2127,7 @@ FILE	*fp;
 **		Create new for 5.0.
 */
 static bool
-get_next_rec(buf, next_char, ln, fn, fp)
-char	buf[];
-char	**next_char;
-i4	*ln;
-char	**fn;
-FILE	*fp;
+get_next_rec(char *buf, char **next_char, i4 *ln, char **fn, FILE *fp)
 {
     if ( SIgetrec(buf, MAXLINE, fp) != OK )
     {
@@ -2110,26 +2157,6 @@ FILE	*fp;
 #endif
 
 /*}
-** Name: FILE_CONTEXT - Information needed to handle files.
-**
-** Description:
-**      This structure is used in calls to open, create, read, write, and 
-**      close the files used by the ERCOMPILE program.
-**
-** History:
-**     03-oct-1985 (derek)
-**          Created new for 5.0.
-*/
-#ifdef  VMS
-typedef struct _FILE_CONTEXT
-{
-    struct FAB      fc_fab;             /* RMS FAB. */
-    struct RAB      fc_rab;		/* RMS RAB. */
-    i4		    *fc_result_size;	/* Location to store result size. */
-    i4		    *fc_line_number;	/* Location to store line number. */
-}   FILE_CONTEXT;
-#endif
-/*}
 ** Name: FILE_CONTROL - Information needed to load files.
 **
 ** Description:
@@ -2144,31 +2171,6 @@ typedef struct _FILE_CONTROL
     i4			classsize;
     ERCONTROL		control_record[CLASS_SIZE];
 }   FILE_CONTROL;
-
-/*
-** context information passed down to record handlers while handling
-** slow messages.  We make fp a pointer for the VMS definition so that
-** we can simply set up the address once, and pass ->fp to put_record
-** without an ifdef.
-**
-** dat array is coerced into a character buffer when used for message
-** text.
-*/
-typedef struct
-{
-#ifdef  VMS
-	FILE_CONTEXT *fp;
-#else
-	FILE *fp;
-#endif
-	i4 pages;		/* index page count */
-	i4 pbreak;		/* page break count on current page */
-	i4 mcount;		/* message count on current break */
-	char *textp;		/* text pointer */
-	INDEX_PAGE ip;		/* index page */
-
-	i4 dat[sizeof(INDEX_PAGE)/sizeof(i4)];
-} SLOW_CONTEXT;
 
 
 /*{
@@ -2187,9 +2189,7 @@ typedef struct
 **	output_file_name		Pointer to output file name.
 **
 ** Outputs:
-**	Returns:
-**	    SUCCESS
-**	    ABORT
+**	Returns: nothing
 **	Exceptions:
 **	    none
 **
@@ -2201,11 +2201,8 @@ typedef struct
 **          Created new for 5.0 KANJI.
 */
 #ifdef  VMS
-STATUS
-build_fast_index(input_file_name, output_file_name, flag)
-char               *input_file_name;
-char               *output_file_name;
-i4		   flag;
+static void
+build_fast_index(char *input_file_name, char *output_file_name, i4 flag)
 {
     FILE_CONTROL    file_control;
     char	    record[RW_MAXLINE];
@@ -2384,14 +2381,10 @@ i4		   flag;
     close_file(&output_file_context);
     if ( !(flag & SAON) )
         delete_file(input_file_name);
-    return (OK);
 }
 #else
-STATUS
-build_fast_index(input_file_name, output_file_name, flag)
-char               *input_file_name;
-char               *output_file_name;
-i4		   flag;
+static void
+build_fast_index(char *input_file_name, char *output_file_name, i4 flag)
 {
     FILE_CONTROL    file_control;
     char	    record[RW_MAXLINE];
@@ -2573,12 +2566,11 @@ SIprintf("Mesg no.: %d\n", mess_no);
     file_control.control_record[class_no].tblsize = tblsize;
     file_control.classsize = class_no + 1;
     /*	Write the index block. */
-    put_record(out_fp, 0, (char *)&file_control, sizeof(file_control));
+    put_record(out_fp, 0, &file_control, sizeof(file_control));
     /*	Close the output file. */
     SIclose(out_fp);
     if ( !(flag & SAON) )
         delete_file(input_file_name);
-    return (OK);
 }
 #endif
 
@@ -2614,8 +2606,7 @@ SIprintf("Mesg no.: %d\n", mess_no);
 **
 ** Outputs:
 **	Returns:
-**	    SUCCESS
-**	    ABORT
+**	    nothing
 **	Exceptions:
 **	    none
 **
@@ -2634,11 +2625,8 @@ SIprintf("Mesg no.: %d\n", mess_no);
 **	    VMS ifdef's bracket a few lines rather than different versions
 **	    of the entire routine.
 */
-i4
-build_slow_index(infile, outfile, flag)
-char	*infile;
-char	*outfile;
-i4	flag;
+static void
+build_slow_index(char *infile, char *outfile, i4 flag)
 {
 	SLOW_CONTEXT	ctx;
 #ifdef VMS
@@ -2663,17 +2651,13 @@ i4	flag;
 
 	if ( !(flag & SAON) )
 	    delete_file(infile);
-
-	return (OK);
 }
 
 /*
 ** create the output file and initialize the SLOW_CONTEXT structure
 */
-VOID
-sctx_init(outfile, ctx)
-char *outfile;
-SLOW_CONTEXT *ctx;
+static VOID
+sctx_init(char *outfile, SLOW_CONTEXT *ctx)
 {
 	LOCATION loc;
 
@@ -2712,11 +2696,8 @@ SLOW_CONTEXT *ctx;
 ** On every message, we bump mcount, and record it's index in the appropriate
 ** array slot.
 */
-VOID
-shdr_hdl(mess,pb,ctx)
-MESSAGE_ENTRY *mess;
-bool pb;
-SLOW_CONTEXT *ctx;
+static VOID
+shdr_hdl(MESSAGE_ENTRY *mess,bool pb,SLOW_CONTEXT *ctx)
 {
 	if (pb)
 	{
@@ -2727,7 +2708,7 @@ SLOW_CONTEXT *ctx;
 			ctx->pbreak == (sizeof(INDEX_PAGE)/sizeof(i4)))
 		{
 			put_record (ctx->fp, ctx->pages,
-				(char *) ctx->dat, sizeof(INDEX_PAGE));
+				ctx->dat, sizeof(INDEX_PAGE));
 			++(ctx->pages);
 			ctx->pbreak = 0;
 		}
@@ -2760,15 +2741,14 @@ SLOW_CONTEXT *ctx;
 ** important - we leave ctx->pages alone so that we can continue to use
 ** it as a record index in the next pass.
 */
-VOID
-shdr_flush(ctx)
-SLOW_CONTEXT *ctx;
+static VOID
+shdr_flush(SLOW_CONTEXT *ctx)
 {
 	if (ctx->mcount > 0)
 	{
 		++(ctx->ip.index_count);
 		put_record (ctx->fp, ctx->pages,
-				(char *) ctx->dat, sizeof(INDEX_PAGE));
+				ctx->dat, sizeof(INDEX_PAGE));
 		++(ctx->pages);
 	}
 	ctx->textp = (char *) ctx->dat;
@@ -2782,16 +2762,13 @@ SLOW_CONTEXT *ctx;
 ** the message entries are simply accumulated into a text buffer until
 ** they are written.
 */
-VOID
-stxt_hdl(mess,pb,ctx)
-MESSAGE_ENTRY *mess;
-bool pb;
-SLOW_CONTEXT *ctx;
+static VOID
+stxt_hdl(MESSAGE_ENTRY *mess,bool pb,SLOW_CONTEXT *ctx)
 {
 	if (pb)
 	{
 		put_record(ctx->fp, ctx->pages,
-				(char *) ctx->dat, sizeof(INDEX_PAGE));
+				ctx->dat, sizeof(INDEX_PAGE));
 		++(ctx->pages);
 		ctx->textp = (char *) ctx->dat;
 		MEfill(sizeof(INDEX_PAGE), (char) 0, (PTR) ctx->dat);
@@ -2810,15 +2787,14 @@ SLOW_CONTEXT *ctx;
 **
 ** close file
 */
-VOID
-stxt_flush(ctx)
-SLOW_CONTEXT *ctx;
+static VOID
+stxt_flush(SLOW_CONTEXT *ctx)
 {
 	if (ctx->textp != (char *) ctx->dat)
 		put_record (ctx->fp, ctx->pages,
-				(char *) ctx->dat, sizeof(INDEX_PAGE));
+				ctx->dat, sizeof(INDEX_PAGE));
 	ctx->ip.sanity = ER_SANITY(ER_MAGIC,ER_VERSION);
-	put_record (ctx->fp, 0, (char *) &(ctx->ip), sizeof(INDEX_PAGE));
+	put_record (ctx->fp, 0, &(ctx->ip), sizeof(INDEX_PAGE));
 #ifdef VMS
 	close_file(ctx->fp);
 #else
@@ -2866,11 +2842,10 @@ SLOW_CONTEXT *ctx;
 **	21-oct-92 (andre)
 **	    removed me_generic_error from MESSAGE_ENTRY and added me_sqlstate
 */
-VOID
-scan_slow(infile,hdl,ctx)
-char *infile;
-VOID (*hdl)();
-SLOW_CONTEXT *ctx;
+static VOID
+scan_slow(char *infile,
+	VOID (*hdl)(MESSAGE_ENTRY *, bool, SLOW_CONTEXT *),
+	SLOW_CONTEXT *ctx)
 {
     char	    record[RW_MAXLINE];
     MESSAGE_ENTRY   current_message;
@@ -3091,11 +3066,8 @@ SLOW_CONTEXT *ctx;
 **	06-Oct-1986 (kobayashi) - first written
 */
 #ifdef  VMS
-i4
-write_fastrec(file_context,record,recordsize)
-FILE_CONTEXT	*file_context;
-char		*record;
-i4		recordsize;
+static i4
+write_fastrec(FILE_CONTEXT *file_context,char *record,i4 recordsize)
 {
     static char	    tempbuf[WRITE_SIZE];
     static char	    *ptemp = tempbuf;
@@ -3127,11 +3099,8 @@ i4		recordsize;
     return(i);
 }
 #else
-i4
-write_fastrec(fp, record, recordsize)
-FILE		*fp;
-char		*record;
-i4		recordsize;
+static i4
+write_fastrec(FILE_CONTEXT *fp, char *record, i4 recordsize)
 {
     static char	    tempbuf[sizeof(FILE_CONTROL)];
     static char	    *ptemp = tempbuf;
@@ -3191,18 +3160,15 @@ i4		recordsize;
 **          Created new for 5.0.
 */
 #ifdef  VMS
-VOID
-put_record(file_context, record_number, record, record_size)
-FILE_CONTEXT       *file_context;
-i4                 record_number;
-char               *record;
-i4                 record_size;
+static VOID
+put_record(FILE_CONTEXT *file_context, i4 record_number,
+	void *record, i4 record_size)
 {
     FILE_CONTEXT        *f = file_context;
     i4		status;
 
     /*	Setup for the write. */
-    f->fc_rab.rab$l_rbf = record;
+    f->fc_rab.rab$l_rbf = (char *) record;
     f->fc_rab.rab$w_rsz = record_size;
     if (record_size != f->fc_fab.fab$w_mrs)
     {
@@ -3228,12 +3194,9 @@ i4                 record_size;
     }
 }
 #else
-VOID
-put_record(fp, record_number, record, record_size)
-FILE	*fp;
-i4      record_number;
-char    *record;
-i4	record_size;
+static VOID
+put_record(FILE *fp, i4 record_number,
+	void *record, i4 record_size)
 {
     OFFSET_TYPE		offset;
     i4			count;
@@ -3241,7 +3204,7 @@ i4	record_size;
     /*	Setup for the write. */
     offset = record_size * record_number;
     SIfseek(fp, offset, SI_P_START);
-    if ( SIwrite(record_size, record, &count, fp) != OK )
+    if ( SIwrite(record_size, (char *) record, &count, fp) != OK )
     {
 	SIprintf("Error writing page %d to outut file.\n", record_number);
 	PCexit(FAIL);
@@ -3277,11 +3240,9 @@ i4	record_size;
 **          Created new for 5.0.
 */
 #ifdef  VMS
-VOID
-create_output_file(file_context, file_name, record_size)
-FILE_CONTEXT       *file_context;
-char               *file_name;
-i4                 record_size;
+static VOID
+create_output_file(FILE_CONTEXT *file_context,
+	char *file_name, i4 record_size)
 {
     FILE_CONTEXT        *f = file_context;
     i4		status;
@@ -3346,9 +3307,8 @@ i4                 record_size;
 **          Created new for 5.0.
 */
 #ifdef  VMS
-VOID
-close_file(file_context)
-FILE_CONTEXT       *file_context;
+static VOID
+close_file(FILE_CONTEXT *file_context)
 {
     FILE_CONTEXT        *f = file_context;
     i4		status;
@@ -3395,10 +3355,8 @@ FILE_CONTEXT       *file_context;
 **	24-nov-1986
 **          Created new for 5.0.
 */
-bool
-open_input_file(file_name, fp)
-char	*file_name;
-FILE	**fp;	
+static bool
+open_input_file(char *file_name, FILE **fp)
 {
     LOCATION		f_loc;
     /*  Open the file. */
@@ -3433,9 +3391,8 @@ FILE	**fp;
 **	11-feb-1987
 **          Created new for 5.0.
 */
-VOID
-delete_file(file_name)
-char	*file_name;
+static VOID
+delete_file(char *file_name)
 {
     LOCATION		f_loc;
     LOfroms(PATH & FILENAME, file_name, &f_loc);
@@ -3472,13 +3429,9 @@ char	*file_name;
 **	24-nov-1985 
 **          Created new for 5.0.
 */
-bool
-get_record(record, result_size, record_size, fp, line_count)
-char	*record;
-i4	*result_size;
-i4	record_size;
-FILE	*fp;
-i4	*line_count;
+static bool
+get_record(char *record, i4 *result_size, i4 record_size,
+	FILE *fp, i4 *line_count)
 {
     bool	at_end = FALSE;
 
@@ -3532,11 +3485,8 @@ i4	*line_count;
 **	03-nov-1986 
 **          Created new for 5.0.
 */
-STATUS
-convert_hex(record, record_size, number)
-char	  record[];
-i4	  record_size;
-i4   *number;
+static STATUS
+convert_hex(char *record, i4 record_size, i4 *number)
 {
     i4	    i;
 
@@ -3580,10 +3530,8 @@ i4   *number;
 **	03-nov-1986 
 **          Created new for 5.0.
 */
-i4
-convert_esc(buf, length)
-char 	*buf;
-i4	length;
+static i4
+convert_esc(char *buf, i4 length)
 {
     char	*s,
 		*c;
@@ -3695,11 +3643,22 @@ typedef struct 	_MSGID_PAIR
     i4		msglen;			/* # bytes for all 3 lines of msg */
 }   MSGID_PAIR;
 
-VOID
-sort_msg(inf_name, outf_name, flag)
-char	*inf_name;
-char	*outf_name;
-i4	flag;
+static VOID bubble(char *arr,i4 nel);
+
+static VOID do_qs(char *arr,i4 nel);
+
+static i4 er__bldracc(LOCATION *inf_loc, LOCATION *raccf_loc, MSGID_PAIR *prptr);
+
+static int er__cmpids(const char *id1, const char *id2);
+
+static i4 er__cntids(LOCATION *inf_loc);
+
+static i4 er__wrtids(LOCATION *raccf_loc, LOCATION *outf_loc,
+	MSGID_PAIR *arr, i4 nummsgs);
+
+
+static VOID
+sort_msg(char *inf_name, char *outf_name, i4 flag)
 {
 
     MSGID_PAIR	*msgarp;	/* pointer to array of MSGID_PAIRs */
@@ -3783,9 +3742,8 @@ i4	flag;
 ** History:
 **	1/22/88 (mhb)	Written
 */
-i4
-er__cntids(inf_loc)
-LOCATION	*inf_loc;
+static i4
+er__cntids(LOCATION *inf_loc)
 {
     char	inbuf[MAX_MSG_LINE + 1];
     FILE	*inf_fd;
@@ -3835,11 +3793,8 @@ LOCATION	*inf_loc;
 ** History:
 **	1/22/88 (mhb)	Written
 */
-i4
-er__bldracc(inf_loc, raccf_loc, prptr)
-LOCATION    *inf_loc,
-	    *raccf_loc;
-MSGID_PAIR  *prptr;
+static i4
+er__bldracc(LOCATION *inf_loc, LOCATION *raccf_loc, MSGID_PAIR *prptr)
 {
 
     char	iobuf[MAX_MSG_LINE+1];
@@ -3874,7 +3829,7 @@ MSGID_PAIR  *prptr;
     {
             offset = SIftell(raccf_fd );	/* get msg's loc in racc file */
 	    prptr->offset = offset;
-	    convert_hex(&iobuf[1], GIDSIZE, &prptr->msgid);
+	    (void) convert_hex(&iobuf[1], GIDSIZE, &prptr->msgid);
 	    prptr->msglen = 0;
 	    for (i = 0; i < 3 && status == OK; i++)/* Write 3 lines per msg */
 	    {
@@ -3918,12 +3873,9 @@ MSGID_PAIR  *prptr;
 **	1/22/88 (mhb)	Written
 */
 
-i4
-er__wrtids(raccf_loc, outf_loc, arr, nummsgs)
-LOCATION 	*raccf_loc,
-		*outf_loc;
-MSGID_PAIR	*arr;
-i4		nummsgs;
+static i4
+er__wrtids(LOCATION *raccf_loc, LOCATION *outf_loc,
+	MSGID_PAIR *arr, i4 nummsgs)
 {
     FILE	*raccf_fd,
 		*outf_fd;
@@ -3987,9 +3939,7 @@ i4  THRESHOLD;
 static i4  Tempsize = 0;
 static i4  Eltsize;
 static char *Tempblock;
-static i4  (*Compfunc)();
-static	VOID	do_qs();
-static	VOID	bubble();
+static int  (*Compfunc)(const char *, const char *);
 
 
 /*{
@@ -4034,12 +3984,9 @@ static	VOID	bubble();
 **	13-jul-87 (bab)	Changed memory allocation to use [FM]Ereqmem.
 **	21-jan-88 (mhb) Copied into ercompile for sorting msgs
 */
-STATUS
-er__qsortids(arr,nel,size,compare) 
-char 	*arr;
-i4  	nel;
-i4  	size;
-i4  	(*compare)();
+static STATUS
+er__qsortids(char *arr,i4 nel,i4 size,
+	int (*compare)(const char *, const char *) )
 {
 
     Eltsize = size;
@@ -4076,9 +4023,7 @@ i4  	(*compare)();
 ** Then sort the two pieces recursively.
 */
 static VOID
-do_qs(arr,nel)
-register char *arr;
-i4  nel;
+do_qs(char *arr,i4 nel)
 {
 	register char *cmp;		/* comparison pointer */
 	register char *hp,*tp;		/* head and tail pointers */
@@ -4185,9 +4130,7 @@ i4  nel;
 
 /* the bubble sort finisher - lengths <= 1 must cause no problems */
 static VOID
-bubble(arr,nel)
-register char *arr;
-i4  nel;
+bubble(char *arr,i4 nel)
 {
 	register i4  i;
 	register char *ptr, *ptrnxt, *ptrlim;
@@ -4232,10 +4175,8 @@ i4  nel;
 ** History:
 **	1/22/88 (mhb)	Written
 */
-i4
-er__cmpids(id1, id2)
-MSGID_PAIR 	*id1,
-		*id2;
+static int
+er__cmpids(const char *id1, const char *id2)
 {
-	return(id1->msgid - id2->msgid);
+	return( ((MSGID_PAIR *)id1)->msgid - ((MSGID_PAIR *)id2)->msgid);
 }

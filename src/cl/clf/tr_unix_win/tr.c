@@ -23,9 +23,7 @@
 #if !defined(__STDARG_H__)
 #include    <varargs.h>
 #endif
-/*
-NO_OPTIM = dg8_us5
-*/
+
 #include    <errno.h>
 
 /**
@@ -250,6 +248,8 @@ NO_OPTIM = dg8_us5
 **	    defns.
 **       9-Jun-2010 (hanal04) Bug 123886
 **          Add %^ format specifier to include pid, tid information.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Minor fix to do-format prototype.
 */
 
 /*}
@@ -292,10 +292,7 @@ static ME_TLS_KEY	TRbufferkey = 0;
 # endif /* OS_THREADS_USED */
 char	    tr_buffer[ER_MAX_LEN];/* TRdisplay output buffer. */
 i4	    tr_offset;		/* Current length of buffer. */
-
 static	i2	    *trace_vector;	/* Current trace vector. */	    
-static	STATUS	    write_line();
-static  VOID	    do_format();
 
 struct argmng {
     char    loc_buf[1024];
@@ -303,6 +300,20 @@ struct argmng {
     PTR	    argptr[256];	/* pointers to args within dataptr */
     i4	    next_arg;		/* next available slot in argptr */
 };
+
+static VOID do_format(
+	i4		    (*fcn)(PTR, i4, char *),
+	PTR		    arg,
+	char		    **format,
+	va_list		    *parameter,
+	i4		    *pcur_arg,
+	char		    *buffer,
+	i4		    buffer_length,
+	i4		    *buffer_offset,
+	PTR		    base,
+	i4		    type,
+	struct argmng	    *marg);
+
 /*
 ** Add forward reference
 */
@@ -635,7 +646,7 @@ va_dcl
     if ( context->fp_array[FP_TERMINAL] != NULL || 
 	 context->fp_array[FP_FILE] != NULL )
     {
-	do_format( TRwrite, (i4 *) 0, &f, &p, &cur_arg, buffer, 
+	do_format( TRwrite, NULL, &f, &p, &cur_arg, buffer, 
 		   sizeof(tr_buffer), offset, 0, 0, &marg );
 
     }
@@ -702,7 +713,7 @@ va_dcl
 # endif
 {
 #if !defined(__STDARG_H__)
-    i4		    (*fcn)();
+    i4		    (*fcn)(PTR, i4, char *);
 # endif
     PTR		    arg;
     char	    *buffer;
@@ -717,7 +728,7 @@ va_dcl
     va_start(p, fcn);
 # else
     va_start(p);
-    fcn =	(i4 (*)()) va_arg(p,PTR);
+    fcn =	(i4 (*)(PTR, i4, char *)) va_arg(p,PTR);
 # endif
 
     arg =	va_arg(p,PTR);
@@ -734,7 +745,7 @@ va_dcl
 }
 
 /*{
-** Name: TRformat_to_buffer	- Format text into memory.
+** Name: TRvformat	- Format text into memory.
 **
 ** Description:
 **      This function will format text into a memory buffer and then call a 
@@ -767,43 +778,50 @@ va_dcl
 **	26-Jun-2007 (jonj)
 **	    Created for circular cached deadlock tracing by LK
 **	    for VMS clusters.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    In cleaning up prototypes, renamed TRformat_to_buffer to
+**	    TRvformat to clarify what it is and realigned its parameters
+**	    with TRformat
 */
 VOID
-TRformat_to_buffer(
-VOID		    (*fcn)(),
-i4		    *arg,
-char		    *buffer,
-i4		    l_buffer,
-char		    *fmt,
-va_list		    ap )
+TRvformat(
+	i4	(*fcn)(PTR, i4, char *),
+	PTR	arg,
+	char	*buffer,
+	i4	l_buffer,
+	char	*fmt,
+	va_list	ap)
 {
     i4		    offset = 0;
     i4		    cur_arg = 0;
     struct argmng   marg;
 
-    do_format(fcn, arg, &fmt, &ap, &cur_arg, buffer, l_buffer, &offset, 0, 0,
+    /* The extra cast for &ap seems to keep gcc (4.5) happy?!? */
+    do_format(fcn, arg, &fmt, (va_list *) &ap, &cur_arg, buffer, l_buffer, &offset, 0, 0,
 		&marg);
 
     if (fcn && offset)
 	(*fcn)(arg, offset, buffer);
 }
 
-static VOID
-do_format(fcn, arg, format, parameter, pcur_arg, buffer, buffer_length, buffer_offset, base, type, marg)
-i4		    (*fcn)();
-PTR		    arg;
-char		    **format;
-va_list		    *parameter;
-i4		    *pcur_arg;
-char		    *buffer;
-i4		    buffer_length;
-i4		    *buffer_offset;
-PTR		    base;
-i4		    type;
+/* "type" parameters */
 #define			IN_REPEAT   1
 #define			IN_ARRAY    2
 #define			IN_STRUCT   3
-struct argmng	    *marg;
+
+static VOID
+do_format(
+	i4		    (*fcn)(PTR, i4, char *),
+	PTR		    arg,
+	char		    **format,
+	va_list		    *parameter,
+	i4		    *pcur_arg,
+	char		    *buffer,
+	i4		    buffer_length,
+	i4		    *buffer_offset,
+	PTR		    base,
+	i4		    type,
+	struct argmng	    *marg)
 {
     char	    *f = *format;
 #if defined(EDBC) || defined(LNX) || defined(a64_sol) || defined(OSX)
@@ -867,11 +885,6 @@ struct argmng	    *marg;
 	** of this space, and then increment the counters cur_arg
 	** and marg->next_arg.
 	*/
-
-# ifdef ds3_ulx
-# undef MECOPY_CONST_MACRO
-# define MECOPY_CONST_MACRO MEcopy
-# endif
 
 # define SET_ARG(VAR,VALIST,TYPE) \
 	if (cur_arg < marg->next_arg) \

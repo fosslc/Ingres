@@ -594,6 +594,8 @@
 **          Changes for Long IDs
 **	12-Jul-2010 (bonro01)
 **          Add DB_STATVERS_6DBV1010 for 10.1 release. 
+**	5-Oct-2010 (kschendel) SIR 124544
+**	    Add Vectorwise storage structure codes.
 **/
 
 #define                 DB_OLDMAXNAME   24
@@ -915,20 +917,30 @@ typedef struct _DB_ALERT_NAME
 **	Codes for storage structures. Sort of looks like they are all prime
 **	numbers - but I don't know why (I just added TPROC as 17 to be safe)
 **	- dougi (5-may-2008)
+**	(kschendel) no reason for it, future codes can use the holes.
 */
 
-#define                 DB_HEAP_STORE   3   /* heap storage structure id */
-#define                 DB_ISAM_STORE   5   /* isam storage structure id */
-#define                 DB_HASH_STORE   7   /* hash storage structure id */
-#define                 DB_BTRE_STORE   11  /* btree storage structure id */
-#define                 DB_RTRE_STORE   13  /* rtree storage structure id */
-#define			DB_TPROC_STORE	17  /* table procedure */
 #define                 DB_SORT_STORE   1   /* sorted heap storage structure*/
                                             /* DB_SORT_STORE used only in the
                                             ** optimizer and QEF to model
                                             ** files from sorter, i.e. it
                                             ** not used in base relations
                                             */
+#define                 DB_HEAP_STORE   3   /* heap storage structure id */
+#define                 DB_ISAM_STORE   5   /* isam storage structure id */
+#define                 DB_HASH_STORE   7   /* hash storage structure id */
+#define                 DB_BTRE_STORE   11  /* btree storage structure id */
+#define                 DB_RTRE_STORE   13  /* rtree storage structure id */
+#define			DB_TPROC_STORE	17  /* table procedure */
+
+#define			DB_STDING_STORE_MAX 17 /* Max "standard ingres" ID */
+
+/* All storage structure codes > DB_STDING_STORE_MAX are Vectorwise codes */
+
+#define			DB_X100_STORE	19  /* X100 table */
+#define			DB_X100CL_STORE	23  /* X100 clustered table */
+#define			DB_X100IX_STORE	29  /* X100 indexed table */
+#define			DB_X100RW_STORE	31  /* X100 "row" table (PAX) */
 
 /*
 **	Various sizes.

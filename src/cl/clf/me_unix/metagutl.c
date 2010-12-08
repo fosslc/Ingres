@@ -73,6 +73,8 @@ extern ME_HEAD      MElist;
 **      29-Nov-1999 (hanch04)
 **          First stage of updating ME calls to use OS memory management.
 **          Make sure me.h is included.  Use SIZE_TYPE for lengths.
+**      15-nov-2010 (stephenb)
+**          wrap IIME_purify_tag_exit in ifdef xPURITY.
 **/
 
 /* # define's */
@@ -84,8 +86,6 @@ extern ME_HEAD      MElist;
 GLOBALREF CS_SYNCH      MEtaglist_mutex;
 GLOBALREF CS_SYNCH      MEfreelist_mutex;
 # endif /* OS_THREADS_USED */
-
-/* static's */
 
 /*}
 ** Name:	METAGNODE	- The elements of the hash table chains.
@@ -362,7 +362,7 @@ ME_HEAD *lp;
 
         return count > 0 ? count - 1 : 0;
 }
-
+#ifdef xPURIFY
 /*{
 ** Name:        IIME_purify_tag_exit()
 **
@@ -384,7 +384,7 @@ ME_HEAD *lp;
 */
 
 VOID
-IIME_purify_tag_exit()
+IIME_purify_tag_exit(void)
 {
         int n;
         int i;
@@ -403,3 +403,4 @@ IIME_purify_tag_exit()
                 }
         }
 }
+#endif /*xPURIFY */

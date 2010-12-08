@@ -613,6 +613,9 @@ struct _LWQ
 **	    Added lfb_fq_leof.
 **	15-Jan-2010 (jonj)
 **	    lfb_next should be SIZE_TYPE, not i4. Deleted unused lfb_prev.
+**      16-Nov-2010 (coomi01) b124493
+**          Mark the free/write queue counts as volatile to avoid
+**          potential cacheing issues.
 */
 struct _LFB
 {
@@ -640,7 +643,7 @@ struct _LFB
     SIZE_TYPE	    lfb_current_lbb;	/* Current buffer. */
     SIZE_TYPE	    lfb_first_lbb;	/* 1st LBB in contiguous alloc. ext. */
     CS_SEMAPHORE    lfb_fq_mutex;	/* A mutex to protect the fq */
-    i4	    	    lfb_fq_count;	/* count of buffers on fq */
+    volatile i4	    lfb_fq_count;	/* count of buffers on fq */
     SIZE_TYPE	    lfb_fq_next;	/* First free buffer. */
     SIZE_TYPE	    lfb_fq_prev;	/* Last free buffer. */
     LWQ		    lfb_wait_buffer;	/* Free buffer wait queue.
@@ -651,7 +654,7 @@ struct _LFB
 					*/
     SIZE_TYPE	    lfb_fq_leof;	/* Logical end of free queue */
     CS_SEMAPHORE    lfb_wq_mutex;	/* A mutex to protect the wq */
-    i4	    	    lfb_wq_count;	/* count of buffers on wq */
+    volatile i4	    lfb_wq_count;	/* count of buffers on wq */
     SIZE_TYPE	    lfb_wq_next;	/* First buffer to write. */
     SIZE_TYPE	    lfb_wq_prev;	/* Last buffer to write. */
     LG_IO	    lfb_di_cbs[2];	/* primary and dual LG_IO structs */

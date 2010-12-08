@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -82,9 +82,36 @@
 **	15-sep-93 (swm)
 **	    Moved cs.h include above other header files which need its
 **	    definition of CS_SID.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+void opt_seg_dump(
+	OPS_STATE *global,
+	QEQ_TXT_SEG *qseg);
+void opt_ldb_dump(
+	OPS_STATE *global,
+	QEQ_LDB_DESC *ldbdesc,
+	bool justone);
+void opt_qrydump(
+	OPS_STATE *global,
+	QEQ_D1_QRY *qryptr);
+void opt_qtdump(
+	OPS_STATE *global,
+	QEF_AHD *dda);
+void opt_qpdump(
+	OPS_STATE *global,
+	QEF_QP_CB *qplan);
+bool opt_chkprint(
+	char *buf_to_check,
+	i4 buflen);
+void opt_seg_chk(
+	OPS_STATE *global,
+	QEQ_D1_QRY *qseg);
+void opt_qtchk(
+	OPS_STATE *global,
+	QEF_QP_CB *qplan);
 
 /*{
 ** Name: opt_seg_dump	- Dump a list of text segments
@@ -654,7 +681,6 @@ opt_seg_chk(
 {
     DD_PACKET	*pktptr;
     QEQ_TXT_SEG	*segptr;
-    i4		lensofar;    
     DD_PACKET	*stop_pkt;
     i4		pkt_counter;
 

@@ -15,6 +15,8 @@
 **  	14-Oct-92 (cmorris)
 **  	    Stop the ANSI C compiler whining by making pack/unpack
 **  	    tables of type unsigned char.
+**  	15-nov-2010 (stephenb)
+**  	    Add forward protos to quiet compiler.
 */
 
 /***************************************************************** 
@@ -124,6 +126,13 @@ static unsigned char upktab[256] = {
 	0173,0174,0175,0200,0200,0200,0200,0200, 	/* xyz..... */
 
 };
+/*
+** Forward references
+*/
+int pk34( char *, int, char * );
+int upkf34( int );
+int pk78( char *,int,char * );	
+int upkf78( int );
 
 
 /*{

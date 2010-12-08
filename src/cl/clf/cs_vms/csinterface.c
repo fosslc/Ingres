@@ -4,6 +4,7 @@
 */
 
 #include    <compat.h>
+#include    <clconfig.h>
 #include    <gl.h>
 #include    <cs.h>
 #include    <er.h>
@@ -45,6 +46,7 @@
 #include    <csinternal.h>
 # include   "cslocal.h"
 #include    "cssampler.h"
+#include    <exinternal.h>
 
 #include    <astjacket.h>
 
@@ -712,6 +714,12 @@
 **          cs_scbdealloc and cs_reject before returning to the caller.
 **      12-aug-2010 (joea)
 **          Use VAXC$ESTABLISH to set up exception handlers.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems,
 **/
 
 /*
@@ -725,20 +733,13 @@ FUNC_EXTERN void    CS_exit_handler();
 #ifdef ALPHA
 FUNC_EXTERN void    CS_cactus_save();
 #endif
-FUNC_EXTERN void    CS_move_async();
 #if defined(__STDARG_H__)
 FUNC_EXTERN i4  TRdisplay( char *, ... );
 #else
 FUNC_EXTERN STATUS  TRdisplay();
 #endif
-FUNC_EXTERN void i_EX_initfunc(
-    void (*setfunc)(EX_CONTEXT *),
-    EX_CONTEXT **(*getfunc)(void));	/* Init the EX facility */
 
-FUNC_EXTERN void CS_mo_init(void);
-FUNC_EXTERN void CS_rcv_request();
 FUNC_EXTERN void CS_scb_attach();
-FUNC_EXTERN void CS_change_priority();
 FUNC_EXTERN STATUS CS_alloc_stack();
 FUNC_EXTERN STATUS CS_cp_mbx_create();
 typedef void FP_Callback(CS_SCB **scb);
@@ -825,7 +826,7 @@ static    CS_FUNCTIONS        CS_functions                   ZERO_FILL;
 GLOBALDEF CS_FUNCTIONS        *Cs_fvp = &CS_functions;
 #endif /* OS_THREADS_USED */
 
-GLOBALDEF CS_SYSTEM           Cs_srv_block ZERO_FILL; /* Overall ctl struct */
+GLOBALDEF volatile CS_SYSTEM  Cs_srv_block ZERO_FILL; /* Overall ctl struct */
 GLOBALDEF CS_SEMAPHORE        Cs_known_list_sem              ZERO_FILL;
 GLOBALDEF CS_SCB	      Cs_queue_hdrs[CS_LIM_PRIORITY] ZERO_FILL;
 GLOBALDEF CS_SCB	      Cs_known_list_hdr		     ZERO_FILL;
@@ -835,11 +836,10 @@ GLOBALDEF CS_SCB	      Cs_as_list_hdr		     ZERO_FILL;
 GLOBALDEF CS_STK_CB	      Cs_stk_list_hdr		     ZERO_FILL;
 GLOBALDEF CS_SCB	      Cs_idle_scb		     ZERO_FILL;
 GLOBALDEF CS_SCB              Cs_repent_scb                  ZERO_FILL;
-GLOBALDEF CS_ADMIN_SCB	      Cs_admin_scb		     ZERO_FILL;
+GLOBALDEF volatile CS_ADMIN_SCB	Cs_admin_scb		     ZERO_FILL;
 GLOBALDEF CS_SYNCH	      Cs_utility_sem	             ZERO_FILL;
 GLOBALDEF PTR		      Cs_save_exsp		     ZERO_FILL;
 GLOBALDEF PTR		      Cs_old_last_chance;
-GLOBALREF void                (*Ex_print_stack)();
 static	short		      Cs_signal ZERO_FILL;
 
 GLOBALREF VOID                (*Ex_diag_link)();
@@ -1823,7 +1823,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
     Cs_known_list_hdr.cs_client_type = 0;
     Cs_known_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_known_list_hdr.cs_tag = CS_TAG;
-    Cs_known_list_hdr.cs_stk_area = 0;
+    Cs_known_list_hdr.cs_stk_area = NULL;
     Cs_known_list_hdr.cs_stk_size = 0;
     Cs_known_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_known_list_hdr.cs_priority = 0;
@@ -1837,7 +1837,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
     Cs_wt_list_hdr.cs_client_type = 0;
     Cs_wt_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_wt_list_hdr.cs_tag = CS_TAG;
-    Cs_wt_list_hdr.cs_stk_area = 0;
+    Cs_wt_list_hdr.cs_stk_area = NULL;
     Cs_wt_list_hdr.cs_stk_size = 0;
     Cs_wt_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_wt_list_hdr.cs_priority = 0;
@@ -1851,7 +1851,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
     Cs_to_list_hdr.cs_client_type = 0;
     Cs_to_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_to_list_hdr.cs_tag = CS_TAG;
-    Cs_to_list_hdr.cs_stk_area = 0;
+    Cs_to_list_hdr.cs_stk_area = NULL;
     Cs_to_list_hdr.cs_stk_size = 0;
     Cs_to_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_to_list_hdr.cs_priority = 0;
@@ -1865,7 +1865,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
     Cs_as_list_hdr.cs_client_type = 0;
     Cs_as_list_hdr.cs_owner = (PTR)CS_IDENT;
     Cs_as_list_hdr.cs_tag = CS_TAG;
-    Cs_as_list_hdr.cs_stk_area = 0;
+    Cs_as_list_hdr.cs_stk_area = NULL;
     Cs_as_list_hdr.cs_stk_size = 0;
     Cs_as_list_hdr.cs_state = CS_COMPUTABLE;
     Cs_as_list_hdr.cs_priority = 0;
@@ -1881,7 +1881,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
 	Cs_queue_hdrs[i].cs_client_type = 0;
 	Cs_queue_hdrs[i].cs_owner = (PTR)CS_IDENT;
 	Cs_queue_hdrs[i].cs_tag = CS_TAG;
-	Cs_queue_hdrs[i].cs_stk_area = 0;
+	Cs_queue_hdrs[i].cs_stk_area = NULL;
 	Cs_queue_hdrs[i].cs_stk_size = 0;
 	Cs_queue_hdrs[i].cs_state = CS_COMPUTABLE;
 	Cs_queue_hdrs[i].cs_priority = i;
@@ -1962,7 +1962,7 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
     idle_scb->cs_owner = (PTR)CS_IDENT;
     idle_scb->cs_tag = CS_TAG;
     idle_scb->cs_length = sizeof(CS_SCB);
-    idle_scb->cs_stk_area = 0;
+    idle_scb->cs_stk_area = NULL;
     idle_scb->cs_stk_size = 0;
     idle_scb->cs_state = CS_COMPUTABLE;
     idle_scb->cs_priority = CS_PIDLE;    /* idle = lowest priority */
@@ -2096,6 +2096,8 @@ CSinitiate(i4 *argc, char ***argv, CS_CB *ccb)
 **            its thread_type, transfer the mask to the cs_cs_mask.
 **            These threads will be terminated and allowed to finish
 **            processing before any other system threads exit.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 */
 STATUS
 IICSterminate(
@@ -2105,6 +2107,7 @@ i4      *active_count)
     i4                 status = 0;
     CS_SCB		*scb;
     CS_SCB		*scb_next;
+    i4                 asts_enabled;
 
     switch (mode)
     {
@@ -2133,7 +2136,7 @@ i4      *active_count)
             ** Turn off AST's so the scb list will not be mucked with
             ** while we are cycling through it.
             */
-	    sys$setast(0);
+	    asts_enabled = (sys$setast(0) == SS$_WASSET);
 
             for (scb = Cs_srv_block.cs_known_list->cs_prev;
                 scb != Cs_srv_block.cs_known_list;
@@ -2142,7 +2145,7 @@ i4      *active_count)
                 if (scb->cs_cs_mask & CS_CLEANUP_MASK)
                 {
                     CSattn(CS_SHUTDOWN_EVENT, scb->cs_self);
-                    sys$setast(1);
+                    if (asts_enabled) sys$setast(1);
                     return (E_CS0003_NOT_QUIESCENT);
                 }
             }
@@ -2165,7 +2168,7 @@ i4      *active_count)
 	    ** any reference to the cs_mask shouldbe protected by in_kernel or
 	    ** having AST's off
 	    */
-	    sys$setast(1);
+	    if (asts_enabled) sys$setast(1);
 
 	    /*
 	    ** Return and wait for server tasks to terminate before shutting
@@ -2431,6 +2434,8 @@ CS_CB              *ccb;
 **	    Correct prototype for CS_last_chance().  Don't set cs_registers[]
 **	    in this module -- that's done for us by CS_alloc_stack().
 **	    CS_ssprsm() now takes a single parameter -- just restore context.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 **
 **  Design:
 **
@@ -2473,9 +2478,10 @@ IICSdispatch()
     };
     EX_CONTEXT		excontext;
     CS_INFO_CB		csib;
-    FUNC_EXTERN	STATUS	cs_handler();
     FUNC_EXTERN int	CS_last_chance();
     bool		recovery_server = FALSE;
+    i4                  asts_enabled;
+
 
 
     if (Cs_srv_block.cs_process == 0)
@@ -2645,7 +2651,7 @@ IICSdispatch()
 		   Cs_admin_scb.csa_scb.cs_username );
 	    Cs_admin_scb.csa_scb.cs_next = &Cs_repent_scb;
 
-	    ret_val = CS_alloc_stack(&Cs_admin_scb, error);
+	    ret_val = CS_alloc_stack(&Cs_admin_scb.csa_scb, &error);
 	    if (ret_val != OK)
 	    {
 		EXdelete();
@@ -2678,7 +2684,7 @@ IICSdispatch()
 	    /*	when this happens, we recover by trashing the offending	    */
 	    /*	thread, and letting nature take its course.		    */
 
-	    ret_val = CS_alloc_stack(&Cs_idle_scb, error);
+	    ret_val = CS_alloc_stack(&Cs_idle_scb, &error);
 	    if (ret_val != OK)
 	    {
 		EXdelete();
@@ -2706,7 +2712,7 @@ IICSdispatch()
 	    /* Extra help for new "show internal sessions" monitor command. */
 	    Cs_repent_scb.cs_next = &Cs_idle_scb;
 
-	    ret_val = CS_alloc_stack(&Cs_repent_scb, error);
+	    ret_val = CS_alloc_stack(&Cs_repent_scb, &error);
 	    if (ret_val != OK)
 	    {
 		EXdelete();
@@ -2883,7 +2889,7 @@ TRdisplay("->->->->\n");
 	** Turn off ast's before calling CS_quantum so that quantum AST
 	** will not be handled until we are ready for it.
 	*/
-	sys$setast(0);
+	asts_enabled = (sys$setast(0) == SS$_WASSET);
 	ret_val = CS_quantum(0);
 	if (ret_val)
 	    break;
@@ -2903,7 +2909,7 @@ TRdisplay("->->->->\n");
 	*/
 	Cs_srv_block.cs_current = NULL;
 	Cs_srv_block.cs_state = CS_IDLING;
-    	sys$setast(1);	    /* Turn AST's on */
+    	if (asts_enabled) sys$setast(1);	    /* Turn AST's on */
 
 	/* Committed; set up right semaphores for MU */
 	MUset_funcs( MUcs_sems() );
@@ -3475,6 +3481,9 @@ PTR     ecb)
         ** before it is suspended.
         */
 
+        /* This is a non-threaded program, so ASTs will be enabled outside
+        ** of CS code.
+        */
         sys$setast(0);
 
         if (process_wait_state != CS_PROCESS_WOKEN)
@@ -4730,25 +4739,6 @@ CS_SEMAPHORE       *sem)
                     if (lib$ast_in_prog() != 0)
                     {
                         lib$signal(SS$_DEBUG);
- 
-                        /* EJLFIX: Make a new error message for this */
-                        return(E_CS0017_SMPR_DEADLOCK);
-                    }
- 
-                    /* if AST's are disabled then signal the debugger for the 
-                    ** same reason as above.
-                    */
-                    enbflg = 1;
-                    if (sys$setast(enbflg) == SS$_WASCLR)
-                    {
-                        lib$signal(SS$_DEBUG);
- 
-                        /* now reset the AST level to the way it was. We 
-                        ** don't want to turn off AST's when someone has 
-                        ** turned them on.
-                        */
-                        enbflg = 0;
-                        sys$setast(enbflg);
  
                         /* EJLFIX: Make a new error message for this */
                         return(E_CS0017_SMPR_DEADLOCK);
@@ -6122,7 +6112,7 @@ CL_ERR_DESC     *error)
     scb->cs_priority = priority;
     scb->cs_self = (CS_SID)scb;
     scb->cs_mode = CS_INITIATE;
-    scb->cs_stk_area = 0;
+    scb->cs_stk_area = NULL;
     scb->cs_pid = Cs_srv_block.cs_pid;
     if ( thread_type & CS_CLEANUP_MASK )
         scb->cs_cs_mask |= CS_CLEANUP_MASK;
@@ -6179,8 +6169,7 @@ CL_ERR_DESC     *error)
     ** during server initialization - when AST's must be kept off until
     ** the server is ready to do task switching.
     */
-    status = sys$setast(0);
-    asts_enabled = (status == SS$_WASSET);
+    asts_enabled = (sys$setast(0) == SS$_WASSET);
 
     status = CS_alloc_stack(scb, error);
     if (status != OK)
@@ -6287,6 +6276,8 @@ CL_ERR_DESC     *error)
 **      09-may-2003 (horda03) Bug 104254
 **          Delete via ipm of a session waiting on a mutex results in
 **          SIGSEGV. Removed reference to scb->cs_sm_root.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 */
 STATUS
 IICSremove(
@@ -6294,12 +6285,13 @@ CS_SID  sid)
 {
     CS_SCB              *scb;
     CS_SCB		*cscb;
+    i4                  asts_enabled;
 
-    sys$setast(0);
+    asts_enabled = (sys$setast(0) == SS$_WASSET);
     scb = CS_find_scb(sid);
     if (scb == 0)
     {
-	sys$setast(1);
+	if (asts_enabled) sys$setast(1);
 	return(E_CS0004_BAD_PARAMETER);
     }
     scb->cs_mask |= CS_DEAD_MASK;
@@ -6364,7 +6356,7 @@ CS_SID  sid)
 		sys$wake(0, 0);
 	}
     }
-    sys$setast(1);
+    if (asts_enabled) sys$setast(1);
     return(OK);
 }
 /*{
@@ -7094,8 +7086,7 @@ CS_SID  sid)
     */
     if (lib$ast_in_prog() == 0)
     {
-	status = sys$setast(0);
-	asts_enabled = (status == SS$_WASSET);
+	asts_enabled = (sys$setast(0) == SS$_WASSET);
     }
 
     if (sid != (CS_SID)0)
@@ -7107,7 +7098,11 @@ CS_SID  sid)
 	** handled by DMF and should be ignored here.
 	*/
 	if ( eid == CS_RCVR_EVENT && (*Cs_srv_block.cs_attn)(eid, scb) )
+        {
+            if (asts_enabled) sys$setast(1);
+
 	    return;
+        }
 	
 	if ((scb->cs_state != CS_COMPUTABLE) &&
 		(scb->cs_mask & CS_INTERRUPT_MASK))
@@ -8247,21 +8242,29 @@ CSaccept_connect()
 **          For all non-internal threads, call CS_ssprsm each time.
 **      23-Jul-2008 (horda03) Bug 120474
 **          Only call CS_ssprsm on threaded servers.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server enable ASTs while in this function.
 */
 void
 IICSswitch()
 {
-    if ( (Cs_srv_block.cs_state != CS_INITIALIZING) &&
-           ((Cs_srv_block.cs_current->cs_thread_type != CS_INTRNL_THREAD) ||
-	    (Cs_lastquant > ALLOWED_QUANTUM_COUNT) ) )
+    if (Cs_srv_block.cs_state != CS_INITIALIZING)
     {
+       if ((Cs_srv_block.cs_current->cs_thread_type != CS_INTRNL_THREAD) ||
+           (CS_lastquant > ALLOWED_QUANTUM_COUNT) )
+       {
 #ifdef KPS_THREADS
-        CS_SCB* scb = Cs_srv_block.cs_current;
-        if (scb)
-            exe$kp_stall_general(scb->kpb);
+           CS_SCB* scb = Cs_srv_block.cs_current;
+           if (scb)
+               exe$kp_stall_general(scb->kpb);
 #else
-	CS_ssprsm( FALSE );
+	   CS_ssprsm( FALSE );
 #endif
+       }
+       else if (sys$setast(1) == SS$_WASCLR)
+       {
+          sys$setast(0);
+       }
     }
 }
 

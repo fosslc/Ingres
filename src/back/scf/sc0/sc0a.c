@@ -82,10 +82,10 @@
 **	10-Sep-2008 (jonj)
 **	    SIR 120874: include sc0e.h to get function prototypes.
 **	    Use new forms of sc0ePut(), uleFormat().
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 */
 GLOBALREF SC_MAIN_CB	*Sc_main_cb;
 /*

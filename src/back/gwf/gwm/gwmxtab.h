@@ -29,6 +29,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes.
 */
 
 typedef struct
@@ -69,4 +71,5 @@ typedef struct
 FUNC_EXTERN DB_STATUS GX_ad_req_col( GX_RSB *xt_rsb, i4  n );
 
 FUNC_EXTERN DB_STATUS GX_ad_to_tuple( GX_RSB *xt_rsb, STATUS *cl_stat );
+FUNC_EXTERN VOID GX_i_out_row( GWX_RCB *gwx_rcb );
 

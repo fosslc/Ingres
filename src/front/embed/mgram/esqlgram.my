@@ -824,6 +824,12 @@ static bool   set_role=FALSE;
 **	 11-Oct-2010 (kiria01) b124564
 **	    Revised grammar for DECLARE CURSOR to avoid the empty branch of
 **	    query_with from erroneously triggering the error production.
+**	 1-Nov-2010 (kschendel) SIR 124544
+**	    Allow UNIQUE as a single word WITH-option now that main sql
+**	    grammar allows it.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Added SET SESSION COLLATION grammar and made COLLATE float position
+**	    in the typespec to follow main parser.
 **
 ** Rules to apply when writing new grammar parts:
 **
@@ -854,8 +860,8 @@ static bool   set_role=FALSE;
 %token	tABORT		tCOPY		tHELP		tMODIFY		
 	tPRINT		tREGISTER	tRELOCATE	tREMOVE
 	tSAVE		tSAVEPOINT	tSET
-	tCOLLATE	tCOMMIT		tROLLBACK	tREVOKE
-	tBYREF		tDISTINCT
+	tCOLLATE	tCOLLATION	tCOMMIT		tROLLBACK
+	tREVOKE		tBYREF		tDISTINCT
 	tOF		tNULL		tNOT
 	tLIKE		tNOTLIKE	tBEGINNING	tNOTBEGINNING
 	tCONTAINING	tNOTCONTAINING	tENDING		tNOTENDING
@@ -2795,8 +2801,8 @@ creat_col_spec: sql_lparen crcol_spec_list sql_rparen
 /*
 ** The syntax of the table_elements (the crcol_spec_list) on a CREATE TABLE
 ** statement is:
-**      colname type [ NOT NULL [column_constraint] | format ] [collate]
-**           {,colname type [NOT NULL [column_constraint] | format] [collate]
+**      colname type [ NOT NULL [column_constraint] | format | collate]
+**           {,colname type [NOT NULL [column_constraint] | format | collate]
 **                      | table_constraint}
 **
 ** A column_constraint has the following syntax:
@@ -2809,9 +2815,6 @@ creat_col_spec: sql_lparen crcol_spec_list sql_rparen
 **	[CONSTRAINT constraint_name] FOREIGN KEY (colname,{colname}) 
 **		REFERENCES tablename [(colname,{,colname)] and both
 **	may be followed by an optional WITH clause.
-**
-** A collate clause has the following syntax:
-**	COLLATE collation_name
 **
 ** Note that the crcol_spec rule (without the cr_uniq_clause) is
 ** inherited by the REGISTER and ALTER TABLE statements.
@@ -2843,7 +2846,7 @@ crcol_spec_constrt: crcol_spec
 		    $$.i = $1.i;
 		}
 ;
-crcol_spec:	sql_id crcol_type crcol_collate crcol_encrypt
+crcol_spec:	sql_id crcol_type crcol_encrypt
 {
 		    $$.i = $2.i;
 }
@@ -2922,9 +2925,6 @@ crcol_type:	sql_name dec_nullfmt_list
 		{
 		    $$.i = $7.i;
 		}
-;
-crcol_collate:	/* nothing */
-	|	sql_collate sql_name
 ;
 crcol_encrypt:	/* nothing */
 	|	sql_encrypt
@@ -5488,7 +5488,7 @@ agg_distinct_cl: tDISTINCT
 ;
 
 sql_cast_expr:	sql_cast sql_lparen select_expr sql_as crcol_type 
-				crcol_collate sql_rparen
+				sql_rparen
 ;
 
 sql_cast:	tCAST
@@ -7721,6 +7721,7 @@ set_key:	tSET
 **                  [, ON_LOGFULL=ABORT|COMMIT|NOTIFY]
 **	            [, SECURITY_LABEL=INITIAL_LABEL | 'security_label']
 **	            [, NODESCRIPTION | DESCRIPTION = 'description']
+**	SET SESSION COLLATION collate
 **
 ** This differs from the basic set_specs in that a string variable in whval
 ** is sent as as string constant rather than as a value. The main use of
@@ -7729,6 +7730,7 @@ set_key:	tSET
 ** Notice that the second form here ends up allowing <empty> ...
 */
 set_sess_specs: authorization_key user_spec
+	|	sql_collation sql_name
 	|	set_sess_opts set_sess_where
 	;
 
@@ -8514,6 +8516,11 @@ sql_collate:	tCOLLATE
 		    db_key( $1.s );
 		}
 ;
+sql_collation:	tCOLLATION
+		{
+		    db_key( $1.s );
+		}
+;
 sql_encrypt:	tENCRYPT
 		{
 		    db_key( $1.s );
@@ -9049,6 +9056,10 @@ sql_wleft:	tNAME
 		    db_key( $1.s );
 		}
 	|	tINDEX
+		{
+		    db_key( $1.s );
+		}
+	|	tUNIQUE
 		{
 		    db_key( $1.s );
 		}
@@ -9659,6 +9670,7 @@ dectab_type:	tNAME		/* Some languages may add more */
 **	[ WITH NULL [WITH | NOT SYSTEM_MAINTAINED]
 **	  | NOT NULL [WITH | NOT DEFAULT] [WITH | NOT SYSTEM_MAINTAINED]
 **	  | column_constraint
+**	  | COLLATE collation
 **	]
 ** Where a column_constraint has the following syntax:
 **      [CONSTRAINT constraint_name] UNIQUE | PRIMARY KEY or
@@ -9718,6 +9730,11 @@ dec_nullfmt1:	dec_withnull
 	|	cons_with
 		{
 		    $$.i = $1.i;
+		    esq->flag &= ~ESQ_WITHABLE_CONSTRAINT;
+		}
+	|	sql_collate sql_name
+		{
+		    $$.i = 0;
 		    esq->flag &= ~ESQ_WITHABLE_CONSTRAINT;
 		}
 ; 

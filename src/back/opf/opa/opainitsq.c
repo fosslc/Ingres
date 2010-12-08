@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -71,8 +71,18 @@
 **          Moved <cs.h> for CS_SID.
 **	29-Jul-2004 (hanje04)
 **	    Remove references to SD (Smart Disk) functions
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opa_ifagg(
+	OPS_SUBQUERY *new_subquery,
+	PST_QNODE *byhead);
+OPS_SUBQUERY *opa_initsq(
+	OPS_STATE *global,
+	PST_QNODE **agg_qnode,
+	OPS_SUBQUERY *father);
 
 /*{
 ** Name: opa_ifagg	- initialize function aggregate structure
@@ -235,7 +245,6 @@ opa_initsq(
 	PST_QNODE          **agg_qnode,
 	OPS_SUBQUERY       *father)
 {
-    i4			sd_id_dum; /* determine whether using stubs */
     OPS_SUBQUERY          *new_subquery; /* new subquery being analyzed */
 
     new_subquery = (OPS_SUBQUERY *) 

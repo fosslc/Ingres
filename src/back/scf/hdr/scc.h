@@ -33,6 +33,8 @@
 **	    scc_error(), scc_trace(), scc_relay().
 **      12-Apr-2004 (stial01)
 **          Define scg_length as SIZE_TYPE.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 /*
@@ -258,8 +260,8 @@ FUNC_EXTERN DB_STATUS	scc_relay( SCF_CB *scf_cb,
 				   SCD_SCB *scb );
 FUNC_EXTERN DB_STATUS	scc_trace( SCF_CB *scf_cb,
 				   SCD_SCB *scb );
-FUNC_EXTERN STATUS	scc_recv( SCD_SCB *scb, i4  sync );
-FUNC_EXTERN STATUS	scc_send( SCD_SCB *scb, i4  sync );
+FUNC_EXTERN STATUS	scc_recv( CS_SCB *scb, i4  sync );
+FUNC_EXTERN STATUS	scc_send( CS_SCB *scb, i4  sync );
 FUNC_EXTERN VOID	scc_dispose( SCD_SCB *scb );
 FUNC_EXTERN VOID	scc_fa_notify( SCD_SCB *scb );
 FUNC_EXTERN VOID	scc_gcomplete( SCD_SCB *scb );

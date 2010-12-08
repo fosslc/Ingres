@@ -1,7 +1,8 @@
 # include	<compat.h>
 # include	<gl.h>
 # include	<ex.h>
-# include	"exi.h"
+# include	<clconfig.h>
+# include	<exinternal.h>
 
 /*
 **Copyright (c) 2004 Ingres Corporation
@@ -34,6 +35,8 @@
 **	    i_EXtop() now returns **EX_CONTEXT rather than *EX_CONTEXT,
 **	    i_EXpop() takes **EX_CONTEXT as parameter. For OS threads,
 **	    this reduces the number of ME_tls_get() calls from 3 to 1.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 STATUS

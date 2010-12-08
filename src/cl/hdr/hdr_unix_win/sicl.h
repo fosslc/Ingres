@@ -99,9 +99,14 @@
 **	    SIungetc.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	19-nov-2010 (stephenb)
+**	    Include stdarg.h, Solaris needs it for the va_list prototype.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 */
 
 # include 	<systypes.h>
+# include	<stdarg.h>
 
 /* Once upon a time, stdio.h defined its own NULL, causing annoying
 ** redefinition warnings.  These days one would hope that stdio.h is
@@ -114,10 +119,8 @@
 
 # include	<stdio.h>
 
-#ifdef CL_PROTOTYPED
 /* get LOCATION type if prototyped */
 #include    <lo.h>
-#endif
 
 #if defined(WIN32) || defined(WIN32S)
 #ifndef _INC_IO
@@ -295,9 +298,7 @@
 #endif
 
 
-#if defined(CL_PROTOTYPED)
 /* FUNCTION PROTOTYPES */
 FUNC_EXTERN char *	SIgetBufQLine(void);
 FUNC_EXTERN void	SIpinit(short docreate,void *hInstance,i2 hWnd,i2 TraceFlg,char *LogFile,i2 AppendFlg,char *TrcTitle,bool bFontFlag);
 FUNC_EXTERN void	SIsetupFixups(int (*p_fclose)(),FILE * (*p_fdopen)(),int (*p_fflush)(),int (*p__commit)(),char * (*p_fgets)(),int (*p_fileno)(),int (*p__fileno)(),FILE * (*p_fopen)(),int (*p_fputc)(),int (*p_fputs)(),size_t (*p_fread)(),FILE * (*p_freopen)(),int (*p_fseek)(),long (*p_ftell)(),size_t (*p_fwrite)(),int (*p_getc)(),int (*p_putc)(),void (*p_setbuf)(),int (*p_ungetc)(),int (*p_dup)(),int (*p_dup2)(),int (*p_isatty)(),char * (*p_mktemp)(),void (*p_exit)(),int *(*p_geterrno)());
-# endif /* CL_PROTOTYPED */

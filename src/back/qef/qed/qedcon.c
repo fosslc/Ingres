@@ -96,6 +96,8 @@
 **		Error initialize in sav_err in code
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 
@@ -172,14 +174,11 @@ QEF_RCB       *v_qer_p )
     DB_STATUS		status;
     QES_DDB_SES		*dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     QEF_DDB_REQ		*ddr_p = & v_qer_p->qef_r3_ddb_req;
-    QED_QUERY_INFO	*qry_p = & v_qer_p->qef_r3_ddb_req.qer_d4_qry_info;
     QES_CONN_SES	*conses_p = & dds_p->qes_d8_union.u1_con_ses;
     QED_CONN_INFO	*coninfo_p = & v_qer_p->qef_r3_ddb_req.qer_d6_conn_info;
     DD_LDB_DESC		*ldb_p = & coninfo_p->qed_c1_ldb;
     RQR_CB		rqr,
 			*rqr_p = & rqr;
-    TPR_CB		tpr,
-			*tpr_p = & tpr;
     bool		dei_ok = FALSE;
 
 
@@ -354,7 +353,6 @@ QEF_RCB		*v_qer_p )
 		    *rqr_p = & rqr;
     TPR_CB	    tpr,
 		    *tpr_p = & tpr;
-    bool	    dei_ok = FALSE;
     QED_QUERY_INFO  *qry_p = & v_qer_p->qef_r3_ddb_req.qer_d4_qry_info;
     SCC_SDC_CB	    *dc = 
       (SCC_SDC_CB *)ddr_p->qer_d6_conn_info.qed_c4_exchange_p;

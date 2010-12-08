@@ -24,6 +24,8 @@ NEEDLIBS = COMPATLIB
 **	    add copyright, fix problem with passed scan pattern.
 **	27-jan-2005 (abbjo03)
 **	    Rename to pmtest2 to avoid conflict with pmtest in front!st!util.
+**      03-nov-2010 (joea)
+**          Declare local functions static.
 */
 
 # include <stdarg.h>
@@ -130,14 +132,14 @@ struct get_test del_tests[] = {
     NULL, 0
 };
 
-STATUS
+static STATUS
 null_handler(exargs)
 EX_ARGS     *exargs;
 {
     return(EXDECLARE);
 } /* null_handler */
 
-void
+static void
 banner( char *title )
 {
     SIprintf( "\n** %s **\n\n", title );
@@ -148,7 +150,7 @@ banner( char *title )
 **
 ** Note: certain of these codes do not exist in 2.0
 */
-char *
+static char *
 xlate_code( STATUS status, char *buf )
 {
     switch ( status )
@@ -173,7 +175,7 @@ xlate_code( STATUS status, char *buf )
     return buf;
 }
 
-void
+static void
 check_res( char *title, STATUS expected, STATUS actual )
 {
     char	buf1[36],buf2[36];
@@ -189,7 +191,7 @@ check_res( char *title, STATUS expected, STATUS actual )
     }
 }
 
-void
+static void
 test_setdefault( int count, char *title, ... )
 {
     va_list	p;
@@ -214,7 +216,7 @@ test_setdefault( int count, char *title, ... )
     va_end(p);
 }
 
-i4 
+static i4 
 test_get( char *name, char *expectedvalue, STATUS expectedstatus )
 {
     STATUS	status;
@@ -256,7 +258,7 @@ test_get( char *name, char *expectedvalue, STATUS expectedstatus )
     return ( status == expectedstatus ) ? OK : FAIL;
 }
 
-i4
+static i4
 test_add( char *name, char *value, STATUS expectedstatus )
 {
     STATUS	status;
@@ -286,7 +288,7 @@ test_add( char *name, char *value, STATUS expectedstatus )
     return ( status == expectedstatus ) ? OK : FAIL;
 }
 
-i4
+static i4
 test_del( char *name, STATUS expectedstatus )
 {
     STATUS	status;
@@ -316,7 +318,7 @@ test_del( char *name, STATUS expectedstatus )
     return ( status == expectedstatus ) ? OK : FAIL;
 }
 
-i4
+static i4
 test_scan( char *title, char *pattern )
 {
     PM_SCAN_REC	scanstate;

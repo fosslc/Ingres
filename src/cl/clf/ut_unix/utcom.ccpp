@@ -175,6 +175,8 @@
 	19-Apr-2010 (hweho01)
 	    For Solaris/Sparc, use the different options by checking  
 	    compiler version/flags at runtime, avoid annoying warnings.  
+	23-Nov-2010 (kschendel)
+	    Drop obsolete DG ports.
 
 # endif
 
@@ -248,31 +250,6 @@
 # define FFLAGS -c -xarch=generic64
 # endif
 #endif
-
-# if defined(sco_us5) || defined(sos_us5)
-# define FFLAGS -mixedcase
-# define FORTRAN	lpifortran
-# endif
-
-# if defined(rtp_us5) || defined(ps2_us5)
-# define FORTRAN	vs mr1
-# endif
-
-# if defined(sqs_us5) || defined(sqs_ptx)
-# define FORTRAN fortran -c132
-# endif
-
-# ifdef dg8_us5
-# define FORTRAN ghf77
-# define FFLAGS -c -f77 -O -elf
-# define CFLAGS -O -c
-# endif
-
-# ifdef dgi_us5
-# define FORTRAN epcf77
-# define FFLAGS -132
-# define CFLAGS -Xt -O -c
-# endif
 
 # ifdef sgi_us5
 # define CFLAGS -c -O -n32 -mips3 -signed 

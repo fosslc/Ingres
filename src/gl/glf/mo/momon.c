@@ -57,6 +57,8 @@
 **	    replace nat and longnat with i4
 **	07-aug-2001 (somsa01)
 **	    Cleaned up compiler warnings.
+**      03-nov-2010 (joea)
+**          Declare MO_igetmon and MO_delmon as static.
 **/
 
 
@@ -97,9 +99,11 @@ GLOBALREF MO_CLASS_DEF MO_mon_classes[];
 ** History:
 **	24-sep-92 (daveb)
 **	    documented
+**	1-Dec-2010 (kschendel)
+**	    Stop with the compiler warnings.
 */
 
-MO_MON_BLOCK *
+static MO_MON_BLOCK *
 MO_igetmon( char *instance )
 {
     char classid[ 80 ];
@@ -118,7 +122,7 @@ MO_igetmon( char *instance )
 
     MO_str_to_uns( instance, &mon_data_val );
 
-    return( MO_getmon( cp, (PTR)mon_data_val ) );
+    return( MO_getmon( cp, (PTR)((SCALARP)mon_data_val) ) );
 }
 
 
@@ -440,7 +444,7 @@ MO_getmon( MO_CLASS *cp, PTR mon_data )
 **	    documented
 */
 
-VOID
+static void
 MO_delmon( MO_MON_BLOCK *mp )
 {
     MO_MON_BLOCK *nmp;		/* next monitor */

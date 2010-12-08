@@ -110,27 +110,11 @@
 **	    list elements for T121. pst_swelem have been moved into gere as a
 **	    static function along with pst_swelem_clone that will handle the
 **	    expansions required.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/* static function declarations */
-static DB_STATUS
-psl_syn_id(
-	PSS_SESBLK	*sess_cb,
-	DB_OWN_NAME	*syn_owner,
-	DB_TAB_NAME	*syn_name,
-	DB_TAB_ID	*syn_id,
-	DB_ERROR	*err_blk);
 
-static DB_STATUS psl_swelem(
-	PSS_SESBLK	*sess_cb,
-	PSS_USRRANGE	*rngtable,
-	PSQ_MODE	query_mode,
-	i4		scope,
-	char		*varname,
-	DB_TAB_NAME	*tabname,
-	PSS_RNGTAB	**rngvar,
-	PST_J_ID	*pjoin_id,
-	DB_ERROR	*err_blk);
+/* Forward structs for prototypes */
 typedef struct _PST_SWELEM_CLONE_CTX {
 	PSS_SESBLK	*cb;
 	PSS_USRRANGE	*rngtable;
@@ -142,9 +126,96 @@ typedef struct _PST_SWELEM_CLONE_CTX {
 	i4		vno_map[PST_NUMVARS];
 	PST_J_ID	jid_map[PST_NUMVARS];
 } PST_SWELEM_CLONE_CTX;
-static DB_STATUS psl_swelem_clone(
+
+/* TABLE OF CONTENTS */
+i4 psl_rngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	DB_TAB_NAME *tabname,
+	PSS_SESBLK *cb,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk,
+	i4 *caller_info,
+	PST_J_ID *pjoin_id);
+i4 psl0_rngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	DB_TAB_NAME *tabname,
+	PSS_SESBLK *cb,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk,
+	i4 tbls_to_lookup,
+	i4 *caller_info,
+	i4 lookup_mask,
+	PST_J_ID *pjoin_id);
+i4 psl_drngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	PSS_SESBLK *cb,
+	PSS_RNGTAB **rngvar,
+	PST_QNODE *root,
+	i4 type,
+	DB_ERROR *err_blk);
+i4 psl_tprngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	i4 dbpid,
+	PSS_SESBLK *cb,
+	PSS_RNGTAB **rngvar,
+	PST_QNODE *root,
+	DB_ERROR *err_blk);
+i4 psl_orngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	DB_OWN_NAME *ownname,
+	DB_TAB_NAME *tabname,
+	PSS_SESBLK *cb,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk,
+	i4 *caller_info);
+i4 psl0_orngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	DB_OWN_NAME *ownname,
+	DB_TAB_NAME *tabname,
+	PSS_SESBLK *cb,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk,
+	i4 *caller_info,
+	i4 lookup_mask);
+static i4 psl_syn_id(
+	PSS_SESBLK *sess_cb,
+	DB_OWN_NAME *syn_owner,
+	DB_TAB_NAME *syn_name,
+	DB_TAB_ID *syn_id,
+	DB_ERROR *err_blk);
+static i4 psl_swelem(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtable,
+	PSQ_MODE query_mode,
+	i4 scope,
+	char *varname,
+	DB_TAB_NAME *tabname,
+	PSS_RNGTAB **rngvar,
+	PST_J_ID *pjoin_id,
+	DB_ERROR *err_blk);
+static i4 psl_swelem_clone(
 	PST_SWELEM_CLONE_CTX *ctx,
-	PSS_RNGTAB	*orig);
+	PSS_RNGTAB *orig);
 
 /*{
 ** Name: psl_rngent	- Enter a range variable
@@ -436,7 +507,6 @@ psl0_rngent(
 	PST_J_ID	*pjoin_id)
 {
     DB_STATUS           status = E_DB_ERROR;
-    i4		err_code;
     i4		fishing = (PSS_SESTBL & tbls_to_lookup) &&
 			(PSS_USRTBL|PSS_DBATBL|PSS_INGTBL) & tbls_to_lookup;
     DB_TAB_OWN		*owner;
@@ -845,7 +915,6 @@ psl_drngent(
 	DB_ERROR	   *err_blk)
 {
     DB_STATUS           status;
-    i4		err_code;
 
     /* The work is actually performed by a pst function - so send it all on. */
     status = pst_sdent(rngtable, scope, varname, cb, rngvar, 
@@ -1564,8 +1633,8 @@ psl_swelem(
 */
 static DB_STATUS
 psl_swelem_clone(
-    struct _PST_SWELEM_CLONE_CTX *ctx,
-    PSS_RNGTAB *orig)
+	PST_SWELEM_CLONE_CTX *ctx,
+	PSS_RNGTAB *orig)
 {
     DB_STATUS status = E_DB_OK;
     PSS_RNGTAB *rptr;
@@ -1638,9 +1707,11 @@ psl_swelem_clone(
 		break;
 	    case PST_CONST:
 	    case PST_BYHEAD:
-		/* Don't descent these */
+		/* Don't descend these */
 		nodep = (PST_QNODE**)pst_pop_item(&stk);
 		continue;
+	    default:
+		break;
 	    }
 	    if (node->pst_left)
 	    {
@@ -1791,6 +1862,8 @@ psl_swelem_clone(
 	    case PST_OR:
 		if ((jid = node->pst_sym.pst_value.pst_s_op.pst_joinid) > 0)
 		    node->pst_sym.pst_value.pst_s_op.pst_joinid = ctx->jid_map[jid];
+		break;
+	    default:
 		break;
 	    }
 	    if ((*nodep)->pst_left)

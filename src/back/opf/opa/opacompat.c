@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -79,8 +79,61 @@
 **	27-Oct-09 (smeke01) b122794
 **	    Correct and improve OP147. Make all output go to the front-end. 
 **	    Display addresses in hex. Correct #define name. 
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opa_cvar(
+	OPS_STATE *global,
+	OPV_GBMVARS *vmap,
+	PST_QNODE *treep);
+static void opa_dups(
+	OPS_SUBQUERY *header,
+	OPS_SUBQUERY *subquery);
+static OPS_SUBQUERY *opa_sameagg(
+	OPS_SUBQUERY *header,
+	PST_QNODE *newaop);
+static bool opa_csimple(
+	OPS_SUBQUERY *header,
+	OPS_SUBQUERY *subquery,
+	OPS_SUBQUERY **previous);
+static void opa_substitute(
+	OPS_SUBQUERY *subquery,
+	OPV_IGVARS gvarno);
+static bool opa_cfunction(
+	OPS_SUBQUERY *header,
+	OPS_SUBQUERY *subquery,
+	OPS_SUBQUERY **previous);
+static void opa_cselect(
+	OPS_SUBQUERY *header,
+	OPS_SUBQUERY *subquery,
+	OPS_SUBQUERY **previous);
+static void opa_igmap(
+	OPS_STATE *global);
+static bool opa_corrcheck(
+	OPS_STATE *global,
+	OPV_IGVARS lvar,
+	OPV_IGVARS rvar);
+static bool opa_cmaps(
+	OPS_STATE *global,
+	OPV_GBMVARS *lmap,
+	OPV_GBMVARS *rmap);
+static bool opa_together(
+	OPS_SUBQUERY *header,
+	OPS_SUBQUERY *subquery);
+static void opa_findcompat(
+	OPS_SUBQUERY *header);
+void opa_agbylist(
+	OPS_SUBQUERY *subquery,
+	bool agview,
+	bool project);
+static void opa_coagview(
+	OPS_SUBQUERY *subquery);
+void opa_gsub(
+	OPS_SUBQUERY *subquery);
+void opa_compat(
+	OPS_STATE *global);
 
 /*{
 ** Name: opa_cvar	- convert var nodes
@@ -111,6 +164,10 @@
 **          initial creation to support common table ID detection
 **	16-feb-93 (ed)
 **	    fix bug 49505 - var bit map consistency check
+**	27-oct-10 (smeke01) b124362
+**	    This function should only convert var numbers for vars that are
+**	    correlated vars and that appear in both queries being compared.
+**	    The rest it should leave unchanged, and not raise an error.
 [@history_template@]...
 */
 static bool
@@ -129,33 +186,55 @@ opa_cvar(
 	{
 	    OPV_IGVARS	    gvar;
 	    OPV_GRV	    *gvarp;
+	    i4		    vno;
 
-	    gvarp = gbase->opv_grv[treep->pst_sym.pst_value.pst_s_var.pst_vno];
+	    vno = treep->pst_sym.pst_value.pst_s_var.pst_vno;
+	    gvarp = gbase->opv_grv[vno];
 	    gvar = gvarp->opv_compare;
 	    if (gvar == OPV_NOGVAR)
-	    {	/* look for unmapped variable to use */
-		if (BTtest((i4)treep->pst_sym.pst_value.pst_s_var.pst_vno,
-		    (char *)vmap))
-		    gvar = treep->pst_sym.pst_value.pst_s_var.pst_vno;	/* this variable
-						** is the same in both queries so map it to
-						** the same variable */
-		else if (gvarp->opv_same == OPV_NOGVAR)
-		    opx_error(E_OP0286_UNEXPECTED_VAR); /* this variable should be
-						** part of a group of more than one
-						** with the same table ID */
-		else for (gvar = -1; (gvar = BTnext((i4)gvar, (char *)vmap, (i4)BITS_IN(*vmap)))>=0;)
-		{   /* need to find a compatible variable */
-		    if ((gbase->opv_grv[gvar]->opv_same == gvarp->opv_same)
-			&&
-			(gbase->opv_grv[gvar]->opv_compare == OPV_NOGVAR)
-			)
-			break;
+	    {
+		if (BTtest(vno, (char *)vmap) || gvarp->opv_same == OPV_NOGVAR)
+		{
+		    /*
+		    ** This var is either the same in both queries, or it is
+		    ** not a correlated var anyway.
+		    */
+		    gvar = vno;
 		}
-		if (gvar < 0)
-		    opx_error(E_OP0286_UNEXPECTED_VAR);
-		gbase->opv_grv[treep->pst_sym.pst_value.pst_s_var.pst_vno]->opv_compare = gvar;
-		    
+		else
+		{
+		    /*
+		    ** The varno for this var is not in the master query, but
+		    ** the var IS a correlated var. Check whether the var is
+		    ** in the master query but with a different vno...
+		    */
+		    for (gvar = -1;
+			(gvar = BTnext((i4)gvar, (char *)vmap, (i4)BITS_IN(*vmap)))>=0;)
+		    {
+			/* ..if it is, we use the vno from the master query...*/
+			if (gbase->opv_grv[gvar]->opv_same == gvarp->opv_same)
+			{
+			    /*
+			    ** Map the var from the candidate query to the
+			    ** var used in the master query. This will make it
+			    ** quicker to find if there are subsequent
+			    ** occurences of this vno in the candidate query.
+			    */
+			    gbase->opv_grv[vno]->opv_compare = gvar;
+			    break;
+			}
+		    }
+		    /*
+		    ** ...if it isn't, this is the same case as the var only
+		    ** being in the second query, so keep the original vno.
+		    */
+		    if (gvar < 0)
+		    {
+			gvar = vno;
+		    }
+		}
 	    }
+	    /* Assign the result of our processing. */
 	    treep->pst_sym.pst_value.pst_s_var.pst_vno = gvar;
 	    ret_val = TRUE;
 	}
@@ -1149,7 +1228,7 @@ OPS_STATE          *global;
 
 
 /*
-** Name: opv_corrcheck - compare correlation names for range values
+** Name: opa_corrcheck - compare correlation names for range values
 **
 ** Description:
 **	This routine compares the correlation names of two tables to
@@ -1172,8 +1251,8 @@ OPS_STATE          *global;
 **		created
 */
 
-bool
-opv_corrcheck(
+static bool
+opa_corrcheck(
 	OPS_STATE          *global,
         OPV_IGVARS 		   lvar,
         OPV_IGVARS 		   rvar)
@@ -1209,7 +1288,7 @@ opv_corrcheck(
 }
 
 /*{
-** Name: opv_cmaps	- compare range variable maps
+** Name: opa_cmaps	- compare range variable maps
 **
 ** Description:
 **      This routine compares range variable maps taking into account
@@ -1236,12 +1315,12 @@ opv_corrcheck(
 **          initial creation
 **	21-jul-00 (wanfr01)
 **	    bug 102154, INGSRV 1232
-**	    added opv_corrcheck to compare correlation names
+**	    added opa_corrcheck to compare correlation names
 [@history_template@]...
 */
 
 static bool
-opv_cmaps(
+opa_cmaps(
 	OPS_STATE          *global,
 	OPV_GBMVARS        *lmap,
 	OPV_GBMVARS        *rmap)
@@ -1284,7 +1363,7 @@ opv_cmaps(
 		&&
 		(gbase->opv_grv[rvar]->opv_same != OPV_NOGVAR)
 		&&
-		opv_corrcheck(global,lvar,rvar)
+		opa_corrcheck(global,lvar,rvar)
 	    )
 	    {
 		gbase->opv_grv[rvar]->opv_compare = lvar;
@@ -1353,6 +1432,10 @@ opv_cmaps(
 **	    Confirm that subqueries to be joined have the same distinctness
 **	    and, if eliminating distincts from a count query, have the same
 **	    column(s) in the resdom list.
+**      10-sept-2010 (huazh01)
+**          if 'header' and 'subquery' are two idential sub-select queries
+**          but under different outer join id, then they are not compatible
+**          to be run together. (b123772)
 [@history_line@]...
 */
 static bool
@@ -1439,7 +1522,7 @@ note that r1 and r2 are not equivalent.
         &&
 	(   !(global->ops_gmask & OPS_IDSAME)
 	    ||
-	    !opv_cmaps(global, &header->ops_correlated, &subquery->ops_correlated)
+	    !opa_cmaps(global, &header->ops_correlated, &subquery->ops_correlated)
 	)
 #endif
        )
@@ -1462,7 +1545,7 @@ note that r1 and r2 are not equivalent.
         &&
 	(   !(global->ops_gmask & OPS_IDSAME)
 	    ||
-	    !opv_cmaps(global, 
+	    !opa_cmaps(global, 
 	      (OPV_GBMVARS *)&header->ops_root->pst_sym.pst_value.pst_s_root.pst_tvrm,
 	      (OPV_GBMVARS *)&subquery->ops_root->pst_sym.pst_value.pst_s_root.pst_tvrm)
 	)
@@ -1645,7 +1728,7 @@ note that r1 and r2 are not equivalent.
 	    &&
 	    (	!(global->ops_gmask & OPS_IDSAME)
 		||
-		!opv_cmaps(global, &lmap, &rmap)
+		!opa_cmaps(global, &lmap, &rmap)
 	    ))
 	{
 	    /* note that "select count (*), min(r.a) from r" would not be
@@ -1726,10 +1809,11 @@ note that r1 and r2 are not equivalent.
     /* If this is a straightforward COUNT, we need to ensure that the duplicate
     ** elimination is the same (kibro01) b121869
     */
-#define ADI_CNTAL_OP	39
     if (header->ops_agg.opa_aop && subquery->ops_agg.opa_aop &&
-	header->ops_agg.opa_aop->pst_sym.pst_value.pst_s_op.pst_opno == ADI_CNTAL_OP &&
-	subquery->ops_agg.opa_aop->pst_sym.pst_value.pst_s_op.pst_opno == ADI_CNTAL_OP)
+	header->ops_agg.opa_aop->pst_sym.pst_value.pst_s_op.pst_opno == 
+            header->ops_global->ops_cb->ops_server->opg_scount &&
+	subquery->ops_agg.opa_aop->pst_sym.pst_value.pst_s_op.pst_opno == 
+            header->ops_global->ops_cb->ops_server->opg_scount)
     {
 	PST_QNODE *h, *s;
 	/* One is count(distinct) and the other just count - can't combine */
@@ -1770,6 +1854,16 @@ note that r1 and r2 are not equivalent.
 	if (h || s)
 		return (FALSE);
     }
+
+    /* b123772:
+    ** if two sub-select queries are identical but under different 
+    ** oj id, then they are not compatible to be run together. 
+    ** 'opl_aggid' gets set in opa_rnode().
+    */
+    if (header->ops_sqtype == OPS_SELECT &&
+        subquery->ops_sqtype == OPS_SELECT &&
+        header->ops_oj.opl_aggid != subquery->ops_oj.opl_aggid)
+       return (FALSE);
 
     return(TRUE); /* return TRUE if aggregates are compatible */
 

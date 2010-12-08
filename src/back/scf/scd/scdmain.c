@@ -446,6 +446,8 @@ NO_OPTIM=dr6_us5
 **	    Update GCA API to LEVEL 5
 **	Nov/Dec 2009 (stephenb)
 **	    Init new batch processing fields.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Refine CS prototypes.
 **/
 
 /*
@@ -749,7 +751,7 @@ char		**argv;
 	ccb.cs_stkcache = FALSE;
 	ccb.cs_scballoc = scd_alloc_scb;
 	ccb.cs_scbdealloc = scd_dealloc_scb;
-	ccb.cs_elog = (void (*)())sc0e_putAsFcn;
+	ccb.cs_elog = sc0e_putAsFcn;
 	ccb.cs_process = scs_sequencer;
 	ccb.cs_startup = scd_initiate;
 	ccb.cs_shutdown = scd_terminate;
@@ -761,8 +763,8 @@ char		**argv;
 	ccb.cs_saddr = scd_get_assoc;
 	ccb.cs_reject = scd_reject_assoc;
 	ccb.cs_disconnect = scd_disconnect;
-        ccb.cs_scbattach = (void (*)())scs_scb_attach;
-        ccb.cs_scbdetach = (void (*)())scs_scb_detach;
+        ccb.cs_scbattach = scs_scb_attach;
+        ccb.cs_scbdetach = scs_scb_detach;
 	ccb.cs_diag = scd_diag;
 	ccb.cs_get_rcp_pid = LGrcp_pid;
 	ccb.cs_format_lkkey = LKkey_to_string;
@@ -1046,7 +1048,7 @@ char		**argv;
 **	    Delete unused blob coupon list.
 */
 STATUS
-scd_alloc_scb( SCD_SCB  **scb_ptr, GCA_LS_PARMS  *input_crb, i4  thread_type )
+scd_alloc_scb( CS_SCB  **csscbp, void  *input_crb, i4  thread_type )
 {
     STATUS              status = OK;
     STATUS		local_status;
@@ -1060,6 +1062,7 @@ scd_alloc_scb( SCD_SCB  **scb_ptr, GCA_LS_PARMS  *input_crb, i4  thread_type )
     SCF_FTC		*ftc;
     GCA_LS_PARMS	*crb;
     SCD_SCB		*scb;
+    SCD_SCB		**scb_ptr = (SCD_SCB **) csscbp;
     char		*block;
     char		*user_name, *terminal_name;
     char		*parent_scb_username = NULL;
@@ -1113,7 +1116,7 @@ scd_alloc_scb( SCD_SCB  **scb_ptr, GCA_LS_PARMS  *input_crb, i4  thread_type )
 	    crb = (GCA_LS_PARMS*)NULL;
     }
     else 
-	crb = input_crb;
+	crb = (GCA_LS_PARMS *) input_crb;
 
     if (crb && crb->gca_status != E_GC0000_OK)
     {
@@ -2067,13 +2070,14 @@ scd_alloc_scb( SCD_SCB  **scb_ptr, GCA_LS_PARMS  *input_crb, i4  thread_type )
 **	    Relocated the code which releases the SCB to the end.  (Bug #93332)
 */
 STATUS
-scd_dealloc_scb( SCD_SCB *scb )
+scd_dealloc_scb( CS_SCB *cscb )
 {
+    SCD_SCB	*scb = (SCD_SCB *) cscb;
     STATUS	 status;
     i4		 count;
     i4	 	 thread_type = scb->scb_sscb.sscb_stype;
 
-    (void) scs_scb_detach( scb );
+    scs_scb_detach( cscb );
 
     /* Decrement current session count by session type */
     CSp_semaphore( TRUE, &Sc_main_cb->sc_misc_semaphore );
@@ -2191,8 +2195,9 @@ scd_dealloc_scb( SCD_SCB *scb )
 **         error to -1 if we have been unable to create a new thread.
 */
 STATUS
-scd_reject_assoc( GCA_LS_PARMS  *crb, STATUS error )
+scd_reject_assoc( void *parm, STATUS error )
 {
+    GCA_LS_PARMS	*crb = (GCA_LS_PARMS *) parm;
     GCA_RR_PARMS        rrparms;
     DB_STATUS		status; 
     STATUS		gca_status;
@@ -2302,8 +2307,9 @@ scd_reject_assoc( GCA_LS_PARMS  *crb, STATUS error )
 **	    Partial backout/rewrite of fix.
 */
 STATUS
-scd_get_assoc( GCA_LS_PARMS *crb, i4  sync )
+scd_get_assoc( void *parm, i4  sync )
 {
+    GCA_LS_PARMS	*crb = (GCA_LS_PARMS *) parm;
     DB_STATUS		status;
     STATUS		error;
     i4                  count;
@@ -2416,8 +2422,9 @@ scd_get_assoc( GCA_LS_PARMS *crb, i4  sync )
 [@history_template@]...
 */
 VOID
-scd_disconnect( SCD_SCB  *scb )
+scd_disconnect( CS_SCB  *csscb )
 {
+    SCD_SCB		*scb = (SCD_SCB *) csscb;
     GCA_ER_DATA		*ebuf;
     DB_STATUS		status;
     STATUS		gca_status = 0;

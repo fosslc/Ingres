@@ -294,6 +294,8 @@
 **	    Remove string length restrictions.
 **	22-Jan-10 (gordy)
 **	    DOUBLEBYTE code generalized for multi-byte charset processing.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 #include <gcxdebug.h>
@@ -1418,6 +1420,7 @@ FUNC_EXTERN STATUS	gcc_alterm( STATUS *, CL_ERR_DESC * );
 
 FUNC_EXTERN STATUS	gcc_adm_init( void );
 FUNC_EXTERN STATUS	gcc_adm_term( void );
+FUNC_EXTERN STATUS	gcc_adm_session( i4, PTR, char * );
 
 FUNC_EXTERN STATUS	gcc_al( GCC_MDE * );
 FUNC_EXTERN VOID	gcc_gca_exit( PTR async_id );
@@ -1445,7 +1448,7 @@ FUNC_EXTERN STATUS	gcc_sl( GCC_MDE * );
 
 FUNC_EXTERN STATUS	gcc_tlinit(STATUS *, CL_ERR_DESC * );
 FUNC_EXTERN STATUS	gcc_tlterm(STATUS *, CL_ERR_DESC * );
-FUNC_EXTERN STATUS	gcc_tl_registry();
+FUNC_EXTERN STATUS	gcc_tl_registry( VOID );
 FUNC_EXTERN STATUS	gcc_tl( GCC_MDE * );
 FUNC_EXTERN VOID	gcc_tl_abort( GCC_MDE *, GCC_CCB *, 
 				      STATUS *, CL_ERR_DESC *, GCC_ERLIST * );
@@ -1476,4 +1479,6 @@ FUNC_EXTERN STATUS	gcc_cnf_encrypt( GCC_MDE *mde, GCC_CCB *ccb );
 FUNC_EXTERN i4		gcc_encode( char *, char *, u_i1 *, u_i1 * );
 FUNC_EXTERN VOID	gcc_decode( u_i1 *, i4, char *, u_i1 *, char * );
 FUNC_EXTERN STATUS	gcc_sess_abort( GCC_CCB * );
-
+FUNC_EXTERN STATUS	gcc_pbinit ( STATUS *, CL_ERR_DESC * );
+FUNC_EXTERN STATUS	gcc_pbterm ( STATUS *, CL_ERR_DESC * );
+FUNC_EXTERN STATUS	gcc_pb ( GCC_MDE *, STATUS *, CL_ERR_DESC * );

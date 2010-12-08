@@ -146,21 +146,15 @@
 **	    remove dbdbms.h
 **	22-Oct-07 (kiria01) b119354
 **	    Split adi_dtcoerce into a quel and SQL version
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_tycoerce(
 ADF_CB              *adf_scb,
 DB_DT_ID            adi_did,
 ADI_DT_BITMASK      *adi_dmsk)
-# else
-DB_STATUS
-adi_tycoerce( adf_scb, adi_did, adi_dmsk)
-ADF_CB              *adf_scb;
-DB_DT_ID            adi_did;
-ADI_DT_BITMASK      *adi_dmsk;
-# endif
 {
     DB_DT_ID            bdt = abs(adi_did);
     u_i2                bm_size = sizeof(ADI_DT_BITMASK);

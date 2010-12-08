@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004,2008 Ingres Corporation
+** Copyright (c) 2004,2008, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -232,21 +232,15 @@
 ** History:
 **      19-jun-87 (thurston)
 **          Initial creation.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_minmaxdv(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE	    *adc_mindv,
 DB_DATA_VALUE	    *adc_maxdv)
-# else
-DB_STATUS
-adc_minmaxdv( adf_scb, adc_mindv, adc_maxdv)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE	    *adc_mindv;
-DB_DATA_VALUE	    *adc_maxdv;
-# endif
 {
     i4			dt;
     i4			bdt;
@@ -486,6 +480,9 @@ DB_DATA_VALUE	    *adc_maxdv;
 **	    Break out the case for byte/varbyte from char/varchar
 **	    which should not be checked against restricted adf_maxstring 
 **	    length in UTF8 installations.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. No need for the reduced length
+**	    as it doesn't use UCS2 CEs.
 */
 
 DB_STATUS
@@ -810,7 +807,8 @@ DB_DATA_VALUE	    *adc_maxdv)
 
 	      case DB_CHR_TYPE:
 	      case DB_CHA_TYPE:
-	  	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	  	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			adc_maxdv->db_collID != DB_UCS_BASIC_COLL)
 		  adc_maxdv->db_length = adf_scb->adf_maxstring/2;
 		else
 		  adc_maxdv->db_length = adf_scb->adf_maxstring;
@@ -823,7 +821,8 @@ DB_DATA_VALUE	    *adc_maxdv)
 
 	      case DB_TXT_TYPE:
 	      case DB_VCH_TYPE:
-	  	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	  	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+			adc_maxdv->db_collID != DB_UCS_BASIC_COLL)
 		  adc_maxdv->db_length = adf_scb->adf_maxstring/2 + DB_CNTSIZE;
 		else
 		  adc_maxdv->db_length = adf_scb->adf_maxstring + DB_CNTSIZE;

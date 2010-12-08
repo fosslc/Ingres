@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -129,8 +129,99 @@
 **          so the remaining spaces would be set properly.    
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/*
+** Forward Structure Definitions:
+*/
+typedef struct _OPJ_ORSTAT OPJ_ORSTAT;
+
+/* TABLE OF CONTENTS */
+void opj_adjust(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qual);
+void opj_mvands(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *qual);
+static void opj_distributive(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *tree);
+static bool opj_factor(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **or_owner,
+	PST_QNODE **cfac_grandpa,
+	bool *cfac_rhs);
+static bool opj_matchbuop(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE ***twin_parent,
+	PST_QNODE **twin,
+	bool *twin_rhs);
+static bool opj_match_inlist(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *twin1,
+	PST_QNODE *twin2);
+static void opj_traverse(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qual,
+	bool *noncnf);
+static void opj_topscan(
+	OPS_SUBQUERY *subquery,
+	OPJ_ORSTAT *opj_orstatp,
+	PST_QNODE **node,
+	bool *success);
+static void opj_orscan(
+	OPS_SUBQUERY *subquery,
+	OPJ_ORSTAT *opj_orstatp,
+	PST_QNODE **node,
+	bool *success,
+	bool *failure);
+static void opj_andscan(
+	OPS_SUBQUERY *subquery,
+	OPJ_ORSTAT *opj_orstatp,
+	PST_QNODE **node,
+	bool *failure,
+	int *count);
+static bool opj_or2scan(
+	OPS_SUBQUERY *subquery,
+	OPJ_ORSTAT *opj_orstatp,
+	PST_QNODE **node,
+	int *count);
+static bool opj_bopscan(
+	OPS_SUBQUERY *subquery,
+	OPJ_ORSTAT *opj_orstatp,
+	PST_QNODE **node,
+	int *count);
+static void opj_scanfail(
+	OPS_SUBQUERY *subquery,
+	OPJ_ORSTAT *opj_orstatp);
+static void opj_inreplace(
+	OPS_SUBQUERY *subquery,
+	OPJ_ORSTAT *opj_orstatp);
+static void opj_orreplace(
+	OPS_SUBQUERY *subquery,
+	OPJ_ORSTAT *opj_orstatp,
+	PST_QNODE **node);
+static void opj_sortor(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **rowarray,
+	i4 *rowcount);
+static void opj_tidyup(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static void opj_complxest(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep,
+	f4 *terms,
+	f4 *factors,
+	bool underor,
+	bool *notcnf);
+void opj_normalize(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qual);
+void opj_mvors(
+	PST_QNODE *qual);
 
 /**
 **
@@ -139,7 +230,7 @@
 **
 */
 
-typedef struct _OPJ_ORSTAT
+struct _OPJ_ORSTAT
 {
     PST_QNODE	*var_array[OPV_MAXVAR];		/* addrs of PST_VARs under
 						** consideration */
@@ -179,94 +270,14 @@ typedef struct _OPJ_ORSTAT
     OPV_BMVARS	var_map;			/* bit map for current AND set */
     bool	first;				/* TRUE: processing first AND set
 						** for current OR set */
-} OPJ_ORSTAT;
+};
 
 /*
 **  Definition of static variables and forward static functions.
 */
 
-static ADI_OP_ID invops[] = {ADI_NE_OP, -1, -1, -1, -1, -1, ADI_GT_OP, 
+static const ADI_OP_ID invops[] = {ADI_NE_OP, -1, -1, -1, -1, -1, ADI_GT_OP, 
 		ADI_GE_OP, ADI_EQ_OP, ADI_LT_OP, ADI_LE_OP};
-
-static bool
-opj_matchbuop(
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE 	***twin_parent,
-	PST_QNODE	**twin,
-	bool		*twin_rhs);
-
-static bool
-opj_match_inlist(
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE 	*twin1,
-	PST_QNODE	*twin2);
-
-static  VOID        opj_nnorm(
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE	**qual);
-
-static	VOID       opj_distributive(
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE       *tree);
-
-static VOID 
-opj_topscan(
-	OPS_SUBQUERY	*subquery,
-	OPJ_ORSTAT	*opj_orstatp,
-	PST_QNODE	**node,
-	bool		*success);
-
-static VOID 
-opj_orscan(
-	OPS_SUBQUERY	*subquery,
-	OPJ_ORSTAT	*opj_orstatp,
-	PST_QNODE	**node,
-	bool		*success,
-	bool		*failure);
-
-static VOID 
-opj_andscan(
-	OPS_SUBQUERY	*subquery,
-	OPJ_ORSTAT	*opj_orstatp,
-	PST_QNODE	**node,
-	bool		*failure,
-	int		*count);
-
-static bool
-opj_or2scan(
-	OPS_SUBQUERY	*subquery,
-	OPJ_ORSTAT	*opj_orstatp,
-	PST_QNODE	**node,
-	int		*count);
-
-static bool
-opj_bopscan(
-	OPS_SUBQUERY	*subquery,
-	OPJ_ORSTAT	*opj_orstatp,
-	PST_QNODE	**node,
-	int		*count);
-
-static VOID
-opj_scanfail(
-	OPS_SUBQUERY	*subquery,
-	OPJ_ORSTAT	*opj_orstatp);
-
-static VOID
-opj_orreplace(
-	OPS_SUBQUERY	*subquery,
-	OPJ_ORSTAT	*opj_orstatp,
-	PST_QNODE	**node);
-
-static VOID
-opj_inreplace(
-	OPS_SUBQUERY	*subquery,
-	OPJ_ORSTAT	*opj_orstatp);
-
-static VOID
-opj_sortor(
-	OPS_SUBQUERY	*subquery,
-	PST_QNODE	**rowarray,
-	i4		*rowcount);
 
 
 /*{
@@ -1210,7 +1221,7 @@ opj_match_inlist(
 **          about to be set to NULL.
 [@history_template@]...
 */
-VOID
+static VOID
 opj_traverse(
 	OPS_SUBQUERY	    *subquery,
 	PST_QNODE	    **qual,
@@ -1340,7 +1351,6 @@ opj_topscan(
 	bool		*success)
 
 {
-i4		i;
 bool		failure;
 
     /* This function examines the top level of the qualification tree. It 
@@ -1774,6 +1784,10 @@ opj_or2scan(
 **      15-jul-2009 (huazh01)
 **          put constants in IN-list into OPJ_ORSTAT's in_array[]. 
 **          b122313. 
+**      17-aug-2010 (huazh01) 
+**          stop copying the query tree into in_array[]. Let
+**          in_array[] and const_array[] references the same query 
+**          tree. (b124212)
 [@history_template@]...
 */
 static bool
@@ -1784,7 +1798,7 @@ opj_bopscan(
 	int		*count)
 
 {
-    PST_QNODE	*var, *cnst, *dup;
+    PST_QNODE	*var, *cnst, *dup, *ptr;
     int		i;
 
     /* First we perform some simple tests (hard to imagine a query with 
@@ -1855,7 +1869,6 @@ opj_bopscan(
 
             opj_orstatp->in_var = &var->pst_sym.pst_value.pst_s_var;
             opj_orstatp->in_col = opj_orstatp->array_size - 1; 
-            opv_copytree(subquery->ops_global, &dup);
             opj_orstatp->in_array[opj_orstatp->in_count] = dup;
             opj_orstatp->in_count++;
         }
@@ -1873,7 +1886,7 @@ opj_bopscan(
     ** are ALWAYS leaf nodes in parse trees, pst_left is ALWAYS available
     ** for this purpose. */
     {
-	PST_QNODE	*var1, *cnst1;
+	PST_QNODE	*var1;
 
 	/* Find our VAR in the var_array. */
 	for (i = 0; i < opj_orstatp->array_size; i++)
@@ -1907,12 +1920,21 @@ opj_bopscan(
 
                 opj_orstatp->in_var = &var1->pst_sym.pst_value.pst_s_var;
                 opj_orstatp->in_col = i;
-                opv_copytree(subquery->ops_global, &dup);
                 opj_orstatp->in_array[opj_orstatp->in_count] = dup;
                 opj_orstatp->in_count++;
             }
 
-	    cnst->pst_left = opj_orstatp->const_array[i];
+            /* loop to the end of constant chain, then link it
+            ** with const_array[i].
+            */
+            ptr = cnst; 
+            while (ptr && 
+                   ptr->pst_sym.pst_type == PST_CONST &&
+                   ptr->pst_left)
+                  ptr = ptr->pst_left; 
+
+	    ptr->pst_left = opj_orstatp->const_array[i];
+
 	    opj_orstatp->const_array[i] = cnst;
 					/* chain new CONST to head of list */
 	    if (opj_orstatp->const_size[i] < 
@@ -2019,6 +2041,12 @@ opj_scanfail(
 **          opj_orstatp->in_array[] could have a linked list of 
 **          constants now, scan them and put them into constant 
 **          array. (b122313)
+**      17-aug-2009 (huazh01)
+**          in_array[] and const_array[] now references to the same 
+**          query tree. This means we don't need to add PST_QNODEs in
+**          in_array[] into const_array[]. For unprocessed nodes in 
+**          in_array[], whose pst_right is NULL, we just need to set up 
+**          the link for its adjacent column. (b124212)
 **          
 [@history_template@]...
 */
@@ -2042,7 +2070,8 @@ opj_inreplace(
       this = opj_orstatp->in_array[i];
 
       while (this != (PST_QNODE *)NULL && 
-             this->pst_sym.pst_type == PST_CONST)
+             this->pst_sym.pst_type == PST_CONST &&
+             this->pst_right == (PST_QNODE*)NULL)
       {
 	/* Insert current IN-list constant into corresponding list in
 	** const_array. */
@@ -2053,18 +2082,18 @@ opj_inreplace(
 					/* first reset dups flag, if ok */
 
         next = this->pst_left; 
-        this->pst_left = opj_orstatp->const_array[invar];
-        opj_orstatp->const_array[invar] = this;
-					/* link 'em up/down */
 	opj_orstatp->row_count++;
+
 	for (j = 0; j < opj_orstatp->array_size; j++)
 	{
 	    /* Short-circuit if this is IN-list's column. */
 	    if (j == invar)
 	    {
+                cnst = opj_orstatp->const_array[invar]->pst_right;
+                this->pst_right = cnst; 
+
 		if (j > 0)
-		 opj_orstatp->const_array[j-1]->pst_right =
-			opj_orstatp->const_array[j];
+		 opj_orstatp->const_array[j-1]->pst_right = this;
 					/* link 'em sideways, but only
 					** if IN-list col isn't first */
 		continue;
@@ -2158,7 +2187,6 @@ opj_orreplace(
     DMT_ATT_ENTRY	*att_array;
     DMT_ATT_ENTRY	*attrp;
     i4			n;
-    i4			attused;
     i4			attr_nametot;
 
  

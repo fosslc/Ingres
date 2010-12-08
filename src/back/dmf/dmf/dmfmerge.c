@@ -23,6 +23,7 @@
 # include <gcccl.h>
 # include <iicommon.h>
 # include <dbdbms.h>
+# include <dmf.h>
 # include <dmfmerge.h>
 
 /*
@@ -127,6 +128,8 @@
 **	    setpgrp() here.
 **	16-Nov-2009 (kschendel) SIR 122890
 **	    Don't include dudbms when not needed.
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Relocated FUNC_EXTERNs from here to dmf.h.
 */
 
 /*
@@ -150,6 +153,9 @@ main(argc, argv)
     MEadvise( ME_INGRES_ALLOC );
     SIprintf( "iimerge is for UNIX only!\n");
     PCexit( FAIL );
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 # else	/* UNIX */
@@ -181,20 +187,6 @@ typedef struct
 						   care which one. */
 	i4		alloctype;		/* MEadvise type. */
 } PROG;
-
-FUNC_EXTERN int cacheutil_libmain();
-FUNC_EXTERN int dmfacp_libmain();
-FUNC_EXTERN int dmfjsp_libmain();
-FUNC_EXTERN int iidbms_libmain();
-FUNC_EXTERN int iimerge();
-FUNC_EXTERN int iishowres_libmain();
-FUNC_EXTERN int lartool_libmain();
-FUNC_EXTERN int lockstat_libmain();
-FUNC_EXTERN int logdump_libmain();
-FUNC_EXTERN int logstat_libmain();
-FUNC_EXTERN int rcpstat_libmain();
-FUNC_EXTERN int rcpconfig_libmain();
-FUNC_EXTERN int repstat_libmain();
 
 PROG progs[] =
 {

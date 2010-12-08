@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -56,10 +56,8 @@
 **      This file contains procedures which combines the outer and inner
 **      ordering to produce a ordering which best describes the output of
 **      a join. 
-[@comment_line@]...
 **
 **          opo_combine - combine inner and outer ordering
-[@func_list@]...
 **
 **
 **  History:    
@@ -73,8 +71,51 @@
 **          join calculations in opo_combine.
 **	14-jul-93 (ed)
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/*
+** Forward Structure Definitions:
+*/
+typedef struct _OPO_CONSTRUCT OPO_CONSTRUCT;
+typedef struct _OPO_MSTATE OPO_MSTATE;
+
+/* TABLE OF CONTENTS */
+static OPO_ISORT opo_finish(
+	OPS_SUBQUERY *subquery,
+	OPO_CONSTRUCT *conp);
+static void opo_aordering(
+	OPS_SUBQUERY *subquery,
+	OPO_CONSTRUCT *conp,
+	OPO_ISORT ordering);
+static void opo_bnewordering(
+	OPO_MSTATE *mstatep,
+	OPO_CONSTRUCT *conp,
+	OPO_ISORT ordering);
+static bool opo_prefix(
+	OPO_MSTATE *mstatep,
+	OPO_ISORT ordering);
+static bool opo_merge(
+	OPO_MSTATE *mstatep,
+	OPE_BMEQCLS *bmmaster,
+	OPE_BMEQCLS *bmslave,
+	OPO_ISORT **slavepp);
+OPO_ISORT opo_combine(
+	OPS_SUBQUERY *subquery,
+	OPO_ISORT jordering,
+	OPO_ISORT outer,
+	OPO_ISORT inner,
+	OPE_BMEQCLS *eqcmap,
+	OPO_ISORT *jorderp);
+void opo_mexact(
+	OPS_SUBQUERY *subquery,
+	OPO_ISORT *ordering,
+	OPO_ISORT psjeqc,
+	bool valid_sjeqc,
+	OPO_ISORT pordeqc,
+	bool valid_ordeqc,
+	bool truncate);
 
 /*}
 ** Name: OPO_CONSTRUCT - state variable for multi-attribute ordering
@@ -87,10 +128,8 @@
 **          made change for unix linting
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
-[@history_template@]...
 */
-typedef struct _OPO_CONSTRUCT
+struct _OPO_CONSTRUCT
 {
     i4              opo_state;          /* state of ordering construction */
 #define             OPO_FEQCLS          1
@@ -133,7 +172,7 @@ typedef struct _OPO_CONSTRUCT
     OPE_BMEQCLS     *opo_eqcmap;	/* map of eqcls which can be involved
                                         ** in the ordering being constructed */
     OPO_EQLIST	    *opo_ordp;          /* ptr to list of orderings */
-}   OPO_CONSTRUCT;
+};
 
 /*}
 ** Name: OPO_MSTATE - merge state of two orderings
@@ -146,9 +185,8 @@ typedef struct _OPO_CONSTRUCT
 ** History:
 **      11-dec-87 ( seputis)
 **          initial creation
-[@history_template@]...
 */
-typedef struct _OPO_MSTATE
+struct _OPO_MSTATE
 {
     OPS_SUBQUERY    *opo_subquery;      /* current subquery being analyzed */
     OPO_ISORT       opo_jorder;         /* join order given the outer and
@@ -159,19 +197,16 @@ typedef struct _OPO_MSTATE
     OPO_CONSTRUCT   opo_corder;         /* state used to construct a
                                         ** new ordering for the intermediate
                                         ** result i.e. opo_ordeqc */
-} OPO_MSTATE;
+};
 
 /*{
 ** Name: opo_finish	- finish off ordering
 **
 ** Description:
-{@comment_line@}...
 **
 ** Inputs:
-[@PARAM_DESCR@]...
 **
 ** Outputs:
-[@PARAM_DESCR@]...
 **	Returns:
 **	    {@return_description@}
 **	Exceptions:
@@ -185,7 +220,6 @@ typedef struct _OPO_MSTATE
 **          fix b6377
 **      25-sep-89 (seputis)
 **          - fix for b5411, MEfill had a size too small
-[@history_template@]...
 */
 static OPO_ISORT
 opo_finish(

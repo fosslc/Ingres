@@ -2,9 +2,7 @@
 **Copyright (c) 2004 Ingres Corporation
 */
 
-# ifndef    VMS
 # include   <si.h>
-# endif
 
 /**
 ** Name:	erloc.h	- Internal ER header file
@@ -42,6 +40,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	29-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup. Remove VMS conditional code.
 **/
 
 /*
@@ -189,15 +189,7 @@ typedef	struct	_ER_CLASS_TABLE
 **	15-Oct-1986 (kobayashi) - first written
 **
 */
-#ifdef	VMS
-typedef struct _ERFILE
-{
-    i4	w_ifi;
-    i4	w_isi;
-}   ERFILE;
-#else
 typedef FILE	*ERFILE;
-#endif
 
 /*}
 ** Name:	ERMULTI	- Internal table to be used multi language

@@ -5,11 +5,6 @@
 # include	<excl.h>
 # include	<ex.h>
 
-/*
-**  Set the default client type to be an user application.
-*/
-static i4       client_type = EX_USER_APPLICATION;
-static bool     ex_initialized = FALSE;
 
 /*{
 ** Name:	EXsetclient - Set client information for the EX subsystem
@@ -20,16 +15,7 @@ static bool     ex_initialized = FALSE;
 **	important in that it allows EX to modify its behavior dependent
 **	on the client
 **
-**	For user applications, EX will only intercept access violation and
-**	floating point exceptions.  This becomes the default behavior for EX.
-**	It is up to the user application to deal with any other exceptions.
-**
-**	If the client is the Ingres DBMS, then EX will need to intercept
-**	any exceptions that will cause a process to exit (current behavior).
-**
-**	In the case of Ingres Tools, EX will also intercept user generated
-**	exit exceptions (such as interrupt) in addition to the access
-**	violation and floating point exceptions.
+**	Windows doesn't in fact care, so EXsetclient is a stub here.
 **
 ** Inputs:
 **	EX_INGRES_DBMS		Client is the Ingres DBMS or any application
@@ -45,10 +31,7 @@ static bool     ex_initialized = FALSE;
 ** Outputs:
 **
 **	Returns:
-**		EX_OK			If everything succeeded.
-**		EXSETCLIENT_LATE	If the EX subsystem has already
-**					been initialized when this is called.
-**		EXSETCLIENT_BADCLEINT	If an unknown client was passed in.
+**		EX_OK			always.
 **
 **	Exceptions:
 **		None.
@@ -62,28 +45,13 @@ static bool     ex_initialized = FALSE;
 **			  has already been initialized.
 **      06-aug-1999 (mcgem01)
 **          Replace nat and longnat with i4.
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    JoeA pointed out that this routine is a no-op, make it
+**	    look like one.
 */
 STATUS
 EXsetclient(i4  client)
 {
-	if (!ex_initialized)
-	{
-	    switch (client)
-	    {
-	      case EX_INGRES_DBMS:
-	      case EX_INGRES_TOOL:
-	      case EX_USER_APPLICATION:
-	        client_type = client;
-		break;
-
-	      default:
-		return(EXSETCLIENT_BADCLIENT);
-		break;
-	    }
-	}
-	else
-	{
-	    return(EXSETCLIENT_LATE);
-	}
-	return(EX_OK);
+    /* Nothing to do here */
+    return(EX_OK);
 }

@@ -106,6 +106,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 **/
 
 GLOBALREF   char     IIQE_33_integer[];
@@ -158,8 +160,6 @@ DB_STATUS
 qed_w0_prt_gmtnow(
 QEF_RCB	    *v_qer_p )
 {
-    DB_STATUS	    status = E_DB_OK;
-    QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     SYSTIME	    now;
     char	    now_str[DD_25_DATE_SIZE + 1];
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
@@ -211,8 +211,6 @@ qed_w1_prt_ldbdesc(
 QEF_RCB		*v_qer_p,
 DD_LDB_DESC	*i_ldb_p )
 {
-    DB_STATUS	    status = E_DB_OK;
-    QEF_CB	    *qecb_p = v_qer_p->qef_cb;
     char	    namebuf[DB_MAXNAME + 1]; /* ANY name */
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;
@@ -582,7 +580,6 @@ QEF_RCB		*v_qer_p,
 i4		i1_call_id,
 TPR_CB		*i2_tpr_p )
 {
-    DD_LDB_DESC	*ldb_p = i2_tpr_p->tpr_site;
     char	*cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		cbufsize = v_qer_p->qef_cb->qef_trsize;
 
@@ -873,7 +870,6 @@ qed_w7_prt_qryinfo(
 QEF_RCB		*v_qer_p )
 {
     DB_STATUS	    status = E_DB_OK;
-    QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     QEF_DDB_REQ     *ddr_p = & v_qer_p->qef_r3_ddb_req;
     QED_QUERY_INFO  *qry_p = & v_qer_p->qef_r3_ddb_req.qer_d4_qry_info;
     DD_PACKET	    *pkt_p = qry_p->qed_q4_pkt_p;
@@ -949,8 +945,6 @@ char		*i_txt_p,
 DD_LDB_DESC	*i_ldb_p )
 {
     DB_STATUS	    status = E_DB_OK;
-    QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
-    QEF_DDB_REQ     *ddr_p = & v_qer_p->qef_r3_ddb_req;
     i4		    txtlen = STlength(i_txt_p);
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;
@@ -1271,8 +1265,6 @@ QEF_RCB         *v_qer_p,
 char		*i1_txt_p,
 i4		i2_txtlen )
 {
-    DB_STATUS       status = E_DB_OK;
-    QEQ_TXT_SEG	    *seg_p = (QEQ_TXT_SEG *) NULL;
     i4		    lendone = 0,
 		    lenleft = i2_txtlen;
     bool	    stop;

@@ -431,9 +431,12 @@
 **	    Add support for column encryption.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
-FUNC_EXTERN char	    *STskipblank();
 static DB_STATUS
 qeu_new_prot_tuple(
 QEF_CB	    *qef_cb,
@@ -1162,10 +1165,12 @@ QEUQ_CB		*qeuq_cb)
 
     /* call qef_error to handle error messages, if any */
     if (DB_FAILURE_MACRO(status))
+    {
 	if (!err_already_reported)
 	    (VOID) qef_error(error, 0L, status, &error, &qeuq_cb->error, 0);
 	else
 	    err_already_reported = FALSE;
+    }
     
     /* Close off all the tables. */
     if (tbl_opened)
@@ -1310,7 +1315,6 @@ QEUQ_CB		*qeuq_cb)
     bool		    err_already_reported = FALSE;
     DMR_ATTR_ENTRY	    dbpkey_array[2];
     DMR_ATTR_ENTRY	    *dbpkey_ptr_array[2];
-    i4			    i;
     QEU_CB		    tranqeu;
     QEU_CB		    dbpqeu;
     i4			    exit_loop;
@@ -1498,10 +1502,12 @@ QEUQ_CB		*qeuq_cb)
     }
     /* call qef_error to handle error messages, if any */
     if (DB_FAILURE_MACRO(status))
+    {
 	if (!err_already_reported)
 	    (VOID) qef_error(error, 0L, status, &error, &qeuq_cb->error, 0);
 	else
 	    err_already_reported = FALSE;
+    }
     
     /* Close off all the tables. */
     if (dbp_opened)
@@ -1621,7 +1627,6 @@ QEF_CB          *qef_cb,
 QEUQ_CB		*qeuq_cb)
 {
     DB_STATUS	    status, local_status;
-    DB_ERROR	    err;
     i4	    error;
     bool	    transtarted = FALSE;	    
     bool	    dbp_opened = FALSE;
@@ -2141,8 +2146,8 @@ QEUQ_CB		*qeuq_cb)
 	    dmt_cb.dmt_id.db_tab_index = qeuq_cb->qeuq_tbl_id[i].db_tab_index;
 
 	    /* Skip over derived tables (tabl_id = {0, 0}). */
-	    if (dmt_cb.dmt_id.db_tab_base == 0 &&
-		dmt_cb.dmt_id.db_tab_index == 0 ||
+	    if ((dmt_cb.dmt_id.db_tab_base == 0 &&
+		dmt_cb.dmt_id.db_tab_index == 0) ||
 		qeuq_cb->qeuq_tbl_type[i] == PST_TPROC)
 		continue;
 
@@ -3374,14 +3379,14 @@ QEUQ_CB		*qeuq_cb)
 	    ** and store a number one higher in hi_priv_descr_no
 	    */
 	    if (   indep_privs 
-	        && (new_ptuple->dbp_popset & DB_DELETE &&
-	    	    !newperm_info.qeu_descr_nums[QEU_DELETE_DESCR]
+	        && ((new_ptuple->dbp_popset & DB_DELETE &&
+	    	    !newperm_info.qeu_descr_nums[QEU_DELETE_DESCR])
 		    ||    
-		    new_ptuple->dbp_popset & DB_APPEND &&
-		    !newperm_info.qeu_descr_nums[QEU_INSERT_DESCR]
+		    (new_ptuple->dbp_popset & DB_APPEND &&
+		    !newperm_info.qeu_descr_nums[QEU_INSERT_DESCR])
 		    ||
-		    new_ptuple->dbp_popset & DB_REPLACE &&
-		    !newperm_info.qeu_descr_nums[QEU_UPDATE_DESCR]
+		    (new_ptuple->dbp_popset & DB_REPLACE &&
+		    !newperm_info.qeu_descr_nums[QEU_UPDATE_DESCR])
     	           )
 		)
 	    {
@@ -3471,8 +3476,8 @@ QEUQ_CB		*qeuq_cb)
 		    for (priv_start = (char *) qtuple->dbq_text.db_t_text,
 			 qtext_end = (char *) qtuple->dbq_text.db_t_text +
 			    qtuple->dbq_text.db_t_count;
-			 (priv_start < qtext_end && CMcmpcase(priv_start, "?"));
-			 priv_start = CMnext(priv_start)
+			 (priv_start < qtext_end && *priv_start != '?');
+			 CMnext(priv_start)
 			)
 		    ;
 
@@ -3938,8 +3943,8 @@ QEUQ_CB		*qeuq_cb)
 	    */
 	    dprot_qeuqcb.qeuq_permit_mask =
 		QEU_PERM | QEU_SKIP_ABANDONED_OBJ_CHECK |
-		    qeuq_cb->qeuq_permit_mask &
-			(QEU_DBP_PROTECTION | QEU_EV_PROTECTION);
+		    (qeuq_cb->qeuq_permit_mask &
+			(QEU_DBP_PROTECTION | QEU_EV_PROTECTION));
 
 	    dprot_qeuqcb.qeuq_flag_mask = 0;
 
@@ -4459,7 +4464,6 @@ QEUQ_CB	    	*qeuq_cb)
     bool	    permits_exist = FALSE;
     bool	    tbl_altered = FALSE;
     bool	    qps_invalidated = FALSE;
-    bool	    dbp_opened = FALSE;
     bool	    audit_dropall = FALSE;
     i4		    i;
     i2		    tree_mode = DB_PROT;
@@ -4468,7 +4472,6 @@ QEUQ_CB	    	*qeuq_cb)
     QEU_CB	    pqeu;
     QEU_CB	    qqeu;
     QEU_CB	    tqeu;
-    QEU_CB	    dbpqeu;
     QEU_QUAL_PARAMS qparams;
     DMT_CB	    dmt_cb;
     ULM_RCB         ulm;
@@ -6322,7 +6325,6 @@ QEUQ_CB	    	*qeuq_cb)
     QEF_DATA	    dep_qefdata;
     QEF_DATA	    dep2_qefdata;
     QEF_DATA	    priv_qefdata;
-    DMT_CHAR_ENTRY  char_array[4];
     DMR_ATTR_ENTRY  prot_key_array[2];
     DMR_ATTR_ENTRY  *protkey_ptr_array[2];
     DMR_ATTR_ENTRY  xdep_key_array[4];
@@ -6338,11 +6340,7 @@ QEUQ_CB	    	*qeuq_cb)
     bool	    err_already_reported = FALSE;
     i4         msgid;
     i4              type;    
-    DB_PROCEDURE    *dbptuple;
     DB_TAB_ID	    ubt_id;
-    char	    *sec_object;
-    i4	    	    sec_obj_len;
-    DB_OWN_NAME	    *sec_owner;
     QEU_PDI_TBL_DESCR   *pdi_tbl_descr = (QEU_PDI_TBL_DESCR *) NULL;
     i4		    exit_loop, exit_loop2;
     bool	    doaudit=TRUE;
@@ -11363,7 +11361,6 @@ DMT_TBL_ENTRY	*tbl_entry)
     DB_STATUS	    status, local_status;
     DB_TAB_ID	    view_ubt_id;
     i4	    error = E_QE0000_OK;
-    i4		    zero_cons_number = 0;
     bool	    transtarted;	    
     bool	    tbl_opened;
     bool	    view_opened;
@@ -13819,7 +13816,6 @@ DMT_TBL_ENTRY	*tbl_entry)
 	        {
 		    QEUQ_CB		tqeuq_cb;
 		    DB_TAB_ID		db_tab_id[1];
-		    DMU_CHAR_ENTRY	chr;
 		    bool		found_another = FALSE;
 	    
 		    STRUCT_ASSIGN_MACRO(*qeuq_cb, tqeuq_cb);
@@ -14072,6 +14068,7 @@ DMT_TBL_ENTRY	*tbl_entry)
 			qeuq_cb->qeuq_keyattid = tqeuq_cb.qeuq_keyattid;
 		        goto flushcache;
 		    } 
+		    MEfill(sizeof(DMU_CB), 0, &dmu_cb);
 		    dmu_cb.length = sizeof(DMU_CB);
 		    dmu_cb.type = DMU_UTILITY_CB;
 		    dmu_cb.dmu_flags_mask = 0;
@@ -14081,17 +14078,8 @@ DMT_TBL_ENTRY	*tbl_entry)
 		    dmu_cb.dmu_tran_id = qef_cb->qef_dmt_id;
 		    if (qeuq_cb->qeuq_flag_mask & QEU_DROP_TEMP_TABLE)
 		    {
-		        chr.char_id = DMU_TEMP_TABLE;
-		        chr.char_value = DMU_C_ON;
-		        dmu_cb.dmu_char_array.data_address = (char *) &chr;
-		        dmu_cb.dmu_char_array.data_in_size = 
-			    sizeof(DMU_CHAR_ENTRY);
+			BTset(DMU_TEMP_TABLE, dmu_cb.dmu_chars.dmu_indicators);
 			dmu_cb.dmu_table_name = qeuq_cb->qeuq_tabname;
-		    }
-		    else
-		    {
-		        dmu_cb.dmu_char_array.data_address = 0;
-		        dmu_cb.dmu_char_array.data_in_size = 0;
 		    }
 		    status = dmf_call(DMU_DESTROY_TABLE, &dmu_cb);
 		    if (DB_FAILURE_MACRO(status))
@@ -17320,7 +17308,7 @@ i2			priv_descr_no)
     DB_STATUS		    status = E_DB_OK;
     DB_IIDBDEPENDS	    *dtuple = (DB_IIDBDEPENDS *) NULL;
     i4			    i;
-    i4			    exit_loop, exit_loop2;
+    i4			    exit_loop;
 
     STRUCT_ASSIGN_MACRO(Qef_s_cb->qef_d_ulmcb, ulm);
     ulm.ulm_streamid = (PTR)NULL;
@@ -19531,13 +19519,7 @@ i4			*error)
 #endif
     DMF_ATTR_ENTRY      temp_array[QEU_MATCH_PRIV_TBL_DEGREE];
     DMF_ATTR_ENTRY 	*temp_ptr_array[QEU_MATCH_PRIV_TBL_DEGREE];
-    DMR_ATTR_ENTRY	tmp1_key_array[4], tmp2_key_array[1];
-    DMR_ATTR_ENTRY	*tmp1key_ptr_array[4], *tmp2key_ptr_array[1];
     DMT_CB		dmt_cb;
-    i4			temp_priv;
-    i2			tmp1_depth;
-    i2			tmp1_gtype;
-    DB_OWN_NAME		tmp1_authid;
     ULM_RCB		ulm;
     i4			depth;
     i4			tuples_added;
@@ -19728,8 +19710,8 @@ i4			*error)
 	    DMU_CB	    dmucb, *dmu_cb = &dmucb;
 	    DMU_KEY_ENTRY   *key_ptr_array[4];
 	    DMU_KEY_ENTRY   key_array[4];
-	    DMU_CHAR_ENTRY  dmu_chars[2];
 
+	    MEfill(sizeof(DMU_CB), 0, &dmucb);
 	    dmu_cb->type			= DMU_UTILITY_CB;
 	    dmu_cb->length			= sizeof(DMU_CB);
 	    dmu_cb->dmu_flags_mask		= 0;
@@ -19748,13 +19730,9 @@ i4			*error)
 		    key_ptr_array[i]->key_attr_name);
 		key_ptr_array[i]->key_order = DMU_ASCENDING;
 	    }
-	    
-	    dmu_cb->dmu_char_array.data_address = (PTR) dmu_chars;
-	    dmu_cb->dmu_char_array.data_in_size = sizeof(dmu_chars);
-	    dmu_chars[0].char_id		= DMU_STRUCTURE;
-	    dmu_chars[0].char_value		= DB_BTRE_STORE;
-	    dmu_chars[1].char_id                = DMU_TEMP_TABLE;
-	    dmu_chars[1].char_value             = DMU_C_ON;
+	    BTset(DMU_STRUCTURE, dmu_cb->dmu_chars.dmu_indicators);
+	    dmu_cb->dmu_chars.dmu_struct = DB_BTRE_STORE;
+	    BTset(DMU_TEMP_TABLE, dmu_cb->dmu_chars.dmu_indicators);
 
 	    status = dmf_call(DMU_MODIFY_TABLE, dmu_cb);
 	    if (status != E_DB_OK)
@@ -22935,7 +22913,7 @@ QEU_PDI_TBL_DESCR	*pdi_tbl_descr)
 			** constructed
 			*/
 			priv_revoked->qeu_flags = 
-			    read_temp_row->qeu_flags & QEU_INVALIDATE_QPS
+			    (read_temp_row->qeu_flags & QEU_INVALIDATE_QPS)
 				| QEU_PRIV_LOST | QEU_GRANT_COMPATIBLE_ONLY;
 
 			priv_revoked->qeu_gtype = DBGR_PUBLIC;
@@ -22972,7 +22950,7 @@ QEU_PDI_TBL_DESCR	*pdi_tbl_descr)
 			** constructed
 			*/
 			gropt_revoked->qeu_flags =
-			    read_temp_row->qeu_flags & QEU_INVALIDATE_QPS
+			    (read_temp_row->qeu_flags & QEU_INVALIDATE_QPS)
 				| QEU_GRANT_OPTION_LOST 
 				| QEU_GRANT_COMPATIBLE_ONLY;
 
@@ -24023,8 +24001,6 @@ QEU_PDI_TBL_DESCR	*pdi_tbl_descr)
 
 		while (status == E_DB_OK)
 		{
-		    DB_PROTECTION		*prot_p;
-
 		    status = qeu_get(qef_cb, xpr_qeu);
 		    if (status != E_DB_OK)
 		    {
@@ -25973,14 +25949,12 @@ QEU_REVOKE_INFO 	*temp_row,
 i4			list_size)
 {
     i4			i;
-    i4			*map_from, *map_to;
     DB_STATUS		status = E_DB_OK;
     
     for (i = 0; i < list_size; i++)
     {
 	i2		priv_flag = 0;
 	i4		privs;
-	i4		j;
 
 	/* 
 	** if both privs_lost list and grant_option_lost have been
@@ -26268,7 +26242,6 @@ i4		*error)
     DMT_SHW_CB          dmt_shw_cb;
     i4			qtxt_mode = DB_PROT;
     i4			qtxt_seq;
-    i4			priv;
     i4			i;
     DMT_TBL_ENTRY	*tbl_entry;
     DMT_ATT_ENTRY	**att_pptr;
@@ -27301,11 +27274,8 @@ i4         *error)
     ** starting at TO <grantee> and to the end.
     */
     DB_STATUS	    status = E_DB_OK;
-    char	    *c, *c1, *c2;
+    char	    *c;
     char	    *char_lim;
-    QEF_DATA	    *first = (QEF_DATA *) NULL;
-    QEF_DATA	    *last  = (QEF_DATA *) NULL;
-    QEF_DATA	    *cur;
     DB_TEXT_STRING  *in_txt = &read_qtxt_tuple->dbq_text;
     i4		    max_size = 0;
     /* will be reset to TRUE once we skip past TO (as in "TO <grantee>" */
@@ -28357,7 +28327,7 @@ DB_OWN_NAME		*obj_owner,
 i4			*error)
 {
     DB_STATUS           status = E_DB_OK, local_status;
-    i4                  i, j;
+    i4                  i;
     QEU_CB              *pdi_qeu = &pdi_tbl_descr->qeu_pdi_qeucb;
     QEU_CB              pr1qeu, *pr1_qeu = (QEU_CB *) NULL;
     QEU_CB		pr2qeu, *pr2_qeu = (QEU_CB *) NULL;
@@ -31051,7 +31021,6 @@ qeu_v_col_drop(
     DMR_ATTR_ENTRY	**save_qeu_key;
     PST_PROCEDURE   	*pnode;
     PST_QTREE       	*vtree;
-    DB_IITREE  		*qtree_ptr, qtree;
     DB_TAB_ID		loc_base_id;
     DB_STATUS		status = E_DB_OK;
     DB_STATUS		unfix_status = E_DB_OK;
@@ -31455,19 +31424,13 @@ qeu_v_finddependency(
 {
     QEU_QUAL_PARAMS	qparams;
     RDF_CB		rdfcb, *rdf_cb = &rdfcb;
-    RDR_RB          	*rdf_inv_rb = &rdf_cb->rdf_rb;
     PST_PROCEDURE   	*pnode;
     PST_QTREE       	*vtree;
-    DB_IITREE  		*qtree_ptr, qtree;
     DB_TAB_ID		loc_base_id;
     DB_STATUS		status = E_DB_OK;
     DB_STATUS		unfix_status = E_DB_OK;
     i4		error = 0;
     i4		i;
-    i4		irngtab;
-    i2			qmode;
-    RDF_CB		subrdfcb, *subrdf_cb = &subrdfcb;
-    RDR_RB          	*subrdf_inv_rb = &subrdf_cb->rdf_rb;
     PST_QNODE           *qtunion;
     DMT_SHW_CB          dmt_show;
     DMT_TBL_ENTRY       dmt_tbl_entry;
@@ -32292,13 +32255,9 @@ DB_TAB_NAME	*newName
     QEU_CB	    pqeu;
     QEU_CB	    qqeu;
     QEU_CB	    tqeu;
-    QEU_QUAL_PARAMS qparams;
-    DMT_CB	    dmt_cb;
     ULM_RCB         ulm;
     QEF_DATA	    pqef_data;
     QEF_DATA	    qqef_data;
-    QEF_DATA	    tqef_data;
-    DMT_CHAR_ENTRY  char_array[4];
     DMR_ATTR_ENTRY  pkey_array[3];
     DMR_ATTR_ENTRY  *pkey_ptr_array[3];
     DMR_ATTR_ENTRY  qkey_array[3];

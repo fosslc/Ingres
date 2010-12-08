@@ -5,16 +5,21 @@
 #include    <compat.h>
 #include    <gl.h>
 
+#include    <cv.h>
+#include    <er.h>
 #include    <gc.h>
 #include    <lo.h>
 #include    <me.h>
 #include    <nm.h>
 #include    <pc.h>
+#include    <pm.h>
 #include    <qu.h>
 #include    <si.h>
 #include    <st.h>
 
 #include    <iicommon.h>
+#include    <erglf.h>
+#include    <erclf.h>
 #include    <gca.h>
 #include    <gcn.h>
 #include    <gcnint.h>
@@ -65,7 +70,7 @@ static	VOID	usage( char *name );
 static	VOID	analyze( char *name );
 static	STATUS	gcn_open( char *name, char *mode, FILE **file, i4 *reclen );
 static	VOID	gcn_nq_filename( char *type, char *host, char *filename );
-static	STATUS	gcn_nq_fopen( char *name, char *mode, FILE **file, i4 reclen );
+static	STATUS	gcn_nq_fopen( char *name, char *mode, FILE **file );
 static	STATUS	gcn_read_rec( FILE *file, u_i1 *record, i4 rec_len );
 static	VOID	gcn_read_rec0( i4 rec_no, GCN_DB_REC0 *record, i4 tuple_id );
 static	VOID	gcn_read_rec1( i4 rec_no, GCN_DB_REC1 *record );
@@ -91,6 +96,7 @@ main( i4  argc, char **argv )
 
     MEadvise(ME_INGRES_ALLOC);
     SIeqinit();
+    PMinit();
 
     if ( argc > 1  &&  argv[1][0] == '-' )
     {
@@ -192,8 +198,9 @@ analyze( char *name )
 
     GChostname( host, sizeof( host ) );
     gcn_nq_filename( name, host, filename );
+    status = gcn_nq_fopen( filename, "r", &file );
 
-    if ( (status = gcn_open( filename, "r", &file, &rec_len )) != OK )
+    if ( status != OK )
     {
         SIprintf( "could not open %s: 0x%x\n", filename, status );
 	return;
@@ -312,7 +319,7 @@ gcn_open( char *name, char *mode, FILE **file, i4 *reclen )
     GCN_DB_RECORD	record;
     STATUS		status;
 
-    if ( (status = gcn_nq_fopen( name, mode, file, *reclen )) != OK )
+    if ( (status = gcn_nq_fopen( name, mode, file )) != OK )
 	return( status );
 
     if ( gcn_read_rec( *file, (u_i1 *)&record, sizeof( record ) ) == OK )
@@ -326,7 +333,7 @@ gcn_open( char *name, char *mode, FILE **file, i4 *reclen )
 		*file = NULL;
 
 		*reclen = record.rec1.gcn_rec_len;
-	        status = gcn_nq_fopen( name, mode, file, *reclen );
+	        status = gcn_nq_fopen( name, mode, file );
 		if ( status != OK )  return( status );
 	    }
 	    break;
@@ -372,6 +379,9 @@ static VOID
 gcn_nq_filename( char *type, char *host, char *filename )
 {
     i4		len, plen, slen;
+    char        *onOff = NULL;
+    bool        clustered = FALSE;
+    STATUS      status;
 
     /*
     ** Filename template: II<type>[_<host>]
@@ -394,8 +404,34 @@ gcn_nq_filename( char *type, char *host, char *filename )
 	else
 	    plen = slen = 0;
 
+    /*
+    ** See if this is a clustered installation.  If it is, 
+    ** the node, login, and attribute files have no file extension.
+    */
+    if ( PMload( (LOCATION *)NULL, (PM_ERR_FUNC *)NULL ) != OK )
+    {
+        SIprintf("Error reading config.dat\n");
+        return;
+    }
+
+    PMsetDefault( 0, "ii" );
+    PMsetDefault( 1, host );
+    PMsetDefault( 2, ERx("gcn") );
+
+    status = PMget( ERx("!.cluster_mode"), &onOff);
+
+    if (onOff && *onOff)
+        clustered = !STncasecmp(onOff, "ON", STlength(onOff));
+
+    if (clustered && (!STncasecmp("LOGIN", type, STlength(type)) ||
+        !STncasecmp("NODE", type, STlength(type)) ||
+        !STncasecmp("ATTR", type, STlength(type))))
+        slen = 0;
+
+    CVupper(type);
+
     STprintf( filename, "%s%s%s%s", 
-	      plen ? "II" : "", type, slen ? "_" : "", slen ? host : "" );
+        plen ? "II" : "", type, slen ? "_" : "", slen ? host : "" );
 
     /*
     ** Finally, truncate the filename if it is too long
@@ -418,7 +454,6 @@ gcn_nq_filename( char *type, char *host, char *filename )
 ** Inputs:
 **	name	- The file name.
 **	mode  - read/write mode.
-**	reclen - record length for those with fixed record lengths
 **
 ** Outputs:
 **	file
@@ -444,11 +479,15 @@ gcn_nq_filename( char *type, char *host, char *filename )
 **      	18-Sep-89 (bryanp)
 **          		Fixed another bug in the hp9_mpe filename generation 
 **			code which was introduced during 61b3ug integration.
+**     16-Nov-2010 (Ralph Loen) Bug 122895
+**           Open global files without a hostname extension if 
+**           ii.[hostname].config.cluster_mode is ON.  Remove reclen
+**           argument.
 **
 */
 
 static STATUS 
-gcn_nq_fopen( char *name, char *mode, FILE **file, i4  reclen )
+gcn_nq_fopen( char *name, char *mode, FILE **file )
 {
     LOCATION	loc;
     STATUS	status;
@@ -466,14 +505,15 @@ gcn_nq_fopen( char *name, char *mode, FILE **file, i4  reclen )
 
     if ( ! STcompare( mode, "r" )  &&  (status = LOexist( &loc )) != OK )
 	goto error;
-		
-    if ( reclen )
-	status = SIfopen( &loc, mode, SI_RACC, reclen, file );
-    else
-#ifndef hp9_mpe
-	status = SIopen( &loc, mode, file );
+
+#ifdef VMS
+    status = SIfopen( &loc, mode, SI_RACC, sizeof(GCN_DB_RECORD), file );
+
+    if (status == E_CL1904_SI_CANT_OPEN && ( LOexist( &loc ) == OK ) )
+	status = SIfopen( &loc, mode, GCN_RACC_FILE, sizeof (GCN_DB_RECORD), 
+            file );
 #else
-	status = SIfopen( &loc, mode, SI_TXT, 256, file );
+    status = SIfopen( &loc, mode, SI_RACC, sizeof (GCN_DB_RECORD), file );
 #endif
 
 error:

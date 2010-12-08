@@ -159,6 +159,8 @@ dmse_tdiff(DM_STECB *step,
 **	24-Jun-2009 (hweho01)
 **          The length of ste_ctid would be 4 or 8, depends on the build
 **          mode; use %p to handle the differences in trace display. 
+**	09-Jun-2010 (wanfr01) B123893
+**	    TRdisplay needs to use %ld for variables which are now i8
 */
 DB_STATUS
 dmse_child_thread(
@@ -312,7 +314,7 @@ SCF_FTX		*ftxcb)
     }
     else if (DMZ_SRT_MACRO(1))
     {
-	TRdisplay("%p DMSE_CHILD: Gets = %d, Puts = %d, Rows = %d, Cwaits = %d, Pwaits = %d\n",
+	TRdisplay("%p DMSE_CHILD: Gets = %ld, Puts = %ld, Rows = %d, Cwaits = %d, Pwaits = %d\n",
 	    step->ste_ctid,
 	    step->ste_c_gets, step->ste_c_puts, s->srt_c_records,
 	    step->ste_ncwaits, step->ste_npwaits);

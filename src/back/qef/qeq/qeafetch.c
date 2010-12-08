@@ -347,6 +347,9 @@ QEE_DSH		*dsh);
 **	1-Jul-2010 (kschendel) b124004
 **	    Remember fake row-buffer used for positioning, so that we
 **	    don't allocate memory over and over.
+**	03-Aug-2010 (thaju02) Bug 123876
+**	    For nonscrollable cursors, increment qef_retcurspos for top-most
+**	    action only and as long as we are not in a dbproc.
 */
 DB_STATUS
 qea_fetch(
@@ -356,7 +359,6 @@ QEE_DSH		*dsh,
 i4		function )
 {
     bool	reset = ((function & FUNC_RESET) != 0);
-    bool	node_reset = reset;
     i4	 	rowcount;
     QEF_DATA	*output	 = dsh->dsh_qef_output;
     i4	 	bufs_used;
@@ -685,13 +687,17 @@ i4		function )
 	** or the select predicate is ANY or query was "select first n ..." 
 	** and this was the "n"th. */
 
-	if ((!scroll && rowlim && rowlim <= ++(firstncbp->get_count) ||
-	 	((((qp_status & QEQP_SINGLETON) || (qmode == QEQP_EXEDBP &&
-			!(action->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET)))
-		    && 
-		    (action->ahd_flags & QEA_NEWSTMT)) 
-		||
-		action->qhd_obj.qhd_qep.ahd_qepflag & AHD_ANY)))
+	if (
+	     (!scroll && rowlim && rowlim <= ++(firstncbp->get_count))
+	     ||
+	     ( action->ahd_flags & QEA_NEWSTMT
+		&& ( qp_status & QEQP_SINGLETON
+		     || (qmode == QEQP_EXEDBP
+			 && (action->qhd_obj.qhd_qep.ahd_qepflag & AHD_FORGET) == 0)
+		   )
+	     )
+	     ||
+	     action->qhd_obj.qhd_qep.ahd_qepflag & AHD_ANY)
 	{
 	    dsh->dsh_error.err_code = E_QE0015_NO_MORE_ROWS;
 	    status = E_DB_WARN;
@@ -714,6 +720,12 @@ err_exit:
 	{
 	    rowstat |= GCA_ROW_AFTER;
 	    qef_rcb->qef_curspos++;		/* indicate AFTER */
+	    if ((action->qhd_obj.qhd_qep.ahd_qepflag & AHD_MAIN) &&
+		(qef_rcb->qef_context_cnt == 0))
+	    {
+		qef_rcb->qef_retcurspos++;
+		qef_rcb->qef_curspos = qef_rcb->qef_retcurspos;
+	    }
 	}
     }
     dsh->dsh_qef_rowcount = dsh->dsh_qef_targcount = rowcount;
@@ -828,7 +840,6 @@ bool		fetchlast,
 bool		*pre_read)
 
 {
-    QEF_CB		*qef_cb = dsh->dsh_qefcb;
     QEE_RSET_SPOOL	*sptr = (QEE_RSET_SPOOL *)dsh->dsh_cbs[dsh->
 				dsh_qp_ptr->qp_rssplix];
     DMT_CB		*dmtcb = sptr->sp_dmtcb;
@@ -996,6 +1007,8 @@ bool		*pre_read)
 **	    Return TIDs from updateable KEYSET cursors.
 **	30-Jun-2010 (kschendel) b124004
 **	    Fill in "code needed here" for partitioned table updates.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Fix missing return value in error return.
 */
 
 static DB_STATUS
@@ -1012,7 +1025,6 @@ i4		*rowstat)
 				dsh_qp_ptr->qp_rssplix];
     DMR_CB		*dmrcb = sptr->sp_rdmrcb;
     DB_STATUS		status;
-    i4			error;
 
 
     /* Not too much to do here. Just set up DMF DMR_NEXT call and
@@ -1031,7 +1043,7 @@ i4		*rowstat)
     dmrcb->dmr_data.data_address = output->dt_data;
     status = dmf_call(DMR_GET, dmrcb);
     if (status != E_DB_OK)
-	return;
+	return (status);
 
     /* Check for KEYSET cursor and perform 2nd step of reading base table
     ** by TID, verifying it to be same row and projecting result row.
@@ -1322,6 +1334,9 @@ i4		*result)
 **	1-Jul-2010 (kschendel) b124004
 **	    Make sure we set up all the tid stuff needed by RUP/RDEL.
 **	    Drop function param, not used and was confusing.
+**	03-Aug-2010 (thaju02) Bug 123876
+**	    For nonscrollable cursors, increment qef_retcurspos for top-most
+**	    action only and as long as we are not in a dbproc.
 */
 
 static DB_STATUS
@@ -1503,7 +1518,12 @@ bool		*gotarow)
 
 	*gotarow = TRUE;
 	if (!scroll)
+	{
 	    qef_rcb->qef_curspos++;	/* increment non-scroll curs */
+	    if ((action->qhd_obj.qhd_qep.ahd_qepflag & AHD_MAIN) && 
+		(qef_rcb->qef_context_cnt == 0))
+		qef_rcb->qef_retcurspos++;
+	}
 
 	if (qen_adf->qen_uoutput >= 0)
 	{

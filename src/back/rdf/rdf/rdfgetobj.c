@@ -54,6 +54,8 @@ GLOBALREF char		      Iird_upper[];	    /* ldb name case "UPPER" */
 GLOBALREF char		      *Iird_caps[];	    /* ldb capabilities */
 GLOBALREF DD_CAPS	      Iird_dd_caps;	    /* initial value for DD_CAPS */
 
+static DB_STATUS rdd_lcltab_exists(RDF_GLOBAL  *global);
+
 /*{
 ** Name: RDFGETOBJ.C - Request distributed information from CDB or LDB.
 **		       External call format: rdd_getobjinfo(global)	
@@ -181,6 +183,8 @@ GLOBALREF DD_CAPS	      Iird_dd_caps;	    /* initial value for DD_CAPS */
 **	    Add support for column encryption.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add static rdd_lcltab_exists() prototype
 */
 
 /*{
@@ -6587,7 +6591,7 @@ rdd_getobjinfo( RDF_GLOBAL *global)
 **	    Standard catalogue interface change for variable page size project.
 **	    Needs space for only 2 columns.
 */
-DB_STATUS rdd_lcltab_exists(RDF_GLOBAL  *global)
+static DB_STATUS rdd_lcltab_exists(RDF_GLOBAL  *global)
 {
     DB_STATUS		status = E_DB_OK;
     DD_OBJ_DESC		*obj_p = &global->rdf_tobj;

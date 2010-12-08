@@ -121,12 +121,12 @@
 **	    Replaced gtr_dbv with gtr_att: redefined GCA_COL_ATT structure.
 **	13-May-2005 (kodse01)
 **	    replace %ld with %d for old nat and long nat variables.
-**  16-Jun-2009 (thich01)
-**      Add GEOM type to error messaging.
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Add all spatial types to error messaging.
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Add GEOM type to error messaging.
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Add all spatial types to error messaging.
+**	    Treat all spatial types the same as LBYTE.
 **	 1-Oct-09 (gordy)
 **	    New GCA2_INVPROC message.
 **      14-oct-2009 (joea)

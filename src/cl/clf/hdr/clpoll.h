@@ -2,6 +2,9 @@
 ** Copyright (c) 2004 Ingres Corporation
 */
 
+#ifndef CLPOLL_H_INCLUDED
+#define CLPOLL_H_INCLUDED
+
 /**
 ** Name: CLPOLL.H - Definitions for file descritor poll facility
 **
@@ -36,6 +39,12 @@
 **	    Define CLPOLL_FD for xCL_RESERVE_STREAM_FDS platforms.
 **	10-may-1999 (walro03)
 **	    Remove obsolete version string sqs_us5.
+**	16-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added iiCLfdreg and CL_poll_fd prototypes.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Fine tune iiCLfdreg prototype.
 **/
 
 /*
@@ -134,3 +143,17 @@
 # define	CLPOLL_FD( fd )
 
 # endif /* xCL_091_BAD_STDIO_FD || xCL_RESERVE_STREAM_FDS */
+
+/* Externs */
+
+FUNC_EXTERN void iiCLintrp(i4);
+FUNC_EXTERN STATUS iiCLpoll(i4 *);
+FUNC_EXTERN i4 CL_poll_fd(i4 fd);
+FUNC_EXTERN STATUS iiCLfdreg(
+        register int fd,
+        i4 op,
+        void (*func)(void *, i4),
+        void *closure,
+        i4 timeout);
+
+#endif /* CLPOLL_H_INCLUDED */

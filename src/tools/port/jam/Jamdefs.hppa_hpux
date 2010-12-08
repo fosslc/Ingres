@@ -29,6 +29,9 @@
 #           Added PAMLIB to resolve symbols defined in PAM library.
 #	22-Jun-2009 (kschendel) SIR 122138
 #	    Combine hpb and hp2 into hybrid capable jamdefs.
+#	27-Oct-2010 (frima01) BUG 124650
+#	    Removed +Olibcalls from compile flags for POSIX compliant
+#	    errors from math lib.
 #
 #####
 
@@ -52,8 +55,8 @@ CC 	default = "c89" ;
 CCDEBUG = "-g" ;
 SHLIBLD = "ld" ;
 CPP 	default = "/lib/cpp" ;
-CCMACH32 = "-DBUILD_ARCH32 +e +Olibcalls -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DAportable +DS2.0a  -W  p,-H375000 -D_LARGEFILE64_SOURCE" ;
-CCMACH64 = "-DBUILD_ARCH64 +e +Olibcalls -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DChpux +DD64 +M2 +DS2.0a  -W  p,-H375000 -D_LARGEFILE64_SOURCE" ;
+CCMACH32 = "-DBUILD_ARCH32 +e -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DAportable +DS2.0a  -W  p,-H375000 -D_LARGEFILE64_SOURCE" ;
+CCMACH64 = "-DBUILD_ARCH64 +e -D_HPUX_SOURCE -D_POSIX_C_SOURCE=199506L +DChpux +DD64 +M2 +DS2.0a  -W  p,-H375000 -D_LARGEFILE64_SOURCE" ;
 CCLDMACH32 	= "-Wl,-E -Wl,-O -Wl,+s -Wl,+n" ;
 CCLDMACH64	= "+DD64 -Wl,+s -Wl,+n" ;
 

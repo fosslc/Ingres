@@ -1,6 +1,9 @@
 /*
 **	Copyright (c) 2004 Ingres Corporation
 */
+#ifndef DS_INCLUDE
+#define DS_INCLUDE
+
 #include    <dscl.h>
 
 /**CL_SPEC
@@ -35,47 +38,44 @@
 **	    replace nat and longnat with i4
 **	20-Jun-2009 (kschendel) SIR 122138
 **	    include r64_us5.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems
 **/
 
 FUNC_EXTERN VOID DSbegin(
-#ifdef CL_PROTOTYPED
 	    FILE	*file, 
 	    i4		lang,
 	    char	*name
-#endif
 );
 FUNC_EXTERN STATUS DSclose(
-#ifdef CL_PROTOTYPED
 	    SH_DESC	*sh_desc
-#endif
 );
 FUNC_EXTERN VOID DSend(
-#ifdef CL_PROTOTYPED
 	    FILE	*file, 
 	    i4		lang
-#endif
 );
 FUNC_EXTERN VOID DSfinal(
-#ifdef CL_PROTOTYPED
 	    void
-#endif
 );
 FUNC_EXTERN STATUS DSinit(
-#ifdef CL_PROTOTYPED
 	    FILE	*file, 
 	    i4		lang, 
 	    i4		align, 
 	    char	*lab, 
 	    i4		vis, 
 	    char	*type
-#endif
 );
-FUNC_EXTERN STATUS DSwrite(
-#ifdef CL_PROTOTYPED
-# if !defined(any_aix)
-	    i4		type, 
-	    char	*val, 
-	    i4		len
-# endif  /* not aix */
+
+/* DSwrite should be:
+** DSwrite(i4, anything, i4)
+** except that the "anything" really can be anything, including NOT
+** pointers.  The call ought to be redone so as to always pass a true
+** pointer to a value, not sometimes a pointer and sometimes a value
+** and sometimes who knows what.  Until then, avoid prototyping,
+** because it might confuse the compiler.  (kschendel)
+*/
+FUNC_EXTERN STATUS DSwrite();
+
 #endif
-);

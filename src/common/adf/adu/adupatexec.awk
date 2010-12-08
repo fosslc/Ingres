@@ -1,4 +1,6 @@
 #
+# Copyright (c) 2010 Ingres Corporation
+#
 # adupatexec.awk - State engine compiler for pattern matching code.
 #
 # This script implemements a simple parser for a file based on the DOT
@@ -476,7 +478,7 @@ END{
 		    print "\t\tREG_litset += sizeof(CHAR);">body
 		    print "\t    }">body
 		    print "\t}">body
-		    print "#endif /*MEMCMP_INTRINSIC*/">body
+		    print "#endif /*MECMP_LOOP*/">body
 		}else if (statetest[s] == "CHINBSET"){
 		    print "\tch = *(CHAR*)REG_CH - REG_O;">body
 		    print "\tif ((CHAR)ch>=8*REG_L ||">body

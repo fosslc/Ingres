@@ -76,6 +76,10 @@
 **	    Replace mg5_osx with generic OSX
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	15-nov-2010 (stephenb)
+**	    prototype all functions fully.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Minor added prototype cleanup.
 */
 
 /********************************************************************
@@ -233,15 +237,26 @@ SYSTIME etime;				/* time struct returned by TMet() */
 static int ppid;    	    		/* my process id */
 
 /* Callback functions */
-static VOID (*cmread) ();   	    	/* called when read completes */
-static VOID (*cmwrite) ();  	    	/* called when write completes */
-static PTR  cmclosure;	    	    	/* closure parm for read/write */
+static VOID (*cmread) (void *, i4);	/* called when read completes */
+static VOID (*cmwrite) (void *, i4);	/* called when write completes */
+static void *cmclosure;	    	    	/* closure parm for read/write */
 
 /* Forward References */
-FUNC_EXTERN VOID    comdone();
-FUNC_EXTERN VOID    comxon();
-static	VOID	    ltoa();
-FUNC_EXTERN VOID    siowrite();
+FUNC_EXTERN VOID    comdone(void);
+FUNC_EXTERN VOID    comxon(void);
+static	VOID	    ltoa(char *, long, int, int);
+FUNC_EXTERN VOID    siowrite(int);
+int 		    cominit( char * );
+VOID		    commd( int, int );
+int		    comst( char *, int, int );
+VOID		    getcm( char * );
+int		    iopnd( SIO_CB * );
+VOID		    putcm( char *,int );
+VOID		    setto( int );
+VOID		    siodone(void );
+int		    sioinit(void );
+VOID		    sioread(int );
+VOID		    sioreg( void (*)(), void (*)(), void *);
 
 /* Global variable references */
 GLOBALREF   int	    errno;
@@ -273,7 +288,7 @@ GLOBALREF   int	    errno;
 **		
 */
 int
-sioinit( )
+sioinit(void )
 {
     char *trace;
 
@@ -318,12 +333,12 @@ sioinit( )
 **		
 */
 VOID
-siodone( )
+siodone(void )
 {
 
     /* unregister file descriptors */
-    (VOID)iiCLfdreg(comfd, FD_READ, (VOID (*)) 0, (PTR) 0, -1);
-    (VOID)iiCLfdreg(comfd, FD_WRITE, (VOID (*)) 0, (PTR) 0, -1);
+    (VOID)iiCLfdreg(comfd, FD_READ, NULL, NULL, -1);
+    (VOID)iiCLfdreg(comfd, FD_WRITE, NULL, NULL, -1);
     return;
 }
 
@@ -487,7 +502,7 @@ char *dev;
 **		
 */
 VOID
-comdone( )
+comdone(void )
 {
 
     /* ---- restore and release the comm port ---- */
@@ -928,7 +943,7 @@ int xon;
 **		
 */
 VOID
-comxon()
+comxon(void)
 {
     char contQ = '\021';
 
@@ -969,10 +984,8 @@ comxon()
 **		Initial coding.
 */
 VOID
-sioreg( cmrdfunc, cmwtfunc, cmclosparm)
-VOID		(*cmrdfunc)();
-VOID		(*cmwtfunc)();
-PTR 	    	cmclosparm;
+sioreg( void (*cmrdfunc)(void *, i4), void (*cmwtfunc)(void *, i4),
+	void * cmclosparm)
 {
     /* register functions */
     cmread = cmrdfunc;

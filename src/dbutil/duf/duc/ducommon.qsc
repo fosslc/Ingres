@@ -375,9 +375,9 @@ EXEC SQL include SQLCA;
 **          Rewrite duc_init_iidefault so that it can be used by both createdb
 **          and upgradedb and can be more easily updated if additional defaults
 **          become necessary.
-**  15-Mar-2010 (troal01)
-**      Added duc_init_srs and spatial_ref_sys system catalog.
-**      Also added geometry_columns view.
+**	15-Mar-2010 (troal01)
+**	    Added duc_init_srs and spatial_ref_sys system catalog.
+**	    Also added geometry_columns view.
 **	01-apr-2010 (toumi01) SIR 122403
 **	    For the encryption project add columns to
 **	    iitables: table_reldatawid, table_reltotdatawid, encrypted_columns,
@@ -399,6 +399,11 @@ EXEC SQL include SQLCA;
 **	    Update duc_iilgmo to recreate lgmo_xa_reduced_reg.
 **	9-Jul-2010 (kschendel) SIR 123450
 **	    Add comment re is_compressed and iitables, no code change.
+**	23-Nov-2010 (troal01)
+**	    Rename srid.dat to sridmap.dat.
+**      06-Dec-2010 (horda03)
+**          Don't access the fields of a LOCATION directly as they are
+**          not the same on all platforms.
 */
 
 
@@ -418,7 +423,7 @@ FUNC_EXTERN	void		duc_init_iisectype();
 FUNC_EXTERN	DU_STATUS	duc_iigwsxa(DU_ERROR *);
 FUNC_EXTERN	DU_STATUS	duc_iisecuritystate();
 FUNC_EXTERN DB_STATUS duc_init_iidefault(bool is_upgrade, DU_ERROR *errcb);
-FUNC_EXTERN DB_STATUS   duc_init_srs();
+FUNC_EXTERN 	DB_STATUS	duc_init_srs();
 FUNC_EXTERN	VOID		duc_iischema();
 FUNC_EXTERN	VOID		duc_iilgmo( DU_ERROR *duc_errcb );
 FUNC_EXTERN	VOID 		duc_init_iiprofile();
@@ -575,7 +580,7 @@ DU_OBJ Du_stdcat [] = {
 { "iilpartitions",	DU_IILPARTITIONS,	DU_ALL},
 { "iiotables",		DU_IIOTABLES,		DU_ALL},
 { "iiocolumns",		DU_IIOCOLUMNS,		DU_ALL},
-{ "geometry_columns",DU_GEOM_COLS,	DU_ALL},
+{ "geometry_columns",	DU_GEOM_COLS,		DU_ALL},
 };
 
 #define MAX_STDCAT_VIEWS sizeof(Du_stdcat)/sizeof(DU_OBJ)
@@ -728,9 +733,9 @@ static DU_STATUS duc_find_cats();
 **	    Add create, modify for iicolcompare catalog.
 **	25-oct-2006 (dougi)
 **	    Disable calls to create, modify iicolcompare 'til we're ready.
-**  15-Mar-2010 (troal01)
-**      Add create, modify for spatial_ref_sys, also check if we want to
-**      pre-load it.
+**	15-Mar-2010 (troal01)
+**	    Add create, modify for spatial_ref_sys, also check if we want to
+**	    pre-load it.
 */
 DU_STATUS
 ##duc_dbms_bld(duc_errcb, dbenv, convert_flag)
@@ -819,7 +824,7 @@ bool		convert_flag;
 	if(dbenv->du_srid_flag && STncasecmp(dbenv->du_dbname, "imadb", 5))
 	{
 	    duc_init_srs();
-    }
+	}
 	/* spatial_ref_sys to hash on srid */
         duc_modify_catalog("spatial_ref_sys");
  
@@ -2158,6 +2163,8 @@ duc_init_iidefault(
 ** History:
 **	8-Mar-2010 (troal01)
 **	   Initial creation.
+**     06-Dec-2010 (horda03)
+**         Removed direct access of a  LOCATION field.
 */
 DB_STATUS
 duc_init_srs()
@@ -2169,18 +2176,18 @@ duc_init_srs()
     
     exec sql whenever sqlerror call duc_sqlerror;
     
-	NMloc(FILES, FILENAME & PATH, (char *) NULL, &srs_loc);
-	LOfaddpath(&srs_loc, "geo", &srs_loc);
-	LOfstfile("srs.dat", &srs_loc);
-	srs_file = srs_loc.path;
-	exec sql copy table spatial_ref_sys(
-    srid= c0tab,
-    auth_name= varchar(0)tab with null(']^NULL^['),
-    auth_srid= c0tab with null(']^NULL^['),
-    srtext= varchar(0)tab with null(']^NULL^['),
-    proj4text= varchar(0)nl with null(']^NULL^['),
-    nl= d0nl)
-	from :srs_file;
+    NMloc(FILES, FILENAME & PATH, (char *) NULL, &srs_loc);
+    LOfaddpath(&srs_loc, "geo", &srs_loc);
+    LOfstfile("sridmap.dat", &srs_loc);
+    LOtos(&srs_loc, &srs_file);
+    exec sql copy table spatial_ref_sys(
+        srid= c0tab,
+        auth_name= varchar(0)tab with null(']^NULL^['),
+        auth_srid= c0tab with null(']^NULL^['),
+        srtext= varchar(0)tab with null(']^NULL^['),
+        proj4text= varchar(0)nl with null(']^NULL^['),
+        nl= d0nl)
+    from :srs_file;
 } /* end duc_init_srs */
 
 /*{
@@ -4930,19 +4937,19 @@ bool		upcase)
 	{
 	    exec sql CREATE VIEW geometry_columns (f_table_schema,
 	    	f_table_name,
-			f_geometry_column,
-			geometry_type,
-			coord_dimension,
-			srid)
+		f_geometry_column,
+		geometry_type,
+		coord_dimension,
+		srid)
 	    AS SELECT VARCHAR(r.relowner, 256),
-	    VARCHAR(r.relid, 256),
+		VARCHAR(r.relid, 256),
 		VARCHAR(a.attname, 256),
 		VARCHAR(iigeomname(a.attgeomtype), 32),
 		iigeomdimensions(a.attgeomtype),
 		a.attsrid
 	    FROM iirelation r, iiattribute a
 	    WHERE r.reltid = a.attrelid and r.reltidx = a.attrelidx
-	    and a.attver_dropped = 0 and a.attgeomtype > -1;
+		and a.attver_dropped = 0 and a.attgeomtype > -1;
 
 	    break;
 	}

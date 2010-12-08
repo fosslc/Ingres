@@ -70,6 +70,8 @@
 **	    replace nat and longnat with i4
 **	21-May-2003 (bonro01)
 **	    Add support for HP Itanium (i64_hpu)
+**	1-Dec-2010 (kschendel)
+**	    (Serious) compiler warning fix in create-comment.
 */
 
 /*
@@ -319,7 +321,7 @@ create_comment ()
     }
     else
     {
-	if (SIfopen(&cmtLoc, ERx("a"), SI_TXT, TERM_LINE, &tmpf) == OK)
+	if (SIfopen(cmtLoc, ERx("a"), SI_TXT, TERM_LINE, &tmpf) == OK)
 	{
 	    SIclose(tmpf);
 	}

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -103,17 +103,79 @@
 **	    node histogram is selected and the left node hiostogram is
 **	    longer.  Added addition setting of the number of elements in 
 **	    the node to ensure correct length.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-    /* Static stuff. */
-static OPO_TUPLES
-oph_join2(
-	OPS_SUBQUERY       *subquery,
-	OPH_HISTOGRAM      *lhistp,
-	OPH_HISTOGRAM      *rhistp,
-	OPO_TUPLES         ltuples,
-	OPO_TUPLES         rtuples);
+
+/*
+** Forward Type Definition:
+*/
+typedef enum _OPN_JTSPECIAL OPN_JTSPECIAL;
+
+/* TABLE OF CONTENTS */
+static OPO_TUPLES oph_join(
+	OPS_SUBQUERY *subquery,
+	OPH_HISTOGRAM *orig_lhistp,
+	OPH_HISTOGRAM *orig_rhistp,
+	OPO_TUPLES ltups,
+	OPO_TUPLES rtups,
+	OPH_HISTOGRAM **jhistpp,
+	bool histflag,
+	OPL_OJHISTOGRAM *ojhistp);
+static OPO_TUPLES oph_join2(
+	OPS_SUBQUERY *subquery,
+	OPH_HISTOGRAM *lhistp,
+	OPH_HISTOGRAM *rhistp,
+	OPO_TUPLES ltuples,
+	OPO_TUPLES rtuples);
+static OPN_JTSPECIAL opn_jtspecial(
+	OPS_SUBQUERY *subquery,
+	OPN_RLS *lrlmp,
+	OPN_RLS *rrlmp,
+	OPH_HISTOGRAM *lhistp,
+	OPH_HISTOGRAM *rhistp);
+static bool oph_imaps(
+	OPS_SUBQUERY *subquery,
+	OPE_IEQCLS tideqc,
+	OPE_BMEQCLS *eqcmp,
+	OPV_BMVARS *varmap);
+static OPH_HISTOGRAM *oph_ojsvar(
+	OPS_SUBQUERY *subquery,
+	OPN_RLS *rlp,
+	OPE_IEQCLS eqcls,
+	OPO_TUPLES tuples);
+static OPH_HISTOGRAM *opn_jtuples(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *np,
+	OPO_ISORT jordering,
+	OPO_ISORT jxordering,
+	OPN_RLS *lrlmp,
+	OPN_RLS *rrlmp,
+	OPE_BMEQCLS *jeqh,
+	bool *junique,
+	bool *jcomplete,
+	OPO_TUPLES *tuples,
+	OPV_IVARS *tidvarnop,
+	OPL_OJHISTOGRAM *ojhistp);
+static void opn_hfunc(
+	OPS_SUBQUERY *subquery,
+	OPE_IEQCLS eqcls,
+	OPH_HISTOGRAM **histpp);
+void oph_jselect(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *np,
+	OPN_RLS **trlpp,
+	OPN_SUBTREE *lsubtp,
+	OPN_EQS *leqclp,
+	OPN_RLS *lrlmp,
+	OPN_SUBTREE *rsubtp,
+	OPN_EQS *reqclp,
+	OPN_RLS *rrlmp,
+	OPO_ISORT jordering,
+	OPO_ISORT jxordering,
+	OPE_BMEQCLS *jeqh,
+	OPE_BMEQCLS *byeqcmap,
+	OPL_OJHISTOGRAM *ojhistp);
 
 
 /*{
@@ -393,6 +455,8 @@ oph_join(
 		break;
 	    case OPL_RIGHTJOIN:
 		newhp = rhistp;
+		break;
+	    default:
 		break;
 	    }
 	}
@@ -1677,22 +1741,23 @@ oph_join2(
 **      30-may-86 (seputis)
 [@history_line@]...
 */
-typedef i4          OPN_JTSPECIAL;
-#define			OPN_JTLINDEX	   3
-/* indicates that the left and right trees contain indexes on
-** this tid equcls and that the left subtree is equal to or more
-** restrictive so the left subtree should be a lower bound for
-** the tuple count */
-#define			OPN_JTRINDEX	   3
-/* indicates that the left and right trees contain indexes on
-** this tid equcls and that the right subtree is equal to or more
-** restrictive so the right subtree should be a lower bound for
-** the tuple count */
-#define                 OPN_JTRIGHTPRIMARY 1
-/* indicates that the right subtree is a primary relation */
-#define                 OPN_JTLEFTPRIMARY  2
-/* indicates that the left subtree is a primary relation */
-#define                 OPN_JTNEITHER      0
+enum _OPN_JTSPECIAL {
+	OPN_JTLINDEX =		3,
+	/* indicates that the left and right trees contain indexes on
+	** this tid equcls and that the left subtree is equal to or more
+	** restrictive so the left subtree should be a lower bound for
+	** the tuple count */
+	OPN_JTRINDEX =		OPN_JTLINDEX,
+	/* indicates that the left and right trees contain indexes on
+	** this tid equcls and that the right subtree is equal to or more
+	** restrictive so the right subtree should be a lower bound for
+	** the tuple count */
+	OPN_JTRIGHTPRIMARY =	1,
+	/* indicates that the right subtree is a primary relation */
+	OPN_JTLEFTPRIMARY =	2,
+	/* indicates that the left subtree is a primary relation */
+	OPN_JTNEITHER =		0
+};
 
 /*{
 ** Name: opn_jtspecial	- find special case of primary and index subtree

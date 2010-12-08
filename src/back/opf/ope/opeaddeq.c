@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -62,9 +62,16 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      14-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+bool ope_addeqcls(
+	OPS_SUBQUERY *subquery,
+	OPE_IEQCLS eqcnum,
+	OPZ_IATTS attnum,
+	bool nulljoin);
 
 /*{
 ** Name: ope_addeqcls	- add an attribute to equivalence class
@@ -114,7 +121,8 @@
 **          Remove the fix to b117642.
 **	21-May-2009 (kiria01) b122051
 **	    Reduce uninitialised db_collID
-[@history_line@]...
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Correct the check for mixed collation.
 */
 bool
 ope_addeqcls(
@@ -163,10 +171,10 @@ ope_addeqcls(
 	{
 	    /* Perform mixed collation check with rest of eqclass. */
 	    if (collID != abase->opz_attnums[attr]->opz_dataval.db_collID &&
-		(collID > DB_NOCOLLATION || 
-		abase->opz_attnums[attr]->opz_dataval.db_collID > DB_NOCOLLATION))
+		collID > DB_NOCOLLATION && 
+		abase->opz_attnums[attr]->opz_dataval.db_collID > DB_NOCOLLATION)
 	    {
-		collID = attrp->opz_dataval.db_collID  = DB_UNSET_COLL;
+		collID = attrp->opz_dataval.db_collID = DB_UNSET_COLL;
 		eqp->ope_mask |= OPE_MIXEDCOLL;
 	    }
 

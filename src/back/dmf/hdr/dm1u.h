@@ -51,6 +51,12 @@
 **	    Try to cut down on massive flag confusion some.
 **	04-Dec-2008 (jonj)
 **	    SIR 120874: dm1u_? functions converted to DB_ERROR *
+**	15-Oct-2010 (kschendel)
+**	    Grrrr ... another instance of two names for the same thing,
+**	    in this case the VERBOSE flag.  Define in terms of the
+**	    definition in dmucb.h.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    dm1u_talk() rewritten with variable parameters, prototyped.
 **/
 
 /*
@@ -60,7 +66,7 @@
 /*  Operation codes for dm1u_verify(). */
 /*  It makes sense to use the same flag and type definitions as the
 **  original DMU caller, with the one exception that the DMU caller
-**  will pass a separate option dmu-char entry for modifiers;  while
+**  will pass a separate dmu-characteristics entry for modifiers;  while
 **  dm1u (and indeed everything below the dmumodify logical level)
 **  wants everything in a single operator word.
 */
@@ -74,7 +80,7 @@
 #define	    DM1U_OPMASK	    0x07	/* Ideally would be in dmucb.h */
 
 /* This modifier is actually part of the "verify" characteristics entry */
-#define	    DM1U_VERBOSE_FL 0x08   /* if set, display informative msgs */
+#define	    DM1U_VERBOSE_FL DMU_V_VERBOSE  /* if set, display informative msgs */
 
 /*  Operation modifiers for dm1u_verify(). */
 /*  These originate with DMU_VOPTION;  just shift things over a bit. */
@@ -144,17 +150,22 @@
 **	    max_tuple_length of 2008 which doesn't account for > 2k pages. 
 **	    max_tuple_length is in range 0 - 32767, changed buffer allocation to
 **	    size DM_MAXTUP (32767) instead of DB_MAXTUP (2008).
+**      01-Nov-2010 (frima01) BUG 124670
+**	    Enforce 8 Byte alignment for dm1u_colbuf to avoid BUS errors.
 */
 
 typedef struct _DM1U_ADF
 {
 #ifdef BYTE_ALIGN
-    char	    dm1u_colbuf[DB_MAXTUP]; /* aligned buffer into which column
+    union {
+	i8          align_enforcement; /* enforce 8 Byte alignment */
+        char	    colbuf[DB_MAXTUP]; /* aligned buffer into which column
 					    ** values are copied before they are
 					    ** passed to ADF.  Do not move this
 					    ** field; use ALIGN_RESTRICT if you
 					    ** need to otherwise.
-					    */
+					*/
+	} dm1u_colbuf;
 #endif
     i4	    dm1u_numdv; 	    /* number of DVs for this tuple */
     char	    dm1u_record[DM_MAXTUP]; /* buffer to hold a record */
@@ -253,4 +264,8 @@ FUNC_EXTERN DB_STATUS dm1u_verify(
 			DB_ERROR        *dberr );
 
 
-FUNC_EXTERN VOID dm1u_talk();
+FUNC_EXTERN VOID dm1u_talk(
+			DM1U_CB		*dm1u,
+			i4		msg_id,
+			i4		count,
+			... );

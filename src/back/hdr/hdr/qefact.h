@@ -2,6 +2,9 @@
 **Copyright (c) 2004 Ingres Corporation
 */
 
+#ifndef QEFACT_H_INCLUDED
+#define QEFACT_H_INCLUDED
+
 /* Make sure we have QSO_NAME */
 #include <qsf.h>
 
@@ -132,7 +135,8 @@
 **	    to DMF_ATTR_ENTRY. This change affects this file.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_line@]...
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes: recursive include protection, avoid psfparse.h.
 **/
 
 /*
@@ -144,6 +148,7 @@ typedef struct _QEQ_LDB_DESC	QEQ_LDB_DESC;
 typedef struct _QEF_EXEC_IMM	QEF_EXEC_IMM;
 typedef	struct _QEF_RELATED_OBJECT	QEF_RELATED_OBJECT;
 typedef struct _QEF_SCROLL	QEF_SCROLL;
+struct _PST_INFO;
 
 
 /*}
@@ -1161,6 +1166,8 @@ typedef	struct	_QEF_RENAME_STATEMENT
 **	28-Jul-2010 (kschendel) SIR 124104
 **	    Add compression flags (same as PST_RESTAB pst_compress flags)
 **	    so that autostruct can keep compression.
+**	18-Oct-2010 (kschendel) SIR 124544
+**	    Replace individual bits and pieces with a DMU_CHARACTERISTICS.
 */
 typedef	struct	_QEF_CREATE_INTEGRITY_STATEMENT
 {
@@ -1320,16 +1327,16 @@ typedef	struct	_QEF_CREATE_INTEGRITY_STATEMENT
 		*/
     DB_TAB_NAME		qci_idxname;	/* index name (explicitly spec.) */
     DM_DATA		qci_idxloc;	/* index location (from with) */
-    i4			qci_idx_fillfac;  /* fillfactor (from with) */
-    i4			qci_idx_leaff;    /* leaffill (from with) */
-    i4			qci_idx_nonleaff; /* non leaffill (from with) */
-    i4		qci_idx_page_size;  /* pagesize (from with) */
-    i4		qci_idx_minpgs;   /* minpages (from with) */
-    i4		qci_idx_maxpgs;   /* maxpages (from with) */
-    i4		qci_idx_alloc;    /* alloc (from with) */
-    i4		qci_idx_extend;   /* extend (from with) */
-    i4		qci_idx_struct;   /* ix structure (from with) */
-    i2		qci_compress;	/* pst_compress style compression flags */
+    DMU_CHARACTERISTICS qci_dmu_chars;	/* Various index options coming from
+					** the constraint WITH-clause
+					*/
+    i2		qci_autocompress;  /* Table auto-structure only:
+				** DMU_COMP_xxx original base-table compression
+				** to preserve create-compression if auto
+				** table structure decides to modify the
+				** original table structure to support a
+				** unique / primary key constraint.
+				*/
 
     /*
     ** The following fields are the DSH row numbers of data that is filled
@@ -1925,7 +1932,7 @@ struct _QEF_EXEC_IMM
    DB_TEXT_STRING   *ahd_text;       /* pointer to query text which needs
                                      ** to be parsed
                                      */
-   PST_INFO     *ahd_info;           /* pst_info pointer copied to 
+   struct _PST_INFO *ahd_info;       /* pst_info pointer copied to 
 				     ** ahd_info
 				     */
 };
@@ -2482,3 +2489,7 @@ struct _QEF_AHD
 	QEQ_D10_REGPROC qed_regproc;	/* execute a registed procedure */
     } qhd_obj;
 };
+
+
+
+#endif /* QEFACT_H_INCLUDED */

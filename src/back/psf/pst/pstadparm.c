@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -63,10 +63,30 @@
 **          can automate this next time.
 **      10-sep-2008 (gupsh01,stial01)
 **          Add unorm() to vlups that need to be normalized 
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-static bool add_unorm (PST_QNODE *tree, PSS_SESBLK *sess_cb);
+/* TABLE OF CONTENTS */
+i4 pst_adparm(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSF_MSTREAM *stream,
+	i2 parmno,
+	char *format,
+	PST_QNODE **newnode,
+	i4 *highparm);
+i4 pst_2adparm(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSF_MSTREAM *stream,
+	i2 parmno,
+	DB_DATA_VALUE *format,
+	PST_QNODE **newnode,
+	i4 *highparm);
+static bool add_unorm(
+	PST_QNODE *tree,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: pst_adparm	- Add a parameter node to a query tree.
@@ -423,8 +443,6 @@ add_unorm (PST_QNODE *tree, PSS_SESBLK *sess_cb)
     bool	unorm;
     i4		utf8;
     ADF_CB	*adf_scb;
-    DB_STATUS	status;
-    DB_ERROR	error;
 
     adf_scb = (ADF_CB*) sess_cb->pss_adfcb;
     utf8 = (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED);

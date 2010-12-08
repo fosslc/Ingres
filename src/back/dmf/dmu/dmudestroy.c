@@ -4,6 +4,7 @@
 
 #include    <compat.h>
 #include    <gl.h>
+#include    <bt.h>
 #include    <tm.h>
 #include    <cs.h>
 #include    <me.h>
@@ -224,18 +225,7 @@ static DB_STATUS destroy_temporary_table(
 **    
 **           .dmu_db_id                     Internal identifier of database.
 **           .dmu_tbl_id                    Internal name of table to destroy.
-**         .dmu_char_array.data_address     Pointer to an area used to pass 
-**                                          an array of entries of type
-**                                          DMU_CHAR_ENTRY.
-**                                          See below for description of 
-**                                          <dmu_char_array> entries.
-**         .dmu_char_array.data_in_size     Length of char_array data in bytes.
-**
-**         <dmu_char_array> entries are of type DMU_CHAR_ENTRY and 
-**         must have following values:
-**         char_id                          Characteristic identifier.
-**                                          Must be one of the following:
-**					    DMU_TEMP_TABLE - temporary table
+**         .dmu_chars			    Characteristics flags and info
 **
 ** Outputs:
 **      dmu_cb
@@ -332,6 +322,9 @@ static DB_STATUS destroy_temporary_table(
 **	    Replaced dmx_show() with the more robust 
 **	    dmxCheckForInterrupt() to standardize external
 **	    interrupt handling.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
+**	    Fix the operation preamble here.
 */
  
 DB_STATUS
@@ -339,11 +332,8 @@ dmu_destroy(DMU_CB    *dmu_cb)
 {
     DMU_CB	    *dmu = dmu_cb;
     DML_ODCB	    *odcb;
-    DMU_CHAR_ENTRY  *char_entry;
-    i4	    char_count;
     i4	    temporary = 0;
     i4	    drop_flags;
-    i4	    i;
     i4	    error, local_error, status;
     DML_XCB	    *xcb;
     i4         db_lockmode;
@@ -420,26 +410,8 @@ dmu_destroy(DMU_CB    *dmu_cb)
 
 	/*  Check for characteristics. */
 
-	if (dmu->dmu_char_array.data_address && 
-		dmu->dmu_char_array.data_in_size)
-	{
-	    char_entry = (DMU_CHAR_ENTRY*) dmu->dmu_char_array.data_address;
-	    char_count = dmu->dmu_char_array.data_in_size / 
-			    sizeof(DMU_CHAR_ENTRY);
-	    for (i = 0; i < char_count; i++)
-	    {
-		switch (char_entry[i].char_id)
-		{
-		case DMU_TEMP_TABLE:
-		    temporary = char_entry[i].char_value == DMU_C_ON;
-		    break;
-
-		default:
-		    SETDBERR(&dmu->error, i, E_DM000D_BAD_CHAR_ID);
-		    return (E_DB_ERROR);
-		}
-	    }
-	}
+	if (BTtest(DMU_TEMP_TABLE, dmu->dmu_chars.dmu_indicators))
+	    temporary = TRUE;
 
 	if (temporary)
 	{
@@ -681,7 +653,6 @@ DB_ERROR    *errcb)
     LG_LXID         log_id;
     DMP_ET_LIST	    *list;
     DMP_TCB	    *tcb = NULL;
-    i4		    error;
 
     /* Init common parts of DMT_CB for calling dmt_delete_temp */
     MEfill(sizeof(DMT_CB), '\0', (PTR)&dmt_cb);

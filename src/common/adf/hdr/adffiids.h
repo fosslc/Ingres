@@ -345,8 +345,8 @@
 **	    Added ADFI_1395_DATE_SUB_VCH for relaxed dates
 **	12-Dec-2008 (kiria01) b121297
 **	    Added ADFI_1396_DATE_ADD_VCH for relaxed dates
-**  28-Feb-2009 (thich01)
-**      Added FI's for fromtext spatial ops
+**	28-Feb-2009 (thich01)
+**	    Added FI's for fromtext spatial ops
 **	12-Mar-2009 (kiria01) SIR121788
 **	    Added ADFI_1397_LNVCHR_TO_LVCH, ADFI_1398_LVCH_TO_LNVCHR,
 **	    ADFI_1399_LVCH_LNVCHR, ADFI_1400_LNVCHR_LVCH,
@@ -354,8 +354,8 @@
 **	    ADFI_1403_LNVCHR_CHAR, ADFI_1404_LNVCHR_C,
 **	    ADFI_1405_LNVCHR_TEXT, ADFI_1406_LNVCHR_VARCHAR and
 **	    ADFI_1407_LNVCHR_LTXT
-**  13-Mar-2009 (thich01)
-**      Added FI's for asText and asBinary
+**	13-Mar-2009 (thich01)
+**	    Added FI's for asText and asBinary
 **	17-Mar-2009 (kiria01) SIR121788
 **	    Added ADFI_1408_LCLOC_TO_LBYTE, ADFI_1409_LCLOC_TO_LNVCHR,
 **	    ADFI_1410_LBLOC_TO_LVCH and ADFI_1411_LNLOC_TO_LVCH
@@ -366,19 +366,19 @@
 **	    which is also fixed).
 **	19-Mar-2009 (kiria01) SIR121788
 **	    Added the missing long byte coercions.
-**  20-Mar-2009 (thich01)
-**      Added FI's for fromwkb spatial ops
+**	20-Mar-2009 (thich01)
+**	    Added FI's for fromwkb spatial ops
 **      22-Apr-2009 (Marty Bowes) SIR 121969
 **          Add generate_digit() and validate_digit() for the generation
 **          and validation of checksum values.
-**  16-Jun-2009 (thich01)
-**      Added FI for GEOM to GEOM.
+**	16-Jun-2009 (thich01)
+**	    Added FI for GEOM to GEOM.
 **      01-Aug-2009 (martin bowes) SIR122320
 **          Added soundex_dm (Daitch-Mokotoff) soundex
-**  20-Aug-2009 (thich01)
-**      Add generic geom from text and from wkb.
-**  25-Aug-2009 (troal01)
-**      Added FI for GEOMNAME and GEOMDIMEN
+**	20-Aug-2009 (thich01)
+**	    Add generic geom from text and from wkb.
+**	25-Aug-2009 (troal01)
+**	    Added FI for GEOMNAME and GEOMDIMEN
 **	31-Aug-2009 (kschendel) b122510
 **	    Add FI's for character(ucode,n) type conversions.  We can't use
 **	    the (all,n) FI's for these because they call the wrong

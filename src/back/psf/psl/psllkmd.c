@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -122,9 +122,39 @@
 **	    SET LOCKMODE ... TIMEOUT = NOWAIT support added.
 **      15-Apr-2003 (bonro01)
 **          Added include <psyaudit.h> for prototype of psy_secaudit()
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
-
-/* external declarations */
+
+/* TABLE OF CONTENTS */
+i4 psl_lm1_setlockstmnt(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+i4 psl_lm2_setlockkey(
+	PSS_SESBLK *sess_cb,
+	char *char_name,
+	i4 *char_type,
+	DB_ERROR *err_blk);
+i4 psl_lm3_setlockparm_name(
+	i4 char_type,
+	char *char_val,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+i4 psl_lm4_setlockparm_num(
+	i4 char_type,
+	i4 char_val,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+i4 psl_lm5_setlockmode_distr(
+	PSS_SESBLK *sess_cb,
+	char *scanbuf_ptr,
+	PSS_Q_XLATE *xlated_qry,
+	PSQ_CB *psq_cb);
+i4 psl_lm6_setlockscope_distr(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_Q_XLATE *xlated_qry,
+	DB_ERROR *err_blk);
 
 /* Useful defines */
 					/*
@@ -198,7 +228,6 @@ psl_lm1_setlockstmnt(
     i4		err_code;
     DMC_CB		*dmc_cb;
     DB_ERROR		err_blk;
-    DB_STATUS	        tempstat;
 
     psq_cb->psq_mode = PSQ_SLOCKMODE;
 
@@ -505,7 +534,6 @@ psl_lm3_setlockparm_name(
             {
                 if (not_distr && (dmc_cb->dmc_sl_scope == DMC_SL_TABLE))
                 {
-                    DB_TAB_ID       *tabid = &dmc_cb->dmc_table_id;
                     PSS_RNGTAB      *tbl = &sess_cb->pss_auxrng.pss_rsrng;
  
 		    if (tbl->pss_tabdesc->tbl_pg_type == DB_PG_V1)

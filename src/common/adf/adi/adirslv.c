@@ -152,12 +152,6 @@
 /*
 **  Forward and/or External function references.
 */
-
-static	i4     ad0_type_rank();  /* rank a function instance */
-static	i4     ad0_type_class(); /* identify base data class */
-static	i4     ad0_type_storage_class(); /* identify base data storage class */
-static	i4     ad0_type_prec();  /* Determine dt precedence */
-
 static bool dt_iscompat(
 	DB_DT_ID	dt1, 	 
 	DB_DT_ID	dt2);
@@ -238,6 +232,17 @@ static const char opnames[] = ADI_OPS_MACRO;
 
 #undef _DEFINEEND
 
+/* rank a function instance */
+static i4	 ad0_type_rank( ADI_FI_DESC	*fi,
+				PREC_TY		prec_ty,
+				DB_DT_ID	*idts);
+/* identify base data class */
+static	i4     ad0_type_class( i4		dt); 
+/* identify base data storage class */
+static	i4     ad0_type_storage_class(i4	dt); 
+/* Determine dt precedence */
+static	i4     ad0_type_prec( i4		dt,
+			      PREC_TY		prec_ty);  
 /*
 [@function_reference@]...
 [@#defines_of_other_constants@]
@@ -436,21 +441,18 @@ static const char opnames[] = ADI_OPS_MACRO;
 **          Add nvl2 to "ifnull" coercion exception (Bug 123880)
 **      6-aug-2010 (stephenb)
 **          Correctly detect NVL2 from ADI_NVL2_FIND_COMMON (Bug 124211)
+**      12-oct-2010 (stephenb)
+**          NVL2 is all/all/all, just leave the input dt's as-is; adjusting
+**          them causes problems with the output (bug 124605).
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_resolve(
 ADF_CB		*adf_scb,
 ADI_RSLV_BLK	*adi_rslv_blk,
 bool		varchar_precedence)
-# else
-DB_STATUS
-adi_resolve( adf_scb, adi_rslv_blk, varchar_precedence)
-ADF_CB		*adf_scb;
-ADI_RSLV_BLK	*adi_rslv_blk;
-bool		varchar_precedence;
-# endif
 {
     DB_STATUS		st;
     DB_DT_ID		idts[ADI_MAX_OPERANDS];
@@ -1479,7 +1481,7 @@ ADI_RSLV_BLK	     *adi_rslv_blk
           }
           else if (fdt == DB_GEOM_TYPE)
           {
-              // Nothing to do here.
+              /* Nothing to do here. Just allow the GEOM family. */
           }
 	  else if (family == DB_ALL_TYPE)
 	  {
@@ -1498,10 +1500,10 @@ ADI_RSLV_BLK	     *adi_rslv_blk
       ** have been updated with member information */
       for (i = 0; i < numdts; i++)
       {
-	if (i==0 && oldfidesc->adi_finstid == ADFI_1457_NVL2_ANY)
-	    /* leave parm1 as-is, it's just the null indicator */
-	    newfidesc->adi_dt[0] = abs(adi_rslv_blk->adi_dt[0]);
-	if ((newfidesc->adi_dt[i] == family) && (member != 0))
+	if (oldfidesc->adi_finstid == ADFI_1457_NVL2_ANY)
+	    /* NVL2 is any/any/any use rslv block dts */
+	    newfidesc->adi_dt[i] = abs(adi_rslv_blk->adi_dt[i]);
+	else if ((newfidesc->adi_dt[i] == family) && (member != 0))
 	  newfidesc->adi_dt[i]= member;
       }
 
@@ -1896,9 +1898,10 @@ ADI_RSLV_BLK	    *adi_rslv_blk
 **          Initial creation.
 **	25-oct-2006 (dougi)
 **	    Exclude UDTs from adi_dtfamily checks.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_coerce_dtfamily_resolve(
 ADF_CB               *adf_scb,
@@ -1907,14 +1910,6 @@ DB_DT_ID	     input,
 DB_DT_ID	     output,	 
 ADI_FI_DESC          *newfidesc
 )
-# else
-adi_coerce_dtfamily_resolve( adf_scb, oldfidesc, input, output, newfidesc)
-ADF_CB		*adf_scb;
-ADI_FI_DESC	*oldfidesc;
-DB_DT_ID	input; 	 
-DB_DT_ID	output;
-ADI_FI_DESC	*newfidesc;
-# endif
 {
     ADI_DATATYPE    *dtp;  
     DB_DT_ID	fi_input = abs(oldfidesc->adi_dt[0]);

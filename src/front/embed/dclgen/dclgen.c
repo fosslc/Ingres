@@ -207,10 +207,10 @@
 **	    Modify 1994 fix for i4's long vs. int decision to prefer int.
 **      28-jan-2009 (stial01)
 **          Use DB_MAXNAME for database objects, LNAME_MAX for language
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      18-feb-2010 (joea)
 **          Add support for DB_BOO_TYPE.  Remove obsolete PL/I code.
 */

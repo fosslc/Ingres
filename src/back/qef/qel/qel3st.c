@@ -95,6 +95,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 GLOBALREF   char	IIQE_42_ing_60[];
@@ -501,8 +503,6 @@ QEC_LINK	*v_lnk_p )
     DD_LDB_DESC	    *cdb_p = 
 			& dds_p->qes_d4_ddb_p->dd_d3_cdb_info.dd_i1_ldb_desc,
 		    *ldb_p = v_lnk_p->qec_19_ldb_p;
-    QEC_D9_TABLEINFO
-		    *tabinfo_p = v_lnk_p->qec_2_tableinfo_p;
     QEC_L3_COLUMNS  dd_columns,
 		    *ddcolumns_p = & dd_columns;	/* tuple struct */
     QEQ_1CAN_QRY    *sel_p = v_lnk_p->qec_6_select_p,

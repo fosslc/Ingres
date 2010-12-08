@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004, Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -63,21 +63,29 @@
 **	31-Jul-2007 (kschendel) SIR 122513
 **	    Pretty much overhaul for new generalized partition qualification
 **	    capabilities.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-/* Local forward declarations */
-
+/* TABLE OF CONTENTS */
+void opb_pqbf(
+	OPS_SUBQUERY *subquery);
 static void opb_pqbf_alloc(
-	OPS_STATE	*global,
-	OPV_VARS	*varp,
-	DB_PART_DEF	*partp);
-
+	OPS_STATE *global,
+	OPV_VARS *varp,
+	DB_PART_DEF *partp);
+void opb_pqbf_findeqc(
+	DB_PART_DEF *partp,
+	OPB_PQBF *pqbfp,
+	OPE_IEQCLS eqc,
+	i4 *dim,
+	i4 *col_index);
 static bool opb_pqbf_ok(
-	OPS_SUBQUERY	*subquery,
-	DB_PART_DEF	*partp,
-	OPB_PQBF	*pqbfp,
-	PST_QNODE	*qnode,
-	OPE_IEQCLS	reqd_eqc);
+	OPS_SUBQUERY *subquery,
+	DB_PART_DEF *partp,
+	OPB_PQBF *pqbfp,
+	PST_QNODE *qnode,
+	OPE_IEQCLS reqd_eqc);
 
 
 /*{

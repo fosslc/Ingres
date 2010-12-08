@@ -343,6 +343,15 @@ extern u_i4  SGN$GL_KSTACKPAG;
 **          version of the one used for internal threads.
 **      14-may-2010 (joea)
 **          Make MMG$GL_PAGE_SIZE and SGN$GL_KSTACKPAG always visible.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**      16-Nov-2010 (horda03)
+**          Control when ASTs can be delivered in a server. Only want ASTs to be
+**          delivered when the server is idle (sys$hiber) or switching threads.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems,
+**      07-Dec-2010 (horda03) SIR 124685
+**          Fix more VMS build problems
 **/
 
 /*
@@ -350,22 +359,20 @@ extern u_i4  SGN$GL_KSTACKPAG;
 */
 
 FUNC_EXTERN CS_SCB  *CS_xchng_thread(); /* Pick next thread to run */
-FUNC_EXTERN i4     CS_quantum();       /* timer AST to pick next thread */
-FUNC_EXTERN void    CS_toq_scan();      /* Scan request timeout queue */
 FUNC_EXTERN void    CS_ssprsm();	/* suspend a task, resume another */
 FUNC_EXTERN void    CS_ast_ssprsm();	/* suspend current task, resume next */
 FUNC_EXTERN void    CS_jmp_start();	/* start a session on empty stack */
 FUNC_EXTERN void    CS_eradicate();	/* unconditionally wipe out a session */
-FUNC_EXTERN void    CS_fmt_scb();	/* debug format an scb */
-FUNC_EXTERN void    CS_move_async();	/* process async event info */
 FUNC_EXTERN void    CS_default_output_fcn(PTR arg1, i4 msg_length,
 					  char *msg_buffer);
-FUNC_EXTERN void    CS_change_priority(); /* change session priority */
-FUNC_EXTERN STATUS  CS_admin_task();	/* add and delete threads */
 FUNC_EXTERN void    CS_detach_scb();    /* make an SCB unknown to MO/IMA */
 FUNC_EXTERN bool
 EXsigarr_sys_report( i4 *sigarr,	/* Report errors, call fr VMS hndlr */
 		    char *buffer );
+
+static STATUS CS_admin_task(i4 mode, CS_ADMIN_SCB *scb,
+	i4 *next_mode, PTR io_area);
+static void CS_toq_scan(void);		/* Scan timeout queue */
 
 #ifdef KPS_THREADS
 static CS_SCB *new_scb;
@@ -379,8 +386,6 @@ static i4 thread_end(KPB_PQ kpb, i4 status);
 ** Definition of all global variables used by this file.
 */
 
-GLOBALREF CS_SYSTEM           Cs_srv_block;
-GLOBALREF CS_ADMIN_SCB	      Cs_admin_scb;
 GLOBALREF CS_SCB	      Cs_idle_scb;
 GLOBALREF CS_SCB              Cs_repent_scb;
 GLOBALREF PTR		      Cs_save_exsp;
@@ -506,7 +511,7 @@ GLOBALDEF const char event_state_mask_names[] = EVENT_STATE_MASKS ;
 **          Created on Jupiter.
 */
 i4
-CSvms_uic()
+CSvms_uic(void)
 {
     if (Cs_srv_block.cs_current)
 	return(Cs_srv_block.cs_current->cs_uic);
@@ -574,6 +579,8 @@ CSvms_uic()
 **          ben waiting for over 2 quantums, then a thread from
 **          the highest priority queue that has been waiting the longest
 **          will be chosen.
+**      16-Nov-2010 (horda03)
+**          Process queued ASTs before selecting the new thread.
 */
 
 CS_SCB	*
@@ -590,17 +597,27 @@ i4		   priority;
     i4			oo_stacks = 0;
 #endif
     i4                 nevents, tim;
-    i4			reenableasts;
     i4                  new_priority;
     i4                  oldest_quantum;
+
+    /* B124691: ASTs should be diasbled. Allow queued ASTs to
+    **          be delivered before exchanging threads.
+    */
+    
 
     /*
     ** Make sure AST's are disabled, so an AST delivered
     ** CSresume will not see queues & cs_state in a
     ** transient state. (bug 102014).
     */
-    reenableasts = (sys$setast(0) != SS$_WASCLR);
+    /* Turn on ASTs to allow delivery */
+    sys$setast(1);
 
+    /* Turn off ASTs we don't want any AST messing with 
+    ** values. Non-CS code isn't AST savvy.
+    */
+    sys$setast(0);
+    
     /*
     ** If the idle thread is the only thing on the ready queues,
     ** don't waste time scanning for that which won't be found.
@@ -632,8 +649,9 @@ i4		   priority;
 	    else if ((new_scb->cs_state == CS_STACK_WAIT) && (!oo_stacks))
 	    {
 		STATUS		status;
+		CL_ERR_DESC     sys_err;
 
-		status = CS_alloc_stack(new_scb);
+		status = CS_alloc_stack(new_scb, &sys_err);
 		if (status == OK)
 		{
 		    new_scb->cs_state = CS_COMPUTABLE;
@@ -702,9 +720,8 @@ i4		   priority;
 	/*
 	** Serious problems.  The idle job is always ready.
 	*/
-	(*Cs_srv_block.cs_elog)(E_CS0007_RDY_QUE_CORRUPT, 0, 0);
+	(*Cs_srv_block.cs_elog)(E_CS0007_RDY_QUE_CORRUPT, NULL, 0, 0);
 	Cs_srv_block.cs_state = CS_ERROR;
-	if (reenableasts) sys$setast(1);
 	return(scb);
     }
 
@@ -739,8 +756,6 @@ i4		   priority;
 	pri_scb->cs_rw_q.cs_q_next->cs_rw_q.cs_q_prev = pri_scb;
     }
 
-    if (reenableasts) sys$setast(1);
-
     /*
     ** If the old or new thread needs to collect CPU statistics, then we need
     ** to figure get the DBMS CPU usage.  If the new session is collecting
@@ -761,7 +776,7 @@ i4		   priority;
 	    i = iosb.iosb$w_status;
 	if (( i & 1) == 0)
 	{
-	    (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, &i, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, NULL, 0, 0);
 	}
 	else
 	{
@@ -857,8 +872,7 @@ i4		   priority;
 **	    Change name of quantum_ticks to CS_lastquant -- matching Unix CL.
 */
 i4
-CS_quantum(mode)
-i4                mode;
+CS_quantum(i4 mode)
 {
     i4                 status;
     CS_SCB		*scb;
@@ -1021,7 +1035,7 @@ i4                mode;
 
     Cs_srv_block.cs_state = CS_ERROR;
     Cs_srv_block.cs_error_code = E_CS0006_TIMER_ERROR;
-    (*Cs_srv_block.cs_elog)(E_CS0006_TIMER_ERROR, &status, 0);
+    (*Cs_srv_block.cs_elog)(E_CS0006_TIMER_ERROR, NULL, 0, 0);
     return(status);
 }
 
@@ -1068,8 +1082,8 @@ i4                mode;
 **	19-feb-1996 (duursma)
 **	    Partly integrated UNIX change 423116.
 */
-void
-CS_toq_scan()
+static void
+CS_toq_scan(void)
 {
     CS_SCB              *scb;
     CS_SCB              *next_scb;
@@ -1401,10 +1415,13 @@ CS_toq_scan()
 **      22-Aug-2000 (horda03)
 **          Obtain pages for Stack from the P1 area.
 **          (102291)
+**      06-Dec-2010 (horda03)
+**         Changed interfsce to match new prototype (shared with Unix).
 */
 STATUS
 CS_alloc_stack(
-CS_SCB             *scb)
+CS_SCB             *scb,
+CL_ERR_DESC        *sys_err)
 {
     VA_RANGE		mem;		/* memory range requested */
     VA_RANGE		retmem;		/* memory range actually effected */
@@ -1414,7 +1431,6 @@ CS_SCB             *scb)
     i4 size = Cs_srv_block.cs_stksize;
     i4			pages;
     PTR			addr;
-    CL_ERR_DESC		sys_err;
     i4 pagelets;
     i4 alloc_pages;
 #ifdef KPS_THREADS
@@ -1465,7 +1481,7 @@ CS_SCB             *scb)
 						/* the stack -- for	    */
 						/* CS_setup()		    */
 	stk_hdr = victim->cs_stk_area;
-	victim->cs_stk_area = 0;
+	victim->cs_stk_area = NULL;
     }
     else
 #endif
@@ -1473,7 +1489,7 @@ CS_SCB             *scb)
     {
 	/* We need to allocate a new stack */
 	status = MEget_pages(ME_MZERO_MASK | ME_USE_P1_SPACE, pagelets,
-                             0, &addr, &pages, &sys_err);
+                             0, &addr, &pages, sys_err);
 	if (status)
 	    return(status);
 	/* change guard pages to be writable only in supervisor mode */
@@ -1501,7 +1517,7 @@ CS_SCB             *scb)
 	stk_hdr->cs_prev->cs_next = stk_hdr;
 	Cs_srv_block.cs_stk_count++;
     }
-    scb->cs_stk_area = (char *) stk_hdr;
+    scb->cs_stk_area = stk_hdr;
     stk_hdr->cs_used = (CS_SID)scb->cs_self;
     scb->cs_stk_size = stk_hdr->cs_size;
  
@@ -1703,10 +1719,8 @@ STATUS
 CS_setup()
 {
     CS_SCB              *scb = Cs_srv_block.cs_current;
-    STATUS		(*rtn)();
     STATUS		status;
     EX_CONTEXT		excontext;
-    FUNC_EXTERN STATUS	cs_handler();
 
     /* Catch escaped exceptions */
     
@@ -1715,13 +1729,13 @@ CS_setup()
 	scb->cs_mode = CS_TERMINATE;
 	if (scb->cs_mask & CS_FATAL_MASK)
 	{
-	    (*Cs_srv_block.cs_elog)(E_CS00FF_FATAL_ERROR, 0, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS00FF_FATAL_ERROR, NULL, 0, 0);
 	    EXdelete();
 	    return(OK);
 	}
 	else
 	{
-	    (*Cs_srv_block.cs_elog)(E_CS0014_ESCAPED_EXCPTN, 0, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS0014_ESCAPED_EXCPTN, NULL, 0, 0);
 	}
 	scb->cs_mask |= CS_FATAL_MASK;
     }
@@ -1748,11 +1762,10 @@ CS_setup()
 		case CS_INPUT:
 		case CS_OUTPUT:
 		case CS_READ:
-		    rtn = Cs_srv_block.cs_process;
 		    break;
 
 		default:
-		    (*Cs_srv_block.cs_elog)(E_CS000C_INVALID_MODE, 0, 0);
+		    (*Cs_srv_block.cs_elog)(E_CS000C_INVALID_MODE, NULL, 0, 0);
 		    scb->cs_mode = CS_TERMINATE;
 		    continue;
 	    }
@@ -1790,7 +1803,7 @@ CS_setup()
 	    }		
 
 	    status =
-		(*rtn)(scb->cs_mode,
+		(*Cs_srv_block.cs_process)(scb->cs_mode,
 			    scb,
 			    &scb->cs_nmode);
 	    if (status)
@@ -1828,7 +1841,7 @@ CS_setup()
 			break;
 
 		    default:
-			(*Cs_srv_block.cs_elog)(E_CS000D_INVALID_RTN_MODE, 0, 0);
+			(*Cs_srv_block.cs_elog)(E_CS000D_INVALID_RTN_MODE, NULL, 0, 0);
 			scb->cs_mode = CS_TERMINATE;
 			break;
 		}
@@ -1840,7 +1853,7 @@ CS_setup()
 	}
 	if (scb->cs_sem_count)
 	{
-	    (*Cs_srv_block.cs_elog)(E_CS001C_TERM_W_SEM, 0, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS001C_TERM_W_SEM, NULL, 0, 0);
 	}
 	EXdelete();
 	return(OK);
@@ -1988,18 +2001,21 @@ CS_SID  sid)
 **	    scb's ready/wait queue links.
 **	24-jan-1996 (dougb) bug 71590
 **	    CS_ssprsm() now takes a single parameter -- just restore context.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 */
 void
 CS_eradicate()
 {
     CS_SCB              *scb = Cs_srv_block.cs_current;
+    i4                  asts_enabled;
 
     CSp_semaphore(TRUE, &Cs_admin_scb.csa_sem);
     if (scb->cs_state == CS_COMPUTABLE &&
         scb->cs_thread_type != CS_INTRNL_THREAD)
         Cs_srv_block.cs_num_active--;
 
-    sys$setast(0);	/* make sure we are not interrupted */
+    asts_enabled = (sys$setast(0) == SS$_WASSET);	/* make sure we are not interrupted */
 
     scb->cs_state = CS_FREE;
     /* remove from whatever queue(s) it is on */
@@ -2033,7 +2049,8 @@ CS_eradicate()
     Cs_srv_block.cs_ready_mask |= (CS_PRIORITY_BIT >> CS_PADMIN);
     CSv_semaphore(&Cs_admin_scb.csa_sem);
     Cs_srv_block.cs_current = NULL;	/* BEWARE of this window in which   */
-    sys$setast(1);
+
+    if (asts_enabled) sys$setast(1);
 
 #ifdef KPS_THREADS
     exe$kp_end(scb->kpb);
@@ -2069,7 +2086,7 @@ CS_eradicate()
 **      22-Oct-2002 (hanal04) Bug 108986
 **          Created.
 */
-void
+static void
 CS_default_output_fcn(PTR arg1, i4 msg_len, char *msg_buffer)
 {
     CL_ERR_DESC err_code;
@@ -2174,13 +2191,14 @@ CS_SCB             *scb;
 **          Created.
 */
 
-CS_rcv_request()
+STATUS
+CS_rcv_request(void)
 {
     STATUS	    status;
     status = (*Cs_srv_block.cs_saddr)(Cs_srv_block.cs_crb_buf, 0);
     if (status)
     {
-	(*Cs_srv_block.cs_elog)(E_CS0011_BAD_CNX_STATUS, &status, 0);
+	(*Cs_srv_block.cs_elog)(E_CS0011_BAD_CNX_STATUS, NULL, 0, 0);
 	return(FAIL);
     }
     return(OK);
@@ -2272,7 +2290,7 @@ CS_SCB		*scb;
     if ( scb->cs_cs_mask & CS_CLEANUP_MASK )
         CSterminate(CS_CLOSE, NULL);
 
-    status = CS_deal_stack((CS_STK_CB *) scb->cs_stk_area);
+    status = CS_deal_stack(scb->cs_stk_area);
     status = (*Cs_srv_block.cs_scbdealloc)(scb);
 
     return(status);
@@ -2315,13 +2333,11 @@ CS_SCB		*scb;
 **	    mask values instead.
 **	24-jan-1996 (dougb) bug 71590
 **	    CS_ssprsm() now takes a single parameter -- just restore context.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 */
-STATUS
-CS_admin_task(mode, scb, next_mode, io_area)
-i4                mode;
-CS_ADMIN_SCB	   *scb;
-i4                *next_mode;
-PTR                io_area;
+static STATUS
+CS_admin_task(i4 mode, CS_ADMIN_SCB *scb, i4 *next_mode, PTR io_area)
 {
     STATUS              status = OK;
     CS_SCB		*dead_scb;
@@ -2330,10 +2346,11 @@ PTR                io_area;
     i4			uic;
     i4			size;
     i4			task_added;
+    i4                  asts_enabled;
 
     if (scb != &Cs_admin_scb)
     {
-	(*Cs_srv_block.cs_elog)(E_CS0012_BAD_ADMIN_SCB, 0, 0);
+	(*Cs_srv_block.cs_elog)(E_CS0012_BAD_ADMIN_SCB, NULL, 0, 0);
 	return(FAIL);
     }
     if (mode != CS_INITIATE)
@@ -2401,10 +2418,10 @@ PTR                io_area;
 	    **	be set just after the test.  If there are no current threads,
 	    **	then admin task will never be called again...
 	    */
-	    sys$setast(0);
+	    asts_enabled = (sys$setast(0) == SS$_WASSET);
 	    if (scb->csa_mask & CSA_ADD_THREAD)
 	    {
-		sys$setast(1);
+		if (asts_enabled) sys$setast(1);
 		continue;
 	    }
 
@@ -2414,7 +2431,7 @@ PTR                io_area;
 	    */
 	    scb->csa_scb.cs_state = CS_UWAIT;
 	    Cs_srv_block.cs_ready_mask &= ~(CS_PRIORITY_BIT >> CS_PADMIN);
-	    sys$setast(1);
+	    if (asts_enabled) sys$setast(1);
 #ifdef KPS_THREADS
             exe$kp_stall_general(((CS_SCB *)scb)->kpb);
 #else
@@ -2464,8 +2481,7 @@ PTR                io_area;
 **          privilege then as this is an Ingstart, no SCB exists.
 */
 STATUS
-cs_handler(exargs)
-EX_ARGS	    *exargs;
+cs_handler(EX_ARGS *exargs)
 {
     /*
     ** liibi01 Cross integration from 6.4 ( Bug 64041 ).
@@ -2545,7 +2561,7 @@ i4                handler;
     CS_SCB              *scb;
 
     if (handler)
-	(*Cs_srv_block.cs_elog)(E_CS0015_FORCED_EXIT, 0, 0);
+	(*Cs_srv_block.cs_elog)(E_CS0015_FORCED_EXIT, NULL, 0, 0);
     
     sys$canexh(&Cs_srv_block.cs_exhblock);
 }
@@ -2576,23 +2592,23 @@ i4                handler;
 ** History:
 **      02-Apr-1987 (fred)
 **          Created.
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
 */
 void
-CS_fmt_scb(scb, iosize, area)
-CS_SCB             *scb;
-i4                iosize;
-char               *area;
+CS_fmt_scb(CS_SCB *scb, i4 iosize, char *area)
 {
     i4                 length = 0;
     char		*buf = area;
     CS_STK_CB		*stk_hdr;
+    i4                 asts_enabled;
 
     if (iosize < 512)
     {
 	STprintf(buf, "Insufficient space\r\n");
 	return;
     }
-    sys$setast(0);
+    asts_enabled = (sys$setast(0) == SS$_WASSET);
     for (;;)
     {
 	STprintf(buf, "---Dump of scb for session %x---\r\n", scb);
@@ -2642,7 +2658,7 @@ char               *area;
 	buf += STlength(buf);
 	if (buf - area >= iosize)
 	    break;
-	stk_hdr = (CS_STK_CB *) scb->cs_stk_area;
+	stk_hdr = scb->cs_stk_area;
 	if (stk_hdr)
 	{
 	    STprintf(buf, "Stk begin: %x\tstk end: %x\r\n",
@@ -2662,10 +2678,10 @@ char               *area;
 	buf += STlength(buf);
 	break;
     }
-    sys$setast(1);
+    if (asts_enabled) sys$setast(1);
 }
 
-STATUS
+void
 CS_breakpoint(void)
 {
 	return(OK);
@@ -2786,22 +2802,22 @@ CS_last_chance(EX_ARGS	*sig_vec)
 
     if (scb->cs_sem_count)
     {
-	(*Cs_srv_block.cs_elog)(E_CS00FC_CRTCL_RESRC_HELD, 0, 0);
+	(*Cs_srv_block.cs_elog)(E_CS00FC_CRTCL_RESRC_HELD, NULL, 0, 0);
 	fatal++;
     }
     else if (lib$ast_in_prog())
     {
-	(*Cs_srv_block.cs_elog)(E_CS00FB_UNDELIV_AST, 0, 0);
+	(*Cs_srv_block.cs_elog)(E_CS00FB_UNDELIV_AST, NULL, 0, 0);
 	fatal++;
     }
     else if (scb->cs_mask & CS_BAD_STACK_MASK)
     {
-	(*Cs_srv_block.cs_elog)(E_CS00F9_2STK_OVFL, 0, 0);
+	(*Cs_srv_block.cs_elog)(E_CS00F9_2STK_OVFL, NULL, 0, 0);
 	fatal++;
     }
     scb->cs_mask |= CS_BAD_STACK_MASK;
 
-    (*Cs_srv_block.cs_elog)(E_CS00FD_THREAD_STK_OVFL, 0, 2,
+    (*Cs_srv_block.cs_elog)(E_CS00FD_THREAD_STK_OVFL, NULL, 0, 2,
 		sizeof(scb->cs_username), scb->cs_username,
 		sizeof(scb->cs_stk_size), &scb->cs_stk_size);
 
@@ -2865,7 +2881,7 @@ CS_last_chance(EX_ARGS	*sig_vec)
 	*/
 	if (scb->cs_stk_area)
 	    scb->cs_registers [CS_ALF_SP]
-		= (i8)((CS_STK_CB *) scb->cs_stk_area)->cs_orig_sp;
+		= (i8)scb->cs_stk_area->cs_orig_sp;
 	scb->cs_registers [CS_ALF_FP] = Cs_cactus_fp;
 
 	scb->cs_registers [CS_ALF_AI] = 0;
@@ -2916,12 +2932,12 @@ CS_last_chance(EX_ARGS	*sig_vec)
 	/* NOTREACHED -- CS_ssprsm() should not return. */
 	fatal++;
 	status = SS$_INSFARG;		/* What status to log? */
-	(*Cs_srv_block.cs_elog)(E_CS00FA_UNWIND_FAILURE, &status, 0);
+	(*Cs_srv_block.cs_elog)(E_CS00FA_UNWIND_FAILURE, NULL, 0, 0);
     }
     if (fatal)
     {
 	previous_fatal_last_chance++;
-	(*Cs_srv_block.cs_elog)(E_CS00FF_FATAL_ERROR, 0, 0);
+	(*Cs_srv_block.cs_elog)(E_CS00FF_FATAL_ERROR, NULL, 0, 0);
 	
 	Cs_srv_block.cs_state = CS_CLOSING;
 	CSterminate(CS_KILL, 0);
@@ -2947,15 +2963,14 @@ CS_last_chance(EX_ARGS	*sig_vec)
 **
 ** Inputs:
 **      scb                             session id of stack to dumped.
+**	output_arg			Passed to output_fcn
 **      output_fcn                      Function to call to perform the output.
 **                                      This routine will be called as
-**                                          (*output_fcn)( newline_present,
+**                                          (*output_fcn)( output_arg,
 **							  length,
 **							  buffer )
 **                                      where buffer is the length character
-**                                      output string, and newline_present
-**                                      indicates whether a newline needs to
-**                                      be added to the end of the string.
+**                                      output string
 **      verbose                         Should we print some information about
 **                                      where this diagnostic is coing from?
 **                                      For this implementation, verbose also 
@@ -3004,7 +3019,8 @@ dump_handler( EX_ARGS *exargs )
 
 static void
 CS_vms_dump_stack(CS_SCB  *scb,
-		  i4      (*output_fcn)(),
+		  void	  *arg,
+		  TR_OUTPUT_FCN *output_fcn,
 		  i4      verbose)
 {
 
@@ -3022,7 +3038,7 @@ CS_vms_dump_stack(CS_SCB  *scb,
 
     if ( EXdeclare( dump_handler, &context ))
     {
-	TRformat( output_fcn, 1, buf, sizeof( buf ) - 1,
+	TRformat( output_fcn, arg, buf, sizeof( buf ) - 1,
 		 "CS_vms_dump_stack(): Unable to continue." );
 
 	EXdelete();
@@ -3115,7 +3131,7 @@ CS_vms_dump_stack(CS_SCB  *scb,
     while ((stack_depth-- > 0) && LIB_GET_PREV_INVO_CONTEXT(&stack_context) )
     {
 	if ( verbose && 99 == stack_depth )
-	    TRformat( output_fcn, 1, buf, sizeof( buf ) - 1,
+	    TRformat( output_fcn, arg, buf, sizeof( buf ) - 1,
 		     "%s", verbose_string );
 
 	/*
@@ -3125,7 +3141,7 @@ CS_vms_dump_stack(CS_SCB  *scb,
 	** Each reg is 8 bytes but we only want first 4 bytes
 	*/
 #if defined(ALPHA)
-	TRformat( output_fcn, 1, buf, sizeof(buf) - 1,
+	TRformat( output_fcn, arg, buf, sizeof(buf) - 1,
 		 "%\
 s    pc: %x    pv: %x    fp: %x    sp: %x%s",
 		 open_string,
@@ -3135,7 +3151,7 @@ s    pc: %x    pv: %x    fp: %x    sp: %x%s",
 		 stack_context.libicb$q_ireg[30],
 		 close_string );
 #elif defined(i64_vms)
-        TRformat( output_fcn, 1, buf, sizeof(buf) - 1,
+        TRformat( output_fcn, arg, buf, sizeof(buf) - 1,
                  "%\
 s    pc: %x    sp: %x%s",
                  open_string,
@@ -3155,7 +3171,7 @@ s    pc: %x    sp: %x%s",
 		STcopy( " (", open_string );
 
 #if defined(ALPHA)
-	    TRformat( output_fcn, 1, buf, sizeof(buf) - 1,
+	    TRformat( output_fcn, arg, buf, sizeof(buf) - 1,
 		     "\
  r2-r15: %x %x %x %x %x %x %x\n\
          %x %x %x %x %x %x %x\n\
@@ -3190,7 +3206,7 @@ s    pc: %x    sp: %x%s",
 		     "EXCEPT,AST,BOTTOM,BASE",
 		     stack_context.libicb$v_fflags_bits );
 #elif defined(__ia64)
-            TRformat( output_fcn, 1, buf, sizeof(buf) - 1,
+            TRformat( output_fcn, arg, buf, sizeof(buf) - 1,
                      "\
  r2-r15: %x %x %x %x %x %x %x\n\
          %x %x %x %x %x %x %x\n\
@@ -3257,15 +3273,15 @@ s    pc: %x    sp: %x%s",
 **	scb				session id of stack to dumped.  If the
 **					value input is NULL then the current
 **					stack is assumed.
+**	context				Not used on vms, ignored
+**	output_arg			Passed to output_fcn as-is
 **	output_fcn			Function to call to perform the output.
 **                                      This routine will be called as
-**                                          (*output_fcn)( newline_present,
+**                                          (*output_fcn)( output_arg,
 **							  length,
 **							  buffer )
 **                                      where buffer is the length character
-**                                      output string, and newline_present
-**                                      indicates whether a newline needs to
-**                                      be added to the end of the string.
+**                                      output string
 **      verbose                         Should we print some information about
 **                                      where this diagnostic is coing from?
 **
@@ -3285,17 +3301,21 @@ s    pc: %x    sp: %x%s",
 **      22-Oct-2002 (hanal04) Bug 108986
 **          Use CS_default_output_fcn() as a default output
 **          function if one is not supplied by the caller.
+**	16-Nov-2010 (kschendel) SIR 124685
+**	    Match the unix call sequence.
 */
 void
 CS_dump_stack( CS_SCB    *scb,
-	      i4	 (*output_fcn)(),
+	      void	 *notused,
+	      PTR 	 output_arg,
+	      TR_OUTPUT_FCN *output_fcn,
 	      i4	 verbose )
 {
     if(output_fcn == NULL)
     {
         output_fcn = CS_default_output_fcn;
     }
-    CS_vms_dump_stack(scb, output_fcn, verbose);
+    CS_vms_dump_stack(scb, output_arg, output_fcn, verbose);
 }
 
 /*{
@@ -3322,7 +3342,7 @@ void
 CSdump_stack( void )
 {
     /* Dump this thread's stack, non-verbose */
-    CS_dump_stack(0, 0, 0);
+    CS_dump_stack(NULL, NULL, NULL, 0, 0);
 }
 
 /*
@@ -3370,7 +3390,7 @@ i4	*cpumeasure)
 	{
 	    SETCLERR(&err, 0, 0); 
 	    err_recorded = 1;
-	    (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, &err, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, &err, 0, 0);
 	}
 	return;
     }
@@ -3630,9 +3650,7 @@ CS_SCB	    *scb)
 **	    Only set the ready mask bit for runable threads.
 */
 void
-CS_change_priority(scb, new_priority)
-CS_SCB	    *scb;
-i4	    new_priority;
+CS_change_priority(CS_SCB *scb, i4 new_priority)
 {
     /* Take off current priority queue */
     scb->cs_rw_q.cs_q_next->cs_rw_q.cs_q_prev = scb->cs_rw_q.cs_q_prev;
@@ -3829,8 +3847,8 @@ FILE *OutFile;
             }
 
             STprintf(StackRec.Vstring,"\n\nSession %08x  (%-24s) cs_state: %s\n",scan_scb,scan_scb->cs_username,buf);
-            stack_end = (u_i4) ((CS_STK_CB *)scan_scb->cs_stk_area)->cs_end;
-            stack_start = (u_i4) ((CS_STK_CB *)scan_scb->cs_stk_area)->cs_begin;       
+            stack_end = (u_i4) scan_scb->cs_stk_area->cs_end;
+            stack_start = (u_i4) scan_scb->cs_stk_area->cs_begin;       
       
             while ((stack_depth-- > 0) && LIB_GET_PREV_INVO_CONTEXT(&stack_context) )
             {
@@ -3934,14 +3952,15 @@ FILE    *OutFile;
 **      Created.
 **  11-mar-1998 (kinte01)
 **      dummy routine on VMS
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Dummy is now void.
 */
-STATUS
+void
 CS_cp_sem_cleanup(
     char            *key,
     CL_ERR_DESC     *err_code)
 {
     CL_CLEAR_ERR(err_code);
-return( OK );
 }
 
 
@@ -4004,11 +4023,9 @@ return( OK );
 **          Changed to return type int
 [@history_template@]...
 */
-typedef u_i2 comp_t;
 
-comp_t
-CS_compress(val)
-register time_t val;
+u_i2
+CS_compress(time_t val)
 {
     register exp = 0, rnd = 0;
 
@@ -4029,72 +4046,7 @@ register time_t val;
     }
     return((comp_t)(exp<<13) + val);
 }
-
-
-#ifdef  CS_PROFILING
-
-#define ARCDENSITY      5       /* density of routines */
-#define MINARCS         50      /* minimum number of counters */
-#define HISTFRACTION    2       /* fraction of text space for histograms */
-
-
-struct phdr {
-        i4 *lpc;
-        i4 *hpc;
-        i4 ncnt;
-};
-
-struct cnt {
-        i4 *pc;
-        long ncall;
-} *countbase;
-
-CSprofend()
-{
-    chdir("/tmp");
-    monitor(0);
-}
-
-CSprofstart()
-{
-    i4 range, cntsiz, monsize; 
-    SIZE_TYPE   pages;
-    SIZE_TYPE   alloc_pages;
-    char        *buf;
-    extern i4  *etext;
-    CL_ERR_DESC err_code;
-
-    range = (int)&etext - 0x2000;
-    cntsiz = range * ARCDENSITY / 100;
-    if (cntsiz < MINARCS)
-        cntsiz = MINARCS;
-    monsize = (range + HISTFRACTION - 1) / HISTFRACTION
-        + sizeof(struct phdr) + cntsiz * sizeof(struct cnt);
-    monsize = (monsize + 1) & ~1;
-    pages = (monsize+ME_MPAGESIZE-1)/ME_MPAGESIZE;
-#ifdef MCT
-    if (ME_page_sem)
-        gen_Psem(ME_page_sem);
-#endif
-    MEget_pages(ME_NO_MASK, pages, 0, (PTR *)&buf, &alloc_pages, &err_code);
-#ifdef MCT
-    if (ME_page_sem)
-        gen_Vsem(ME_page_sem);
-#endif
-    monitor(0x2000, &etext, buf, pages*ME_MPAGESIZE, cntsiz);
-    moncontrol(1);
-    PCatexit(CSprofend);
-}
-#else
-CSprofend()
-{
-}
-
-CSprofstart()
-{
-}
-#endif
-
+
 
 /*
 ** Name: CSsigchld - deal with SIGCHLD
@@ -4145,8 +4097,7 @@ CSprofstart()
 */
 
 void
-CSsigchld(sig)
-i4 sig;
+CSsigchld(i4 sig)
 {
         i4 pid,i;
 
@@ -4217,9 +4168,8 @@ i4 sig;
 **          Deleted double-question marks; ANSI compiler thinks they
 **          are trigraph sequences.
 */
-i4
-CSsigterm(sig)
-i4     sig;
+void
+CSsigterm(i4 sig)
 {
     i4          i = 0;
 
@@ -4241,6 +4191,5 @@ i4     sig;
         (VOID) CSterminate(CS_COND_CLOSE, &i);
         break;
     }
-    return(0);
 }
 #endif

@@ -158,6 +158,8 @@
 **	    Replace mg5_osx with generic OSX
 **	25-Aug-2009 (frima01) Bug 122138
 **	    Modified last change, added include dlfcn.h for i64_hpu too.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */
 #include <compat.h>
 #include <gl.h>
@@ -183,10 +185,8 @@
 #include <dl.h>
 #include	"dlint.h"
 
-#if defined(dg8_us5) || defined(dgi_us5) || defined(axp_osf) || \
-    defined(sqs_ptx) || defined(any_aix) || defined(i64_hpu) || \
-    defined(nc4_us5) || defined(rmx_us5) || defined(sgi_us5) || \
-    defined(sos_us5) || defined(usl_us5) || defined(hp2_us5) || \
+#if defined(axp_osf) || defined(any_aix) || defined(i64_hpu) || \
+    defined(sgi_us5) || defined(usl_us5) || defined(hp2_us5) || \
     defined(LNX) || defined(a64_sol) || defined(OSX)
 #include <dlfcn.h>
 #endif
@@ -226,20 +226,9 @@ i4 handle_all()
 static struct { char *procname; long *procptr; } *DLusertab = NULL;
 static long *DLprocnum = NULL;
 long *II3GLsyms = NULL;
-#if defined(hp3_us5)
-static char *prependunderscore(s)
-	char *s;
-{
-	static char buf[BUFSIZ];
-	buf[0] = '_';
-	STncpy(&buf[1], s, sizeof(buf) - 1);
-	buf[ BUFSIZ - 1 ] = EOS;
-	return(buf);
-}
-#endif	/* hp3 */
 #if defined(hpb_us5)
 #define	prependunderscore(x)	(x)
-#endif	/* hp3 */
+#endif	/* hpb */
 
 static char *(*oldlookupfcn)() = NULL;
 
@@ -315,28 +304,24 @@ char **locp;
 static STATUS
 iiDLsymfunc( void *handle, char *symname, void **retaddr )
 {
-#if defined(su4_u42) || defined(m88_us5) || defined(dr6_us5) || \
-    defined(dg8_us5) || defined(sparc_sol) || defined(usl_us5) || \
-    defined(dgi_us5) || defined(sui_us5) || defined(axp_osf) || \
-    defined(sqs_ptx) || defined(any_aix) || \
-    defined(nc4_us5) || defined(rmx_us5) || defined(sgi_us5) || \
-    defined(sos_us5) || defined(hp2_us5) || defined(i64_hpu) || \
+#if defined(sparc_sol) || defined(usl_us5) || defined(axp_osf) || \
+    defined(any_aix) || defined(sgi_us5) || \
+    defined(hp2_us5) || defined(i64_hpu) || \
     defined(a64_sol) || defined(LNX) || defined(OSX)
 
     if ( (*retaddr = dlsym( handle, symname )) == NULL )
 	return (FAIL);
     return (OK);
 
-# endif /* su4_u42, etc */
-#	if (defined(hp8_us5) || defined(hp3_us5) || defined(hp8_bls)) && \
-	   !defined(hp2_us5)
+# endif /* sol, etc */
+#	if defined(hp8_us5) && !defined(hp2_us5)
 
 	if ( shl_findsym( (shl_t *)&handle, symname, TYPE_UNDEFINED, retaddr) == 0 )
 	    return ( OK );
 	else
 	    return ( FAIL );
 	    
-# endif /* hp8_us5 || hp3_us5 || hp8_bls && !hp2_us5 */
+# endif
 }
 /*
 ** Name:	DLosprepare - OS-specific portion of DLprepare
@@ -400,11 +385,8 @@ DLosprepare(
 #else	/* got it over with */
 
 	DLdebug("DL: attempting to load \"%s\"\n", shlibname);
-#if defined(su4_u42) || defined(m88_us5) || defined(dr6_us5) || \
-    defined(dg8_us5) || defined(sparc_sol) || defined(usl_us5) || \
-    defined(dgi_us5) || defined(sui_us5) || defined(axp_osf) || \
-    defined(sqs_ptx) || defined(any_aix) || \
-    defined(sos_us5) || defined(nc4_us5) || defined(rmx_us5) || \
+#if defined(sparc_sol) || defined(usl_us5) || defined(axp_osf) || \
+    defined(any_aix) || \
     defined(sgi_us5) || defined(hp2_us5) || defined(i64_hpu) || \
     defined(a64_sol) || defined(LNX) || defined(OSX)
 	{
@@ -477,7 +459,7 @@ DLosprepare(
 	   }	/* end if-then-else */
 #endif	/* if defined(DL_OLD_LOOKUP_FUNC) */
 	} /* the block of the su4_u42 code */
-#endif /* su4_u42 */
+#endif /* sol etc */
 #	if defined(hpb_us5)
 	{
 		shl_t ret;
@@ -532,7 +514,6 @@ DLosprepare(
 		{
 			DLdebug("Lookup %s isn't in DL module %s\n",
 				DL_LOOKUP_FUNC, shlibname);
-# if defined(hpb_us5)
 			if (shl_findsym((shl_t *)&ret, prependunderscore("II_U3GLUser3glTab"),
 				(short)TYPE_UNDEFINED, &DLusertab) != -1 &&
 			    shl_findsym((shl_t *)&ret, prependunderscore("II_U3GLProcNum"),
@@ -543,7 +524,6 @@ DLosprepare(
 				lookupfcn = retrofitlookup;
 				oldlookupfcn = NULL;
 			}
-#endif
 		}
 		else
 		{
@@ -551,28 +531,13 @@ DLosprepare(
 			cookie = (PTR)ret;
 			haslookup = TRUE;
 		}
-#ifdef hp3_us5
-		/* just in case, look for W4GL05 on HP3 */
-		{
-			void *newval;
-			lookupfcn = (STATUS (*)())val;
-			if ((*lookupfcn)(&ret, "IIU3xxxrpaResolveProcAddr", &newval) == OK)
-			{
-				DLdebug("Using HP3 retrofit lookup function in DL module %s\n",
-					shlibname);
-				/* There is a W4GL05 lookup routine there! */
-				lookupfcn = hp3retrofitlookup;
-				oldlookupfcn = (STATUS (*)())newval;
-			}
-		}
-#endif	/* hp3 */
 		if ( lookupfcn == NULL )
 		{
 		    lookupfcn = iiDLsymfunc;
 		    haslookup = FALSE;
 		}
 	}
-#endif	/* hp8_us5, hp8_bls and hp3_us5 && !hp2_us5*/
+#endif	/* hpb_us5*/
 
 #if defined(VMS)
 	/*  We need to do the following:
@@ -672,9 +637,6 @@ DLosprepare(
 */
 #ifdef DL_OLD_LOOKUP_FUNC
 	if (lookupfcn != retrofitlookup
-#ifdef hp3_us5
-		&& lookupfcn != hp3retrofitlookup
-#endif
 	)
 #endif
 	{
@@ -760,13 +722,10 @@ CL_ERR_DESC *errp;
 		}
 		return(DL_OSUNLOAD_FAIL);
 	}
-#endif	/* hp8/hp3 */
-#if defined(su4_u42) || defined(m88_us5) || defined(dr6_us5) || \
-    defined(dg8_us5) || defined(sparc_sol) || defined(usl_us5) || \
-    defined(dgi_us5) || defined(sui_us5) || defined(axp_osf) || \
-    defined(sqs_ptx) || defined(any_aix) || \
-    defined(nc4_us5) || defined(rmx_us5) || defined(sgi_us5) || \
-    defined(sos_us5) || defined(hp2_us5) || defined(i64_hpu) || \
+#endif	/* hpb */
+#if defined(sparc_sol) || defined(usl_us5) || defined(axp_osf) || \
+    defined(any_aix) || defined(sgi_us5) || \
+    defined(hp2_us5) || defined(i64_hpu) || \
     defined(a64_sol) || defined(LNX) || defined(OSX)
 	if (dlclose(cookie) != 0)
 	{	

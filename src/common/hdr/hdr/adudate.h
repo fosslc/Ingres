@@ -2,6 +2,8 @@
 ** Copyright (c) 2004,2008 Ingres Corporation
 */
 #include <iicommon.h>
+#include <tm.h>
+#include <adf.h>
 
 /**
 ** Name: ADUADTDATE.H - Date datatype definitions.
@@ -91,7 +93,12 @@
 **          Interval (when coverted to a string. Also added
 **          AD_11_MAX_STRING_LEN which is set to the maximum length
 **          a string for a DATE (ANSI or INGRESDATE) will take.
+**	23-Nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
+
+#ifndef ADUDATE_HDR_INCLUDED
+#define ADUDATE_HDR_INCLUDED
 
 
 /*}
@@ -566,21 +573,36 @@ FUNC_EXTERN i4 adu_3day_of_date(AD_NEWDTNTRNL  *d);
 /* Compute the number of seconds since epoch */
 FUNC_EXTERN i4 adu_5time_of_date(AD_NEWDTNTRNL  *d);
 
-FUNC_EXTERN DB_STATUS adu_14strtodate(); /* Routine to coerce a string data
-                                            ** value into a date data value.
-                                            */
-FUNC_EXTERN DB_STATUS adu_21ansi_strtodt(); /* Routine to coerce a 
-					    ** ANSI string data
-                                            ** value into a date data value.
-                                            */
-FUNC_EXTERN DB_STATUS adu_2datetodate(); /* This routine converts a date 
-                                            ** value into a date value.
-                                            ** This is used for copying a date
-                                            ** data value into a tuple buffer.
-                                            */
-FUNC_EXTERN DB_STATUS adu_6datetostr();  /* Routine to coerce a date datatype
-                                            ** into a string datatype.
-                                            */
+/* Routine to coerce a string data value into a date data value. */
+FUNC_EXTERN DB_STATUS adu_14strtodate(ADF_CB          *adf_scb,
+				      DB_DATA_VALUE   *str_dv,
+				      DB_DATA_VALUE   *date_dv);
+
+/* Routine to coerce a ANSI string data value into a date data value. */
+FUNC_EXTERN DB_STATUS adu_21ansi_strtodt(ADF_CB          *adf_scb,
+					DB_DATA_VALUE   *str_dv,
+					DB_DATA_VALUE   *date_dv);
+
+/* This routine converts a date value into a date value. 
+** This is used for copying a date data value into a tuple buffer. 
+*/
+FUNC_EXTERN DB_STATUS adu_2datetodate(ADF_CB              *adf_scb,
+				      DB_DATA_VALUE       *date_dv1, 
+				      DB_DATA_VALUE       *date_dv2);
+
+/* Routine to coerce a date datatype into a string datatype. */
+FUNC_EXTERN DB_STATUS adu_6datetostr( ADF_CB              *adf_scb,
+				      DB_DATA_VALUE       *date_dv,
+				      DB_DATA_VALUE       *str_dv);
+
+/* set time to midnight GMT if needed */
+FUNC_EXTERN DB_STATUS adu_dtntrnl_pend_time ( ADF_CB         *adf_scb,
+					      AD_NEWDTNTRNL   *inval);
+
+FUNC_EXTERN DB_STATUS adu_hrtimetodate(HRSYSTIME          *time,
+                                       AD_DATENTRNL       *date,
+                                       i4         *error);
+
 /*
 ** Time zone access macros for AD_TIME & AD_TIMESTAMP
 **
@@ -656,3 +678,5 @@ FUNC_EXTERN DB_STATUS adu_6datetostr();  /* Routine to coerce a date datatype
 #define AD_TZ_MINUTESNEW(d) ((d)->dn_tzoffset>=0\
 			    ?(d)->dn_tzoffset-((d)->dn_tzoffset/60)*60\
 			    :-(d)->dn_tzoffset-((d)->dn_tzoffset/-60)*60)
+
+#endif /* ADUDATE_HDR_INCLUDED */

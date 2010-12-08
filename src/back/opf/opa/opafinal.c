@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -76,7 +76,45 @@
 **	31-Aug-2006 (kschendel)
 **	    Watch for HFAGG as well as RFAGG, even though they shouldn't
 **	    appear yet this early in opa.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opa_corelated(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qnodepp);
+static void opa_subselect(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qnodepp);
+static bool opa_resdom(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *root);
+static void opa_relabel(
+	OPS_SUBQUERY *subquery);
+void opa_tnode(
+	OPS_STATE *global,
+	OPZ_IATTS rsno,
+	OPV_IGVARS varno,
+	PST_QNODE *root);
+void opa_stid(
+	OPS_SUBQUERY *subquery);
+static void opa_icount(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qualpp,
+	PST_QNODE *countp);
+static bool opa_forqual(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qualpp,
+	PST_QNODE *countp);
+static void opa_fqual(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qualpp,
+	PST_QNODE *countp);
+static void opa_recorelated(
+	OPS_SUBQUERY *subquery);
+void opa_final(
+	OPS_STATE *global);
 
 /*{
 ** Name: opa_corelated	- process corelated variable
@@ -124,7 +162,7 @@
 [@history_template@]...
 */
  
-VOID
+static VOID
 opa_corelated(
 	OPS_SUBQUERY       *subquery,
 	PST_QNODE          **qnodepp)

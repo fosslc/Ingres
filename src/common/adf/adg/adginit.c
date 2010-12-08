@@ -167,7 +167,7 @@ GLOBALCONSTREF	ADF_OUTARG	Adf_outarg_default; /*Default output fmts.*/
 **  Definition of static variables and forward static functions.
 */
 
-static  DB_STATUS   adg_outargs();      /* Init/set ADF_OUTARG struct */
+static  DB_STATUS   adg_outargs(ADF_CB *adf_scb); /* Init/set ADF_OUTARG struct */
 
 
 /*{
@@ -398,17 +398,13 @@ static  DB_STATUS   adg_outargs();      /* Init/set ADF_OUTARG struct */
 **          Remove 'ad_1rsvd_cnt'. (b121246).
 **      24-Jun-2010 (horda03) B123987 
 **          Initialise adf_misc_flags 
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adg_init(
 ADF_CB  *adf_scb)
-# else
-DB_STATUS
-adg_init( adf_scb)
-ADF_CB  *adf_scb;
-# endif
 {
     DB_STATUS		db_stat;
     i4			i;
@@ -712,8 +708,7 @@ ADF_CB  *adf_scb;
 */
 
 static DB_STATUS
-adg_outargs(adf_scb)
-ADF_CB		*adf_scb;
+adg_outargs(ADF_CB  *adf_scb)
 {
     ADF_OUTARG	    *outarg = &adf_scb->adf_outarg;
     DB_STATUS	    db_stat;

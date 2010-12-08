@@ -83,6 +83,8 @@
 #	18-Mar-2010 (frima01) SIR 122138
 #	    Try to make filename for packlist unique to avoid
 #	    mutual interferences.
+##	23-Nov-2010 (kschendel)
+##	    drop obsolete ports.
 #
  
 [ $SHELL_DEBUG ] && set -x
@@ -155,7 +157,7 @@ done
 # Create the tar file
 echo "Creating $fname ..."
 case $vers in
-   hp8_us5|rs4_us5|r64_us5|axp_osf|sqs_ptx|sos_us5|sgi_us5|hpb_us5|\
+   hp8_us5|rs4_us5|r64_us5|axp_osf|sgi_us5|hpb_us5|\
    hp2_us5|*_lnx|int_rpl|i64_hpu|*_osx)
 	    tar -cvf $tarfile `cat $packlistfile` ||
             {

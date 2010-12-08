@@ -31,14 +31,16 @@
 **      20-mar-2009 (stegr01)
 **         lifted from Unix stream to support Posix threading on VMS
 **         for Itanium port
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 # if defined(xCL_005_GETTIMEOFDAY_EXISTS) || defined(sos_us5) 
 struct timeval	CS_itv;
 # endif
 
-void
-CS_rrusage()
+static void
+CS_rrusage(void)
 {
 #ifdef xCL_003_GETRUSAGE_EXISTS
     struct timeval	tv;
@@ -87,7 +89,8 @@ CS_rrusage()
 #endif /* xCL_003_GETRUSAGE_EXISTS */
 }
 
-CS_recusage()
+void
+CS_recusage(void)
 {
 # ifdef xCL_005_GETTIMEOFDAY_EXISTS
 

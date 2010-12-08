@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -75,12 +75,46 @@
 **          In opz_ctree() do not call opz_bop() for BOP nodes that
 **          have equal left and right nodes except for nullability
 **          caused by outer-join. b94310.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-static VOID
-opz_ctree(
-	OPS_SUBQUERY       *subquery,
-	PST_QNODE          *nodep);
+
+/* TABLE OF CONTENTS */
+static void opz_or(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static void opz_bop(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static void opz_ojvmap(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep,
+	OPV_GRV *grvp,
+	OPV_BMVARS *vmap,
+	OPV_IVARS joinopvar);
+static void opv_tidview(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep,
+	OPV_IVARS joinopvar,
+	bool boolinit);
+static void opz_varfixup(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static void opz_var(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static void opz_ctree(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static void opz_corelated(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS joinopvar);
+static void opz_parmmap(
+	OPS_SUBQUERY *subquery,
+	OPV_BMVARS *mapptr,
+	PST_QNODE *nodep);
+void opz_create(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opz_or	- process OR node for outer joins

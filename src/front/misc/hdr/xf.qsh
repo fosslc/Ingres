@@ -174,8 +174,8 @@
 **	    Add encryption support and With_r1000_catalogs.
 **      22-Jul-2010 (horda03)
 **          Added prototype for get_table_nr
-**  27-Jul-2010(troal01)
-**      Add geospatial srid support
+**	27-Jul-2010(troal01)
+**	    Add geospatial srid support
 */
 
 /*

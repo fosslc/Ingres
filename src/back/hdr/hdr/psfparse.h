@@ -3,6 +3,8 @@
 **
 */
 
+#include <dmucb.h>
+
 /**
 ** Name: PSFPARSE.H - Global parser definitions.
 **
@@ -688,6 +690,12 @@
 **	    Add E_PS03B4_NO_COPY_CACHE
 **      11-Aug-2010 (hanal04) Bug 124180
 **          Added PSQ_MONEY_COMPAT. Set if money_compat true in config.dat.
+**	21-Oct-2010 (kiria01) b124629
+**	    Move pst_ttargtype into enum PST_TTARGTYPE. Move pst_rgtype into
+**	    enum PST_RGTYPE using table macro. Make PST_STTYPE into enum
+**	    using table macro.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Cleaned up prototypes
 **/
 
 /*
@@ -1141,6 +1149,8 @@
 #define E_PS04D3_ALARM_TOO_MANY_OBJS        (E_PS_ERRORS + 0x4D3)
 #define E_PS04D4_ALARM_TOO_MANY_SUBJS       (E_PS_ERRORS + 0x4D4)
 #define E_PS04D5_ALARM_OBJ_OPER_MISMATCH    (E_PS_ERRORS + 0x4D5)
+
+#define E_PS04F0_NOWITH_X100		    (E_PS_ERRORS + 0x4F0)
 /*
 **	Errors having to do with shutting down the server.
 */
@@ -2527,11 +2537,15 @@ typedef struct _PST_OBJDEP
 **	    Add a place to pass in create-compression.
 **	12-aug-2010 (stephenb)
 **	    Resolve flag conflict in psq_flags2
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Pass result-structure to PSF startup.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for setting installation wide collation defaults.
 */
 typedef enum psq_mode_enum {
 #define PSQ_MODES_MACRO \
 _DEFINE(PSQ_RETRIEVE,            1,"RETRIEVE")\
-_DEFINE(PSQ_RETINTO,             2,"CREATE TABLE")\
+_DEFINE(PSQ_RETINTO,             2,"CREATE AS SELECT")\
 _DEFINE(PSQ_APPEND,              3,"APPEND")\
 _DEFINE(PSQ_REPLACE,             4,"REPLACE")\
 _DEFINE(PSQ_DELETE,              5,"DELETE")\
@@ -2676,7 +2690,7 @@ _DEFINE(PSQ_SON_ERROR,         143,"SET SESSION ON_ERROR")\
 _DEFINE(PSQ_UPD_ROWCNT,        144,"SET UPDATE_ROWCOUNT")\
 _DEFINE(PSQ_145_unused,        145,"PSQ_145_unused")\
 _DEFINE(PSQ_DGTT,              146,"DECLARE GLOBAL TEMPORARY TABLE")\
-_DEFINE(PSQ_DGTT_AS_SELECT,    147,"DECLARE GLOBAL TEMPORARY TABLE")\
+_DEFINE(PSQ_DGTT_AS_SELECT,    147,"DECLARE (temporary) AS SELECT")\
 _DEFINE(PSQ_GWFTRACE,          148,"SET TRACE POINT GWXXX")\
 _DEFINE(PSQ_CONS,              149,"ANSI CONSTRAINT declaration" /*MUST MATCH DB_CONS value in <dbdbms.h>*/ )\
 _DEFINE(PSQ_ALTERTABLE,        150,"ALTER TABLE")\
@@ -2719,10 +2733,13 @@ _DEFINE(PSQ_GCA_XA_PREPARE,    186,"PSQ_GCA_XA_PREPARE")\
 _DEFINE(PSQ_GCA_XA_COMMIT,     187,"PSQ_GCA_XA_COMMIT")\
 _DEFINE(PSQ_GCA_XA_ROLLBACK,   188,"PSQ_GCA_XA_ROLLBACK")\
 _DEFINE(PSQ_FREELOCATOR,       189,"FREE LOCATOR")\
-_DEFINE(PSQ_ATBL_RENAME_COLUMN,190,"PSQ_ATBL_RENAME_COLUMN")\
-_DEFINE(PSQ_ATBL_RENAME_TABLE, 191,"PSQ_ATBL_RENAME_TABLE")\
+_DEFINE(PSQ_ATBL_RENAME_COLUMN,190,"ALTER TABLE (rename column)")\
+_DEFINE(PSQ_ATBL_RENAME_TABLE, 191,"ALTER TABLE (rename table)")\
 _DEFINE(PSQ_SETBATCHCOPYOPTIM, 192, "SET BATCH_COPY_OPTIM")\
 _DEFINE(PSQ_CREATECOMP,        193,"SET CREATE_COMPRESSION")\
+_DEFINE(PSQ_X100_DGTT,         194,"VW DECLARE GLOBAL TEMPORARY TABLE")\
+_DEFINE(PSQ_X100_CRCONST,      195,"VW CREATE CONSTRAINT")\
+_DEFINE(PSQ_X100_CRINDEX,      196,"VW CREATE INDEX")\
 _ENDDEFINE
 #define _DEFINE(n,v,x) n=v,
 #define _ENDDEFINE PSQ_MODE_MAX
@@ -2829,6 +2846,9 @@ typedef struct _PSQ_CB
 					** startup config option: passed
 					** to parser facility CB.
 					*/
+    i2		    psq_result_struct;	/* Config result_structure for PSF */
+    bool	    psq_result_compression;  /* Config result_structure
+					** compression indicator for PSF */
     u_i4	    psq_flag;		/*
 					** holds assorted bitflag instructions,
 					** defined below:
@@ -3211,35 +3231,22 @@ typedef struct _PSQ_CB
                                         ** to psq_flag.
 					*/
 
-					/*
-					** set ==> disregard error condition
-					** when performing requested action
-					*/
 #define	    PSQ_RULE_UPD_PREFETCH	0x0001L
 #define     PSQ_DFLT_READONLY_CRSR	0x0002L
 #define	    PSQ_BATCH			0x0004L /* query is part of a batch */
 #define	    PSQ_LAST_BATCH		0x0008L /* end of batch */
 #define	    PSQ_COPY_OPTIM		0x0010L /* use copy optim */
-					 /*
-					 ** set ==> set if the default cursor 
-					 ** mode is readonly 
-					 */
-#define	    PSQ_LOCATOR			0x00020L
+#define	    PSQ_LOCATOR			0x0020L
 					/* 
 					** set ==> GCA_LOCATOR_MASK is on
 					*/
-#define     PSQ_MONEY_COMPAT		0x0008L
+#define     PSQ_MONEY_COMPAT		0x0040L
 					/*
                                         ** Set if constant strings are to be
                                         ** parsed for money.
                                         */
     bool	    psq_vch_prec;	/* varchar precedence */
  
-                                        /*
-                                        ** set ==> disregard error condition
-                                        ** when performing requested action
-                                        */
-#define     PSQ_RULE_UPD_PREFETCH       0x0001L
     i2                  psq_usub_stat;  /* Status of unicode substitution */
     char                psq_usub_char[4];  /* Unicode substitution character */
     DB_DATA_VALUE	psq_locator[10];   /* Array of locators for FREE LOCATOR */
@@ -3251,6 +3258,11 @@ typedef struct _PSQ_CB
     void               *psq_qnode;      /* QSF node details for */
 
     char	       *psq_server_class; /* server_class */
+    DB_COLL_ID		psq_def_coll;		/* Default collation for CHAR,
+						** VARCHAR, C, TEXT and LONG
+						** VARCHAR */
+    DB_COLL_ID		psq_def_unicode_coll;	/* Default collation for NCHAR,
+						** NVARCHAR and LONG NVARCHAR */
 } PSQ_CB;
 
 /*
@@ -3824,6 +3836,55 @@ typedef struct _PST_OP_NODE
 **	16-mar-2007 (dougi)
 **	    Added PST_RS_KEYSET flag for keyset scrollable cursors.
 */
+
+typedef enum _PST_TTARGTYPE{
+    PST_ATTNO =			10,
+    PST_LOCALVARNO =		11,
+    PST_RQPARAMNO =		12,
+    PST_USER =			13,
+    PST_DBPARAMNO =		14,	/* Used by PST_CPROCSTMT - This
+					** indicates the the target element
+					** is a parameter to the DBP.
+					** Pst_ntargno represents the parameter
+					** number in the actual parameter list.
+					** Pst_rsname is the name of the formal
+					** parameter.
+					*/
+    PST_RSDNO =			15,	/* Used by PST_RL_NODE */
+					/*
+					** Used by OPC_DMUAHD to mark
+					** special B1 attributes for special
+					** processing.
+					*/
+    PST_HIDDEN =		16,
+    PST_BYREF_DBPARAMNO =	17,	/* Used by PST_CPROCSTMT - This
+					** indicates the the target element
+					** is a BYREF parameter to the DBP.
+					** Pst_ntargno represents the parameter
+					** number in the actual parameter list.
+					** Pst_rsname is the name of the formal
+					** parameter.
+					*/
+    PST_TTAB_DBPARM =		18,	/* Used by PST_CPROCSTMT - Thus
+					** indicates a temporary table 
+					** procedure parameter. Pst_right 
+					** addresses a VAR node with only the 
+					** table name in pst_atname. 
+					*/
+    PST_RESROW_COL =		19,	/* Used by PST_RETROW - indicates 
+					** "columns" of dbproc result row
+					** referenced in return row stmt.
+					*/
+    PST_SUBEX_RSLT =		20,	/* Used in OPF code generation to
+					** identify results of common
+					** subexpressions optimized out of
+					** ADF CXs 
+					*/
+    PST_OUTPUT_DBPARAMNO =	21,	/* Used by PST_CPROCSTMT - same as
+					** BYREF but for OUTPUT parms added 
+					** for parameter modes. */
+} PST_TTARGTYPE;
+
 typedef struct _PST_RSDM_NODE
 {
     /* result domain number, from 1 to the number of resdoms
@@ -3839,52 +3900,7 @@ typedef struct _PST_RSDM_NODE
     ** not TRUE.
     */
     i4  	    pst_ntargno;
-    i4  	    pst_ttargtype;
-#define     PST_ATTNO		10
-#define     PST_LOCALVARNO	11
-#define     PST_RQPARAMNO	12
-#define     PST_USER		13
-#define	    PST_DBPARAMNO	14	/* Used by PST_CPROCSTMT - This
-					** indicates the the target element
-					** is a parameter to the DBP.
-					** Pst_ntargno represents the parameter
-					** number in the actual parameter list.
-					** Pst_rsname is the name of the formal
-					** parameter.
-					*/
-#define	    PST_RSDNO		15	/* Used by PST_RL_NODE */
-					/*
-					** Used by OPC_DMUAHD to mark
-					** special B1 attributes for special
-					** processing.
-					*/
-#define	    PST_HIDDEN		16
-#define	    PST_BYREF_DBPARAMNO	17	/* Used by PST_CPROCSTMT - This
-					** indicates the the target element
-					** is a BYREF parameter to the DBP.
-					** Pst_ntargno represents the parameter
-					** number in the actual parameter list.
-					** Pst_rsname is the name of the formal
-					** parameter.
-					*/
-#define	    PST_TTAB_DBPARM     18      /* Used by PST_CPROCSTMT - Thus
-					** indicates a temporary table 
-					** procedure parameter. Pst_right 
-					** addresses a VAR node with only the 
-					** table name in pst_atname. 
-					*/
-#define	    PST_RESROW_COL	19	/* Used by PST_RETROW - indicates 
-					** "columns" of dbproc result row
-					** referenced in return row stmt.
-					*/
-#define	    PST_SUBEX_RSLT	20	/* Used in OPF code generation to
-					** identify results of common
-					** subexpressions optimized out of
-					** ADF CXs 
-					*/
-#define	    PST_OUTPUT_DBPARAMNO 21	/* Used by PST_CPROCSTMT - same as
-					** BYREF but for OUTPUT parms added 
-					** for parameter modes. */
+    PST_TTARGTYPE   pst_ttargtype;
 
     i4		    pst_rsupdt;		/* TRUE iff cursor column for update */
     i4		    pst_rsflags;	/* Was pst_print - b116230 */
@@ -4376,27 +4392,34 @@ typedef struct _PST_QNODE
 **	21-nov-2008 (dougi) Bug 121265
 **	    Added PST_TPROC_NOPARMS to solve RDF woes.
 */
+typedef enum pst_rgtype_enum {
+#define PST_RGTYPES_MACRO \
+_DEFINE(PST_UNUSED,	0)\
+_DEFINE(PST_TABLE,	1)	/* Base table */\
+_DEFINE(PST_RTREE,	2)	/* View - pst_rgroot has the query tree */\
+_DEFINE(PST_SETINPUT,	3)	/* Temporary table, used in set-input dbprocs;\
+				** tab_id will be filled in, but will only be\
+				** valid when RECREATEing the procedure */\
+_DEFINE(PST_DRTREE,	4)	/* Derived table in FROM clause */\
+_DEFINE(PST_WETREE,	5)	/* WITH clause element "query name" */\
+_DEFINE(PST_TPROC,	6)	/* Table procedure */\
+_DEFINE(PST_TPROC_NOPARMS,7)	/* Table proc with no parm list - used\
+				** internally in RDF */\
+_ENDDEFINE
+#define _DEFINE(n,v) n=v,
+#define _ENDDEFINE PST_RGTYPE_MAX
+	PST_RGTYPES_MACRO
+#undef _DEFINE
+#undef _ENDDEFINE
+} PST_RGTYPE;
+
 typedef struct _PST_RNGENTRY
 {
 	/* Pst_rgtype tells whether this range variable represents a
 	** phsyical relation or a relation that must be materialized from a
 	** qtree. 
 	*/
-    i4			pst_rgtype;
-#define	    PST_UNUSED	0
-#define	    PST_TABLE	1
-#define	    PST_RTREE	2
-#define	    PST_SETINPUT 3	/* temporary table, used in set-input dbprocs;
-				** tab_id will be filled in, but will only be
-				** valid when RECREATEing the procedure
-				*/
-#define	    PST_DRTREE	4	/* derived table (subselect) in from clause 
-				*/
-#define	    PST_WETREE	5	/* with clause element "query name" */
-#define	    PST_TPROC	6	/* table procedure */
-#define	    PST_TPROC_NOPARMS 7	/* table proc with no parm list - used 
-				** internally in RDF */
-
+    PST_RGTYPE		pst_rgtype;
     PST_QNODE		*pst_rgroot;	/* root node of qtree */
 
 	/* Pst_rgparent is a number of the range var that uses this range var
@@ -4477,10 +4500,13 @@ typedef struct _PST_HINTENT
 ** History:
 **     01-oct-87 (stec)
 **          written
+**	11-Oct-2010 (kschendel) SIR 124544
+**	    Add key-order (for register as import).
 */
 typedef struct _PST_RSKEY
 {
     struct _PST_RSKEY  *pst_nxtkey;	/* pointer */
+    bool		pst_descending;	/* TRUE if descending key order */
     DB_ATT_NAME		pst_attname;	/* attribute name */
 } PST_RESKEY;
 
@@ -4488,7 +4514,18 @@ typedef struct _PST_RSKEY
 ** Name: PST_RESTAB - Result table info.
 **
 ** Description:
-**      This structure groups information about result table.
+**      This structure groups information about the result table.
+**
+**	This structure is somewhat of a stub, resulting from the
+**	transition over the years from simple QUEL retrieve-into,
+**	to the DMU_CB and all the SQL complications.  The most
+**	commonly used member is the result variable number, resvno.
+**	The table ID / name / owner  may be used to describe the
+**	"result" of a DML statement such as INSERT, UPDATE, or
+**	DELETE.  The location is at present only used by constraints,
+**	to store a location from a constraint-WITH clause.  (Constraint
+**	data structures presently contain a DMU_CHARACTERISTICS
+**	but not a complete DMU_CB.)
 **
 ** History:
 **    01-oct-87 (stec)
@@ -4530,112 +4567,20 @@ typedef struct _PST_RSKEY
 **	    Make things that are boolean, actually bool.
 **	17-Nov-2009 (kschendel) SIR 122890
 **	    Expand result-journaled to indicate NOW or AT NEXT CHECKPOINT.
+**	7-Oct-2010 (kschendel) SIR 124544
+**	    Delete off most of this, moved to DMU_CHARACTERISTICS.
 */
+
 typedef struct _PST_RESTAB
 {
     DB_TAB_ID	    pst_restabid;	/* result table id for this qry */
     DB_TAB_NAME	    pst_resname;	/* nm of res.tab.,if doesn't exist yet*/
     DB_OWN_NAME	    pst_resown;		/* owner of result table */
     DM_DATA	    pst_resloc;		/* location descriptor */
-    char	    pst_flr1[sizeof(DB_LOC_NAME) - sizeof(DM_DATA)];/*filler*/
     i4		    pst_resvno;		/* number of result range variable */
-    i4		    pst_fillfac;	/* fillfactor value */
-    i4		    pst_leaff;		/* leaffill (indexfill) value */
-    i4		    pst_nonleaff;	/* nonleaffill value */
-    i4	    pst_page_size;	/* requested page size for table */
-    i4	    pst_minpgs;		/* minpages value */
-    i4	    pst_maxpgs;		/* maxpages values */
-    i4	    pst_alloc;		/* allocation value. */
-    i4	    pst_extend;		/* extend value. */
-    i4	    pst_struct;		/* structure type */
-    i2	    pst_resjour;	/* Result rel. journaled? */
-#define	PST_RESJOUR_OFF		0	/* Not journaled */
-#define	PST_RESJOUR_ON		1	/* Journaled now (db is journaled) */
-#define	PST_RESJOUR_LATER	2	/* Journaled later; db not journaled */
+    bool	    pst_heapsort;	/* TRUE if CTAS result is heapsort */
+					/* DMU_CB will show "heap" */
 
-    i2	    pst_compress;	/* compression options, as follows: */
-					/* Data compression should be used. */
-#define			PST_DATA_COMP	    0x0001L
-
-					/* Data compression should NOT be used.
-					** This bit indicates that COMPRESSION=
-					** (NODATA) has been explicitly
-					** specified, and is thus used
-					** differently by the parser. Logically,
-					** this bit and PST_DATA_COMP are
-					** mutually exclusive, and are never
-					** both set, and setting this bit is
-					** equivalent to not setting the
-					** PST_DATA_COMP bit.
-					*/
-#define			PST_NO_DATA_COMP    0x0002L
-
-					/* Key compression should be used. */
-#define			PST_INDEX_COMP	    0x0004L
-
-					/* Key compression should NOT be used.
-					** This bit indicates that COMPRESSION=
-					** (NOKEY) has been explicitly
-					** specified, and is thus used
-					** differently by the parser. Logically,
-					** this bit and PST_INDEX_COMP are
-					** mutually exclusive, and are never
-					** both set, and setting this bit is
-					** equivalent to not setting the
-					** PST_INDEX_COMP bit.
-					*/
-#define			PST_NO_INDEX_COMP   0x0008L
-
-					/* Used only by the parser. This bit
-					** indicates that the compression
-					** semantics are currently deferred
-					** until the storage structure is
-					** known.
-					*/
-#define			PST_COMP_DEFERRED   0x0010L
-
-					/* Used only by the parser. This bit
-					** indicates that WITH NOCOMPRESSION
-					** was specified. At the completion
-					** of parsing the CREATE TABLE ...
-					** AS SELECT statement, the parser
-					** will clear this bit, and so OPF does
-					** not ever see it.
-					*/
-#define			PST_NO_COMPRESSION  0x0020L
-
-					/* HI Data compression should be used */
-#define			PST_HI_DATA_COMP    0x0040L
-
-    bool	    pst_resdup;		/* TRUE iff duplicates requested */
-    bool	    pst_clustered;	/* TRUE if Clustered Btree */
-    bool	    pst_temporary;	/* zero if table is permanent, non-zero
-					** if table is temporary.
-					*/
-    char	    pst_autostruct;	/* flag for auto structure options */
-#define			PST_AUTOSTRUCT	    0x01
-					/* autostruct is on */
-#define			PST_NO_AUTOSTRUCT   0x02
-					/* autostruct is off */
-    bool	    pst_recovery;	/* zero if temporary table was declared
-					** WITH NORECOVERY, non-zero otherwise.
-					** (always FALSE at present)
-					*/
-    i4	    pst_secaudit;	/* Security audit flags */
-#define			PST_SECAUDIT_ROW	0x01
-#define			PST_SECAUDIT_NOROW	0x02
-    i4 	    pst_flags;		/* General flags */
-					/* 
-					** Table is system_maintained
-					*/
-# define		PST_SYS_MAINTAINED	0x01						/*
-					** Table has row security auditing
-					*/
-# define		PST_ROW_SEC_AUDIT	0x04
-
-    PST_RESKEY	    *pst_reskey;	/* NULL terminated linked list
-					** of key entries */
-    DB_ATT_NAME	    *pst_secaudkey;	/* Security audit key */
 } PST_RESTAB;
 
 /*
@@ -6392,6 +6337,8 @@ typedef	struct	_PST_COL_ID
 **	    Fix define values. 
 **	28-Jul-2010 (kschendel) SIR 124104
 **	    Add compression so that auto structure can maintain compression.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Drop compression, opf can now dig it out of the DMU_CB.
 */
 typedef	struct	_PST_CREATE_TABLE
 {
@@ -6403,15 +6350,7 @@ typedef	struct	_PST_CREATE_TABLE
 #define       PST_ATBL_ALTER_COLUMN   5L     /* alter table alter column */
                                   /* may eventually allow temp tables,etc */
 
-    i2	pst_autostruct;		/* flag field for auto structure options */
-				/* Flags defined in PST_RESTAB */
-    i2	pst_compress;		/* Compression flags, same as PST_RESTAB */
-				/* OPF doesn't care much about this, it depends
-				** on the pst_restab or DMU char stuff, but
-				** it does pass this along to the create
-				** integrity action for use by auto-structure
-				*/
-    struct _QEU_CB	*pst_createTableQEUCB;	 
+    struct _QEU_CB	*pst_createTableQEUCB;
 				 /* the DMU_CB in this QEUCB describes table */
 }	PST_CREATE_TABLE;
 
@@ -6648,6 +6587,8 @@ typedef	struct	_PST_CREATE_PROCEDURE
 **	    columns.
 **	28-Jul-2010 (kschendel) SIR 124104
 **	    Add compression so that auto structure can maintain compression.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Add DMU_CHARACTERISTICS which is what holds index options now.
 */
 typedef	struct	_PST_CREATE_INTEGRITY
 {
@@ -6769,17 +6710,17 @@ typedef	struct	_PST_CREATE_INTEGRITY
 		*/
     i2		      pst_key_count;
 		/* count of columns in key column list */
-    i2		      pst_compress;
-		/* Compression indicator, same as PST_RESTAB.  The path to
-		** get here is sess_cb->pss_restab.pst_compress is copied
-		** to pst_createTable.pst_compress is copied (by opc) to
-		** pst_createIntegrity.pst_compress.  Goofy, but it's the
-		** simplest way to do it.
-		** Note that the compression indicator is only set when
-		** auto-structure is asked for.
+    i2		      pst_autocompress;
+		/* Only for use with table auto-structure.
+		** Compression indicator, DMU_COMP_xxx.  This shows the
+		** original (data) compression on the base table so that
+		** auto-structure can re-apply that compression after it
+		** auto-structures the base table (to btree).
+		** OPC digs this out of the create-table DMU_CB at entry,
+		** and then code gen puts it into the qci action header.
 		*/
-    PST_RESTAB	      pst_indexopts;
-		/* constraint index options */
+    PST_RESTAB	pst_indexres;	/* Constraint index name, location info */
+    DMU_CHARACTERISTICS pst_indexopts; /* constraint index options */
 
 }	PST_CREATE_INTEGRITY;
 
@@ -6985,30 +6926,71 @@ typedef struct _PST_CREATE_SCHEMA
 **	    before triggers.
 */
 
-typedef enum _PST_STTYPE
-{
-    PST_DV_TYPE =	1,	/* PST_DECVAR	*/
-    PST_QT_TYPE =	2,	/* PST_QTREE	*/
-    PST_IF_TYPE =	3,	/* PST_IFSTMT	*/
-    PST_MSG_TYPE =	4,	/* PST_MSGSTMT	*/
-    PST_RTN_TYPE =	5,	/* PST_RTNSTMT	*/
-    PST_CMT_TYPE =	6,	/* PST_CMTSTMT  */
-    PST_RBK_TYPE =	7,	/* PST_RBKSTMT  */
-    PST_RSP_TYPE =	8,	/* PST_RSPSTMT  */
-    PST_WH_TYPE =	9,	/* Reserved for PSF use at this time */
-    PST_CP_TYPE =	10,	/* PST_CPROCSTMT - EXECUTE/CALL PROCEDURE */
-    PST_EMSG_TYPE =	11,	/* PST_MSGSTMT - same as MESSAGE */
-    PST_IP_TYPE =	12,	/* PST_IPROCSTMT - execute an internal DBP */
-    PST_EVREG_TYPE =	13,	/* REGISTER EVENT - data is PST_EVENTSTMT */
-    PST_EVDEREG_TYPE =	14,	/* REMOVE EVENT - data is PST_EVENTSTMT */
-    PST_EVRAISE_TYPE =	15,	/* RAISE EVENT - data is PST_EVENTSTMT */
-    PST_ENDLOOP_TYPE =	16,	/* ENDLOOP - will not be visible outside PSF -
-				** the only truly useful field is pst_next! */
-    PST_EXEC_IMM_TYPE =	17,     /* implies EXECUTE IMMEDIATE type */
-    PST_REGPROC_TYPE =	18,	/* PST_REGPROC_STMT - execute a registered DBP*/
-    PST_RP_TYPE =	19,	/* Reserved for PSF use at this time */
-    PST_FOR_TYPE =	20,	/* FOR loop */
-    PST_RETROW_TYPE =	21,	/* RETURN ROW */
+/* statement types from 4000-7999 are reserved for DDL statements */
+
+/*
+** direct comparisons to the following two symbols should not be
+** made.  to figure out whether a statement is a DDL type, use
+** the PST_IS_A_DDL_STATEMENT macro.
+*/
+#define	PST_FIRST_DDL_STATEMENT_TYPE	4000
+#define	PST_LAST_DDL_STATEMENT_TYPE	7999
+
+#define	PST_IS_A_DDL_STATEMENT( pstType ) 			\
+	(    ( pstType >= PST_FIRST_DDL_STATEMENT_TYPE )	\
+	  && ( pstType <=  PST_LAST_DDL_STATEMENT_TYPE ))
+
+#define PST_STTYPE_MACROS \
+_DEFINE(PST_DV_TYPE,	1,	"PST_DECVAR") \
+_DEFINE(PST_QT_TYPE,	2,	"PST_QTREE") \
+_DEFINE(PST_IF_TYPE,	3,	"PST_IFSTMT") \
+_DEFINE(PST_MSG_TYPE,	4,	"PST_MSGSTMT") \
+_DEFINE(PST_RTN_TYPE,	5,	"PST_RTNSTMT") \
+_DEFINE(PST_CMT_TYPE,	6,	"PST_CMTSTMT") \
+_DEFINE(PST_RBK_TYPE,	7,	"PST_RBKSTMT") \
+_DEFINE(PST_RSP_TYPE,	8,	"PST_RSPSTMT") \
+_DEFINE(PST_WH_TYPE,	9,	"Reserved WH") \
+_DEFINE(PST_CP_TYPE,	10,	"PST_CPROCSTMT") /*EXECUTE/CALL PROCEDURE*/ \
+_DEFINE(PST_EMSG_TYPE,	11,	"PST_MSGSTMT") /*same as MESSAGE*/ \
+_DEFINE(PST_IP_TYPE,	12,	"PST_IPROCSTMT") /*execute an internal DBP*/ \
+_DEFINE(PST_EVREG_TYPE,	13,	"REGISTER EVENT") /*data is PST_EVENTSTMT*/ \
+_DEFINE(PST_EVDEREG_TYPE,14,	"REMOVE EVENT") /*data is PST_EVENTSTMT*/ \
+_DEFINE(PST_EVRAISE_TYPE,15,	"RAISE EVENT") /*data is PST_EVENTSTMT*/ \
+_DEFINE(PST_ENDLOOP_TYPE,16,	"ENDLOOP") /* PSF only - volatile the only truly \
+					   ** useful field is pst_next! */ \
+_DEFINE(PST_EXEC_IMM_TYPE,17,	"EXECUTE IMMEDIATE") \
+_DEFINE(PST_REGPROC_TYPE,18,	"PST_REGPROC_STMT") /*execute a registered DBP*/ \
+_DEFINE(PST_RP_TYPE,	19,	"ReservedRP") \
+_DEFINE(PST_FOR_TYPE,	20,	"FOR loop") \
+_DEFINE(PST_RETROW_TYPE,21,	"RETURN ROW") /*no specific data*/ \
+	/* Next are the DDLs - note not contiguous with prior */ \
+_DEFINE2(CREATE_TABLE,	 0,	"CREATE TABLE") /*PST_CREATE_TABLE*/ \
+_DEFINE2(CREATE_INDEX,	 1,	"CREATE INDEX") /*PST_CREATE_TABLE_STATEMENT*/ \
+_DEFINE2(CREATE_RULE,	 2,	"CREATE RULE") /*PST_CREATE_RULE*/ \
+_DEFINE2(CREATE_PROCEDURE,3,	"CREATE PROC") /*PST_CREATE_PROCEDURE*/ \
+_DEFINE2(CREATE_INTEGRITY,4,	"CREATE INTEG") /*PST_CREATE_INTEGRITY*/ \
+_DEFINE2(MODIFY_TABLE,	 5,	"MODIFY TABLE") /*PST_MODIFY_TABLE*/ \
+_DEFINE2(DROP_INTEGRITY, 6,	"DROP INTEG") /*PST_DROP_INTEGRITY*/ \
+_DEFINE2(CREATE_SCHEMA,	 7,	"CREATE SCHEMA") /*PST_CREATE_SCHEMA*/ \
+_DEFINE2(CREATE_VIEW,	 8,	"CREATE VIEW") /*PST_CREATE_VIEW*/ \
+_DEFINE2(RENAME,	 9,	"RENAME") /*implies rename processing*/ \
+_ENDDEFINE
+
+typedef enum _PST_STTYPE {
+#define _DEFINE(n,v,s) n = v,
+#define _DEFINE2(n,v,s)
+#define _ENDDEFINE
+    PST_STTYPE_MACROS PST_STTYPE_MAX,
+#undef _DEFINE
+#undef _DEFINE2
+#undef _ENDDEFINE
+#define _DEFINE(n,v,s)
+#define _DEFINE2(n,v,s) PST_##n##_TYPE = v+PST_FIRST_DDL_STATEMENT_TYPE,
+#define _ENDDEFINE
+    PST_STTYPE_MACROS PST_STTYPE_DDL_MAX
+#undef _DEFINE
+#undef _DEFINE2
+#undef _ENDDEFINE
 } PST_STTYPE;
 
 typedef struct _PST_STATEMENT
@@ -7020,7 +7002,7 @@ typedef struct _PST_STATEMENT
 	** will be listed in three places, PST_QTREE.pst_mode,
 	** PSQ_CB.psq_mode, and PST_STATEMENT.pst_stmttype.
 	*/
-    i4			pst_mode;
+    PSQ_MODE		pst_mode;
 
 	/* Pst_next points to the statement that should be executed
 	** after the current statement is executed. The linked list
@@ -7072,42 +7054,6 @@ typedef struct _PST_STATEMENT
 
 	/* Indicates which variant of the union */
     PST_STTYPE		pst_type;
-
-	/* statement types from 4000-7999 are reserved for DDL statements */
-
-	/*
-	** direct comparisons to the following two symbols should not be
-	** made.  to figure out whether a statement is a DDL type, use
-	** the PST_IS_A_DDL_STATEMENT macro.
-	*/
-
-#define	PST_FIRST_DDL_STATEMENT_TYPE	4000
-#define	PST_LAST_DDL_STATEMENT_TYPE	7999
-
-#define	PST_IS_A_DDL_STATEMENT( pstType ) 			\
-	(    ( pstType >= PST_FIRST_DDL_STATEMENT_TYPE )	\
-	  && ( pstType <=  PST_LAST_DDL_STATEMENT_TYPE ))
-
-#define	PST_CREATE_TABLE_TYPE	( PST_FIRST_DDL_STATEMENT_TYPE )
-	/* implies PST_CREATE_TABLE structure */
-#define	PST_CREATE_INDEX_TYPE	( PST_FIRST_DDL_STATEMENT_TYPE + 1 )
-	/* implies PST_CREATE_TABLE_STATEMENT structure */
-#define	PST_CREATE_RULE_TYPE	( PST_FIRST_DDL_STATEMENT_TYPE + 2 )
-	/* implies PST_CREATE_RULE structure */
-#define	PST_CREATE_PROCEDURE_TYPE ( PST_FIRST_DDL_STATEMENT_TYPE + 3 )
-	/* implies PST_CREATE_PROCEDURE structure */
-#define	PST_CREATE_INTEGRITY_TYPE ( PST_FIRST_DDL_STATEMENT_TYPE + 4 )
-	/* implies PST_CREATE_INTEGRITY structure */
-#define	PST_MODIFY_TABLE_TYPE	( PST_FIRST_DDL_STATEMENT_TYPE + 5 )
-	/* implies PST_MODIFY_TABLE structure */
-#define	PST_DROP_INTEGRITY_TYPE	( PST_FIRST_DDL_STATEMENT_TYPE + 6 )
-	/* implies PST_DROP_INTEGRITY structure */
-#define PST_CREATE_SCHEMA_TYPE  (PST_FIRST_DDL_STATEMENT_TYPE + 7)
-       /* implies PST_CREATE_SCHEMA structure */
-#define PST_CREATE_VIEW_TYPE    ( PST_FIRST_DDL_STATEMENT_TYPE + 8 )
-	/* implies PST_CREATE_VIEW structure */
-#define PST_RENAME_TYPE    ( PST_FIRST_DDL_STATEMENT_TYPE + 9 )
-	/* implies rename processing */
 
 	/* Pst_specific holds the statement specific information */
     union
@@ -7183,7 +7129,7 @@ typedef struct _PST_PROCEDURE
 					** see pst_vsn in struct PST_QTREE for
 					** a list of possible values and their
 					** descriptions */
-	/* Pst_isproc is TRUE if this represents a database procedure. If
+	/* pst_isdbp is TRUE if this represents a database procedure. If
 	** it is FALSE, then this represents a non-procedure (ie. dml) query
 	** that equel, esql, the TM, abf, etc has sent us.
 	*/
@@ -7275,52 +7221,44 @@ typedef struct _PSS_SESBLK *PSF_SESSCB_PTR;
 /*
 ** entry points
 */
-FUNC_EXTERN DB_STATUS
-psq_call(
+FUNC_EXTERN DB_STATUS psq_call(
 	i4		   opcode,
 	PSQ_CB		   *psq_cb,
 	PSF_SESSCB_PTR	   sess_cb);
 
-FUNC_EXTERN DB_STATUS
-psy_call(
+FUNC_EXTERN DB_STATUS psy_call(
 	i4		   opcode,
 	PSY_CB		   *psy_cb,
 	PSF_SESSCB_PTR	   sess_cb);
 
-FUNC_EXTERN DB_STATUS
-psf_debug(
+FUNC_EXTERN DB_STATUS psf_debug(
 	DB_DEBUG_CB	   *debug_cb);
 
 /*
 ** these functions are not the "normal" entry points but are nonetheless used
 ** by OPF 
 */
-FUNC_EXTERN DB_STATUS
-pst_resolve(
+FUNC_EXTERN DB_STATUS pst_resolve(
 	PSF_SESSCB_PTR     sess_cb,
 	ADF_CB		   *adf_scb,
 	PST_QNODE	   *opnode,
 	DB_LANG		   lang,
 	DB_ERROR	   *error);
 
-FUNC_EXTERN VOID
-pst_1ftype(
+FUNC_EXTERN VOID pst_1ftype(
 	PST_QNODE          *qnode,
 	char               *buf);
 
-FUNC_EXTERN VOID
-pst_1fidop(
+FUNC_EXTERN VOID pst_1fidop(
 	PST_QNODE          *qnode,
 	char               *buf);
 
-FUNC_EXTERN DB_STATUS
-pst_1prmdump(
+FUNC_EXTERN DB_STATUS pst_1prmdump(
 	PST_QNODE          *tree,
 	PST_QTREE	   *header,
 	DB_ERROR	    *error);
 
-FUNC_EXTERN DB_STATUS
-pst_prmdump(
+FUNC_EXTERN DB_STATUS pst_prmdump(
 	PST_QNODE           *tree,
 	PST_QTREE	    *header,
 	DB_ERROR	    *error,

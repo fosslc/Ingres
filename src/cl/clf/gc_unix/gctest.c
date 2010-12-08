@@ -12,13 +12,15 @@
 #include 	<gc.h>
 #include	<me.h>
 #include	<pc.h>
+#include	<ex.h>
+#include	<exinternal.h>
 #include	<rusage.h>
 #include	<bsi.h>
 #include 	"gcarw.h"
 #include 	"gcacli.h"
+#include	"clpoll.h"
 
 #include	<errno.h>
-extern	int	errno;
 
 #define	NUM_PACKETS	40
 #define	MIN_PACKETS	4
@@ -85,6 +87,10 @@ NEEDLIBS = COMPAT MALLOCLIB
 **	    GCrelease() for each client and finally issues GCterminate().
 **	13-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	14-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	15-nov-2010 (stephenb)
+**	    correctlt prototype all functions
 */
 
 VOID    iiCLintrp();
@@ -96,22 +102,22 @@ VOID    iiCLintrp();
 static	PTR	GC_alloc();
 static	void	GC_free();
 static 	VOID	usage();
-static  VOID    fill_write_packet();
-static  bool    verify_read_packet();
-static	VOID	reg_server();
-static	VOID	do_signal();
-static	VOID	reap_child();
-static	VOID	do_server();
-static	VOID	do_client();
+static  VOID    fill_write_packet(PTR, int);
+static  bool    verify_read_packet(PTR, int, SVC_PARMS *);
+static	VOID	reg_server(char *);
+static	VOID	do_signal(int);
+static	VOID	reap_child(void);
+static	VOID	do_server(char *);
+static	VOID	do_client(char *);
 static	VOID	listen_callback( PTR );
-static	VOID	connect_callback();
-static	VOID	send_packet();
-static	VOID	send_callback();
-static	VOID	close_socket();
+static	VOID	connect_callback(PTR);
+static	VOID	send_packet(SVC_PARMS *);
+static	VOID	send_callback(PTR);
+static	VOID	close_socket(SVC_PARMS *);
 static	VOID	close_callback( PTR );
-static	VOID	receive_packet();
-static	VOID	receive_callback();
-
+static	VOID	receive_packet(SVC_PARMS *);
+static	VOID	receive_callback(PTR);
+static	VOID	do_test(char *);
 /*
 ** local data
 */
@@ -373,7 +379,7 @@ int	serv_pid;
 }
 
 static	VOID
-reap_child()
+reap_child(void)
 {
 	int	exit_status = OK, status ;
 
@@ -388,6 +394,7 @@ reap_child()
 	PCexit(exit_stat);
 }
 
+static VOID
 do_test(port)
 char	*port;
 {

@@ -14,6 +14,7 @@
 # include <st.h>
 # include <tr.h>
 # include <me.h>
+# include <qu.h>
 
 # include <csinternal.h>
 # include <iinap.h>
@@ -163,6 +164,10 @@
 **          is avoided in CSp_semaphore().
 **	21-Jan-2007 (kiria01) b117581
 **	    Use global cs_state_names instead of explicit strings
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of qu.h with QUr_* prototypes.
 **/
 
 
@@ -174,7 +179,6 @@ static bool CS_sem_owner_dead(
 	    int             sem_pid,
 	    CS_SEMAPHORE    *sem);
 
-GLOBALREF CS_SYSTEM           Cs_srv_block;
 GLOBALREF i4		      Cs_incomp;
 GLOBALREF i4             Cs_numprocessors;
 GLOBALREF i4             Cs_max_sem_loops;
@@ -474,7 +478,7 @@ IICSp_semaphore(i4 exclusive, register CS_SEMAPHORE *sem)
 		    sem->cs_smstatistics.cs_sms_count++;
 
 		    /* Now, go move everyone back to ready */
-		    while (next_scb = sem->cs_next)
+		    while ((next_scb = sem->cs_next) != NULL)
 		    {
 			if (next_scb->cs_state == CS_MUTEX)
 			{
@@ -553,10 +557,12 @@ IICSp_semaphore(i4 exclusive, register CS_SEMAPHORE *sem)
 	register i4 real_loops, loops, yield_loops, avg_spins,
                          smxx_count, smsx_count;
 	real_loops = loops = yield_loops = 0;
+	avg_spins = 0;
 
 	Cs_srv_block.cs_inkernel = 1;
 
-	if (scb) base_priority = scb->cs_priority;
+	if (scb)
+	    base_priority = scb->cs_priority;
 
 	for (;;)
 	{
@@ -1154,7 +1160,7 @@ IICSv_semaphore( register CS_SEMAPHORE *sem )
 	if (sem->cs_count == 0)
 	{ /* move waiters back to ready */
 	    sem->cs_excl_waiters = 0; /* all get an equal opportunity */
-	    while (next_scb = sem->cs_next)
+	    while ((next_scb = sem->cs_next) != NULL)
 	    {
 		if (next_scb->cs_state == CS_MUTEX)
 		{
@@ -1886,20 +1892,24 @@ CS_sem_owner_dead(
 ** History:
 **  23-Feb-1998 (bonro01)
 **      Created.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Make void, nothing uses the return value.
 */
-STATUS
+void
 CS_cp_sem_cleanup(
     char            *key,
     CL_ERR_DESC     *err_code)
 {
+
+    CL_CLEAR_ERR(err_code);
+
 # ifdef OS_THREADS_USED
 #ifdef xCL_NEED_SEM_CLEANUP
     if ( (Cs_srv_block.cs_mt) )
-	return ( CSMT_cp_sem_cleanup( key, err_code ) );
+	CSMT_cp_sem_cleanup( key, err_code );
 # endif /* xCL_NEED_SEM_CLEANUP */
 # endif /* OS_THREADS_USED */
 
-	return(OK);
 }
 
 /*{

@@ -1,11 +1,12 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
 #include    <gl.h>
 #include    <cs.h>
 #include    <cm.h>
+#include    <cv.h>
 #include    <qu.h>
 #include    <st.h>
 #include    <me.h>
@@ -61,7 +62,31 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psy_print(
+	PSF_MSTREAM *mstream,
+	i4 map[],
+	PSY_QTEXT **block,
+	unsigned char *text,
+	i4 length,
+	PSS_USRRANGE *rngtab,
+	DB_ERROR *err_blk);
+i4 psy_put(
+	PSF_MSTREAM *mstream,
+	register char *inbuf,
+	register i4 len,
+	PSY_QTEXT **block,
+	DB_ERROR *err_blk);
+i4 psy_txtalloc(
+	PSF_MSTREAM *mstream,
+	PSY_QTEXT **newblock,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: psy_print	- Format query text to send to user
@@ -449,7 +474,8 @@ psy_put(
 	tocopy = len > left ? left : len;
 	outplace = (*block)->psy_qtext + (*block)->psy_qcount;
 #ifdef xDEBUG
-	if (ult_check_macro(&sess_cb->pss_trace, 71, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_PSY_PUT_TRACE, &val1, &val2))
 	{
 	    TRdisplay("%.#s", tocopy, inbuf);
 	}

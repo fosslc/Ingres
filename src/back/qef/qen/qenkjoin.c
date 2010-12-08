@@ -139,6 +139,8 @@
 **	    Use utility for setting DMF qualification.
 **	11-May-2010 (kschendel) b123565
 **	    Rename dsh-root to dsh-parent.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 
@@ -339,7 +341,6 @@ i4		    function )
 					** join qualifying partitions */
     PTR		    knokey_map;		/* Bitmap of PP's not containing key */
     DB_STATUS	    status = E_DB_OK;
-    STATUS	    st;
     bool	    reset = FALSE;
     i4		    out_func = NO_FUNC;
     i4	    val1;
@@ -349,7 +350,7 @@ i4		    function )
     i4		    mapbytes;		/* Size (bytes) of phys partition map */
     bool	    read_outer;		/* Need to / have just read an outer */
     TIMERSTAT	    timerstat;
-    u_char	    *nullind_ptr;
+    char	    *nullind_ptr;
     bool	    potential_card_violation = FALSE;
 
 

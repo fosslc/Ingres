@@ -615,6 +615,8 @@ static STATUS check_char(
 **	    Split CRIB connection into two statements; some compilers
 **	    overoptimize the single statement, corrupting crib_next,
 **	    crib_prev.
+**      11-Nov-2010 (stial01) B124720
+**          Restore orig_timeout for replicator support tables
 */
 
 DB_STATUS
@@ -889,10 +891,12 @@ DMT_CB   *dmt_cb)
 	else
 	    lk_list_id = xcb->xcb_lk_id;
 
+	/* Always save lock timeout for table being opened */
+	orig_timeout = timeout;
+
         if (dmt->dmt_flags_mask & DMT_NO_LOCK_WAIT)
         {
            /* Don't wait for lock if busy. */
-           orig_timeout = timeout;
            timeout = DMC_C_NOWAIT;
         }
   
@@ -1086,15 +1090,30 @@ DMT_CB   *dmt_cb)
 	/* point replicator RCBs at the XCB */
 
 	if (r->rep_shad_rcb)
+	{
 	    r->rep_shad_rcb->rcb_xcb_ptr = xcb;
+	    r->rep_shad_rcb->rcb_timeout = orig_timeout;
+	}
 	if (r->rep_arch_rcb)
+	{
 	    r->rep_arch_rcb->rcb_xcb_ptr = xcb;
+	    r->rep_arch_rcb->rcb_timeout = orig_timeout;
+	}
 	if (r->rep_shadidx_rcb)
+	{
 	    r->rep_shadidx_rcb->rcb_xcb_ptr = xcb;
+	    r->rep_shadidx_rcb->rcb_timeout = orig_timeout;
+	}
 	if (r->rep_prio_rcb)
+	{
 	    r->rep_prio_rcb->rcb_xcb_ptr = xcb;
+	    r->rep_prio_rcb->rcb_timeout = orig_timeout; 
+	}
 	if (r->rep_cdds_rcb)
+	{
 	    r->rep_cdds_rcb->rcb_xcb_ptr = xcb;
+	    r->rep_cdds_rcb->rcb_timeout = orig_timeout; 
+	}
 
 	if ( crow_locking(r) )
 	{

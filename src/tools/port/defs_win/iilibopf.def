@@ -25,6 +25,8 @@
 ;	    New functions for partition qual.
 ;	02-Dec-2009 (whiro01) Bug 122890
 ;	    Added new function needed from Karl's massive Datallegro change.
+;	19-Nov-2010 (kiria01) SIR 124685
+;	    Dropped static functions opa_corelated, opa_ojsub and opn_sortcpu
 ;
 
 EXPORTS
@@ -33,7 +35,7 @@ EXPORTS
     opa_agbylist                    @102
     opa_compat                      @103
     opa_gsub                        @104
-    opa_corelated                   @105
+;;  @105
     opa_final                       @106
     opa_stid                        @107
     opa_tnode                       @108
@@ -41,7 +43,7 @@ EXPORTS
     opa_covar                       @110
     opa_cunion                      @111
     opa_not                         @112
-    opa_ojsub                       @113
+;;  @113
     opa_resolve                     @114
     opa_rsmap                       @115
     opa_ifagg                       @116
@@ -273,7 +275,7 @@ EXPORTS
     opn_bfkhget                     @344
     opn_calcost                     @345
     opn_goodco                      @346
-    opn_sortcpu                     @347
+;;  @347
     opn_ceval                       @348
     opn_timeout                     @349
     opn_checksort                   @350

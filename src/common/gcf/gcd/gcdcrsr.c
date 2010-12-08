@@ -89,7 +89,6 @@
 **	    Added support for BOOLEAN.
 **      17-Aug-2010 (thich01)
 **          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
-
 */	
 
 /*

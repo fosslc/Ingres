@@ -680,7 +680,7 @@
 **          GetProcParamNames() if the target db is Vectorwise.  In
 **          GetServerInfo(), set the release version to the same as Ingres 
 **          10.0 for Vectorwise servers, and disable OPT_INGRESDATE and
-**          OPT_BLANKDATEisNULL for Vectorwise servers.`
+**          OPT_BLANKDATEisNULL for Vectorwise servers.
 **    17-Aug-2010 (thich01)
 **          Make changes to treat spatial types like LBYTEs or NBR type as BYTE.
 **    12-Oct-2010 (Ralph Loen) Bug 124581
@@ -690,6 +690,8 @@
 **          PrepareSqldaAndBuffer() with the prepare_or_describe argument set 
 **          to SQLDESCRIB if the select query is prepared: in this case, only 
 **          the sqlda needs to be allocated, not the fetch buffer.
+**    15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 /*
@@ -739,11 +741,12 @@ static void GetCapabilitiesFromDSN(char * pDSN, LPDBC pdbc);
 static BOOL GetProcParamNames(SESS * pSession, LPSTMT pstmt, LPDESC pLitIPD,
                                  char *szProcName, char *szSchema);
 
-RETCODE odbc_AutoCommit(LPSQB pSqb, BOOL bFlag);
-RETCODE odbc_query_sm( QRY_CB *qry_cb );
-RETCODE exitPutSeg(RETCODE, IIAPI_PUTPARMPARM *, IIAPI_PUTPARMPARM *);
-BOOL    stripOffQuotes( CHAR *);
-void odbc_print_qry( i2, i2 );
+static BOOL odbc_execute(SESS* pSession,
+				LPSTMT  pstmt, IIAPI_QUERYTYPE apiQueryType);
+static RETCODE odbc_query_sm( QRY_CB *qry_cb );
+static RETCODE exitPutSeg(RETCODE, IIAPI_PUTPARMPARM *, IIAPI_PUTPARMPARM *);
+static BOOL    stripOffQuotes( CHAR *);
+static void odbc_print_qry( i2, i2 );
 
 static const char nt[] = "\0"; 
 #define MAGIC_1980  1980
@@ -5009,7 +5012,8 @@ static RETCODE odbc_putSegment(LPSTMT pstmt, IIAPI_QUERYTYPE
         return exitPutSeg(rc, &putParmParm, serviceParms);
 }
 
-RETCODE exitPutSeg(RETCODE rc, IIAPI_PUTPARMPARM
+static RETCODE
+exitPutSeg(RETCODE rc, IIAPI_PUTPARMPARM
     *putParmParm, IIAPI_PUTPARMPARM *serviceParms)
 {
 	odbc_free((VOID *)putParmParm->pp_parmData );
@@ -5209,8 +5213,9 @@ static BOOL odbc_describe_input(SESS* pSession, LPSTMT pstmt)
 ** Returns: 
 **      
 */
-BOOL odbc_execute(SESS* pSession,
-					LPSTMT  pstmt, IIAPI_QUERYTYPE apiQueryType)
+static BOOL
+odbc_execute(SESS* pSession,
+		LPSTMT  pstmt, IIAPI_QUERYTYPE apiQueryType)
 {
     IIAPI_QUERYPARM   	queryParm;
     BOOL rc = TRUE;
@@ -7332,7 +7337,7 @@ static void GetCapabilitiesFromDSN(char * pDSN, LPDBC pdbc)
 **          to be allocated, not the fetch buffer.
 */
 
-RETCODE odbc_query_sm( QRY_CB *qry_cb )
+static RETCODE odbc_query_sm( QRY_CB *qry_cb )
 {
 
     LPSTMT pstmt = qry_cb->pstmt;
@@ -7753,7 +7758,7 @@ supported in scrollable result sets","HY000",TRUE);
 }
 
 
-BOOL
+static BOOL
 stripOffQuotes( char *s)
 {
   BOOL ret = FALSE;
@@ -7797,7 +7802,7 @@ stripOffQuotes( char *s)
 **	 20-Nov-2009 (Ralph Loen) Bug 122945
 **	    Created.
 */
-void
+static void
 odbc_print_qry( i2 sequence, i2 sequence_type )
 {
     i2 seq;

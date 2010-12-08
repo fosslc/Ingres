@@ -8,6 +8,7 @@
 # include   <stdio.h>
 # include   <math.h>
 # include   <compat.h>
+# include   <clconfig.h>
 # include   <ex.h>
 # include   <cs.h>
 # include   <me.h>
@@ -16,6 +17,7 @@
 # include   <pc.h>
 # include   <st.h>
 # include   <er.h>
+# include   <exinternal.h>
 
 /******************************************************************************
 **
@@ -89,6 +91,8 @@
 **          Clear System Interrupt Handlers prior to setting up Ingres'
 **          Interrupt handler. This allows CTRL-C interrupt to be processed
 **          by the Interrupt handler setup here.
+**	16-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 ******************************************************************************/
 
 /*
@@ -97,8 +101,7 @@
 **
 */
 
-GLOBALREF     VOID    (*Ex_print_stack)();      /* NULL or CS_dump_stack */
-static        VOID    ex_print_error(PTR arg1, i4 msg_length, char * msg_buffer);
+static STATUS ex_print_error(PTR arg1, i4 msg_length, char * msg_buffer);
 
 STATUS       iEXdeliver(EX_ARGS * argp);
 VOID         EXsignal(EX ex, i4 arg_count, i4 arg1,...);
@@ -749,7 +752,7 @@ EXsys_report(EX_ARGS * exargs, char *buffer)
 
     if ( print_stack && Ex_print_stack )
     {
-        Ex_print_stack(0, ctxtp, ex_print_error, TRUE);
+        Ex_print_stack(0, ctxtp, NULL, ex_print_error, TRUE);
     }
 
     return (TRUE);
@@ -1289,10 +1292,11 @@ EXtlrelease (DWORD tlsid, PTR tlsitem)
 **      31-dec-1993 (andys)
 **              Add ER_ERROR_MSG parameter to ERsend.
 */
-static VOID
+static STATUS
 ex_print_error(PTR arg1, i4 msg_length, char * msg_buffer)
 {
     CL_ERR_DESC err_code;
 
     ERsend(ER_ERROR_MSG, msg_buffer, msg_length, &err_code);
+    return (OK);
 }

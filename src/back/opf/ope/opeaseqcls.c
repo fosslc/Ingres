@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -73,8 +73,22 @@
 **          for union view target lists to all parent query references in var nodes
 **          or else OPC/QEF will not allocate the null byte and access violations
 **          may occur
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opl_nullchange(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *qnodep);
+void ope_aseqcls(
+	OPS_SUBQUERY *subquery,
+	OPE_BMEQCLS *eqcmap,
+	PST_QNODE *root);
+static void opd_sjtarget(
+	OPS_SUBQUERY *subquery);
+void ope_qual(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opl_nullchange	- check for nullability change in var node
@@ -259,6 +273,8 @@ ope_aseqcls(
 	}
 	break;
     }
+    default:
+	break;
     }
 }
 

@@ -3,6 +3,7 @@
 */
 
 # include	<compat.h>
+# include	<ci.h>
 # include	<gl.h>
 # include	"cilocal.h"
 # include	<me.h>
@@ -116,6 +117,8 @@
 **	    if LIC_TERMINATE returned.
 **	11-Jun-2004 (hanch04)
 **	    Removed reference to CI for the open source release.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Removed forward declarations - they reside in ci.h.
 */
 
 /* # defines */
@@ -125,18 +128,6 @@
 # define CI_i2swap(x) ((((x) & 0x00ff) << 8) | (((x) >> 8) & 0x00ff))
 # define	CCITT_INIT	0x0ffff
 # define	CCITT_MASK	0102010
-
-/*
-**	Forward function references
-*/
-BITFLD			CIchksum();
-VOID			CIdecode();
-VOID			CIencode();
-FUNC_EXTERN VOID	CIencrypt();
-VOID			CIexpand();
-VOID			CIshrink();
-VOID			CItobin();
-VOID			CItotext();
 
 /* statics */
 /*

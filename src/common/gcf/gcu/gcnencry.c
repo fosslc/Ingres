@@ -12,7 +12,8 @@
 
 #include <iicommon.h>
 #include <gca.h>
-#include <gcaint.h>
+#include <gcn.h>
+#include <gcnint.h>
 #include <gcu.h>
 
 /**
@@ -58,6 +59,8 @@
 **	    replace nat and longnat with i4
 **	 15-Jul-07 (gordy)
 **	    Moved gcn_decrypt() into server only code.
+**       15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 **/
 
 STATUS

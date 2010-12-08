@@ -3,6 +3,8 @@
 */
 #include	<compat.h>
 #include	<gl.h>
+#include	<gc.h>
+#include	<clpoll.h>
 
 
 /*{
@@ -30,6 +32,10 @@
 **	    replace nat and longnat with i4
 **	21-Aug-2009 (kschendel) 121804
 **	    Update the function declarations to fix gcc 4.3 problems.
+**	15-nov-2010 (stephenb)
+**	    Include gc.h for prototypes.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Included clpoll.h for iiCLpoll.
 */	
 
 

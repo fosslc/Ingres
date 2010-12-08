@@ -34,6 +34,8 @@
 **	    replace nat and longnat with i4
 **	10-mar-2002 (somsa01)
 **	    Added MING hints for successful 64-bit compilation.
+**	15-nov-2010 (stephenb)
+**	    Proto forward funcs.
 */
 
 /*
@@ -61,6 +63,16 @@ char destconst[ SIZE + 1 ];
 char destfunc[ SIZE + 1 ];
 
 int err = 0;
+
+/*
+** Forward references
+*/
+static VOID
+check(
+	char *a,
+	char *b,
+	i4 len,
+	char *name);
 
 main(
 	VOID)
@@ -127,7 +139,7 @@ main(
 	SIprintf( err ? "Failures!!!\n" : "MEcopy & MECOPY_MACROS OK\n" );
 	PCexit( err );
 }
-
+static VOID
 check(
 	char *a,
 	char *b,

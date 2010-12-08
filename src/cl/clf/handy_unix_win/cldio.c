@@ -367,6 +367,10 @@ GLOBALREF i4 Di_backend;	/* TRUE if running a back-end server.
 **	    performance, not correctness;  any fstype that operates incorrectly
 **	    when direct-IO is OFF should be banned outright!)  Remove the
 **	    notion of forced direct-IO.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Drop an obsolete hp3 conditional.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Add static declaration to II_dio_do_lseek.
 **/
 
 /* defines */
@@ -1130,7 +1134,7 @@ IIdio_read(
 **      17-aug-92 (pearl)
 **              Created.
 */
-int
+static int
 II_dio_do_lseek()
 {
     static int checked = 0;
@@ -1471,14 +1475,7 @@ IIdio_compute_file_size(
     CL_ERR_DESC	    sys_err;
 
     {
-#ifdef hp3_us5
-        max_eof = curr_eof = (lseek(file_desc, 0l, SEEK_END) /
-                                D_MIN_DISK_BLK_SIZE);
-        if (max_eof <= 0l)
-                max_eof = curr_eof = (MAXFS / D_MIN_DISK_BLK_SIZE);
-#else
 	max_eof = curr_eof = (MAXFS / D_MIN_DISK_BLK_SIZE);
-#endif
 	min_eof = 0;
 
 	/* Assertion: min_eof is always guaranteed to be <= than the number of

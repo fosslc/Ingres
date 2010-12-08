@@ -70,12 +70,15 @@
 **	    Add diagnostic registration stuff.
 **	31-Jan-2007 (kiria01) b117581
 **	    Use global cs_mask_names and cs_state_names.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Delete CS_SYSTEM ref, get from csinternal.
+**	    Fix confusion re output-fcn, it's a TR_OUTPUT_FCN not something
+**	    else.  Drop the goofy add-a-newline arg.  TRformat always drops
+**	    trailing and doubled newlines, normalize the calls here.
 */
 
 
 GLOBALREF i4                    Ex_core_enabled;
-
-GLOBALREF CS_SYSTEM		Cs_srv_block;
 
 GLOBALREF CS_SEMAPHORE		Cs_known_list_sem;
 
@@ -84,29 +87,25 @@ GLOBALREF CS_SEMAPHORE		Cs_known_list_sem;
 */
 GLOBALDEF CSSAMPLERBLKPTR	CsSamplerBlkPtr ZERO_FILL;
 
-FUNC_EXTERN STATUS	cs_handler();
-
-static bool	     SamplerInit = FALSE;
-
 static STATUS StartSampler(
                 char    *command,
-                i4	(*output_fcn)() );
+                TR_OUTPUT_FCN	*output_fcn );
 
 static STATUS StopSampler(
-                i4	(*output_fcn)() );
+                TR_OUTPUT_FCN	*output_fcn );
 
 static STATUS ShowSampler(
-                i4	(*output_fcn)() );
+                TR_OUTPUT_FCN	*output_fcn );
 
 static void show_sessions(
     char    *command,
-    i4	    (*output_fcn)(),
+    TR_OUTPUT_FCN *output_fcn,
     i4	    formatted,
     i4	    powerful);
 
-static void test_segv(char *command, i4 (*output_fcn)(), i4 depth );
+static void test_segv(char *command, TR_OUTPUT_FCN *output_fcn, i4 depth );
 
-static void format_sessions(char *command, i4 (*output_fcn)(), i4 powerful);
+static void format_sessions(char *command, TR_OUTPUT_FCN *output_fcn, i4 powerful);
 
 /*
 ** Name: CS_null_handler	- No-op exception handler.
@@ -131,8 +130,7 @@ static void format_sessions(char *command, i4 (*output_fcn)(), i4 powerful);
 **	    Moved and renamed.  Was csmt_monitor_handler in csmtmonitor.c.
 */
 STATUS
-CS_null_handler(exargs)
-EX_ARGS	    *exargs;
+CS_null_handler(EX_ARGS *exargs)
 {
     return(EXDECLARE);
 } /* CS_null_handler */
@@ -169,11 +167,8 @@ EX_ARGS	    *exargs;
 **	    Initial version.
 */
 CS_SCB	*
-CS_verify_sid( action, command, output_fcn, nointernal )
-  char 	*action; 
-  char  *command;
-  i4	(*output_fcn)();
-  i4	nointernal;
+CS_verify_sid( char *action, char *command, TR_OUTPUT_FCN *output_fcn,
+	i4 nointernal )
 {
     EX_CONTEXT		 ex_context;
     CS_SCB		*scb = NULL;
@@ -191,13 +186,13 @@ CS_verify_sid( action, command, output_fcn, nointernal )
 
     if ( NULL == scb )
     {
-	TRformat(output_fcn, 1, buf, sizeof(buf) - 1, "Invalid session id");
+	TRformat(output_fcn, NULL, buf, sizeof(buf) - 1, "Invalid session id");
     }
     else if ( nointernal &&
 	      ( (scb == (CS_SCB *)&Cs_idle_scb) ||
 	        (scb == (CS_SCB *)&Cs_admin_scb) ) )
     {
-	TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+	TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		"Cannot %s internal session %p.", action, scb->cs_self);
 	scb = NULL;
     }
@@ -221,13 +216,13 @@ CS_verify_sid( action, command, output_fcn, nointernal )
 **	powerful			Is this user powerful
 **	output_fcn			Function to call to perform the output.
 **					This routine will be called as
-**					    (*output_fcn)(newline_present,
+**					    (*output_fcn)(NULL,
 **							    length,
 **							    buffer)
 **					where buffer is the length character
-**					output string, and newline_present
-**					indicates whether a newline needs to
-**					be added to the end of the string.
+**					output string.
+**					Although a standard "output function"
+**					accepts a pointer arg, we don't use it.
 **
 ** Outputs:
 **	next_mode			As above.
@@ -442,15 +437,15 @@ CS_verify_sid( action, command, output_fcn, nointernal )
 **	29-Jan-2010 (smeke01) Bug 123192
 **	    For 'show smstats' and 'show mutex', display u_i4 values with 
 **	    format specifier %10u rather than %8d. 
+**	16-Nov-2010 (kschendel) SIR 124685
+**	    Low level routine (CS_dump_stack) needs to be able to really use
+**	    the arg param to an output_fcn, so we need to stop with the
+**	    misuse of that param as a newline flag.  The effect trickles all
+**	    the way up.
 */
 STATUS
-IICSmonitor(mode, temp_scb, nmode, command, powerful, output_fcn)
-i4		   mode;
-CS_SCB		   *temp_scb;
-i4		   *nmode;
-char		   *command;
-i4		   powerful;
-i4		   (*output_fcn)();
+IICSmonitor(i4 mode, CS_SCB *temp_scb, i4 *nmode,
+	char *command, i4 powerful, TR_OUTPUT_FCN *output_fcn)
 {
     STATUS		status;
     i4			count;
@@ -460,7 +455,6 @@ i4		   (*output_fcn)();
     CS_SCB		*an_scb;
     CS_SCB		*scan_scb;
     CS_SEMAPHORE	*mutex;
-    i4			format = 1;
     CS_MNTR_SCB		*scb;
     PTR			ptr_tmp;
     char                *temp ;
@@ -494,7 +488,7 @@ i4		   (*output_fcn)();
 	    {
 		if (!powerful)
 		{
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 				"Superuser status required to stop servers");
 		}
 		else
@@ -502,7 +496,7 @@ i4		   (*output_fcn)();
 		    status = CSterminate(CS_COND_CLOSE, &count);
 		    if (status)
 		    {
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 				"Error stopping server, %d. sessions remaining",
 					count);
 		    }
@@ -513,7 +507,7 @@ i4		   (*output_fcn)();
 	    {
 		if (!powerful)
 		{
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 				"Superuser status required to stop servers");
 		}
 		else
@@ -521,7 +515,7 @@ i4		   (*output_fcn)();
 		    status = CSterminate(CS_KILL, &count);
 		    if (status)
 		    {
-			TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+			TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 				"Server will stop. %d. sessions aborted",
 					count);
 		    }
@@ -532,7 +526,7 @@ i4		   (*output_fcn)();
 	    {
 		if (!powerful)
 		{
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 				"Superuser status required to stop servers");
 		}
 		else
@@ -545,7 +539,7 @@ i4		   (*output_fcn)();
 	    {
 		if (!powerful)
 		{
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 				"Superuser status required to stop servers");
 		}
 		else
@@ -553,7 +547,7 @@ i4		   (*output_fcn)();
 		    status = CSterminate(CS_CLOSE, &count);
 		    if (status)
 		    {
-			TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+			TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 				"Server will stop. %d. sessions remaining",
 					count);
 		    }
@@ -589,12 +583,10 @@ i4		   (*output_fcn)();
 	    else if ((STzapblank(command, command))
 			&& STscompare("showmutex", 9, command, 9) == 0)
 	    {
-               /* lint truncation warning if size of ptr > i4, 
-		  but code valid */
 		if ((CVaxptr(command + 9, &ptr_tmp)) || 
 		    (ptr_tmp  < (PTR)0x2000))
 		{
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 			"Invalid mutex id %p", ptr_tmp);
 		    break;
 		}
@@ -605,8 +597,8 @@ i4		   (*output_fcn)();
 
                 if (EXdeclare(CS_null_handler, &ex_context1))
                 {
-		   TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-			"mutex id %p invalid address\n", mutex);
+		   TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+			"mutex id %p invalid address", mutex);
                    EXdelete();
 		   break;
 		}
@@ -614,8 +606,8 @@ i4		   (*output_fcn)();
 		if ( mutex->cs_sem_scribble_check != CS_SEM_LOOKS_GOOD &&
 		     mutex->cs_sem_scribble_check != CS_SEM_WAS_REMOVED)
 		{
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-			"Structure at %p does not look like a mutex\n",
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+			"Structure at %p does not look like a mutex",
 				mutex);
 		    break;
 		}
@@ -625,8 +617,8 @@ i4		   (*output_fcn)();
                 if ( mutex->cs_value ||
                      (mutex->cs_pid && (mutex->cs_type == CS_SEM_MULTI)))
 		{
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-			"Mutex at %p: Name: %s, EXCL owner: (sid: %p, pid: %d)\n ",
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+			"Mutex at %p: Name: %s, EXCL owner: (sid: %p, pid: %d) ",
 				mutex,
 		    mutex->cs_sem_name[0] ? mutex->cs_sem_name : "(UN-NAMED)",
 				mutex->cs_owner,
@@ -634,8 +626,8 @@ i4		   (*output_fcn)();
 		}
 		else if ( mutex->cs_count )
 		{
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-			"Mutex at %p: Name: %s, SHARE owner: (sid: %p, pid: %d), count: %d\n",
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+			"Mutex at %p: Name: %s, SHARE owner: (sid: %p, pid: %d), count: %d",
 				mutex,
 		    mutex->cs_sem_name[0] ? mutex->cs_sem_name : "(UN-NAMED)",
 				mutex->cs_owner,
@@ -644,8 +636,8 @@ i4		   (*output_fcn)();
 		}
 		else
 		{
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-			"Mutex at %p: Name: %s, is currently unowned\n",
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+			"Mutex at %p: Name: %s, is currently unowned",
 				mutex,
 		    mutex->cs_sem_name[0] ? mutex->cs_sem_name : "(UN-NAMED)");
 		}
@@ -658,11 +650,11 @@ i4		   (*output_fcn)();
 		num_sessions = Cs_srv_block.cs_num_sessions;
 		/* Compute both cs_num_active, cs_hwm_active */
 		num_active = CS_num_active();
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-		    "\r\n\tServer: %s\r\n\r\nConnected Sessions (includes \
-system threads)\r\n\r\n\tCurrent:\t%d\r\n\tLimit:\t\t%d\r\n\r\nActive \
-Sessions\r\n\r\n\tCurrent\t\t%d\r\n\tLimit\t\t%d\r\n\tHigh \
-Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+		    "\n\tServer: %s\n \nConnected Sessions (includes \
+system threads)\n \n\tCurrent:\t%d\n\tLimit:\t\t%d\n \nActive \
+Sessions\n \n\tCurrent\t\t%d\n\tLimit\t\t%d\n\tHigh \
+Water\t%d\n \nrdy mask %x state: %x\nidle quantums %d./%d. (%d.%%)",
 		    Cs_srv_block.cs_name,
 		    num_sessions, Cs_srv_block.cs_max_sessions,
 		    num_active, Cs_srv_block.cs_max_active,
@@ -680,29 +672,29 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
 		char		place[1024];
 		char		*buffer = place;
 		
-		STprintf(buffer, "Semaphore Statistics:\r\n");
+		STprintf(buffer, "Semaphore Statistics:\n");
 		buffer += STlength(buffer);
-		STprintf(buffer, "--------- -----------\r\n");
+		STprintf(buffer, "--------- -----------\n");
 		buffer += STlength(buffer);
-                STprintf(buffer, "    Exclusive requests:   %10u   Shared:  %10u   Multi-Process:  %10u\r\n",
+                STprintf(buffer, "    Exclusive requests:   %10u   Shared:  %10u   Multi-Process:  %10u\n",
                             Cs_srv_block.cs_smstatistics.cs_smx_count,
                             Cs_srv_block.cs_smstatistics.cs_sms_count,
                             Cs_srv_block.cs_smstatistics.cs_smc_count);
-                STprintf(buffer, "    Exclusive collisions: %10u   Shared:  %10u   Multi-Process:  %10u\r\n",
+                STprintf(buffer, "    Exclusive collisions: %10u   Shared:  %10u   Multi-Process:  %10u\n",
                             Cs_srv_block.cs_smstatistics.cs_smxx_count,
                             Cs_srv_block.cs_smstatistics.cs_smcx_count);
-                STprintf(buffer, "    Multi-Process Wait loops: %10u \r\n",
+                STprintf(buffer, "    Multi-Process Wait loops: %10u\n",
                             Cs_srv_block.cs_smstatistics.cs_smcl_count);
-                STprintf(buffer, "    Multi-Process single-processor redispatches: %10u\r\n",
+                STprintf(buffer, "    Multi-Process single-processor redispatches: %10u\n",
                             Cs_srv_block.cs_smstatistics.cs_smsp_count);
-                STprintf(buffer, "    Multi-Process multi-processor redispatches: %10u\r\n",
+                STprintf(buffer, "    Multi-Process multi-processor redispatches: %10u\n",
                             Cs_srv_block.cs_smstatistics.cs_smmp_count);
                 buffer += STlength(buffer);
-                STprintf(buffer, "    Multi-Process non-server naps: %10u \r\n",
+                STprintf(buffer, "    Multi-Process non-server naps: %10u\n",
                             Cs_srv_block.cs_smstatistics.cs_smnonserver_count);
 		buffer += STlength(buffer);
-		STprintf(buffer, "--------- -----------\r\n");
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1, place);
+		STprintf(buffer, "--------- -----------\n");
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1, place);
 	    }
 	    else if (STscompare("clearsmstats", 12, command, 12) == 0)
 	    {
@@ -710,8 +702,8 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
                 Cs_srv_block.cs_smstatistics.cs_sms_count = 0;
                 Cs_srv_block.cs_smstatistics.cs_smxx_count = 0;
                 Cs_srv_block.cs_smstatistics.cs_smsx_count = 0;
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-		    "Semaphore statistics cleared\n");
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+		    "Semaphore statistics cleared");
 		TRdisplay("=========\n***** WARNING: Semaphore statistics cleared at %@ by %24s\n=========\n",
 		    scb->csm_scb.cs_username);
 	    }
@@ -723,15 +715,15 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
             {
                 if (!powerful)
                 {
-                    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-                        "Superuser status required to start sampling.", 0L);
+                    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+                        "Superuser status required to start sampling.");
                 }
                 else
                 {
                     status = StartSampler(command, output_fcn);
                     if (status)
                     {
-                        TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+                        TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
                                "Sampling failed to start.");
                     }
                 }
@@ -740,16 +732,16 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
             {
                 if (!powerful)
                 {
-                    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-                        "Superuser status required to stop sampling.", 0L);
+                    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+                        "Superuser status required to stop sampling.");
                 }
                 else
                 {
                     status = StopSampler(output_fcn);
                     if (status)
                     {
-                        TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-                               "Sampling failed to stop.", 0L);
+                        TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+                               "Sampling failed to stop.");
                     }
                 }
             }
@@ -757,16 +749,16 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
             {
                 if (!powerful)
                 {
-                    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-                        "Superuser status required to show sampling.", 0L);
+                    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+                        "Superuser status required to show sampling.");
                 }
                 else
                 {
                     status = ShowSampler(output_fcn);
                     if (status)
                     {
-                        TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-                               "Show sampling failed.", 0);
+                        TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+                               "Show sampling failed.");
                     }
                 }
             }
@@ -779,20 +771,20 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
 				scb->csm_scb.cs_username,
 				sizeof(scb->csm_scb.cs_username))) && !powerful)
 		    {
-			TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+			TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		      "Superuser or owner status required to remove sessions");
 		    }
 		    else
 		    {
 			if (CSremove((CS_SID)an_scb->cs_self) == OK)
 			{
-		            TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		            TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 			        "Session %p removed", an_scb->cs_self);
                             CSattn(CS_REMOVE_EVENT, (CS_SID)an_scb->cs_self);
 			}
 			else
 			{
-		            TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		            TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 			        "Session %p not removed", an_scb->cs_self);
 			}
 		    }
@@ -806,7 +798,7 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
 
 		if (an_scb->cs_state != CS_COMPUTABLE)
 		{
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 			"Session %p is not computable -- not suspended",
 			    an_scb->cs_self);
 		}
@@ -816,13 +808,13 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
 				scb->csm_scb.cs_username,
 				sizeof(scb->csm_scb.cs_username))) && !powerful)
 		    {
-			TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+			TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 				"Superuser or owner status required to suspend sessions");
 		    }
 		    else
 		    {
 			an_scb->cs_state = CS_UWAIT;
-			TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+			TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 			    "Session %p has been indefinitely suspended",
 				an_scb->cs_self);
 		    }
@@ -836,7 +828,7 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
 
 		if (an_scb->cs_state != CS_UWAIT)
 		{
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 			"Session %p was not suspended",
 			    an_scb->cs_self);
 		}
@@ -844,13 +836,13 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
 		{
 		    if (!powerful)
 		    {
-			TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+			TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 				"Superuser status required to resume sessions");
 		    }
 		    else
 		    {
 			an_scb->cs_state = CS_COMPUTABLE;
-			TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+			TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 			    "Session %p has been resumed",
 				an_scb->cs_self);
 		    }
@@ -867,14 +859,14 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
 		    CS_fmt_scb(an_scb,
 				sizeof(buffer),
 				buffer);
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1, buffer);
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1, buffer);
 		}
 
 		CSget_scb(&scan_scb);
 		if (scan_scb != an_scb)
-			CS_dump_stack(an_scb, 0, output_fcn, FALSE);
+			CS_dump_stack(an_scb, NULL, NULL, output_fcn, FALSE);
 		else
-			CS_dump_stack(0, 0, output_fcn, FALSE);
+			CS_dump_stack(NULL, NULL, NULL, output_fcn, FALSE);
 	    }
             else if (STscompare("stacks", 6, command, 6) == 0)
             {
@@ -883,13 +875,13 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
                     scan_scb && scan_scb != Cs_srv_block.cs_known_list;
                     scan_scb = scan_scb->cs_next)
                 {
-			TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-			    "\n---\nStack dump for session %p (%24s)\n",
+			TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+			    "\n---\nStack dump for session %p (%24s)",
 			    scan_scb->cs_self, scan_scb->cs_username);
                         if (an_scb != scan_scb)
-                                CS_dump_stack(scan_scb, 0, output_fcn, FALSE);
+                                CS_dump_stack(scan_scb, NULL, NULL, output_fcn, FALSE);
                         else
-                                CS_dump_stack(0, 0, output_fcn, FALSE);
+                                CS_dump_stack(NULL, NULL, NULL, output_fcn, FALSE);
                 }
             }
             else if (STscompare("enablecore", 10, command, 10) == 0)
@@ -913,24 +905,24 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
 		     (OK != CSaltr_session((CS_SID)0, CS_AS_PRIORITY, 
 			    (PTR)&priority)) )	
 		{
-		     TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		     TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 			"Failed");
 		}
             }
 	    else if (STscompare("help", 4, command, 4) == 0)
 	    {
-                TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+                TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
                     "Server:\n     SET SERVER [SHUT | CLOSED | OPEN]\n \
     STOP SERVER\n     SHOW SERVER [LISTEN | SHUTDOWN | CAPABILITIES]\n     START SAMPLING [milli second interval]\n     STOP SAMPLING\n     SHOW SAMPLING\n\n");
-                TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+                TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
                     "Session:\n     SHOW [USER] SESSIONS [FORMATTED | STATS]\n \
     SHOW SYSTEM SESSIONS [FORMATTED | STATS]\n \
     SHOW ALL SESSIONS [FORMATTED | STATS]\n \
     FORMAT [ALL | sid]\n     REMOVE [sid]\n     SUSPEND [sid]\n \
     RESUME [sid]\n\n");
-                TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+                TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
                     "Query:\n     KILL [sid]\n\n");
-                TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+                TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		    "Others:\n     QUIT\n\n");
 	    }
 	    else if (STscompare("test", 4, command, 4) == 0)
@@ -963,7 +955,7 @@ Water\t%d\r\n\r\nrdy mask %x state: %x\r\nidle quantums %d./%d. (%d.%%)",
     }
     if ( badcmnd )
     {
-	TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+	TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		"Illegal command");
     }
     EXdelete();
@@ -1015,7 +1007,7 @@ format_lock( CS_SCB *scb, char *buffer )
 static void
 show_sessions(
     char    *command,
-    i4	    (*output_fcn)(),
+    TR_OUTPUT_FCN *output_fcn,
     i4	    format_option,
     i4	    powerful)
 {
@@ -1105,8 +1097,8 @@ show_sessions(
 	        STprintf(tbuf, "CPU %d", an_scb->cs_cputime * 10),
 		STcat(sbuf,tbuf);
 
-	    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-	    	"Session %p (%24s) %s\n",
+	    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+	    	"Session %p (%24s) %s",
 		an_scb->cs_self,
 		an_scb->cs_username,
 		sbuf);
@@ -1114,7 +1106,7 @@ show_sessions(
 	else switch (an_scb->cs_state)
 	{
 	    case CS_COMPUTABLE:
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		    "Session %p (%24s) cs_state: %w (%d) cs_mask: %v",
 			    an_scb->cs_self,
 			    an_scb->cs_username,
@@ -1125,7 +1117,7 @@ show_sessions(
 			    an_scb->cs_mask); 
 		if (an_scb->cs_mask & CS_MUTEX_MASK && 
 		    an_scb->cs_sync_obj)
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 			"        Mutex: %s  ((%s) %p)",
 			((CS_SEMAPHORE *)an_scb->cs_sync_obj)->cs_sem_name[0] ?
 			((CS_SEMAPHORE *)an_scb->cs_sync_obj)->cs_sem_name :
@@ -1137,7 +1129,7 @@ show_sessions(
 	    case CS_FREE:
 	    case CS_STACK_WAIT:
 	    case CS_UWAIT:
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		    "Session %p (%24s) cs_state: %w cs_mask: %v",
 			    an_scb->cs_self,
 			    an_scb->cs_username,
@@ -1148,7 +1140,7 @@ show_sessions(
 		break;
 
 	    case CS_EVENT_WAIT: 
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		    "session %p (%24s) cs_state: %w (%s) cs_mask: %v",
 			    an_scb->cs_self,
 			    an_scb->cs_username,
@@ -1179,7 +1171,7 @@ show_sessions(
 		break;
 		
 	    case CS_MUTEX:
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		    "Session %p (%24s) cs_state: %w ((%s) %p) cs_mask: %v",
 			    an_scb->cs_self,
 			    an_scb->cs_username,
@@ -1190,7 +1182,7 @@ show_sessions(
 			    cs_mask_names,
 			    an_scb->cs_mask); 
 		if (an_scb->cs_sync_obj)
-		    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 			"        Mutex: %s",
 			((CS_SEMAPHORE *)an_scb->cs_sync_obj)->cs_sem_name[0] ?
 			((CS_SEMAPHORE *)an_scb->cs_sync_obj)->cs_sem_name :
@@ -1198,7 +1190,7 @@ show_sessions(
 		break;
 		
 	    case CS_CNDWAIT:
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		    "Session %p (%24s) cs_state: %w (%p) cs_mask: %v",
 			    an_scb->cs_self,
 			    an_scb->cs_username,
@@ -1211,7 +1203,7 @@ show_sessions(
 		
 	    default:
 
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		    "Session %p (%24s) cs_state: <invalid> %x",
 		    an_scb->cs_self,
 		    an_scb->cs_username,
@@ -1223,7 +1215,7 @@ show_sessions(
 	{
 	    if (an_scb->cs_mask & CS_MNTR_MASK)
 	    {
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		    "Session %p is a monitor task, owner is pid %d",
 			an_scb->cs_self,
 			an_scb->cs_ppid);
@@ -1231,8 +1223,8 @@ show_sessions(
 	    else if ((an_scb == &Cs_idle_scb)
 			|| (an_scb == (CS_SCB *)&Cs_admin_scb))
 	    {
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-		"Session %p is an internal task; no info avaiable",
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+		"Session %p is an internal task; no info available",
 			an_scb->cs_self);
 	    }
 	    else
@@ -1253,7 +1245,7 @@ show_sessions(
 **	    LRC requests that "special" should be "system"
 */
 static void
-format_sessions(char *command, i4 (*output_fcn)(), i4 powerful)
+format_sessions(char *command, TR_OUTPUT_FCN *output_fcn, i4 powerful)
 {
     i4		show_user = 0;
     i4		show_system = 0;
@@ -1261,7 +1253,6 @@ format_sessions(char *command, i4 (*output_fcn)(), i4 powerful)
     CS_SCB	*an_scb;
     char	buf[100];
     i4		found_scb = 0;
-    PTR		ptr_tmp;
 
     STzapblank(command, command);
 
@@ -1317,7 +1308,7 @@ format_sessions(char *command, i4 (*output_fcn)(), i4 powerful)
 	{
 	    if (scan_scb->cs_mask & CS_MNTR_MASK)
 	    {
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		    "Session %p is a monitor task, owner is pid %d",
 			scan_scb->cs_self,
 			scan_scb->cs_ppid);
@@ -1325,7 +1316,7 @@ format_sessions(char *command, i4 (*output_fcn)(), i4 powerful)
 	    else if ((scan_scb == &Cs_idle_scb)
 			|| (scan_scb == (CS_SCB *)&Cs_admin_scb))
 	    {
-		TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+		TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 		"Session %p is an internal task; no info available",
 			scan_scb->cs_self);
 	    }
@@ -1344,7 +1335,7 @@ format_sessions(char *command, i4 (*output_fcn)(), i4 powerful)
     }
     if (an_scb != 0 && found_scb == 0)
     {
-	TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
+	TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
 	    "Invalid session id");
     }
     CSv_semaphore(&Cs_known_list_sem);
@@ -1358,7 +1349,7 @@ format_sessions(char *command, i4 (*output_fcn)(), i4 powerful)
 static void 
 test_segv(
 	char *command, 
-	i4 (*output_fcn)(), 
+	TR_OUTPUT_FCN *output_fcn, 
 	i4 depth 
 )
 {
@@ -1369,19 +1360,19 @@ test_segv(
     switch ( depth )
     {
     case 0:	/* Top level call, set up */
-	TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-	   "Start SEGV test\n" );
+	TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+	   "Start SEGV test" );
         if (EXdeclare(cs_handler, &ex_context))
         {
-	    TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-	    "Exception caught\n" );
+	    TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+	    "Exception caught" );
 	}
 	else
 	{
  	    test_segv("1st",output_fcn,depth+1);
 	}
-	TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-	   "End SEGV test\n" );
+	TRformat(output_fcn, NULL, buf, sizeof(buf) - 1,
+	   "End SEGV test" );
 	EXdelete();
 	break;
     case 3:	/* Force SEGV here */
@@ -1408,11 +1399,9 @@ test_segv(
 **  *command        Text of the command
 **  output_fcn      Function to call to perform the output.
 **                  This routine will be called as
-**                      (*output_fcn)(newline_present, length, buffer)
+**                      (*output_fcn)(NULL, length, buffer)
 **                  where buffer is the length character
-**                  output string, and newline_present
-**                  indicates whether a newline needs to
-**                  be added to the end of the string.
+**                  output string
 **
 **  Returns:
 **      OK
@@ -1431,7 +1420,7 @@ test_segv(
 static STATUS
 StartSampler(
 	char    *command,
-	i4	(*output_fcn) () )
+	TR_OUTPUT_FCN *output_fcn )
 
 {
 	char	buf[100];
@@ -1439,11 +1428,6 @@ StartSampler(
 	SYSTIME	time;
 	char	timestr[50];
 	STATUS  status = OK;
-	void	CS_sampler();
- 	CL_ERR_DESC errdesc;
-# if 0
-        GCA_LS_PARMS        local_crb;
-# endif
 
 
 	/*
@@ -1455,8 +1439,8 @@ StartSampler(
 	*/
 	if (CVal(command + 13, &interval))
 	{
-	    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-	   		"The sampling interval must be between 100 and 100000 milliseconds", 0L);
+	    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+	   		"The sampling interval must be between 100 and 100000 milliseconds");
 	    return(FAIL);
 	}
 	if (interval == 0)
@@ -1464,8 +1448,8 @@ StartSampler(
 
 	if ((interval < 100) || (interval > 100000))
 	{
-	    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-	   		"The sampling interval must be between 100 and 100000 milliseconds", 0L);
+	    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+	   		"The sampling interval must be between 100 and 100000 milliseconds");
 	    return(FAIL);
 	}
 
@@ -1485,7 +1469,7 @@ StartSampler(
 	{
 	    CsSamplerBlkPtr->interval = interval;
 
-	    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 	   		"The sampling interval is now %6.2f seconds",
 	   		 interval/1000.0);
 	    return(OK);
@@ -1523,7 +1507,7 @@ StartSampler(
 	*/
 
 	TMstr(&time, timestr);
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 		"Sampling is started. %s",
 		timestr);
 
@@ -1542,11 +1526,9 @@ StartSampler(
 ** Inputs:
 **  output_fcn      Function to call to perform the output.
 **                  This routine will be called as
-**                      (*output_fcn)(newline_present, length, buffer)
+**                      (*output_fcn)(NULL, length, buffer)
 **                  where buffer is the length character
-**                  output string, and newline_present
-**                  indicates whether a newline needs to
-**                  be added to the end of the string.
+**                  output string
 **
 **		    This may be NULL
 **
@@ -1562,7 +1544,7 @@ StartSampler(
 
 static STATUS
 StopSampler(
-	i4	(*output_fcn) () )
+	TR_OUTPUT_FCN *output_fcn )
 
 {
 	SYSTIME	time;
@@ -1574,8 +1556,8 @@ StopSampler(
 	if (CsSamplerBlkPtr == NULL)
 	{
 	    if (output_fcn != NULL)
-	        TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-	   	     "There is no sampling now", 0L);
+	        TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+	   	     "There is no sampling now");
 	    return(status);
 	}
 	/*
@@ -1618,7 +1600,7 @@ StopSampler(
 
 	TMstr(&time, timestr);
 	if (output_fcn != NULL)
-	    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 	     	"Sampling is stopped. %s",
 		timestr);
 
@@ -1637,11 +1619,9 @@ StopSampler(
 ** Inputs:
 **  output_fcn      Function to call to perform the output.
 **                  This routine will be called as
-**                      (*output_fcn)(newline_present, length, buffer)
+**                      (*output_fcn)(NULL, length, buffer)
 **                  where buffer is the length character
-**                  output string, and newline_present
-**                  indicates whether a newline needs to
-**                  be added to the end of the string.
+**                  output string
 **
 **  Returns:
 **      OK
@@ -1672,7 +1652,7 @@ StopSampler(
 
 static STATUS
 ShowSampler(
-	i4	(*output_fcn) () )
+	TR_OUTPUT_FCN *output_fcn )
 
 {
 	char	timestr[50];
@@ -1689,8 +1669,8 @@ ShowSampler(
 		
 	if (CsSamplerBlkPtr == NULL)
 	{
-	    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-	   	     "There is no sampling now", 0L);
+	    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+	   	     "There is no sampling now");
 	    return(FAIL);
 	}
 
@@ -1702,8 +1682,8 @@ ShowSampler(
 
 	if (CsSamplerBlkPtr == NULL)
 	{
-	    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-	   	     "There is no sampling now", 0L);
+	    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+	   	     "There is no sampling now");
 
 	    return(FAIL);
 	}
@@ -1715,14 +1695,14 @@ ShowSampler(
 	** Print the time
 	*/
 	TMstr(&CsSamplerBlkPtr->starttime, timestr);
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 		"Started at %s.",
 		timestr);
 
 	TMnow(&CsSamplerBlkPtr->stoptime);
 	TMstr(&CsSamplerBlkPtr->stoptime, timestr);
 
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 		"Current Time %s.",
 		timestr);
 
@@ -1735,26 +1715,26 @@ ShowSampler(
 
 	}
 
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 		"Total sample intervals %d.",
 		CsSamplerBlkPtr->numsamples);
 
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 		"Total User Thread samples %d.",
 		totusersamples);
 
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 		"Total System Thread samples %d",
 		totsyssamples);
 
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 		"Total Active User Threads %d, Active High Water Mark %d",
 		CS_num_active(),
 		Cs_srv_block.cs_hwm_active);
 
 	/* Update Server cpu time so we have something to show */
 	CS_update_cpu((i4 *)0, (i4 *)0);
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 		"Server CPU seconds %d.%d",
 		(Cs_srv_block.cs_cpu - CsSamplerBlkPtr->startcpu) / 100,
 		(Cs_srv_block.cs_cpu - CsSamplerBlkPtr->startcpu) % 100);
@@ -1763,8 +1743,8 @@ ShowSampler(
 	** For each thread type tell how much time was spent in each state
 	*/
 
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-		"Thread Name          Computable  EventWait  MutexWait   Misc", 0L);
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+		"Thread Name          Computable  EventWait  MutexWait   Misc");
 
 	for (i = -1; i < MAXSAMPTHREADS; i++)
 	{
@@ -1781,7 +1761,7 @@ ShowSampler(
     	     	        		/ (f8) samples;
 		}
 
-		TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+		TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 			"%20w %10.1f  %9.1f  %9.1f  %5.1f",
 			"AdminThread,UserThread,MonitorThread,FastCommitThread,\
 WriteBehindThread,ServerInitThread,EventThread,2PCThread,RecoveryThread,LogWriter,\
@@ -1793,18 +1773,18 @@ LKCallbackThread,LKDeadlockThread,SamplerThread,SortThread,FactotumThread,Licens
 	    }
 	}
 
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-		"------------------------------------------------------------", 0L);
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+		"------------------------------------------------------------");
 
 	/*
 	** For user/system threads, tell how much computable time was spent in each facility
 	*/
 
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-		"Computability Analysis", 0L);
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+		"Computability Analysis");
 
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-		"Facility      User  System", 0L);
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+		"Facility      User  System");
 
 	for (i = 0; i < MAXFACS; i++)
 	{
@@ -1827,18 +1807,18 @@ LKCallbackThread,LKDeadlockThread,SamplerThread,SortThread,FactotumThread,Licens
 		}
 	    }
 
-	    if (perct[0] > 0 | perct[1] > 0)
+	    if (perct[0] > 0 || perct[1] > 0)
 	    {
 
-	        TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	        TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 			"%8w    %6.1f  %6.1f",
 			"<None>,CLF,ADF,DMF,OPF,PSF,QEF,QSF,RDF,SCF,ULF,DUF,GCF,RQF,TPF,GWF,SXF,URS,ICE,CUF",
 			i,
 			perct[0], perct[1]);
 	    }
 	}
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-		"--------------------------", 0L);
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+		"--------------------------");
 
 	/*
 	** For all System Events tell how much time was spent waiting on each type
@@ -1887,12 +1867,12 @@ LKCallbackThread,LKDeadlockThread,SamplerThread,SortThread,FactotumThread,Licens
 	    u_i4	lke_time  = Cs_srv_block.cs_wtstatistics.cs_lke_time - 
 					CsSamplerBlkPtr->waits.cs_lke_time;
 
-	    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-		"Event Wait Analysis", 0L);
+	    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+		"Event Wait Analysis");
 
-	    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-	    "           DIOR    DIOW    LIOR    LIOW    BIOR    BIOW     Log    Lock  LGEvnt  LKEvnt   Other", 0L);
-	    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+	    "           DIOR    DIOW    LIOR    LIOW    BIOR    BIOW     Log    Lock  LGEvnt  LKEvnt   Other");
+	    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 	    "Waits  %8d%8d%8d%8d%8d%8d%8d%8d%8d%8d%8d",
 	    Cs_srv_block.cs_wtstatistics.cs_dior_done - 
 		CsSamplerBlkPtr->waits.cs_dior_done,
@@ -1919,7 +1899,7 @@ LKCallbackThread,LKDeadlockThread,SamplerThread,SortThread,FactotumThread,Licens
 		(Cs_srv_block.cs_wtstatistics.cs_event_wait -
 		    CsSamplerBlkPtr->waits.cs_event_wait));
 			
-	    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 	    "Time(ms)  %5d%8d%8d%8d%8d%8d%8d%8d%8d%8d%8d",
 		(dior_waits) ? dior_time / dior_waits : 0,
 		(diow_waits) ? diow_time / diow_waits : 0,
@@ -1943,7 +1923,7 @@ LKCallbackThread,LKDeadlockThread,SamplerThread,SortThread,FactotumThread,Licens
 				/ (f8) totsyssamples;
 	        }
 
-	        TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	        TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 		"%8s%7.1f %7.1f %7.1f %7.1f %7.1f %7.1f %7.1f %7.1f %7.1f %7.1f %7.1f",
 		"System", perct[0], 
 		perct[1], perct[2], perct[3], perct[4], perct[5], perct[6],
@@ -1960,7 +1940,7 @@ LKCallbackThread,LKDeadlockThread,SamplerThread,SortThread,FactotumThread,Licens
 				/ (f8) totusersamples;
 	        }
 
-	        TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+	        TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 		"%8s%7.1f %7.1f %7.1f %7.1f %7.1f %7.1f %7.1f %7.1f %7.1f %7.1f %7.1f",
 		"User", perct[0], 
 		perct[1], perct[2], perct[3], perct[4], perct[5], perct[6],
@@ -1968,18 +1948,18 @@ LKCallbackThread,LKDeadlockThread,SamplerThread,SortThread,FactotumThread,Licens
 
 	    }  /* User Events */
 
-	    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-    "-----------------------------------------------------------------------------------------------", 0L);
+	    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+    "-----------------------------------------------------------------------------------------------");
 	}  /* either System or User Events */
 
 	/*
 	** For each Mutex Wait, tell how much time was spent waiting on each.
 	*/	
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-		"Mutex Wait Analysis", 0L);
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+		"Mutex Wait Analysis");
 
-	TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-		"Mutex Name                       ID        Admin  User  Fast  Write   Log  Group", 0L);
+	TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+		"Mutex Name                       ID        Admin  User  Fast  Write   Log  Group");
 
 	samples = CsSamplerBlkPtr->nummutexsamples;
 	threshold = (samples + 50) / 1000;	/* only look at mutexes > .1% */
@@ -2007,7 +1987,7 @@ LKCallbackThread,LKDeadlockThread,SamplerThread,SortThread,FactotumThread,Licens
 
 	        if (totmutexes > threshold)
 		{
-		    TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
+		    TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
 			"%32s %p %5.1f  %5.1f %5.1f  %5.1f %5.1f  %5.1f",
 			CsSamplerBlkPtr->Mutex[i].name,
 			CsSamplerBlkPtr->Mutex[i].id,
@@ -2017,8 +1997,8 @@ LKCallbackThread,LKDeadlockThread,SamplerThread,SortThread,FactotumThread,Licens
 
 	}  /* Mutex Events */
 
-        TRformat(output_fcn, (i4 *) 1, buf, sizeof(buf)-1,
-		"--------------------------------------------------------------------------------", 0L);
+        TRformat(output_fcn, NULL, buf, sizeof(buf)-1,
+		"--------------------------------------------------------------------------------");
 
 	/*
 	** For each Condition Wait, tell how much time was spent waiting on each.
@@ -2048,7 +2028,7 @@ typedef struct _CSMON_REGISTRATION CSMON_REGISTRATION;
 struct _CSMON_REGISTRATION
 {
     char	*prefix;
-    i4		(*entryfcn)(i4 (*)(PTR, i4, char *), char *);
+    i4		(*entryfcn)(TR_OUTPUT_FCN *, char *);
 };
 
 static i4		  CSmon_Registration_Count = 0;
@@ -2088,7 +2068,7 @@ static CSMON_REGISTRATION CSmon_Registrations[CSMON_MAX_REGS]	ZERO_FILL;
 **
 ****************************************************************************/
 
-CSMON_REGISTRATION *
+static CSMON_REGISTRATION *
 csmon_lookup_entry( char *command )
 {
     CSMON_REGISTRATION	*registration;
@@ -2151,11 +2131,9 @@ csmon_lookup_entry( char *command )
 **
 **	  output_fcn      Function to call to perform the output.
 **	                  This routine will be called as
-**                      (*output_fcn)(newline_present, length, buffer)
+**                      (*output_fcn)(NULL, length, buffer)
 **	                  where buffer is the length character
-**	                  output string, and newline_present
-**	                  indicates whether a newline needs to
-**	                  be added to the end of the string.
+**	                  output string
 **
 **	  command	  Pointer to buffer holding passed command.
 **
@@ -2178,7 +2156,7 @@ csmon_lookup_entry( char *command )
 ****************************************************************************/
 
 STATUS
-IICSmon_register( char *prefix, i4 (*entry_fcn)(i4 (*)(PTR,i4,char*), char *) )
+IICSmon_register( char *prefix, i4 (*entry_fcn)(TR_OUTPUT_FCN *, char *) )
 {
     CSMON_REGISTRATION	*registration;
 
@@ -2258,11 +2236,9 @@ IICSmon_deregister( char *prefix )
 ** Inputs:
 **	output_fcn -      Function to call to perform the output.
 **	                  This routine will be called as
-**                      (*output_fcn)(newline_present, length, buffer)
+**                      (*output_fcn)(NULL, length, buffer)
 **	                  where buffer is the length character
-**	                  output string, and newline_present
-**	                  indicates whether a newline needs to
-**	                  be added to the end of the string.
+**	                  output string
 **
 **	command	   -      String to be checked against registered diagnostics.
 **
@@ -2283,7 +2259,7 @@ IICSmon_deregister( char *prefix )
 ****************************************************************************/
 
 i4
-CSmon_try_registered_diags( i4 (*output_fcn)(PTR, i4, char *), char *command )
+CSmon_try_registered_diags( TR_OUTPUT_FCN *output_fcn, char *command )
 {
     CSMON_REGISTRATION	*registration;
 

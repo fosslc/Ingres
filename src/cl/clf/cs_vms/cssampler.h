@@ -39,6 +39,8 @@
 **	14-oct-2008 (joea)
 **	    Integrate 16-nov-1998 change from unix version.  MAX_EVENTS
 **	    increased to 10.  Use CM_TMSTAT for waits.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **
 ******************************************************************************/
 # define MAXCONDS	17
@@ -140,3 +142,5 @@ STATUS LockSamplerBlk(CS_SYNCH *hpLockSem);
 
 STATUS UnlockSamplerBlk(CS_SYNCH *hpLockSem);
 # endif /* OS_THREADS_USED */
+
+FUNC_EXTERN void CS_sampler(void);

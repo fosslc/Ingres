@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -89,8 +89,13 @@
 **          initialize the scan block with default since distributed does 
 **	    not have DMF. Also initialize the scan block for different
 **	    buffer pools.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 ops_bgn_session(
+	OPF_CB *opf_cb);
 
 /*{
 ** Name: ops_bgn_session	- initialize session control block
@@ -159,6 +164,9 @@
 **	4-Dec-2008 (kschendel) b122118
 **	    opx_verror is not callable here, crashes the server.  Use
 **	    opx_rverror to report any DMF call error.
+**	09-Nov-2010 (wanfr01) SIR 124714
+** 	    adjust ops_scanblocks based on ops_holdfactor to allow holdfactor
+**	    tuning (to allow disk i/o estimate tuning)
 [@history_line@]...
 */
 DB_STATUS
@@ -270,7 +278,7 @@ ops_bgn_session(
     if (opf_cb->opf_smask & OPF_SDISTRIBUTED)
     {
 	for (i = 0; i < DB_NO_OF_POOL; i++)
-	  ops_cb->ops_alter.ops_scanblocks[i] = DB_HFBLOCKSIZE/DB_MINPAGESIZE; 
+	  ops_cb->ops_alter.ops_scanblocks[i] = DB_HFBLOCKSIZE * 100 / (ops_cb->ops_alter.ops_holdfactor * DB_MINPAGESIZE);
 					    /* since
 					    ** distributed does not have a DMF
 					    ** use a default scan factor */
@@ -295,10 +303,15 @@ ops_bgn_session(
 	    return (dmf_status);
 	}
 	for (i = 0; i < DB_NO_OF_POOL; i++)
-	  ops_cb->ops_alter.ops_scanblocks[i] = dmt_cb.dmt_io_blocking[i]; 
+	{
+	  ops_cb->ops_alter.ops_scanblocks[i] = dmt_cb.dmt_io_blocking[i] * 100 / ops_cb->ops_alter.ops_holdfactor;
+	  if (ops_cb->ops_alter.ops_scanblocks[i] < 1)
+	      ops_cb->ops_alter.ops_scanblocks[i] = 1;
+	}
 				    /* fetch
 				    ** current blocking factor from DMF */
     }
+
     ult_init_macro( &ops_cb->ops_tt, OPT_BMSESSION, OPT_SWVALUES, 
 	OPT_SVALUES );		     /* init trace timing vector for session */
 

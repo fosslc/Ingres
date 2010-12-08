@@ -11,6 +11,8 @@
 **          Replace nat and longnat with i4.
 **      07-may-2010 (coomi01)
 **          Move SI result codes to si.h
+**      15-nov-2010 (stephenb)
+**          SIdoformat() is prototyped in si.h since it is called from the front-end.
 */
 
 # define MAXSTRINGBUF   80
@@ -18,12 +20,3 @@
 GLOBALREF BOOL SIchar_mode;
 FUNC_EXTERN BOOL SIget_charmode();
 FUNC_EXTERN BOOL GetOpenRoadStyle();
-
-FUNC_EXTERN VOID SIdofrmt(
-#ifdef CL_PROTOTYPED
-	i4              calltype,
-	FILE            *outarg,
-	char            *fmt,
-	va_list         ap
-#endif
-);

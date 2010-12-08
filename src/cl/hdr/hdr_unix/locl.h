@@ -72,6 +72,11 @@ typedef	struct _LOCATION	LOCATION;   /* needed for si.h */
 **	    query of more exact file attributes: LO_IS_LNK, LO_IS_CHR,
 **	    LO_IS_BLK, LO_IS_FIFO, LO_IS_SOCK. Also add the ability to
 **	    stat a link and not the referenced file.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    In cleaning up PSF errors, added LOCATION_INIT as a supported
+**	    initial value for LOCATION.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 
@@ -162,6 +167,7 @@ struct _LOCATION
 	FILE	*fp;
 	char	desc;
 } ;
+#define LOCATION_INIT {NULL,NULL,NULL,NULL,NULL,0}
 
 /*
 **	structure for LOinfo calls.
@@ -227,40 +233,28 @@ typedef struct
 **  Forward and/or External function references.
 */
 FUNC_EXTERN STATUS  LOgtfile(
-#ifdef CL_PROTOTYPED
             LOCATION        *loc1,
             LOCATION        *loc2
-#endif
 );
 
 FUNC_EXTERN STATUS  LOreset(
-#ifdef CL_PROTOTYPED
             void
-#endif
 );
 
 FUNC_EXTERN STATUS  LOsave(
-#ifdef CL_PROTOTYPED
             void
-#endif
 );
 
 FUNC_EXTERN STATUS  LOcurnode(
-#ifdef CL_PROTOTYPED
             LOCATION        *loc
-#endif
 );
 
 FUNC_EXTERN STATUS  LOdbname(
-#ifdef CL_PROTOTYPED
             LOCATION        *loc,
             char            *name
-#endif
 );
 
 FUNC_EXTERN STATUS  LOgetowner(
-#ifdef CL_PROTOTYPED
             LOCATION        *loc,
             char            **buf
-#endif
 );

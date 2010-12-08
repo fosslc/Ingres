@@ -202,6 +202,8 @@
 **	    Log record now has actual compression types in it.
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Remove table name,owner from log records.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Delete DM2U_KEY_ENTRY, it's really a DMU_KEY_ENTRY.
 **/
 
 static DB_STATUS dmv_reindex(
@@ -464,6 +466,8 @@ DMVE_CB		*dmve_cb)
 **	    Pass along name generator info.
 **	13-Apr-2010 (kschendel) SIR 123485
 **	    Open no-coupon to avoid unnecessary LOB overhead.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    indxcb changed for DMU chars, fix here.
 */
 static DB_STATUS
 dmv_reindex(
@@ -473,14 +477,14 @@ DM0L_INDEX 	*log_rec)
     DMP_RCB		*rcb = NULL;
     DMP_TCB		*t;
     DB_TAB_TIMESTAMP	timestamp;
-    i4                  i;  
+    i4                  i;
     i4                  local_error;
     DB_STATUS		status = E_DB_OK;
     i4                  keycnt = 0;
     i4                  attcnt = 0;
-    DM2U_KEY_ENTRY       *keyentry;
-    DM2U_KEY_ENTRY       *curentry;
-    DM2U_KEY_ENTRY       **keyptrs;
+    DMU_KEY_ENTRY       *keyentry;
+    DMU_KEY_ENTRY       *curentry;
+    DMU_KEY_ENTRY       **keyptrs;
     DB_OWN_NAME         table_owner;
     DB_TAB_NAME         table_name;
     DM2U_INDEX_CB       *indx_cb = NULL;
@@ -532,20 +536,20 @@ DM0L_INDEX 	*log_rec)
 	}
 
 	/*
-	** Allocate memory for DM2U_INDEX_CB, 
-	** and DM2U_KEY_ENTRY pointers and entries
+	** Allocate memory for DM2U_INDEX_CB,
+	** and DMU_KEY_ENTRY pointers and entries
 	*/
 	status = dm0m_allocate(sizeof(DM2U_INDEX_CB) +
-	    attcnt * sizeof (DM2U_KEY_ENTRY *) + 
-	    attcnt * sizeof(DM2U_KEY_ENTRY),
+	    attcnt * sizeof (DMU_KEY_ENTRY *) +
+	    attcnt * sizeof(DMU_KEY_ENTRY),
 	    (i4)0, (i4)DM2U_IND_CB, (i4)DM2U_IND_ASCII_ID,
 	    (char *)NULL, (DM_OBJECT **)&indx_cb, &dmve->dmve_error);
 	if (status != E_DB_OK)
 	    break;
 
-	/* We have attribute numbers, allocate & init DM2U_KEY_ENTRYs */
-	keyptrs = (DM2U_KEY_ENTRY **)(indx_cb + 1);
-	keyentry = (DM2U_KEY_ENTRY *)(keyptrs + attcnt);
+	/* We have attribute numbers, allocate & init DMU_KEY_ENTRYs */
+	keyptrs = (DMU_KEY_ENTRY **)(indx_cb + 1);
+	keyentry = (DMU_KEY_ENTRY *)(keyptrs + attcnt);
 
 	for (i = 0; i < attcnt; i++)
 	{
@@ -616,7 +620,7 @@ DM0L_INDEX 	*log_rec)
 	indx_cb->indxcb_tab_owner = &table_owner;
 	indx_cb->indxcb_reltups = log_rec->dui_reltups;
 	indx_cb->indxcb_gw_id = 0;
-	indx_cb->indxcb_char_array = (DM_DATA *)NULL; /* Not used if rollforward */
+	indx_cb->indxcb_dmu_chars = NULL; /* Not used if rollforward */
 	indx_cb->indxcb_tbl_pri = 0; /* Not used if rollforward */
 	indx_cb->indxcb_errcb = &dmve->dmve_error;
 

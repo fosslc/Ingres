@@ -114,6 +114,8 @@
 **          Fix buffers that are dependent on DB_MAXNAME
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.  Delete numerous unused variables.
 **/
 
 
@@ -169,17 +171,7 @@ QEF_RCB         *v_qer_p,
 QEE_DSH         *i1_dsh_p,
 QEF_AHD		*i2_sub_p )
 {
-    DB_STATUS       status = E_DB_OK;
     QEQ_D1_QRY	    *qry_p = & i2_sub_p->qhd_obj.qhd_d1_qry;
-    DD_LDB_DESC	    *ldb_p = qry_p->qeq_q5_ldb_p;
-    QEQ_TXT_SEG	    *seg_p = (QEQ_TXT_SEG *) NULL;
-    DD_PACKET	    *pkt_p = (DD_PACKET *) NULL;
-    DB_DATA_VALUE   *dv_p = (DB_DATA_VALUE *) NULL;
-    i4		    dvcnt = 0,
-		    lenleft,
-		    lendone;
-    char	    tmpname[DB_MAXNAME + 1];
-
 
     /* output query text to the log */
 
@@ -225,7 +217,6 @@ QEF_RCB         *v_qer_p,
 QEE_DSH         *i1_dsh_p,
 QEF_AHD		*act_p )
 {
-    DB_STATUS       status = E_DB_OK;
     QEQ_D2_GET	    *i2_get_p = & act_p->qhd_obj.qhd_d2_get;
     DD_LDB_DESC	    *ldb_p = i2_get_p->qeq_g1_ldb_p;
 
@@ -271,11 +262,8 @@ QEF_RCB         *v_qer_p,
 QEE_DSH         *i1_dsh_p,
 QEQ_D3_XFR	*i2_xfr_p )
 {
-    DB_STATUS	status = E_DB_OK;
     QEE_DDB_CB  *qee_p = i1_dsh_p->dsh_ddb_cb;
-    QEQ_DDQ_CB  *ddq_p = & i1_dsh_p->dsh_qp_ptr->qp_ddq_cb;
     QEQ_D1_QRY	*src_p = & i2_xfr_p->qeq_x1_srce,
-		*cpy_p = & i2_xfr_p->qeq_x3_sink,
 		*tmp_p = & i2_xfr_p->qeq_x2_temp;
     DD_PACKET   *pkt_p;
     i4          temp_slot;
@@ -402,13 +390,10 @@ QEF_RCB         *v_qer_p,
 QEE_DSH         *i1_dsh_p,
 QEF_AHD		*i2_def_p )
 {
-    DB_STATUS	    status = E_DB_OK;
     QEE_DDB_CB	    *qee_p = i1_dsh_p->dsh_ddb_cb;
-    QEQ_DDQ_CB	    *ddq_p = & i1_dsh_p->dsh_qp_ptr->qp_ddq_cb;
     QEQ_D1_QRY	    *sub_p = & i2_def_p->qhd_obj.qhd_d1_qry;
     QEF_PARAM	    *prm_p = (QEF_PARAM *) NULL;
     DB_DATA_VALUE   **dv_pp = (DB_DATA_VALUE **) NULL;
-    i4		    temp_slot;
 
 
     qee_p5_qids(v_qer_p, i1_dsh_p);
@@ -481,10 +466,8 @@ qeq_p6_inv_act(
 QEF_RCB		*v_qer_p,
 QEF_AHD		*i_act_p )
 {
-    DB_STATUS	    status = E_DB_OK;
     QEE_DSH         *dsh_p = (QEE_DSH *)(v_qer_p->qef_cb->qef_dsh);
 				    /* current query */
-    QEE_DDB_CB      *qee_p = dsh_p->dsh_ddb_cb;
     QEQ_D1_QRY      *sub_p = & i_act_p->qhd_obj.qhd_d1_qry;
     QEF_PARAM	    *prm_p = (QEF_PARAM *) NULL;
     DB_DATA_VALUE   **dv_pp = (DB_DATA_VALUE **) NULL;
@@ -580,17 +563,6 @@ QEE_DSH		*i_dsh_p )
 	IIQE_61_qefsess,
 	(PTR) v_qer_p->qef_cb);
     qec_tprintf(v_qer_p, cbufsize, cbuf);
-/*
-    ** display the DSH information **
-
-    STprintf(cbuf, 
-	"%s %p: 1) Data segment header information\n",
-	IIQE_61_qefsess,
-	(PTR) v_qer_p->qef_cb);
-    qec_tprintf(v_qer_p, cbufsize, cbuf);
-
-    qee_p0_prt_dsh(v_qer_p, i_dsh_p);
-*/
     /* display the QP header information */
 
     STprintf(cbuf, 
@@ -664,8 +636,6 @@ QEF_RCB		*v_qer_p,
 QEE_DSH		*i_dsh_p )
 {
     DB_STATUS	    status = E_DB_OK;
-    QEF_QP_CB	    *qp_p = i_dsh_p->dsh_qp_ptr;
-    QEQ_DDQ_CB	    *ddq_p = & qp_p->qp_ddq_cb;
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;
 
@@ -730,7 +700,6 @@ qeq_p12_qp_ldbs(
 QEF_RCB		*v_qer_p,
 QEE_DSH		*i_dsh_p )
 {
-    DB_STATUS	    status = E_DB_OK;
     QEF_QP_CB	    *qp_p = i_dsh_p->dsh_qp_ptr;
     QEQ_DDQ_CB	    *ddq_p = & qp_p->qp_ddq_cb;
     QEQ_LDB_DESC    *curldb_p = ddq_p->qeq_d2_ldb_p;
@@ -816,10 +785,6 @@ QEE_DSH		*i_dsh_p,
 i4		 i_dvcnt,
 DB_DATA_VALUE	*i_dv_p )
 {
-/*
-    DB_STATUS	    status = E_DB_OK;
-    QEF_QP_CB	    *qp_p = i_dsh_p->dsh_qp_ptr;
-*/
     i4		    i;
     DB_DATA_VALUE   *dv_p;    
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
@@ -883,7 +848,6 @@ qeq_p14_qp_acts(
 QEF_RCB		*v_qer_p,
 QEE_DSH		*i1_dsh_p )
 {
-    DB_STATUS	    status = E_DB_OK;
     QEF_QP_CB	    *qp_p = i1_dsh_p->dsh_qp_ptr;
     QEF_AHD	    *act_p = qp_p->qp_ahd,
 		    *nxt_p;
@@ -894,8 +858,7 @@ QEE_DSH		*i1_dsh_p )
     QEQ_D3_XFR      *xfr_p = (QEQ_D3_XFR *) NULL;
     QEQ_TXT_SEG     *seg_p;
     i4		    sel_ldb,
-		    act_cnt,
-		    i;
+		    act_cnt;
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;
 
@@ -1417,7 +1380,6 @@ QEQ_D1_QRY	*i2_sub_p )
     QEF_PARAM	    *prm_p = (QEF_PARAM *) NULL;
     DB_DATA_VALUE   **dv_pp = (DB_DATA_VALUE **) NULL;
     DD_TAB_NAME	    *tmpname_p = (DD_TAB_NAME *) NULL;
-    i4		    dvcnt = 0;
     char	    tmpname[DB_TAB_MAXNAME + 1];
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;
@@ -1562,7 +1524,6 @@ qeq_p21_hdr_gen(
 QEF_RCB		*v_qer_p,
 QEE_DSH		*i_dsh_p )
 {
-    DB_STATUS	    status = E_DB_OK;
     QEF_QP_CB	    *qp_p = i_dsh_p->dsh_qp_ptr;
     char	    qpname[DB_CURSOR_MAXNAME + 1];
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
@@ -1701,9 +1662,6 @@ QEE_DSH		*i_dsh_p )
     DB_STATUS	    status = E_DB_OK;
     QEF_QP_CB	    *qp_p = i_dsh_p->dsh_qp_ptr;
     QEQ_DDQ_CB	    *ddq_p = & qp_p->qp_ddq_cb;
-/*
-    QEE_DDB_CB	    *qee_p = i_dsh_p->dsh_ddb_cb;
-*/
     char	    tblname[DB_TAB_MAXNAME + 1];
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;
@@ -2051,18 +2009,11 @@ qeq_p35_upd_csr(
 QEF_RCB		*v_qer_p,
 QEE_DSH		*i_dsh_p )
 {
-/*
-    DB_STATUS	    status = E_DB_OK;
-    QEF_QP_CB	    *qp_p = i_dsh_p->dsh_qp_ptr;
-*/
-    QEE_DDB_CB      *qee_p = i_dsh_p->dsh_ddb_cb;
     QEE_DSH         *ree_p = i_dsh_p->dsh_aqp_dsh;
                                                 /* must use update dsh for
                                                 ** cursor */
     QEE_DDB_CB      *uee_p = ree_p->dsh_ddb_cb;
     DB_CURSOR_ID    *qid_p = & uee_p->qee_d5_local_qid;
-    QES_DDB_SES     *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
-    QES_QRY_SES     *qss_p = & dds_p->qes_d8_union.u2_qry_ses;
     QEQ_DDQ_CB      *ddq_p = & i_dsh_p->dsh_qp_ptr->qp_ddq_cb;
     QEF_AHD         *act_p = i_dsh_p->dsh_qp_ptr->qp_ahd;
     QEQ_D1_QRY      *sub_p = & act_p->qhd_obj.qhd_d1_qry;

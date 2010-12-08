@@ -133,7 +133,7 @@ GW_RSB	*gwu_newrsb();
 **	    gwr_tab_owner	table owner
 **	    gwr_tab_id		table id (for ingres table)
 **	    gwr_column_cnt	number of columns in this table
-**	    gwr_char_array	array of table options.
+**	    gwr_dmf_chars	address of table options structure.
 **	    gwr_attr_array	array of column_cnt entries describing the
 **				ingres table for this gateway object.
 **	    gwr_in_vdata1	contains the gateway specific table options
@@ -178,6 +178,8 @@ GW_RSB	*gwu_newrsb();
 **	    Pass exit gw_session for access to private SCB.  Prototyped.
 **	    Cast db_id arg to gwu_copen; it's a PTR.
 **      05-apr-99 (chash01) need a default page count.
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    dmu_char_array replaced with DMU_CHARACTERISTICS.
 */
 DB_STATUS
 gwt_register( GW_RCB *gw_rcb )
@@ -247,7 +249,7 @@ gwt_register( GW_RCB *gw_rcb )
 	gwx.xrcb_gw_id = gw_id;
 	STRUCT_ASSIGN_MACRO(gw_rcb->gwr_in_vdata1, gwx.xrcb_var_data1);
 	STRUCT_ASSIGN_MACRO(gw_rcb->gwr_in_vdata2, gwx.xrcb_var_data2);
-	STRUCT_ASSIGN_MACRO(gw_rcb->gwr_char_array, gwx.xrcb_var_data4);
+	gwx.xrcb_dmu_chars = gw_rcb->gwr_dmf_chars;
 	gwx.xrcb_column_cnt = gw_rcb->gwr_column_cnt;
 	gwx.xrcb_column_attr =
 	    (DMT_ATT_ENTRY *)gw_rcb->gwr_attr_array.ptr_address;

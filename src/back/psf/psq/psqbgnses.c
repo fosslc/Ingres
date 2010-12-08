@@ -1,4 +1,4 @@
-/* Copyright (c) 1995, 2005 Ingres Corporation
+/* Copyright (c) 1995, 2005, 2010 Ingres Corporation
 **
 **
 */
@@ -27,7 +27,6 @@
 #include    <psfindep.h>
 #include    <pshparse.h>
 #include    <psftrmwh.h>
-#include    <pslyalloc.h>
 
 /**
 **
@@ -134,8 +133,14 @@
 **          Changes for SET [NO]BLOBJOURNALING
 **      14-jan-2004 (stial01)
 **          set [no]blobjournaling only when table specified.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psq_bgn_session(
+	register PSQ_CB *psq_cb,
+	register PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psq_bgn_session	- Begin a parser session.
@@ -368,6 +373,10 @@
 **	    Get cardinality check default from server block not psq_cb
 **	21-Jul-2010 (kschendel) SIR 124104
 **	    Initialize default compression from facility cb.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Initialize default result structure from facility cb.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for setting installation wide collation defaults.
 */
 DB_STATUS
 psq_bgn_session(
@@ -380,7 +389,6 @@ psq_bgn_session(
     STATUS		    sem_status;
     i4		    sem_errno;
     bool		    leave_loop = TRUE;
-    extern PSF_SERVBLK	    *Psf_srvblk;
     ULM_RCB		    ulm_rcb;
 
     /*
@@ -857,6 +865,29 @@ psq_bgn_session(
     sess_cb->pss_crsid = 0;
 
     sess_cb->pss_create_compression = Psf_srvblk->psf_create_compression;
+
+    /* SCF can pass a client requested result_structure, but if it
+    ** doesn't, init from server default.
+    */
+    if (psq_cb->psq_result_struct != 0)
+    {
+	sess_cb->pss_result_struct = psq_cb->psq_result_struct;
+	sess_cb->pss_result_compression = psq_cb->psq_result_compression;
+    }
+    else
+    {
+	sess_cb->pss_result_struct = Psf_srvblk->psf_result_struct;
+	sess_cb->pss_result_compression = Psf_srvblk->psf_result_compression;
+    }
+
+    if (psq_cb->psq_def_coll > DB_NOCOLLATION)
+	sess_cb->pss_def_coll = psq_cb->psq_def_coll;
+    else
+	sess_cb->pss_def_coll = Psf_srvblk->psf_def_coll;
+    if (psq_cb->psq_def_unicode_coll > DB_NOCOLLATION)
+	sess_cb->pss_def_unicode_coll = psq_cb->psq_def_unicode_coll;
+    else
+	sess_cb->pss_def_unicode_coll = Psf_srvblk->psf_def_unicode_coll;
 
     return (E_DB_OK);
 }

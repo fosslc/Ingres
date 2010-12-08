@@ -2,7 +2,7 @@
 #define _ADUPATEXEC_H_INC
 
 /*
-** Copyright (c) 2008 Ingres Corporation
+** Copyright (c) 2008, 2010 Ingres Corporation
 */
 
 /**
@@ -48,6 +48,10 @@
 **	08-Jan-2010 (kiria01) b123118
 **	    PUTNUM on bigendian was writing the wrong bytes for numbers
 **	    outside the 0..252 range.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
 
 #include <adp.h>
@@ -107,7 +111,9 @@
 ** Leaving the PAT2 flags for flags2
 */
 #define AD_PAT2_COLLATE		0x0001U /* Collation present */
-#define AD_PAT2_UNICODE		0x0002U /* Unicode pattern */
+#define AD_PAT2_UNICODE_CE	0x0002U /* Unicode CE pattern */
+#define AD_PAT2_UCS_BASIC	0x0004U /* Unicode pattern UCS_BASIC */
+#define AD_PAT2_UTF8_UCS_BASIC	0x0008U /* UTF8 pattern UCS_BASIC */
 #define AD_PAT2_ENDLIT		0x0800U /* Ending hint */
 #define AD_PAT2_MATCH		0x1000U /* Matches all */
 #define AD_PAT2_LITERAL		0x2000U /* Single literal */
@@ -273,7 +279,7 @@ typedef struct _AD_PAT_SEA_CTX {
 ** This context models the data interface that allows the data
 ** to be presented the same way irrespective of whether it were
 ** a long object or a short one.
-** The rational is that we wish to read the blob data once and
+** The rationale is that we wish to read the blob data once and
 ** allow multiple patterns to be scanned for without resorting
 ** to re-reading the data.
 */
@@ -294,6 +300,7 @@ typedef struct _AD_PAT_DA_CTX {
 					** data for intermediate DBVs
 					** needed for coercions */
     i1			unicode;	/* Dealing with Unicode */
+    i1			unicodeCE;	/* Dealing with Unicode + CE */
     i1			utf8;		/* UTF-8 handling needed */
     i1			binary;		/* Binary handling needed */
     i1			is_long;	/* Dealing with peripheral */
@@ -311,7 +318,7 @@ typedef struct _AD_PAT_DA_CTX {
 **
 ** All numbers, be they counts or offsets or lengths or even the byte block
 ** length specifier will be stored as follows. Small values will be stored as
-** a byte, others will be prefixed with an extra byte discriptor followed by
+** a byte, others will be prefixed with an extra byte descriptor followed by
 ** the value of the relevant size. It will be noted that ALL such numbers will
 ** be odd in byte length!
 ** 
@@ -362,6 +369,8 @@ typedef struct _AD_PAT_DA_CTX {
 ** +---+---+---+---+---+
 ** | 6 | 2 |xFF|x03| Next operator
 ** +---+---+---+---+---+
+** The bitset operators are BSET (1, N, 0-W, 1-W, N-W and N-M) and a negative
+** form NBSET (1, N, 0-W, 1-W, N-W and N-M).
 **
 ** The SIMPLE SET operand form will be represented as ordered characters
 ** (possibly multi-byte) with a special interpretation of the '-' character.
@@ -380,6 +389,7 @@ typedef struct _AD_PAT_DA_CTX {
 ** +---+---+---+---+---+---+---+---+---+---+---+
 ** | 8 | . | - | 0 | 9 | - | A | Z | x | Next operator
 ** +---+---+---+---+---+---+---+---+---+---+---+
+** The simple set operators are SET (1, N, 0-W, 1-W, N-W and N-M)
 **
 ** The COMPOUND SET operand form will be represented as ordered characters
 ** as for the SIMPLE form except that an extra parameter marks a split in
@@ -394,23 +404,27 @@ typedef struct _AD_PAT_DA_CTX {
 ** | 9 | 3 | - | a | z | a | e | i | o | u | Next operator
 ** +---+---+---+---+---+---+---+---+---+---+---+
 ** and would match lower case consonants.
+** The compound set operators are NSET (1, N, 0-W, 1-W, N-W and N-M)
 **
-** UNICODE variation
+** UNICODE/UTF8/Collation variations
 ** 
-** Essentially the same sequence of operators is available to Unicode as
-** normal except that the pattern compiler will not generate all the
-** operators. Notably the bit set operators are not generated and where string
-** data is present in either a literal or set operand, each character will be
-** represented by the 6 byte, level 3 CE entry for the compare. These are
-** sorted in collation order as for the other char forms so that the set match
-** can be curtailed early based on the ordering. The unicode pattern compiler
-** must also ensure that the data is aligned. To do this, the compiler must
-** pad with a PAT_NOP if needed. As all numbers are odd in size (see above)
-** and an opcode is 1 byte long, many instructions will already be i2 aligned.
+** Essentially the same sequence of operators is available to each form except
+** that specific pattern compilers might not generate all the forms of operators.
+** Notably the bit set operators are not generated for Unicode/UTF8 when using
+** CE data and when it represents string data in either a literal or set operand,
+** each character will be represented by the 6 byte, level 3 CE entry for the
+** compare. UCS_BASIC Unicode just uses the 2 byte codepoints raw. In SET & NSET
+** these are sorted in collation order as for the other char forms so that the
+** set match can be curtailed early based on the ordering.
+** The Unicode pattern compiler must also ensure that the data is aligned. To do
+** this, the compiler must pad with a PAT_NOP if needed. As all numbers are odd
+** in size (see above) and an opcode is 1 byte long, many instructions will
+** already be i2 aligned.
 **
 ** With Unicode, there is no special case for the '-' character needed as the
-** illegal collation weight of 0xFFFF is used. As for the '-' above, the 0xFFFF
-** (range introducer) will be followed by the bound characters.
+** illegal collation weight/character of 0xFFFF is used. As for the '-' above,
+** the 0xFFFF (range introducer) will be followed by the bound characters.
+** The Unicode CE 'chars' will be the 6 byte
 **
 ** Misc OPS:
 ** A number of operations require adjusting the PC in some manner. These
@@ -546,10 +560,11 @@ typedef DB_STATUS ADU_PATEXEC_FUNC(
 /*
 ** Routines implemented in adupatexec.c
 */
-
 ADU_PATEXEC_FUNC adu_pat_execute;
-ADU_PATEXEC_FUNC adu_pat_execute_col;
-ADU_PATEXEC_FUNC adu_pat_execute_uni;
+ADU_PATEXEC_FUNC adu_pat_execute_utf8; /* AD_PAT2_UTF8_UCS_BASIC */
+ADU_PATEXEC_FUNC adu_pat_execute_col; /* AD_PAT2_COLLATE */
+ADU_PATEXEC_FUNC adu_pat_execute_uni; /* AD_PAT2_UCS_BASIC */
+ADU_PATEXEC_FUNC adu_pat_execute_uniCE; /* AD_PAT2_UNICODE_CE */
 
 /*
 ** Routines implemented in adupatcomp.c
@@ -566,6 +581,9 @@ bool adu_pat_decode(
 	u_i1 **S,
 	u_i1 **B);
 
+DB_STATUS adu_patcomp_set_pats (
+	AD_PAT_SEA_CTX *sea_ctx);
+
 #if PAT_DBG_TRACE>0
 bool adu_pat_disass(
 	char buf[256],
@@ -574,6 +592,9 @@ bool adu_pat_disass(
 	char **p1,
 	i8 *v1,
 	bool uni);
+VOID adu_patcomp_dump (
+	PTR	data,
+	char	*fname);
 #endif
 
 /*
@@ -589,6 +610,16 @@ DB_STATUS adu_patda_init(
 DB_STATUS adu_patda_term(AD_PAT_DA_CTX *dv_ctx);
 
 DB_STATUS adu_patda_get(AD_PAT_DA_CTX *dv_ctx);
+void adu_patda_ucs2_lower_1(ADUUCETAB*, const UCS2**, const UCS2*, UCS2**);
+void adu_patda_ucs2_upper_1(ADUUCETAB*, const UCS2**, const UCS2*, UCS2**);
+void adu_patda_ucs2_minmax_1(ADUUCETAB*, const UCS2**, const UCS2*, UCS2**, UCS2**);
+
+FUNC_EXTERN DB_STATUS	 adu_patcomp_set_pats (
+				AD_PAT_SEA_CTX *sea_ctx);
+
+FUNC_EXTERN VOID adu_patcomp_dump (
+        			PTR     data,
+        			char    *fname);
 
 extern i4 ADU_pat_debug;
 extern u_i4 ADU_pat_cmplx_lim;

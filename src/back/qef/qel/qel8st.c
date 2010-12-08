@@ -78,8 +78,11 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
+static DB_STATUS qel_86_proceduress(QEF_RCB *i_qer_p, QEC_LINK *v_lnk_p);
 
 /*{
 ** Name: qel_81_std_cats - Perform deletion on non-index STANDARD catalogs.
@@ -514,10 +517,8 @@ QEC_LINK	*v_lnk_p )
 */
 
 
-DB_STATUS
-qel_86_proceduress(i_qer_p, v_lnk_p)
-QEF_RCB		*i_qer_p;
-QEC_LINK	*v_lnk_p;
+static DB_STATUS
+qel_86_proceduress(QEF_RCB *i_qer_p, QEC_LINK *v_lnk_p)
 {
     DB_STATUS	    status;
     QES_DDB_SES	    *dds_p = & i_qer_p->qef_cb->qef_c2_ddb_ses;

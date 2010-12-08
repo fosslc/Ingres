@@ -126,6 +126,8 @@
 **          Add cases for DB_BOO_TYPE in adc_1tmlen_rti and adc_2tmcvt_rti.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Ensure whole DBV copied.
 **/
 
 
@@ -246,23 +248,16 @@ static  VOID        ad0_printfatt(char *value, i4  vallen,
 **	    Copied db_prec field into tmp_dv from adc_dv.
 **	13-mar-2001 (somsa01)
 **	    Changed adc_defwid and adc_worstwid to i4's.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_tmlen(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE	    *adc_dv,
 i4		    *adc_defwid,
 i4		    *adc_worstwid)
-# else
-DB_STATUS
-adc_tmlen( adf_scb, adc_dv, adc_defwid, adc_worstwid)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE	    *adc_dv;
-i4		    *adc_defwid;
-i4		    *adc_worstwid;
-# endif
 {
     DB_STATUS		db_stat = E_DB_OK;
     i4      		bdt = abs((i4) adc_dv->db_datatype);
@@ -301,12 +296,10 @@ i4		    *adc_worstwid;
     }
     else				/* nullable */
     {
-        DB_DATA_VALUE	    tmp_dv;
+        DB_DATA_VALUE tmp_dv = *adc_dv; 
 
-
-	tmp_dv.db_datatype  = bdt;
-	tmp_dv.db_prec	    = adc_dv->db_prec;
-	tmp_dv.db_length    = adc_dv->db_length - 1;
+	tmp_dv.db_datatype = bdt;
+	tmp_dv.db_length--;
 
     	db_stat = (*Adf_globs->Adi_dtptrs[mbdt]->adi_dt_com_vect.adp_tmlen_addr)
 			(adf_scb, &tmp_dv, adc_defwid, adc_worstwid);
@@ -468,23 +461,16 @@ i4		    *adc_worstwid;
 **	    Support II_MONEY_FORMAT=NONE for Sir 9541.
 **	13-mar-2001 (somsa01)
 **	    Changed defwid and worstwid to i4's.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_tmcvt(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE	    *adc_dv,
 DB_DATA_VALUE	    *adc_tmdv,
 i4		    *adc_outlen)
-# else
-DB_STATUS
-adc_tmcvt( adf_scb, adc_dv, adc_tmdv, adc_outlen)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE	    *adc_dv;
-DB_DATA_VALUE	    *adc_tmdv;
-i4		    *adc_outlen;
-# endif
 {
     DB_STATUS		db_stat = E_DB_OK;
     i4			bdt = abs((i4) adc_dv->db_datatype);
@@ -546,9 +532,8 @@ i4		    *adc_outlen;
     }
     else				/* nullable, but not NULL */
     {
-	DB_DATA_VALUE	    tmp_dv;
+	DB_DATA_VALUE tmp_dv = *adc_dv;
 
-	STRUCT_ASSIGN_MACRO(*adc_dv, tmp_dv);
 	tmp_dv.db_datatype = bdt;
 	tmp_dv.db_length--;
 
@@ -1528,6 +1513,7 @@ i4		    *adc_outlen)
 	    else
 		local_dv.db_data = unicode_buffer;
 	    local_dv.db_prec = 0;
+	    local_dv.db_collID = DB_UNSET_COLL;
 	    local_dv.db_datatype = DB_VCH_TYPE;
 
 	    db_stat = adu_nvchr_coerce(adf_scb, adc_dv, &local_dv);
@@ -1708,6 +1694,8 @@ i4		    *adc_outlen)
 
 	  str_dv.db_data = adc_tmdv->db_data;
 	  str_dv.db_datatype = DB_CHA_TYPE;
+	  str_dv.db_prec = 0;
+	  str_dv.db_collID = DB_UNSET_COLL;
 	  *adc_outlen = str_dv.db_length = datelen;
 	  MEfill (datelen, NULLCHAR, (PTR) (str_dv.db_data));
 	  db_stat = adu_6datetostr(adf_scb, adc_dv, &str_dv);

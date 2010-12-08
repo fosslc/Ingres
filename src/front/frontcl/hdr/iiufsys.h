@@ -79,6 +79,8 @@
 **	    COBOL for i64_hpu requires DOUBLEDREF parameter.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */
 
 /* Most compilers append an underscore to all external symbol names 
@@ -90,22 +92,10 @@
 ** define NO_UNDSCR
 */ 
 
-# if defined(apo_u42) || defined(ris_us5) || defined(m88_us5)
-# define NO_UNDSCR
-# endif
 # if defined(any_aix)
 # define NO_UNDSCR
 # endif
-# ifdef hp3_us5
-# define NO_UNDSCR
-# endif
 # if defined(any_hpux) && !defined(i64_hpu)
-# define NO_UNDSCR
-# endif
-# ifdef hp9_mpe
-# define NO_UNDSCR
-# endif
-# ifdef dg8_us5
 # define NO_UNDSCR
 # endif
 
@@ -113,14 +103,6 @@
 ** MIXEDCASE_FORTRAN is defined for fortrans which support mixed case
 ** global symbols with no underscore.
 */
-
-# if defined(rmx_us5) || defined(rux_us5)
-# define MIXEDCASE_FORTRAN
-# endif
-
-# ifdef m88_us5
-# define MIXEDCASE_FORTRAN
-# endif
 
 # ifdef NT_GENERIC
 # define MIXEDCASE_FORTRAN
@@ -132,11 +114,6 @@
 */
 
 /*#define DOUBLEDEREF*/
-
-# if defined(sos_us5)
-# define MIXEDCASE_FORTRAN
-# define DOUBLEDEREF
-# endif
 
 # if defined(i64_hpu)
 # define DOUBLEDEREF
@@ -150,20 +127,8 @@
 ** argument.  FLENTYPE is how to declare the argument, and FLENTYPE is
 ** how to get the value.
 */
-# if defined(apo_u42)
-	typedef		short*		 FLENTYPE;
-#	define		FSTRLEN(l)	(*(l))
-# endif
-
-# if defined(sos_us5)
-	typedef		i4*	FLENTYPE;
-#	define		FSTRLEN(l)	(*(l))
-# endif
-
-# ifndef FSTRLEN
 	typedef		i4	FLENTYPE;
 #	define		FSTRLEN(l)	(l)
-# endif
 
 # endif
 
@@ -175,32 +140,7 @@
 # define LEN_AFTER_VAR
 # endif
 
-# if defined(sos_us5)
-# define LEN_AFTER_VAR
-# endif
-
 /* If you have defined LEN_BEFORE_VAR in forgen.h then you must also
 ** define it here to indicate that the formal parameter list for "return-
 ** ing" functions (returns a value in the user's var) will be different. 
 */
-
-/* 
-** STRUCT_VAR is defined for fortrans which pass strings as a structure
-** pointer. The structure is defined below.
-*/
-
-# ifdef x3b2_us5
-# define STRUCT_VAR
-struct x3b_fchar {
-	char *s;
-	long len;
-};
-# endif
-
-# ifdef rmx_us5
-# define STRUCT_VAR
-struct x3b_fchar {
-	char *s;
-	long len;
-};
-# endif

@@ -262,6 +262,9 @@
 **          structure is hash.
 **	3-May-2010 (kschendel) SIR 123639
 **	    Pull test 94, we're leaving it up to DMF now.
+**	30-Nov-2010 (kschendel)
+**	    Fix for new spatial catalogs which have externally prescribed
+**	    names (bah, humbug!) and don't start with ii.
 **/
 
 
@@ -3393,8 +3396,26 @@ DMP_RELATION	iirelation ;
 **          initial creation
 **	06-May-93 (teresa)
 **	    Changed interface to duve_banner() and renumbered verifydb checks.
-[@history_template@]...
 */
+
+/* Helper function to determine whether a table name is apparently a
+** catalog name.
+*/
+
+static bool
+is_catalog_name_own(DMP_RELATION *iirel)
+{
+    i4 len;
+
+    len = cui_trmwhite(sizeof(iirel->relid.db_tab_name), iirel->relid.db_tab_name);
+
+    return (len > 2
+	    && (STncasecmp("ii", iirel->relid.db_tab_name, 2) == 0
+		|| (len == 15 && STncasecmp("spatial_ref_sys", iirel->relid.db_tab_name,len) == 0)
+		|| (len == 16 && STncasecmp("geometry_columns", iirel->relid.db_tab_name,len) == 0) )
+	    && STncasecmp("$ingres", iirel->relowner.db_own_name,7) == 0);
+}
+
 
 static DU_STATUS
 test_5  ( duve_cb, iirelation )
@@ -3416,10 +3437,7 @@ DMP_RELATION	iirelation;
 	if ( ( iirelation.relstat & TCB_CATALOG ) || 
 	     ( iirelation.relstat & TCB_EXTCATALOG) )
 	{
-	    if ((STncasecmp("ii", iirelation.relid.db_tab_name, 2 ) != 
-	         DU_IDENTICAL) ||
-		(STncasecmp("$ingres", iirelation.relowner.db_own_name,7)
-		 != DU_IDENTICAL))
+	    if (! is_catalog_name_own(&iirelation))
 	    {
                 if (duve_banner( DUVE_IIRELATION, 5, duve_cb)
 	        == DUVE_BAD) 
@@ -3444,10 +3462,7 @@ DMP_RELATION	iirelation;
 	else /* 5b -- this is not a catalog, so it better not start with 'ii'
 	     **	      and be owned by $ingres
 	     */
-	    if ( (STncasecmp("ii", iirelation.relid.db_tab_name,2) == 
-		  DU_IDENTICAL) &&
-		 (STncasecmp("$ingres", iirelation.relowner.db_own_name,7)
-		  == DU_IDENTICAL) )
+	    if (is_catalog_name_own(&iirelation))
 	    {
                 if (duve_banner( DUVE_IIRELATION, 5, duve_cb)
 	        == DUVE_BAD) 

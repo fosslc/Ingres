@@ -46,6 +46,8 @@
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
 **	26-Aug-2009 (kschendel) b121804
 **	    Correct CS_event_shutdown type.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Various prototype fixes, move some stuff to csinternal.
 **/
 
 /*
@@ -54,16 +56,8 @@
 
 /* csinterface.c */
 
-GLOBALREF CS_SYSTEM	      Cs_srv_block;
 GLOBALREF CS_SCB	      Cs_queue_hdrs[CS_LIM_PRIORITY];
-GLOBALREF CS_SCB	      Cs_known_list_hdr;
-GLOBALREF CS_SCB	      Cs_to_list_hdr;
-GLOBALREF CS_SCB	      Cs_wt_list_hdr;
-GLOBALREF CS_SCB	      Cs_as_list_hdr;
-GLOBALREF CS_STK_CB	      Cs_stk_list_hdr;
 GLOBALREF CS_SCB	      Cs_idle_scb;
-GLOBALREF CS_SCB	      Cs_repent_scb;
-GLOBALREF CS_ADMIN_SCB	      Cs_admin_scb;
 GLOBALREF i4		      CSdebug;
 
 /* cshl.c */
@@ -73,52 +67,42 @@ GLOBALREF i4		      Cs_incomp;
 
 /* func externs -- should be ptorotyped later */
 
-FUNC_EXTERN CS_SCB *CS_xchg_thread();
-FUNC_EXTERN STATUS CS_admin_task();
+FUNC_EXTERN STATUS CS_del_thread(CS_SCB *);
 FUNC_EXTERN void CS_event_shutdown(void);
-FUNC_EXTERN STATUS CS_find_events();
-FUNC_EXTERN STATUS CS_parse_option();
-FUNC_EXTERN STATUS CS_set_server_connect();
-FUNC_EXTERN STATUS CS_setup();
+FUNC_EXTERN STATUS CS_rcv_request(void);
+FUNC_EXTERN void CS_setup(void);
 #ifndef CS_tas
-FUNC_EXTERN STATUS CS_tas();
+FUNC_EXTERN STATUS CS_tas(CS_ASET *);
 #endif
-FUNC_EXTERN STATUS cs_handler();
-FUNC_EXTERN VOID CSdiag_server_link();
-FUNC_EXTERN VOID CS_eradicate();
-FUNC_EXTERN VOID CS_fmt_scb();
-FUNC_EXTERN VOID CS_mkframe();
-FUNC_EXTERN VOID CS_mo_init(void);
-FUNC_EXTERN VOID CS_move_async();
-FUNC_EXTERN VOID CS_swuser();
-FUNC_EXTERN VOID CS_toq_scan();
-FUNC_EXTERN VOID CSsigchld();
-FUNC_EXTERN VOID iiCLintrp();
-FUNC_EXTERN i4  CS_quantum();
-FUNC_EXTERN i4  CSsigterm();
-FUNC_EXTERN i4  CSslave_handler();
-# ifndef CS_relspin
-FUNC_EXTERN VOID CS_relspin();
-# endif
+FUNC_EXTERN VOID CS_eradicate(void);
+FUNC_EXTERN VOID CSsigchld(i4);
+FUNC_EXTERN void CS_wake(PID);
+FUNC_EXTERN CS_SCB *CS_xchng_thread(CS_SCB *);
+
+#if defined(int_lnx) || defined(int_rpl)
+FUNC_EXTERN void CS_sqs_pushf(CS_SCB *, void (*retfunc)(void));
+#endif
 
 /* defined in cshl.c: */
 FUNC_EXTERN VOID CS_change_priority( 
 	CS_SCB      *scb, 
 	i4         new_priority);
-FUNC_EXTERN STATUS CS_breakpoint(void);
-FUNC_EXTERN VOID CS_update_cpu(
-	i4      *pageflts,
-	i4 *cpumeasure);
 
 /* defined in csclock.c */
-FUNC_EXTERN void 	CS_clockinit();
-FUNC_EXTERN i4 	CS_checktime(void);
 FUNC_EXTERN i4 	CS_realtime_update_smclock(void);
 GLOBALREF   i4 	Cs_enable_clock;
 
-#if defined(sparc_sol) || defined(a64_sol)
-FUNC_EXTERN VOID CS_dump_stack( CS_SCB *scb, ucontext_t *ucp, VOID (*output_fcn)()
-, i4 verbose );
+/* Funky cscp.c stuff */
+#ifdef xCL_078_CVX_SEM
+FUNC_EXTERN STATUS CS_sleep(struct semaphore *)
+FUNC_EXTERN STATUS CS_wakeup(struct semaphore *)
 #else
-FUNC_EXTERN VOID CS_dump_stack();
+FUNC_EXTERN STATUS CS_sleep(int, int);
+FUNC_EXTERN STATUS CS_wakeup(int, int);
 #endif
+
+#if defined(SIGDANGER)
+GLOBALREF bool iiCSrcvd_danger;
+#endif
+
+FUNC_EXTERN void CS_init_slave(int argc, char **argv);

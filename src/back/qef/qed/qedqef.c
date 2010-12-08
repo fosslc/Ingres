@@ -617,6 +617,8 @@ QEF_RCB       *v_qer_p )
 **	10-oct-93 (tam)
 **	    Use 'CAP_SLAVE2PC' instead of 'SLAVE2PC' in querying
 **	    iidbcapabilities. (b50446)
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 */
 
 
@@ -629,13 +631,6 @@ QEF_RCB		*v2_qer_p )
     QEF_CB	    *qef_cb = v2_qer_p->qef_cb;
     QES_DDB_SES	    *dds_p = & v2_qer_p->qef_cb->qef_c2_ddb_ses;
     QEF_DDB_REQ	    *ddr_p = & v2_qer_p->qef_r3_ddb_req;
-/*
-    DD_LDB_DESC	    *ldb_p = 
-			& ddr_p->qer_d2_ldb_info_p->dd_i1_ldb_desc;
-    DD_0LDB_PLUS    *plus_p = 
-			& ddr_p->qer_d2_ldb_info_p->dd_i2_ldb_plus;
-    DD_CAPS	    *caps_p = & plus_p->dd_p3_ldb_caps;
-*/
     RQR_CB	    rq_cb,
 		    *rqr_p = & rq_cb;
     RQB_BIND	    rq_bind[QEK_2_COL_COUNT];	/* for 2 columns */
@@ -643,7 +638,6 @@ QEF_RCB		*v2_qer_p )
     char	    cap_val[DB_CAPVAL_MAXLEN + 1];
     i4		    tup_cnt;
     i4		    str_code;
-    i4		    val_code;
     bool	    log_qry_55 = FALSE,
                     log_err_59 = FALSE;
     i4         i4_1, i4_2;

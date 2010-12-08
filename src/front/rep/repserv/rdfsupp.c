@@ -69,10 +69,10 @@
 **      22-apr-2009 (joea)
 **          In RSicc_InitColCache, retrieve column_always_ident and
 **          column_bydefault_ident to support identity columns.
-**  16-Jun-2009 (thich01)
-**      Add GEOM type.
-**  20-Aug-2009 (thich01)
-**      Add all spatial types.
+**	16-Jun-2009 (thich01)
+**	    Add GEOM type.
+**	20-Aug-2009 (thich01)
+**	    Add all spatial types.
 **      05-nov-2009 (joea)
 **          Add test for BOOLEAN in RSicc_InitColCache.
 **/

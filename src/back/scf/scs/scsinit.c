@@ -74,6 +74,7 @@ NO_OPTIM =
 
 #include    <scserver.h>
 
+#include    <uld.h>
 #include    <cut.h>
 #include    <cui.h>
 
@@ -839,17 +840,14 @@ NO_OPTIM =
 **      11-Aug-2010 (hanal04) Bug 124180
 **          Added money_compat for backwards compatibility of money
 **          string constants.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Move scs_check_external_password() prototype to scs.h
 **/
 
 /*
 **  Forward and/or External function references.
 */
 FUNC_EXTERN STATUS	adu_datenow(ADF_CB *, DB_DATA_VALUE *);
-FUNC_EXTERN DB_STATUS	scs_check_external_password(SCD_SCB *,
-						    DB_OWN_NAME *,
-						    DB_OWN_NAME *,
-						    DB_PASSWORD *,
-						    bool);
 
 /* Static routine called within this module. This routine is supposed */
 /* to be consistent with the routine IICXconv_to_struct_xa_xid in the */
@@ -1371,6 +1369,17 @@ GLOBALREF DU_DATABASE	      dbdb_dbtuple;
 **      26-Nov-2009 (hanal04) Bug 122938
 **          Different GCA protocol levels can handle different levels
 **          of decimal precision.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Session startup result-structure goes to PSF now, not OPF.
+**	    Use generic structure looker-upper instead of hand coding.
+**	04-nov-2010 (maspa05) bug 124654, 124687
+**	    Moved SC930 SESSION BEGINS here from PSQ so that we get a session
+**          begin even when no query is issued, as can happen with XA 
+**          operations
+**      30-Nov-2010 (hanal04) Bug 124758
+**          Different GCA protocol levels expect different object name
+**          lengths for example table and owner names in an SQL call to
+**          resolve_table().
 */
 i4
 scs_initiate(SCD_SCB *scb )
@@ -1378,7 +1387,7 @@ scs_initiate(SCD_SCB *scb )
     i4			i;
     i4			dash_u = 0;
     i4			tbl_structure = 0;
-    i4			index_structure = 0;
+    i4			result_structure = 0;
     i4			flag_value;
     GCA_USER_DATA	*flag;
     DB_STATUS		status = E_DB_OK;
@@ -1413,8 +1422,6 @@ scs_initiate(SCD_SCB *scb )
     char		sem_name[ CS_SEM_NAME_LEN ];
     u_i4		idmode;
     bool		want_updsyscat=FALSE;
-    char                *env = 0;
-    char		*pmvalue;
 #ifdef xDEBUG
     char		*cp;
 #endif
@@ -1946,7 +1953,8 @@ scs_initiate(SCD_SCB *scb )
 		case    GCA_IDX_STRUCT:
 		case    GCA_RES_STRUCT:
 		{
-		    char	value[16];
+		    char	*sname;
+		    char	value[30];
 
 		    if (l_value >= sizeof(value))
 		    {
@@ -1975,31 +1983,21 @@ scs_initiate(SCD_SCB *scb )
 			}
 		    }
 
-		    MECOPY_VAR_MACRO(flag->gca_p_value.gca_value, l_value, value);
+		    MEcopy(flag->gca_p_value.gca_value, l_value, value);
 		    value[l_value] = '\0';
 		    CVlower(value);
-		    if (STcompare("isam", value) == 0)
-			tbl_structure = DB_ISAM_STORE;
-		    else if (STcompare("cisam", value) == 0)
-			tbl_structure = -DB_ISAM_STORE;
-		    else if (STcompare("hash", value) == 0)
-			tbl_structure = DB_HASH_STORE;
-		    else if (STcompare("chash", value) == 0)
-			tbl_structure = -DB_HASH_STORE;
-		    else if (STcompare("btree", value) == 0)
-			tbl_structure = DB_BTRE_STORE;
-		    else if (STcompare("cbtree", value) == 0)
-			tbl_structure = -DB_BTRE_STORE;
-		    else if (STcompare("heap", value) == 0)
-			tbl_structure = DB_HEAP_STORE;
-		    else if (STcompare("cheap", value) == 0)
-			tbl_structure = -DB_HEAP_STORE;
-		    else
+		    sname = &value[0];
+		    if (value[0] == 'c')
+			++sname;
+		    tbl_structure = uld_struct_xlate(sname);
+		    if (tbl_structure == 0)
 		    {
 			status = E_DB_ERROR;
 			error.err_code = E_US0022_FLAG_FORMAT;
 			break;
 		    }
+		    if (value[0] == 'c')
+			tbl_structure = -tbl_structure;
 		    if (p_index == GCA_IDX_STRUCT)
 		    {
 			if (abs(tbl_structure) == DB_HEAP_STORE)
@@ -2013,7 +2011,7 @@ scs_initiate(SCD_SCB *scb )
 		    }
 		    else
 		    {
-			index_structure = tbl_structure;
+			result_structure = tbl_structure;
 		    }
 		    break;
 		}
@@ -3177,8 +3175,17 @@ scs_initiate(SCD_SCB *scb )
                 {
                     adf_cb->adf_max_decprec = CL_MAX_DECPREC_31;
                 }
+
                 if (scb->scb_cscb.cscb_version >= GCA_PROTOCOL_LEVEL_68)
+                {
                     adf_cb->adf_proto_level |= AD_BOOLEAN_PROTO;
+                    adf_cb->adf_max_namelen = DB_GW1_MAXNAME;
+                }
+                else
+                {
+                    adf_cb->adf_max_namelen = DB_OLDMAXNAME_32;
+                }
+
 	    }
 
 	    if (date_alias_recd == FALSE)
@@ -4164,6 +4171,15 @@ scs_initiate(SCD_SCB *scb )
             if(Sc_main_cb->sc_money_compat)
                 psq_cb->psq_flag2 |= PSQ_MONEY_COMPAT;
 
+	    psq_cb->psq_result_struct = 0;
+	    if (result_structure != 0)
+	    {
+		psq_cb->psq_result_struct = abs(result_structure);
+		psq_cb->psq_result_compression = FALSE;
+		if (result_structure < 0)
+		    psq_cb->psq_result_compression = FALSE;
+	    }
+
 	    status = psq_call(PSQ_BGN_SESSION, psq_cb,
 				scb->scb_sscb.sscb_psscb);
 	    if (status)
@@ -4217,19 +4233,6 @@ scs_initiate(SCD_SCB *scb )
 	    {
 		STRUCT_ASSIGN_MACRO(opf_cb->opf_errorblock, error);
 		break;
-	    }
-	    if (index_structure)
-	    {
-		opf_cb->opf_compressed = (index_structure < 0);
-		opf_cb->opf_value = abs(index_structure);
-		opf_cb->opf_alter = OPF_RET_INTO;
-		opf_cb->opf_level = OPF_SESSION;
-		status = opf_call(OPF_ALTER, opf_cb);
-		if (status != E_DB_OK)
-		{
-		    STRUCT_ASSIGN_MACRO(opf_cb->opf_errorblock, error);
-		    break;
-		}
 	    }
 	    scb->scb_sscb.sscb_facility |= (1 << DB_OPF_ID);
 	}
@@ -4381,6 +4384,47 @@ scs_initiate(SCD_SCB *scb )
 			   : ", Normal"),
 		     0, (PTR)0);
 	}
+
+	/* SC930 trace of session begin */
+
+	if ((scb->scb_sscb.sscb_stype != SCS_SMONITOR) &&
+	    (ult_always_trace() & SC930_TRACE))
+	{
+	    void *f = ult_open_tracefile((PTR)scb->cs_scb.cs_self);
+	    if (f)
+	    {
+		    char tmp[1000];
+
+		    STprintf(tmp,"(DBID=%d)(%*s)(%*s)(%*s)(SVRCL=%*s)(%*s)(%08x:%08x)",
+		       scb->scb_sscb.sscb_ics.ics_udbid,
+				    /* username */
+		      sizeof(scb->scb_sscb.sscb_ics.ics_iusername.db_own_name),
+		      scb->scb_sscb.sscb_ics.ics_iusername.db_own_name,
+				    /* role */
+		      sizeof(scb->scb_sscb.sscb_ics.ics_eaplid.db_own_name),
+		      scb->scb_sscb.sscb_ics.ics_eaplid.db_own_name,
+				    /* group */
+		      sizeof(scb->scb_sscb.sscb_ics.ics_egrpid.db_own_name),
+		      scb->scb_sscb.sscb_ics.ics_egrpid.db_own_name,
+				    /* Server class */
+		      SVR_CLASS_MAXNAME,
+		      Sc_main_cb->sc_server_class,
+				    /* dbname */
+		       sizeof(scb->scb_sscb.sscb_ics.ics_dbname.db_db_name),
+		       scb->scb_sscb.sscb_ics.ics_dbname.db_db_name,
+				    /* Dis transaction ID */
+		      scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id.
+		           db_ingres_dis_tran_id.db_tran_id.db_high_tran,
+		      scb->scb_sscb.sscb_dis_tran_id.db_dis_tran_id.
+		           db_ingres_dis_tran_id.db_tran_id.db_low_tran
+		      );
+
+		    ult_print_tracefile(f,SC930_LTYPE_BEGINTRACE,tmp);
+		    ult_close_tracefile(f);
+
+	    }
+	}
+
     }
 
     return(error.err_code);
@@ -5851,6 +5895,8 @@ scs_icsxlate(SCD_SCB	*scb ,
 **          Set DMC2_READONLYDB for true readonly database (DU_RDONLY) so
 **          we can tell the difference between a readonlydb and one opened
 **          for read-only access
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Do not create MO objects for iidbdb.
 */
 DB_STATUS
 scs_dbdb_info(SCD_SCB *scb ,
@@ -5995,13 +6041,16 @@ scs_dbdb_info(SCD_SCB *scb ,
 	    ** use it instead of the hard-coded dbdb_dbtuple,
 	    ** since the real iidbdb dbtuple may have different
 	    ** case-translation semantics than the hard-coded one
+	    **
+	    ** Do -not- create MO objects for iidbdb; that will
+	    ** happen if iidbdb is added as the session's database.
 	    */
 	    status = scs_dbopen((DB_DB_NAME  *)DB_DBDB_NAME,
 				(DB_DB_OWNER *)DB_INGRES_NAME,
 				(SCV_LOC *) Sc_main_cb->sc_dbdb_loc,
 				scb,
 				error,
-				0,
+				SCV_NODBMO_MASK,
 				dmc,
 				(Sc_main_cb->sc_dbdb_dbtuple ?
 				   (DU_DATABASE *)Sc_main_cb->sc_dbdb_dbtuple :
@@ -7679,7 +7728,7 @@ scs_dbdb_info(SCD_SCB *scb ,
 	error->err_code = E_US0002_NO_FLAG_PERM;
 	return(E_DB_ERROR);
     }
-    /* for DESTROYDB with '-u' flag, make sure user has security priv first *
+    /* for DESTROYDB with '-u' flag, make sure user has security priv first */
 
     if ( scb->scb_sscb.sscb_ics.ics_appl_code == DBA_DESTROYDB
         &&

@@ -10,6 +10,20 @@
 #include <tr.h>
 #include <cx.h>
 #include <lk.h>
+/* all below just to include dmd.h */
+#include <iicommon.h>
+#include <dbdbms.h>
+#include <adf.h>
+#include <lg.h>
+#include <dmf.h>
+#include <dm.h>
+#include <dmp.h>
+#include <dmpp.h>
+#include <dm0s.h>
+#include <dm0p.h>
+#include <dm1b.h>
+#include <dm0l.h>
+#include <dmd.h>
 
 /*
 ** Name: dmddlm.c - Debug print function for cluster DLM locks
@@ -29,6 +43,8 @@
 **	    Created.
 **	02-sep-2008 (joea)
 **	    Fix handling of installation ID.
+**	02-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add include of dmd.h, make node_format() static.
 */
 
 #if defined(conf_CLUSTER_BUILD)
@@ -46,7 +62,7 @@ static NODEINFO	nodes[CX_MAX_NODES];
 
 static char *system_level_inst_id = "AA";
 
-void
+static void
 node_format(u_i4 node_number, char **buf)
 {
     int i;

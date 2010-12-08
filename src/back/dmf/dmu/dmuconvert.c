@@ -142,18 +142,9 @@ DMU_CB    *dmu_cb;
     DMU_CB		*dmu = dmu_cb;
     DML_XCB		*xcb;
     DML_ODCB		*odcb;
-    DMU_CHAR_ENTRY	*chr;
-    DMU_KEY_ENTRY	**key;
-    i4		chr_count;
     i4		error, local_error;
     DB_STATUS		status;
-    i4             db_lockmode;
-    DB_LOC_NAME         *location;
-    i4             loc_count= 0;
-    bool                bad_loc;
     i4		mask;
-    DB_OWN_NAME		table_owner;
-    DB_TAB_NAME		table_name;
 
     CLRDBERR(&dmu->error);
 

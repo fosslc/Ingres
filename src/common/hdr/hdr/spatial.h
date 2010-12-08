@@ -47,10 +47,10 @@ typedef struct _DB_SPATIAL_REF_SYS
 {
 	i4   srs_srid;
 #define SRS_SRID_COL 1
-	char srs_auth_name[256 + 1]; //varchar(256) + null delim
+	char srs_auth_name[256 + 1]; /* varchar(256) + null delim */
 	i4   srs_auth_id;
-	char srs_srtext[2048 + 1]; //varchar(2048) + null delim
-	char srs_proj4text[1024 + 1]; //varchar(2048) + null delim
+	char srs_srtext[2048 + 1]; /* varchar(2048) + null delim */
+	char srs_proj4text[1024 + 1]; /* varchar(2048) + null delim */
 } DB_SPATIAL_REF_SYS;
 
 /*
@@ -93,9 +93,11 @@ GLOBALCONSTREF GEOM_TYPE geom_type_mapping[];
  */
 #define GEOM_TYPE_UNDEFINED -1
 #define SRID_UNDEFINED -1
-#define FULL_PRECISION -1 //Used for astext when rounding or not
-#define GENERIC_GEOMETRY -42 //Used in _fromText/_fromWKB functions to
-                             //indicate abstract geometry type
+#define FULL_PRECISION -1 /* Used for astext when rounding or not */
+#define GENERIC_GEOMETRY -42 /* 
+                              * Used in _fromText/_fromWKB functions to
+                              * indicate abstract geometry type
+                              */
 /*
  * Current storage version for geospatial data and list of
  * old storage versions. This is necessary for handling the data

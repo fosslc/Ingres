@@ -397,7 +397,6 @@ i4		function )
     QEN_HOLD	    *qen_hold = (QEN_HOLD *)NULL;
     QEN_SHD         *qen_shd;
     QEN_TEMP_TABLE  *tidTempTable = (QEN_TEMP_TABLE *)NULL;
-    DMR_CB	    *dmrcb;
     DB_STATUS	    status = E_DB_OK;
     bool	    reset = FALSE;
     bool	    out_reset = FALSE;
@@ -405,7 +404,6 @@ i4		function )
     bool            ojoin = (node->node_qen.qen_sjoin.sjn_oj != NULL);
     bool            ljoin = FALSE;
     bool            rjoin = FALSE;
-    i4		    new_to_old;
     i4	    val1;
     i4	    val2;
     u_i4	    tid;
@@ -644,8 +642,8 @@ loop_reset:
 	    if (status != E_DB_OK)
 	    {
 		if (dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS ||
-		    dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION &&
-		    node->qen_flags & QEN_PART_SEPARATE)
+		    (dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION &&
+		    node->qen_flags & QEN_PART_SEPARATE))
 		{
 
 		    qen_status->node_access |= QEN_OUTER_HAS_JOINED;
@@ -785,8 +783,8 @@ loop_reset:
 		    if (status != E_DB_OK)
 		    {
 		        if (dsh->dsh_error.err_code == E_QE0015_NO_MORE_ROWS ||
-			    dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION
-			    && node->qen_flags & QEN_PART_SEPARATE)
+			    (dsh->dsh_error.err_code == E_QE00A5_END_OF_PARTITION
+			    && node->qen_flags & QEN_PART_SEPARATE))
 		        {
 			    if ( qen_hold )
 			    {
@@ -1108,7 +1106,6 @@ QEN_NODE	*node,
 QEE_DSH		*dsh,
 bool		*in_reset )
 {
-    QEN_NODE	    *in_node = node->node_qen.qen_sjoin.sjn_inner;
     QEN_HOLD	    *qen_hold = (QEN_HOLD *)NULL;
     QEN_SHD         *qen_shd = (QEN_SHD *)NULL;
     QEN_TEMP_TABLE  *tidTempTable =

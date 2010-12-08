@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2008 Ingres Corporation
+** Copyright (c) 2008, 2010 Ingres Corporation
 **
 */
 
@@ -24,12 +24,14 @@
 **  s	pat_bld_finpat()	Complete pattern frame in list
 **  s	pat_update_num()	Adjust a numeric pattern operand
 **  s	pat_insert_num()	Insert a numeric pattern operand
-**  s	pat_op_lit()		Flush any pending literal text (non-unicode)
+**  s	pat_op_lit()		Flush any pending literal text (including utf8)
+**  s	pat_op_ulit()		Flush any Unicode literal
 **  s	pat_op_CElit()		Flush any Unicode literal as CE elements
 **  s	pat_op_any_one()	Generate PAT_ANY_1 
 **  s	pat_op_wild()		Generate PAT_ANY_0_W
 **  s	pat_op_bitset()		Generate PAT_[N]BITSET_1
 **  s	pat_op_set()		Generate PAT_[N]SET_1
+**  s	pat_op_uset()		Generate a non-CE Unicode PAT_[N]SET_1
 **  s	pat_op_CEset()		Generate a CE list form PAT_[N]SET_1
 **  s	pat_set_add()		Add set element
 **  s   pat_rep_push()		Push repeat context
@@ -103,6 +105,13 @@
 **          Warning cleanup for Janitor's project.
 **	23-Apr-2010 (wanfr01) Bug 123139
 **	    Add cv.h for CVal definition
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. Essentially the UCS_BASIC
+**	    additions have been isolated in service routines that handle the
+**	    generation of literals or set data.
+**	    to use UCS2 CEs for comparison related actions.
+**      02-Dec-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
 
 #include <compat.h>
@@ -122,19 +131,6 @@
 #include <cv.h>
 
 #include "adupatexec.h"
-
-/*		*********************
-**		*** Big UTF8 NOTE ***
-**		*********************
-** This module is designed so that it never need process UTF8 chars itself
-** as they will have been converted to NVARCHARs and handled with them.
-** Therefore to remove the redundant per-character UTF8 overheads - they
-** have been short-circuited below.
-*/
-#ifdef CMGETUTF8
-#undef CMGETUTF8
-#endif
-#define CMGETUTF8 0
 
 /*
 ** Define data for instruction decoding, dump and load code for debug.
@@ -327,6 +323,15 @@ static const UCS2 chclasses_uni[] = {
     0,0
 };
 
+static i4 cmp_simple   (PTR, const u_i1*, u_i4, const u_i1*, u_i4);
+static i4 cmp_collating(PTR, const u_i1*, u_i4, const u_i1*, u_i4);
+static i4 cmp_unicode  (PTR, const u_i1*, u_i4, const u_i1*, u_i4);
+static i4 cmp_unicodeCE(PTR, const u_i1*, u_i4, const u_i1*, u_i4);
+static bool pat_set_add(PAT_SET **listp, const u_char *ch, u_i4 len, bool range, 
+			i4 (*cmp)(PTR, const u_i1*, u_i4, const u_i1*, u_i4), 
+			PTR arg);
+static u_i1 * trace_op(u_i1 *pc, bool uni);
+
 
 /*
 ** Name: find_op() - Look for an operator
@@ -410,7 +415,7 @@ find_op(enum optypes_enum optype, u_i4 N, u_i4 M, bool wild)
 **      04-Apr-2008 (kiria01) SIR120473
 **          Initial creation.
 */
-u_i1 *
+static u_i1 *
 trace_op(u_i1 *pc, bool uni)
 {
     char buf[80];
@@ -605,8 +610,8 @@ pat_op_simple(
 	    op = PAT_MATCH;
 	    break;
 	case PAT_LIT:
-	    /* If Collation or Unicode present then must not use PAT_ENDLIT */
-	    if (ctx->patdata->patdata.flags2 & (AD_PAT2_COLLATE|AD_PAT2_UNICODE))
+	    /* If Collation or UnicodeCE present then must not use PAT_ENDLIT */
+	    if (ctx->patdata->patdata.flags2 & (AD_PAT2_COLLATE|AD_PAT2_UNICODE_CE))
 		break;
 	    if (ctx->prelit_op)
 	    {
@@ -1013,7 +1018,7 @@ pat_insert_num(
 ** History:
 **      04-Apr-2008 (kiria01) SIR120473
 **          Initial creation.
-**	04-Mer-2009 (kiria01) bBUGNO
+**	04-Mar-2009 (kiria01) bBUGNO
 **	    We have a complication with zero-width collating characters
 **	    in that they need stripping out of the patterns
 */
@@ -1028,9 +1033,9 @@ pat_op_lit(
     if (l = *lit)
     {
 	u_i1 *p;
-	*lit = NULL;
 
-	if (db_stat = chk_space(ctx, end - l + 1 + 8))
+	*lit = NULL;
+	if (db_stat = chk_space(ctx, (end - l + 1) * sizeof(UCS2) + 8))
 	    return db_stat;
 	/* Check coalesce */
 	switch (*ctx->last_op)
@@ -1053,7 +1058,7 @@ pat_op_lit(
 	    ctx->no_of_ops++;
 	    ctx->last_op = ctx->wrtptr;
 	    *ctx->wrtptr++ = PAT_LIT;
-	    {   i8 tmp = end - l;
+	    {   i8 tmp = (end - l) * sizeof(u_char);
 		PUTNUM(ctx->wrtptr, tmp);
 	    }
 	}
@@ -1076,6 +1081,99 @@ pat_op_lit(
 }
 
 
+/*
+** Name: pat_op_ulit() - Flush any Unicode literal
+**
+**      This routine uses the marker indicating the first item of a text
+**	run to output as a literal the outstanding text - as for the
+**	routine pat_op_lit() but for unicode.
+**
+**	We can use the raw data, as the UCS_BASIC collation is in effect.
+**
+** Inputs:
+**	ctx		PAT_BLD context
+**	lit		Address of pointer to current literal start if any
+**	end		Address of endof literal
+**
+** Outputs:
+**	lit		Pointer will be cleared.
+**
+** Returns:
+**	DB_STATUS	E_DB_OK if ok
+**			Otherwise result from chk_space
+**
+** Exceptions:
+**	none
+**
+** Side Effects:
+**	None
+**
+** History:
+**	19-Nov-2010 (kiria01) SIR 124690
+**          Initial creation.
+*/
+static DB_STATUS
+pat_op_ulit(
+	PAT_BLD	*ctx,
+	const UCS2	**lit,
+	const UCS2	*end)
+{
+    DB_STATUS db_stat;
+    const UCS2 *l;
+    if (l = *lit)
+    {
+	u_i1 *p;
+
+	*lit = NULL;
+	if (db_stat = chk_space(ctx, (end - l + 1) * sizeof(UCS2) + 8))
+	    return db_stat;
+	/* Check coalesce */
+	switch (*ctx->last_op)
+	{
+	case PAT_LIT:
+	    /* Update consequtive length */
+	    p = ctx->last_op+1;
+	    pat_update_num(&p, (end - l)*sizeof(UCS2), &ctx->wrtptr);
+	    /*
+	    ** Leaves last_op unchanged ready for another coalesce
+	    ** and the wrtptr ready for the data to be appended
+	    */
+	    break;
+	case PAT_ANY_0_W:
+	case PAT_ANY_1_W:
+	case PAT_ANY_N_W:
+	    ctx->prelit_op = ctx->last_op;
+	    /*FALLTHROUGH*/
+	default:
+	    ctx->no_of_ops++;
+	    if ((SCALARP)ctx->wrtptr & (sizeof(UCS2)-1))
+	    {
+		/* Stick in NOP to align the LITERAL */
+		*ctx->wrtptr++ = PAT_NOP;
+	    }
+	    ctx->last_op = ctx->wrtptr;
+	    *ctx->wrtptr++ = PAT_LIT;
+	    {   i8 tmp = (end - l) * sizeof(UCS2);
+		PUTNUM(ctx->wrtptr, tmp);
+	    }
+	}
+	if (ctx->patdata->patdata.flags & AD_PAT_WO_CASE)
+	{
+	    while (l < end)
+	    {
+		adu_patda_ucs2_lower_1((ADUUCETAB *)ctx->adf_scb->adf_ucollation,
+				&l, end, (UCS2**)&ctx->wrtptr);
+	    }
+	}
+	else
+	{
+	    while (l < end)
+		*ctx->wrtptr++ = *l++;
+	}
+    }
+    return E_DB_OK;
+}
+
 /*
 ** Name: pat_op_CElit() - Flush any Unicode literal as CE elements
 **
@@ -1270,7 +1368,7 @@ pat_op_wild(
 	    ** in this case */
 	    if (*p == PAT_LIT)
 	    {
-		if (ctx->patdata->patdata.flags2 & AD_PAT2_UNICODE)
+		if (ctx->patdata->patdata.flags2 & (AD_PAT2_UCS_BASIC|AD_PAT2_UNICODE_CE))
 		{
 		    if (ctx->prelit_op[1] == PAT_NOP)
 		    {
@@ -1623,6 +1721,214 @@ pat_op_set(
 
 
 /*
+** Name: pat_op_uset() - Generate non-CE unicode PAT_[N]SET_1
+**
+**      This routine generates the simpler set operator
+**
+**	The routine pat_set_add() will have arranged the data in
+**	a simple list of singleton characters and ranges. It will
+**	have done so using a passed function for the compares so
+**	that the logic is the same regardless of the datatype.
+**
+**	NOTE: The set passed may in fact be a dual set with both
+**	selectors and de-selectors. The [.part] member, if !=0 will
+**	indicate the boundary between the parts. If either [.part]
+**	is != 0 or neg is set, the instruction generated will be
+**	the fuller PAT_NSET form.
+**	 A set of:		 will become:
+**	  '[a-z]'		  PAT_SET_1  3   '-az'
+**	  '[^a-z]'		  PAT_NSET_1 4 0 '-az'
+**	  '[a-z^f-m]'		  PAT_NSET_1 7 3 '-az-fm'
+**	  '[a-z^]'		  PAT_SET_1  3   '-az'
+**
+** Inputs:
+**	ctx		PAT_BLD context
+**	neg		Bool indicating sense of the set
+**	setbuf		PAT_SET context
+**	sptr		End address of set buffer
+**
+** Returns:
+**	DB_STATUS	E_DB_OK if ok
+**			Otherwise result from chk_space
+**
+** Exceptions:
+**	none
+**
+** Side Effects:
+**	None
+**
+** History:
+**	19-Nov-2010 (kiria01) SIR 124690
+**          Initial creation.
+*/
+static DB_STATUS
+pat_op_uset(
+	PAT_BLD *ctx,
+	i4		neg,
+	PAT_SET		*setbuf)
+{
+    u_i4 Nn=1, Mn=0;
+    bool wild = FALSE;
+    DB_STATUS db_stat;
+    u_i1 *hold_n, *real_last_op = ctx->last_op, op;
+    u_i4 i, new_len = 0, l;
+
+    if (neg && !setbuf->n)
+    {
+	/* This is [^] which means 1 character not in the empty
+	** set - in other words the same as _ */
+	return pat_op_any_one(ctx);
+    }
+    else if (!neg && setbuf->n == 1)
+    {
+	/* This is [x] which means 1 character - in other words the same
+	** as LIT 'x' */
+	const UCS2 *p = (UCS2 *)setbuf->set[0].ch;
+	l = setbuf->set[0].len;
+	return pat_op_ulit(ctx, &p, p+l/sizeof(UCS2));
+    }
+    ctx->no_of_ops++;
+    if (db_stat = chk_space(ctx, setbuf->n + 10))
+	return db_stat;
+    if (setbuf->part && setbuf->part != setbuf->n)
+	neg = TRUE;
+    ctx->prelit_op = NULL;
+    ctx->last_op = ctx->wrtptr;
+    op = find_op(neg?opTy_NSET:opTy_SET, Nn, Mn, wild);
+
+    *ctx->wrtptr++ = op;
+    if (opcodes[op].p1 == P1_N)
+	PUTNUM(ctx->wrtptr, Nn);
+    if (opcodes[op].p2 == P2_M)
+	PUTNUM(ctx->wrtptr, Mn);
+    /* At this point we need an operand - we insert a 0 now
+    ** and fix up after */
+    hold_n = ctx->wrtptr;
+    PUTNUM0(ctx->wrtptr);
+    if (neg)
+	PUTNUM0(ctx->wrtptr);
+    for (i = 0; i < setbuf->n; i++)
+    {
+	if (neg && i == setbuf->part)
+	{
+	    u_i1 *hold_n2 = hold_n+NUMSZ(0);
+	    new_len = ctx->wrtptr - hold_n2 - NUMSZ(0);
+	    pat_update_num(&hold_n2, new_len, &ctx->wrtptr);
+	}
+	if (i+1 < setbuf->n && setbuf->set[i+1].len == ISRANGE)
+	{
+	    if (db_stat = chk_space(ctx, setbuf->set[i].len+1))
+		return db_stat;
+	    /* Write range introducer - but only if it is not
+	    ** an artificial one that spans nothing */
+	    if (cmp_unicode(NULL, setbuf->set[i+2].ch, setbuf->set[i+2].len,
+			       setbuf->set[i].ch, setbuf->set[i].len) != 1)
+	    {
+		((UCS2*)ctx->wrtptr)[0] = U_RNG;
+		ctx->wrtptr += sizeof(UCS2);
+	    }
+	    /* Write LWB */
+	    if (l = setbuf->set[i].len)
+		MEmemcpy(ctx->wrtptr, setbuf->set[i].ch, l);
+	    ctx->wrtptr += l;
+	    /* Skip two slots to drop out and write UPB as next slot */
+	    i += 2;
+	}
+	else if (setbuf->set[i].len == sizeof(UCS2) &&
+		*((UCS2*)setbuf->set[i].ch) == U_RNG)
+	{
+	    /* A lone '-'! As the '-' is used as a range
+	    ** introducer we make this into a fake range '---' */
+	    ((UCS2*)ctx->wrtptr)[0] = U_RNG;
+	    ((UCS2*)ctx->wrtptr)[0] = U_RNG;
+	    ctx->wrtptr += sizeof(UCS2)*2;
+	    /* ... and let the final one be written below */
+	}
+	if (l = setbuf->set[i].len)
+	{
+	    if (db_stat = chk_space(ctx, l))
+		return db_stat;
+	    MEmemcpy(ctx->wrtptr, setbuf->set[i].ch, l);
+	    ctx->wrtptr += l;
+	}
+    }
+    /* Don't use the insert form as it wiil mean that
+    ** the buffer build above will not be aligned */
+    new_len = ctx->wrtptr - hold_n - 1;
+    pat_update_num(&hold_n, new_len, &ctx->wrtptr);
+    /* We check for coalesce but at present it seems unlikely to
+    ** benefit. Would need [a-c1-9][a-c1-9][a-c1-9] to meld to
+    ** [a-c1-9]{3} etc.
+    ** If a coalesce is to be done there would HAVE to be an exact set
+    ** match!
+    */
+    if (opcodes[*real_last_op].cl == opcodes[*ctx->last_op].cl)
+    {
+	u_i4 N = opcodes[*real_last_op].v1, M = 0, len;
+	u_i1 *p = real_last_op;
+	p++;
+	if (N == V1__)
+	    N = GETNUM(p);
+	if (opcodes[*real_last_op].p2 == P2_M)
+	    M = GETNUM(p);
+	N += Nn;
+	M += Mn;
+	len = GETNUM(p);
+	if (len == new_len && !MEcmp(p, ctx->wrtptr-len, len))
+	{
+	    i4 opN = N < V1__ ? N : V1__;
+	    u_i1 *setdata = ctx->wrtptr-len;
+	    if (opcodes[*real_last_op].v2 == V2_W)
+		wild = TRUE;
+	    op = find_op(opcodes[op].ty, N, M, wild);
+	    if (op == PAT_BUGCHK)
+	    {
+#if PAT_DBG_TRACE>0
+		if (ADU_pat_debug & PAT_DBG_TRACE_ENABLE)
+		    TRdisplay("Failed to find combining OP");
+		if (ADU_pat_debug & PAT_DBG_TRACE_COALESCE){
+		    TRdisplay("attempting OPs\n");
+		    trace_op(real_last_op, FALSE);
+		    trace_op(ctx->last_op, FALSE);
+		}
+#endif
+	    }
+	    else
+	    {
+#if PAT_DBG_TRACE>0
+		if (ADU_pat_debug & PAT_DBG_TRACE_COALESCE){
+		    TRdisplay("Combining OPs\n");
+		    trace_op(real_last_op, FALSE);
+		    trace_op(ctx->last_op, FALSE);
+		}
+#endif
+		ctx->wrtptr = real_last_op;
+		ctx->last_op = real_last_op;
+		*ctx->wrtptr++ = op;
+		if (opcodes[op].p1 == P1_N)
+		    PUTNUM(ctx->wrtptr, N);
+		if (opcodes[op].p2 == P2_M)
+		    PUTNUM(ctx->wrtptr, M);
+		{
+		    u_i8 tmp = len;
+		    PUTNUM(ctx->wrtptr, tmp);
+		}
+		while (len--)
+		    *ctx->wrtptr++ = *setdata++;
+#if PAT_DBG_TRACE>0
+		if (ADU_pat_debug & PAT_DBG_TRACE_COALESCE){
+		    TRdisplay("... into OP\n");
+		    trace_op(ctx->last_op, FALSE);
+		}
+#endif
+	    }
+	}
+    }
+    return E_DB_OK;
+}
+
+
+/*
 ** Name: pat_op_CEset() - Generate a CE list form PAT_[N]SET_1
 **
 **      This routine generates a unicode PAT_[N]SET_1.
@@ -1631,8 +1937,8 @@ pat_op_set(
 **	a simple list of singleton characters and ranges. It will
 **	have done so using a passed function for the compares so
 **	that the logic is the same regardless of the datatype.
-***
-*	NOTE: The set passed may in fact be a dual set with both
+**
+**	NOTE: The set passed may in fact be a dual set with both
 **	selectors and de-selectors. The [.part] member, if !=0 will
 **	indicate the boundary between the parts. If either [.part]
 **	is != 0 or neg is set, the instruction generated will be
@@ -1866,7 +2172,7 @@ pat_op_CEset(
 **	04-Jan-2010 (kiria01) b123096
 **	    Catch illegal reversed range error.
 */
-bool
+static bool
 pat_set_add(
     PAT_SET **listp,
     const u_char *ch,
@@ -2944,19 +3250,115 @@ pat_dump(
 		fname, rval);
 	return;
     }
-    if (tr)
-	TRdisplay("*PATTERN-LIST %d %x %d\n",
-	           patdata->patdata.npats,
-	           patdata->patdata.flags+
-			((u_i4)patdata->patdata.flags<<16),
-	           patdata->patdata.length);
-    else
-	SIfprintf(fd, "*PATTERN-LIST %d %x %d\n",
-	           patdata->patdata.npats,
-	           patdata->patdata.flags+
-			((u_i4)patdata->patdata.flags<<16),
-	           patdata->patdata.length);
-    if (patdata->patdata.flags2 & AD_PAT2_UNICODE)
+    {
+	char buf[4096], *p = buf;
+	static const char *fl_esc[] = {
+	    "AD_PAT_NO_ESCAPE",
+	    "AD_PAT_HAS_ESCAPE",
+	    "AD_PAT_DOESNT_APPLY",
+	    "AD_PAT_HAS_UESCAPE"
+	};
+#define _DEFINE(n,v,t) t,
+#define _DEFINEEND
+	static const char *names[] = { AD_PAT_FORMS };
+#undef _DEFINEEND
+#undef _DEFINE
+	SIprintf(p, "*PATTERN-LIST %d %x %d\n",
+		       patdata->patdata.npats,
+		       patdata->patdata.flags+
+			    ((u_i4)patdata->patdata.flags<<16),
+		       patdata->patdata.length);
+	p += STlength(p);
+	*p++ = '#'; /* Issue flags decode as a comment */
+	*p++ = ' ';
+	if (patdata->patdata.flags & AD_PAT_FORM_NEGATED)
+	{
+	    STcopy("NOT ", p);
+	    p += STlength(p);
+	}
+	STcopy(names[(patdata->patdata.flags & AD_PAT_FORM_MASK) >> 8], p);
+	p += STlength(p);
+	*p++ = ',';
+	STcopy(fl_esc[patdata->patdata.flags&AD_PAT_ISESCAPE_MASK], p);
+	p += STlength(p);
+	if (patdata->patdata.flags & AD_PAT_WO_CASE)
+	{
+	    STcopy(",WO_CASE", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags & AD_PAT_WITH_CASE)
+	{
+	    STcopy(",WITH_CASE", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags & AD_PAT_DIACRIT_OFF)
+	{
+	    STcopy(",DIACRIT_OFF", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags & AD_PAT_BIGNORE)
+	{
+	    STcopy(",BIGNORE", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags2 & AD_PAT2_COLLATE)
+	{
+	    STcopy(",COLLATE", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags2 & AD_PAT2_UNICODE_CE)
+	{
+	    STcopy(",UNICODE_CE", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags2 & AD_PAT2_UCS_BASIC)
+	{
+	    STcopy(",UCS_BASIC", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags2 & AD_PAT2_UTF8_UCS_BASIC)
+	{
+	    STcopy(",UTF8_UCS_BASIC", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags2 & AD_PAT2_ENDLIT)
+	{
+	    STcopy(",ENDLIT", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags2 & AD_PAT2_MATCH)
+	{
+	    STcopy(",MATCH", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags2 & AD_PAT2_LITERAL)
+	{
+	    STcopy(",LITERAL", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags2 & AD_PAT2_PURE_LITERAL)
+	{
+	    STcopy(",PURE_LITERAL", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags2 & AD_PAT2_FORCE_FAIL)
+	{
+	    STcopy(",FORCE_FAIL", p);
+	    p += STlength(p);
+	}
+	if (patdata->patdata.flags2 & AD_PAT2_RSVD_UNUSED)
+	{
+	    SIprintf(p, ",RSVD_UNUSED=%x", patdata->patdata.flags & AD_PAT2_RSVD_UNUSED);
+	    p += STlength(p);
+	}
+	*p++ = '\n';
+	*p++ = EOS;
+	if (tr)
+	    TRdisplay(buf);
+	else
+	    SIfprintf(fd, buf);
+    }
+    if (patdata->patdata.flags2 & (AD_PAT2_UCS_BASIC|AD_PAT2_UNICODE_CE))
 	uni = 1;
 
     for (i = 0; i < patdata->patdata.npats &&
@@ -3677,6 +4079,7 @@ prs_num_uni(const UCS2 **p, const UCS2 *e, u_i4 *np)
 **	    cmp_simple
 **	    cmp_collation
 **	    cmp_unicode
+**	    cmp_unicodeCE
 **
 ** Inputs
 **	arg	Argument passed from pat_set_add()
@@ -3726,6 +4129,19 @@ cmp_collating(PTR arg, const u_i1*a, u_i4 al, const u_i1*b, u_i4 bl)
 
 static i4
 cmp_unicode(PTR arg_unused, const u_i1*a, u_i4 al, const u_i1*b, u_i4 bl)
+{
+    i4 res = 0;
+    u_i4 i = 0;
+    while (i < al && i < bl && !(res = ((UCS2*)a)[i/2] - ((UCS2*)b)[i/2]))
+	i+=sizeof(UCS2);
+    if (!res)
+	return res;
+    /* Disable any adjacency coalesce if different lengths */
+    return 2*(al - bl);
+}
+
+static i4
+cmp_unicodeCE(PTR arg_unused, const u_i1*a, u_i4 al, const u_i1*b, u_i4 bl)
 {
     i4 res = 0;
     u_i4 i = 0;
@@ -3865,7 +4281,7 @@ adu_patcomp_like(
 	temp_dv.db_length = sizeof(temp_esc);
 	temp_dv.db_data = (PTR)temp_esc;
 	temp_dv.db_datatype = DB_CHA_TYPE;
-	temp_dv.db_collID = -1;
+	temp_dv.db_collID = DB_UNSET_COLL;
 	temp_dv.db_prec = 0;
 	if (db_stat = adu_nvchr_unitochar(adf_scb, esc_dv, &temp_dv))
 	    return db_stat;
@@ -4660,6 +5076,8 @@ adu_patcomp_like_uni(
     bool allow_pat = TRUE;
     bool regexp = FALSE;
     bool pure = TRUE;
+    DB_STATUS (*pat_op_set_fn)(PAT_BLD*, i4, PAT_SET*) = pat_op_CEset;
+    DB_STATUS (*pat_op_lit_fn)(PAT_BLD*, const UCS2 **, const UCS2 *) = pat_op_CElit;
 
     /*
     ** Parse out the following wild characters
@@ -4704,17 +5122,23 @@ adu_patcomp_like_uni(
     **       S   @*		Literal *
     **       S   @+		Literal +
     */
-    pat_flags |= (AD_PAT2_UNICODE<<16);
+    if ((pat_flags & (AD_PAT2_UCS_BASIC|AD_PAT2_UNICODE_CE)<<16) == 0)
+	pat_flags |= (AD_PAT2_UCS_BASIC<<16);
     
     pat_bld_init(adf_scb, sea_ctx, &pat_ctx, pat_flags);
-
+    if (pat_flags & (AD_PAT2_UCS_BASIC<<16))
+    {
+	/* Swap out SET and LIT functions to not store CE */
+	pat_op_set_fn = pat_op_uset;
+	pat_op_lit_fn = pat_op_ulit;
+    }
     if (esc_dv && (pat_flags&AD_PAT_ISESCAPE_MASK)==AD_PAT_HAS_ESCAPE)
     {
 	DB_DATA_VALUE temp_dv;
 	temp_dv.db_length = sizeof(temp_esc[0]);
 	temp_dv.db_data = (PTR)&temp_esc[0];
 	temp_dv.db_datatype = DB_NCHR_TYPE;
-	temp_dv.db_collID = -1;
+	temp_dv.db_collID = DB_UNSET_COLL;
 	temp_dv.db_prec = 0;
 	if (db_stat = adu_nvchr_coerce(adf_scb, esc_dv, &temp_dv))
 	    return db_stat;
@@ -4762,7 +5186,7 @@ adu_patcomp_like_uni(
 	if (*p == temp_esc[0])
 	{
 	    pure = FALSE;
-	    if (db_stat = pat_op_CElit(&pat_ctx, &lit, p))
+	    if (db_stat = (*pat_op_lit_fn)(&pat_ctx, &lit, p))
 		return db_stat;
 	    /* Eat escape */
 	    p++;
@@ -4870,7 +5294,7 @@ adu_patcomp_like_uni(
 		/* leave escape char in stream as a literal */
 		lit = temp_esc;
 		/* literal the escape & start new one */
-		if (db_stat = pat_op_CElit(&pat_ctx, &lit, lit+1))
+		if (db_stat = (*pat_op_lit_fn)(&pat_ctx, &lit, lit+1))
 		    return db_stat;
 		lit = p;
 	    }
@@ -4878,7 +5302,7 @@ adu_patcomp_like_uni(
 	else if (*p == AD_1LIKE_ONE && allow_pat)
 	{
 	    /* Force out any part literal - runs will coalesce */
-	    if (db_stat = pat_op_CElit(&pat_ctx, &lit, p))
+	    if (db_stat = (*pat_op_lit_fn)(&pat_ctx, &lit, p))
 		return db_stat;
 	    if (db_stat = pat_op_any_one(&pat_ctx))
 		return db_stat;
@@ -4887,7 +5311,7 @@ adu_patcomp_like_uni(
  	else if (*p == AD_2LIKE_ANY && allow_pat)
 	{
 	    /* Force out any part literal - runs will coalesce */
-	    if (db_stat = pat_op_CElit(&pat_ctx, &lit, p))
+	    if (db_stat = (*pat_op_lit_fn)(&pat_ctx, &lit, p))
 		return db_stat;
 	    if (db_stat = pat_op_wild(&pat_ctx))
 		return db_stat;
@@ -4896,14 +5320,14 @@ adu_patcomp_like_uni(
 	else if (*p == AD_3LIKE_LBRAC && regexp)
 	{
 	    /* Force out any part literal - runs will coalesce */
-	    if (db_stat = pat_op_CElit(&pat_ctx, &lit, p))
+	    if (db_stat = (*pat_op_lit_fn)(&pat_ctx, &lit, p))
 		return db_stat;
 	    handle_set = TRUE;
 	}
 	else if (*p == AD_8LIKE_LPAR && regexp)
 	{
 	    /* Force out any part literal - runs will coalesce */
-	    if (db_stat = pat_op_CElit(&pat_ctx, &lit, p))
+	    if (db_stat = (*pat_op_lit_fn)(&pat_ctx, &lit, p))
 		return db_stat;
 	    if (p[1] == AD_9LIKE_RPAR || p[1] == AD_7LIKE_BAR)
 		return adu_error(adf_scb, E_AD101F_REG_EXPR_SYN, 0);
@@ -4916,7 +5340,7 @@ adu_patcomp_like_uni(
 	else if (*p == AD_9LIKE_RPAR && regexp)
 	{
 	    /* Force out any part literal - runs will coalesce */
-	    if (db_stat = pat_op_CElit(&pat_ctx, &lit, p))
+	    if (db_stat = (*pat_op_lit_fn)(&pat_ctx, &lit, p))
 		return db_stat;
 	    /* pop sub-pattern context */
 	    if (db_stat = pat_rep_pop(&pat_ctx))
@@ -4926,7 +5350,7 @@ adu_patcomp_like_uni(
 	else if (*p == AD_7LIKE_BAR && regexp)
 	{
 	    /* Force out any part literal - runs will coalesce */
-	    if (db_stat = pat_op_CElit(&pat_ctx, &lit, p))
+	    if (db_stat = (*pat_op_lit_fn)(&pat_ctx, &lit, p))
 		return db_stat;
 	    /* Alternation */
 	    if (!pat_ctx.rep_depth)
@@ -4951,7 +5375,7 @@ adu_patcomp_like_uni(
 	else if ((pat_flags & AD_PAT_BIGNORE) && (*p == U_BLANK || !*p))
 	{
 	    /* Force out any part literal - runs will coalesce */
-	    if (db_stat = pat_op_CElit(&pat_ctx, &lit, p))
+	    if (db_stat = (*pat_op_lit_fn)(&pat_ctx, &lit, p))
 		return db_stat;
 	    p++;
 	}
@@ -4982,6 +5406,8 @@ adu_patcomp_like_uni(
 	    UCS2 temp_ce[(MAX_CE_LEVELS-1)*1048];
 	    UCS2 *ce = temp_ce;
 
+	    if (pat_flags & (AD_PAT2_UCS_BASIC<<16))
+		bitset_valid = TRUE;
 	    pure = FALSE;
 	    if (bitset_valid)
 		MEfill(256/8, 0, set);
@@ -5115,7 +5541,7 @@ rbrac_common:	    if (in_range)
 		    if (bitset_valid && (neg || part_neg))
 			db_stat = pat_op_bitset(&pat_ctx, neg, lo, hi, count, set);
 		    else
-			db_stat = pat_op_CEset(&pat_ctx, neg, *setbuf);
+			db_stat = (*pat_op_set_fn)(&pat_ctx, neg, *setbuf);
 		    if (!db_stat)
 			goto set_ok;
 		    if ((*setbuf)->lim == PAT_SET_STK_DIM)
@@ -5214,7 +5640,7 @@ ch_common:	    /* If ANY set character is non-ASCII then we
 			    return db_stat;
 			}
 			adu_pat_MakeCEchar(adf_scb, &p, p+1, &ce, pat_flags);
-			if (pat_set_add(setbuf, (u_char*)cep, ce_len, in_range, cmp_unicode, NULL))
+			if (pat_set_add(setbuf, (u_char*)cep, ce_len, in_range, cmp_unicodeCE, NULL))
 			    /* Drop out of loop to return error
 			    ** E_AD1015_BAD_RANGE
 			    */
@@ -5287,7 +5713,7 @@ set_ok:	    if ((*setbuf)->lim == PAT_SET_STK_DIM)
 	    else 
 		continue;
 	    /* Force out any part literal - runs will coalesce */
-	    if (lit && (db_stat = pat_op_CElit(&pat_ctx, &lit, old_p)))
+	    if (lit && (db_stat = (*pat_op_lit_fn)(&pat_ctx, &lit, old_p)))
 		return db_stat;
 
 	    /* Here we have the repeat parsed out into lo, hi and wild.
@@ -5342,7 +5768,7 @@ set_ok:	    if ((*setbuf)->lim == PAT_SET_STK_DIM)
 		return db_stat;
 	}
     }
-    if (db_stat = pat_op_CElit(&pat_ctx, &lit, p))
+    if (db_stat = (*pat_op_lit_fn)(&pat_ctx, &lit, p))
 	return db_stat;
 
     /*
@@ -5423,8 +5849,9 @@ set_ok:	    if ((*setbuf)->lim == PAT_SET_STK_DIM)
 **	high-key/low-key combination.  These values represent the largest &
 **	smallest values which will match the key, respectively.
 **
-**	This routine handles non-Unicode/UTF8 patterns and will pass Unicode
-**	patterns to adu_patcomp_kbld_uni
+**	This routine handles non-Unicode and UCS_BASIC UTF8 patterns and will pass
+**	other patterns to adu_patcomp_kbld_uniCE or adu_patcomp_kbld_uni if UCS_BASIC
+**	implied.
 **
 **	However, the type of operation to be used is also included amongst the
 **	parameters.  The possible operators, and their results, are listed
@@ -5587,8 +6014,10 @@ ADC_KEY_BLK	*adc_kblk)
 
 	/* Hand off Unicode pattern */
 	I2ASSIGN_MACRO(patdata->patdata.flags2, flags);
-	if (flags & AD_PAT2_UNICODE)
+	if (flags & AD_PAT2_UCS_BASIC)
 	    return adu_patcomp_kbld_uni(adf_scb, adc_kblk);
+	if (flags & AD_PAT2_UNICODE_CE)
+	    return adu_patcomp_kbld_uniCE(adf_scb, adc_kblk);
 
 	/* We cannot optimise to a range if collation is in effect */
 	if (flags & AD_PAT2_COLLATE)
@@ -5671,6 +6100,7 @@ ADC_KEY_BLK	*adc_kblk)
 	while (pc < patbufend && !wild)
 	{
 	    u_i1 op = *pc++;
+	    u_i4 cl, cl2;
 
 	    if (opcodes[op].v1 != V1__)
 		N = opcodes[op].v1;
@@ -5737,46 +6167,70 @@ ADC_KEY_BLK	*adc_kblk)
 		}
 		if (patdata->patdata.flags & AD_PAT_WO_CASE)
 		{
+		    cl2 = 0;
 		    /* Note: LIT pattern is already lowercase */
-		    while (v > 0 && pfx_len < pfx_len_lim)
+		    while (v >= (cl = CMbytecnt(pc)) && pfx_len_lim - pfx_len >= cl)
 		    {
-			u_i1 pc2[2];
+			u_i1 pc2[4];
 			if (i == 0)
-			    lo[pfx_len] = hi[pfx_len] = *pc;
+			{
+			    MEcopy(pc, cl, lo + pfx_len);
+			    MEcopy(pc, cl, hi + pfx_len);
+			}
 			else
 			{
-			    if (lo[pfx_len] > *pc)
-				lo[pfx_len] = *pc;
-			    if (hi[pfx_len] < *pc)
-				hi[pfx_len] = *pc;
+			    if (cl != (cl2 = CMbytecnt(lo + pfx_len)))
+				break;
+			    if (MEcmp(pc, lo + pfx_len, cl) < 0)
+				MEcopy(pc, cl, lo + pfx_len);
+			    if (cl != (cl2 = CMbytecnt(hi + pfx_len)))
+				break;
+			    if (MEcmp(pc, hi + pfx_len, cl) > 0)
+				MEcopy(pc, cl, hi + pfx_len);
 			}
 			CMtoupper(pc, pc2);
-			if (lo[pfx_len] > *pc2)
-			    lo[pfx_len] = *pc2;
-			if (hi[pfx_len] < *pc2)
-			    hi[pfx_len] = *pc2;
-			CMnext(pc);
+			cl2 = CMbytecnt(pc2);
+			if (cl != cl2)
+			    break;
+			if (MEcmp(pc2, lo + pfx_len, cl) < 0)
+			    MEcopy(pc2, cl, lo + pfx_len);
+			if (MEcmp(pc2, hi + pfx_len, cl) > 0)
+			    MEcopy(pc2, cl, hi + pfx_len);
+			pc += cl;
 			v--;
-			pfx_len++;
+			pfx_len += cl;
 		    }
 		}
 		else
 		{
-		    while (v > 0 && pfx_len < pfx_len_lim)
+		    cl2 = 0;
+		    while (v >= (cl = CMbytecnt(pc)) && pfx_len_lim - pfx_len >= cl)
 		    {
-			u_i1 ch = *pc++;
 			if (i == 0)
-			    lo[pfx_len] = hi[pfx_len] = ch;
+			{
+			    MEcopy(pc, cl, lo + pfx_len);
+			    MEcopy(pc, cl, hi + pfx_len);
+			}
 			else
 			{
-			    if (lo[pfx_len] > ch)
-				lo[pfx_len] = ch;
-			    if (hi[pfx_len] < ch)
-				hi[pfx_len] = ch;
+			    if (cl != (cl2 = CMbytecnt(lo + pfx_len)))
+				break;
+			    if (MEcmp(pc, lo + pfx_len, cl) < 0)
+				MEcopy(pc, cl, lo + pfx_len);
+			    if (cl != (cl2 = CMbytecnt(hi + pfx_len)))
+				break;
+			    if (MEcmp(pc, hi + pfx_len, cl) > 0)
+				MEcopy(pc, cl, hi + pfx_len);
 			}
+			pc += cl;
 			v--;
-			pfx_len++;
+			pfx_len += cl;
 		    }
+		}
+		if (i > 0 && cl != cl2)
+		{
+		    pc = patbufend;
+		    break;
 		}
 		/* If still pattern left then this slot might not
 		** ever match the column */
@@ -5796,9 +6250,9 @@ ADC_KEY_BLK	*adc_kblk)
 		{
 		    u_i1 *lo_ch = pc;
 		    u_i1 *hi_ch = pc;
-		    u_i1 _lo_ch2[2];
+		    u_i1 _lo_ch2[4];
 		    u_i1 *lo_ch2 = _lo_ch2;
-		    u_i1 _hi_ch2[2];
+		    u_i1 _hi_ch2[4];
 		    u_i1 *hi_ch2 = _hi_ch2;
 		    /* The lower range char MIGHT be a range
 		    ** operator - if so get the next char */
@@ -5854,7 +6308,7 @@ ADC_KEY_BLK	*adc_kblk)
 		break;
 
 /*BSET*/    case opClass_B:/* Bitset */
-		/* We have a low and a high character:
+		/* We have a low and a high character: (both will be single byte)
 		** Low at *pc (or +1 if range introducer) and high at the
 		** end of the set literal */
 		patseen = TRUE;
@@ -5924,7 +6378,13 @@ anyn:		/* We know min length but no more */
 	    	    adc_kblk->adc_tykey = ADC_KALLMATCH;
 		    goto common_return;
 		}
-		while (N > 0 && pfx_len < pfx_len_lim)
+		if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+		{
+		    /* Terminate pattern now */
+		    pc = patbufend;
+		    break;
+		}
+		while (N > 0 && pfx_len_lim - pfx_len > 0)
 		{
 		    lo[pfx_len] = lowestchar;
 		    hi[pfx_len] = highestchar;
@@ -5967,12 +6427,40 @@ anyn:		/* We know min length but no more */
 	*/
     }
 
-    while (pfx_len_lim < save_lohilen)
+    MEfill(save_lohilen - pfx_len_lim, 0, lo+pfx_len_lim);
+    if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
     {
-	lo[pfx_len_lim] = lowestchar;
-	hi[pfx_len_lim] = highestchar;
-	pfx_len_lim++;
+	/* Can't just pad with 0xFF for high - they must be legal UTF8
+	** so fill with max follower and then fixup leaders */
+	MEfill(save_lohilen - pfx_len_lim, 0xBF, hi+pfx_len_lim);
+	while (save_lohilen - pfx_len_lim >= 4)
+	{
+	    hi[pfx_len_lim] = 0xF7;
+	    pfx_len_lim += 4;
+	}
+	switch (save_lohilen - pfx_len_lim)
+	{
+	case 3:
+	    hi[pfx_len_lim] = 0xEF;
+	    break;
+	case 2:
+	    hi[pfx_len_lim] = 0xDF;
+	    break;
+	case 1:
+	    hi[pfx_len_lim] = 0x7F;
+	    break;
+	}
+	/* On final gotcha. If we leave the range keys as they are,
+	** adc_1helem_rti will see them and treat as though UTF-8
+	** ignoring the collation! This is because by default
+	** the collID is not copied to the hi & lo keys. Without
+	** this it will break hashing!
+	** The following probably should be propagated through OPB. */
+		lo_dv->db_collID = hi_dv->db_collID = DB_UCS_BASIC_COLL;
     }
+    else
+	MEfill(save_lohilen - pfx_len_lim, highestchar, hi+pfx_len_lim);
+
     if (lo_dv->db_datatype == DB_VCH_TYPE ||
 	lo_dv->db_datatype == DB_TXT_TYPE ||
 	lo_dv->db_datatype == DB_LTXT_TYPE)
@@ -5980,6 +6468,8 @@ anyn:		/* We know min length but no more */
 	((DB_TEXT_STRING*)lo_dv->db_data)->db_t_count = save_lohilen;
 	((DB_TEXT_STRING*)hi_dv->db_data)->db_t_count = save_lohilen;
     }
+    if (MEcmp(hi, lo, save_lohilen) < 0)
+	adc_kblk->adc_tykey = ADC_KALLMATCH;
 
 common_return:
     if (patdata != &_patdata && (PTR)patdata != adc_kblk->adc_kdv.db_data)
@@ -5989,7 +6479,7 @@ common_return:
 
 
 /*{
-** Name: adu_patcomp_kbld_uni - Build an ISAM, BTREE, or HASH key from the value.
+** Name: adu_patcomp_kbld_uniCE - Build an ISAM, BTREE, or HASH key from the value.
 **
 ** Description:
 **      This routine constructs a key pair for use by the system.  The key pair
@@ -5998,7 +6488,7 @@ common_return:
 **	smallest values which will match the key, respectively.
 **
 **	This routine handles Unicode/UTF8 patterns and will pass non-Unicode
-**	patterns to adu_patcomp_kbld
+**	patterns to adu_patcomp_kbld or UCS_BASIC collation to adu_patcomp_kbld_uni
 **
 **	However, the type of operation to be used is also included amongst the
 **	parameters.  The possible operators, and their results, are listed
@@ -6123,7 +6613,7 @@ common_return:
 **          Detect null pattern data and return ADC_KALLMATCH
 */
 DB_STATUS
-adu_patcomp_kbld_uni (
+adu_patcomp_kbld_uniCE (
 ADF_CB		*adf_scb,
 ADC_KEY_BLK	*adc_kblk)
 {
@@ -6167,7 +6657,10 @@ ADC_KEY_BLK	*adc_kblk)
 
 	/* Hand off non-Unicode pattern */
 	I2ASSIGN_MACRO(patdata->patdata.flags2, flags);
-	if (~flags & AD_PAT2_UNICODE)
+	if (flags & AD_PAT2_UCS_BASIC)
+	    return adu_patcomp_kbld_uni(adf_scb, adc_kblk);
+
+	if (~flags & AD_PAT2_UNICODE_CE)
 	    return adu_patcomp_kbld(adf_scb, adc_kblk);
 
 	/* We cannot optimise to a range if:
@@ -6510,7 +7003,7 @@ common_exit:
 		    goto common_exit;
 		break;
 
-/*BSET*/    case opClass_B:/* Bitset - for unicode??? */
+/*BSET*/    case opClass_B:/* Bitset - for unicodeCE??? */
 /*NBSET*/   case opClass_NB:/* Bitset */
 		v = GETNUM(pc);	    /*skip offset*/
 		/*FALLTHROUGH*/
@@ -6735,7 +7228,7 @@ anyn:		/* We know min length but no more */
 	    DB_DATA_VALUE dv;
 	    dv.db_datatype = DB_NCHR_TYPE;
 	    dv.db_length = lohicount*sizeof(UCS2);
-	    dv.db_collID = -1;
+	    dv.db_collID = DB_UNSET_COLL;
 	    dv.db_prec = 0;
 	    dv.db_data = (PTR)hi1;
 	    adc_kblk->adc_tykey = ADC_KALLMATCH;
@@ -6791,7 +7284,540 @@ common_return:
     return db_stat;
 }
 
+
+/*{
+** Name: adu_patcomp_kbld_uni - Build an ISAM, BTREE, or HASH key from the value.
+**
+** Description:
+**      This routine constructs a key pair for use by the system.  The key pair
+**	is build based upon the type of key desired.  A key pair consists of a
+**	high-key/low-key combination.  These values represent the largest &
+**	smallest values which will match the key, respectively.
+**
+**	This routine handles Unicode UCS_BASIC patterns and will pass non-Unicode
+**	or UTF8 UCS_BASIC patterns to adu_patcomp_kbld and the other Unicodes
+**	to adu_patcomp_kbld_uniCE
+**
+**	However, the type of operation to be used is also included amongst the
+**	parameters.  The possible operators, and their results, are listed
+**	below. Of these it is expected that only LIKE will be supported with
+**	DB_PAT_TYPE.
+**
+**	    ADI_EQ_OP ('=')
+**	    ADI_NE_OP ('!=')
+**	    ADI_LT_OP ('<')
+**	    ADI_LE_OP ('<=')
+**	    ADI_GT_OP ('>')
+**	    ADI_GE_OP ('>=')
+**	    ADI_LIKE_OP
+**
+**	In addition to returning the key pair, the type of key produced is
+**	returned.  The choices are
+**
+**	    ADC_KNOMATCH    --> No values will match this key.
+**				    No key is formed.
+**	    ADC_KEXACTKEY   --> The key will match exactly one value.
+**				    The key that is formed is placed as the low
+**				    key.
+**	    ADC_KRANGEKEY   --> Two keys were formed in the pair.  The caller
+**				    should seek to the low-key, then scan until
+**				    reaching a point greater than or equal to
+**				    the high key.
+**	    ADC_KHIGHKEY    --> High key found -- only high key formed.
+**	    ADC_KLOWKEY	    --> Low key found -- only low key formed.
+**	    ADC_KALLMATCH   --> The given value will match all values --
+**				    No key was formed.
+**
+**	NOTE: As Unicode keys are still using the raw characters and not CE
+**	data we cannot really aid Unicode range selection as the patdata data
+**	contains only CE data and there is no efficient way of reversing the
+**	mapping. Until CE data is used for keys we will err on the side of
+**	caution and return ADC_KALLMATCH.
+**	NOTE about NOTE: If the Pattern was provided with a PAT_COMMENT then
+**	we can improve the ADC_KALLMATCH to a ADC_KRANGEKEY by aiding the
+**	reversing of the CE mapping by limited lookup.
+**
+**	Given these values with LIKE, the combinations possible are shown
+**	below.
+**
+**	    ADC_KRANGEKEY   --> Two keys were formed in the pair.
+**	    ADC_KALLMATCH   --> The given value will match all values --
+**				Returned when a generated KEY pair will
+**				be suspect - typically due to collation.
+**
+**
+** Inputs:
+**      adf_scb                         scb
+**      adc_kblk                        Pointer to key block data structure...
+**	    .adc_kdv			The DB_DATA_VALUE to form
+**					a key for.
+**		.db_datatype		Datatype of data value.
+**		.db_length		Length of data value.
+**		.db_data		Pointer to the actual data.
+**	    .adc_opkey			Key operator used to tell this
+**					routine what kind of comparison
+**					operation the key is to be
+**					built for, as described above.
+**					NOTE: ADI_OP_IDs should not be used
+**					directly.  Rather the caller should
+**					use the adi_opid() routine to obtain
+**					the value that should be passed in here.
+**          .adc_lokey			DB_DATA_VALUE to recieve the
+**					low key, if built.  Note, its datatype
+**					and length should be the same as
+**					.adc_hikey's datatype and length.
+**		.db_datatype		Datatype for low key.
+**	    	.db_length		Length for low key (i.e. how
+**					much space is reserved for the
+**					data portion).
+**		.db_data		Pointer to location to put the
+**					actual data of the low key.  If this
+**					is NULL, no data will be written.
+**	    .adc_hikey			DB_DATA_VALUE to recieve the
+**					high key, if built.  Note, its datatype
+**					and length should be the same as 
+**					.adc_lokey's datatype and length.
+**		.db_datatype		Datatype for high key.
+**		.db_length		Length for high key (i.e. how
+**					much space is reserved for the
+**					data portion).
+**		.db_data		Pointer to location to put the
+**					actual data of the high key.  If this
+**					is NULL, no data will be written.
+**	    .adc_pat_flags		*** USED ONLY FOR THE `LIKE' family
+**					of operators ***
+**
+** Outputs:
+**      *adc_kblk                      Key block filled with following
+**	    .adc_tykey                       Type key provided
+**	    .adc_lokey                       if .adc_tykey is ADC_KRANGEKEY and
+**					     key buffer passed.
+**	    .adc_hikey			     if .adc_tykey is ADC_KRANGEKEY and
+**					     key buffer passed.
+**
+**	Returns:
+**	    DB_STATUS
+**	Exceptions:
+**	    none
+**
+** Side Effects:
+**	    none
+**
+**
+** History:
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
+*/
+DB_STATUS
+adu_patcomp_kbld_uni (
+ADF_CB		*adf_scb,
+ADC_KEY_BLK	*adc_kblk)
+{
+    AD_PATDATA *patdata;
+    AD_PATDATA _patdata;
+    DB_STATUS db_stat = E_DB_OK;
+    DB_DATA_VALUE *lo_dv   = &adc_kblk->adc_lokey;
+    DB_DATA_VALUE *hi_dv   = &adc_kblk->adc_hikey;
+    u_i4 i;
+    u_i4 pfx_len_lim;
+    u_i4 lohicount;
+    u_i4 base = PATDATA_1STFREE;
+    u_i4 nomatch = 0;
+    UCS2 *lo = (UCS2*)lo_dv->db_data;
+    UCS2 *hi = (UCS2*)hi_dv->db_data;
+    UCS2 lowestchar = 0x0000;
+    UCS2 highestchar = 0xFFFF;
+    bool patseen = FALSE;
 
+    if (adc_kblk->adc_opkey != ADI_LIKE_OP)
+	return adu_error (adf_scb, E_AD9998_INTERNAL_ERROR,
+		2, 0, "patu kbld op");
+
+    if (adc_kblk->adc_kdv.db_datatype != DB_PAT_TYPE)
+	return adu_error (adf_scb, E_AD9998_INTERNAL_ERROR,
+		2, 0, "patu kbld dt");
+
+    patdata = (AD_PATDATA *)adc_kblk->adc_kdv.db_data;
+    {
+	u_i2 flags;
+
+	if (NULL == patdata)
+	{
+	    adc_kblk->adc_tykey = ADC_KALLMATCH;
+	    return E_DB_OK;
+	}
+
+	/* Hand off non-Unicode pattern */
+	I2ASSIGN_MACRO(patdata->patdata.flags2, flags);
+	if (flags & AD_PAT2_UNICODE_CE)
+	    return adu_patcomp_kbld_uniCE(adf_scb, adc_kblk);
+	if (~flags & AD_PAT2_UCS_BASIC)
+	    return adu_patcomp_kbld(adf_scb, adc_kblk);
+
+	/* We cannot optimise to a range if:
+	** - blanks are to be ignored
+	** - case is to be ignored*/
+	I2ASSIGN_MACRO(patdata->patdata.flags, flags);
+	if (flags & (AD_PAT_BIGNORE|AD_PAT_WO_CASE))
+	{
+	    /* Text modification is implied that renders this
+	    ** impractical, return ALLMATCH */
+	    adc_kblk->adc_tykey = ADC_KALLMATCH;
+	    return E_DB_OK;
+	}
+    }
+
+    /* We will probably return ADC_KRANGEKEY so set that now */
+    adc_kblk->adc_tykey = ADC_KRANGEKEY;
+
+    /* If no key buffers passed this is a query as to whether
+    ** an equality lookup (HASH) can be supported. As LIKE cannot
+    ** return ADC_KEXACTKEY or ADC_KNOMATCH we go no further than
+    ** say range match for now. If asked for the hi/lo keys we can
+    ** later switch to ALL if need be. */
+    if (!lo || !hi)
+	return E_DB_OK;
+
+    if (ME_ALIGN_MACRO(patdata, sizeof(i2)) != (PTR)patdata)
+    {
+	if ((i4)sizeof(_patdata) >= adc_kblk->adc_kdv.db_length)
+	    patdata = &_patdata;
+	else
+	{
+	    patdata = (AD_PATDATA*)MEreqmem(0, adc_kblk->adc_kdv.db_length,
+			FALSE, &db_stat);
+            if (!patdata || db_stat)
+		return db_stat;
+	}
+	MEcopy(adc_kblk->adc_kdv.db_data,
+		adc_kblk->adc_kdv.db_length, patdata);
+    }
+    
+    /* Now get string length of low and high keys (assumed to be the same) */
+    lohicount = lo_dv->db_length / sizeof(UCS2);
+    /* Write out the length of the results if NVARCHAR */
+    if (lo_dv->db_datatype == DB_NVCHR_TYPE)
+	*lo++ = *hi++ = --lohicount;
+    /* The Unicode UCS_BASIC helem consists of the raw code points */
+    pfx_len_lim = lohicount;
+
+    /* It is very unlikely that we will have any great length
+    ** of prefix-pattern as most pattern operators will break it */
+    for (i = 0; i < patdata->patdata.npats &&
+		base < patdata->patdata.length; i++)
+    {
+	u_i4 patlen = patdata->vec[base];
+	u_i1 *pc = (u_i1*)&patdata->vec[base+1];
+	u_i1 *patbufend = (u_i1*)&patdata->vec[base+patlen];
+	u_i4 pfx_len = 0;
+	i8 N, M, v;
+	i4 n;
+	bool wild = FALSE;
+
+	while (pc < patbufend && !wild)
+	{
+	    u_i1 op = *pc++;
+
+	    if (opcodes[op].v1 != V1__)
+		N = opcodes[op].v1;
+	    else if (opcodes[op].p1 == P1_N)
+		N = GETNUM(pc);
+	    if (opcodes[op].p2 == P2_M)
+		M = GETNUM(pc);
+	    else if (opcodes[op].v2 == V2_W)
+		wild = 1;
+	    switch (opcodes[op].cl)
+	    {
+	    case opClass__:
+		switch (op)
+		{
+		default:
+		    /* Most operators we use to terminate the key */
+		    patseen = TRUE;
+		    /*FALLTHROUGH*/
+		case PAT_FINAL:
+		    pc = patbufend;
+		    break;
+		case PAT_NOP:
+		case PAT_TRACE:
+		case PAT_NOTRACE:
+		case PAT_BOS:
+		case PAT_EOS:
+		case PAT_BOM:
+		case PAT_EOM:
+		    continue;
+
+/*ANY*/		case PAT_ANY_0_W:
+		case PAT_ANY_1:
+		case PAT_ANY_1_W:
+		case PAT_ANY_N:
+		case PAT_ANY_N_W:
+		case PAT_ANY_N_M:
+		    goto anyn;
+		}
+
+		break;
+	    case opClass_C:/* CASE */
+	    case opClass_J:/* Jump/Label */
+		v = GETNUM(pc);
+		patseen = TRUE;
+		/* No point looking further for this slot */
+		pc = patbufend;
+		break;
+
+	    case opClass_L:/* Literal text */
+		/* What this is all about - we have a prefix string:
+		** This needs adding as a prefix to both low and high */
+		v = GETNUM(pc);
+		if (op != PAT_LIT)
+		{
+		    if (op == PAT_FNDLIT || op == PAT_ENDLIT)
+		    {
+			/* FNDLIT/ENDLIT are essentially a % so treat
+			** as such for keybld */
+			wild = TRUE;
+			goto anyn;
+		    }
+		    pc += v;
+		    break;
+		}
+		if (patdata->patdata.flags & AD_PAT_WO_CASE)
+		{
+		    const UCS2 *upc = (UCS2 *)pc;
+		    UCS2 *plo = &lo[pfx_len];
+		    UCS2 *phi = &hi[pfx_len];
+		    pc += v;
+		    while (upc < (UCS2*)pc && pfx_len < pfx_len_lim)
+		    {
+			if (i == 0)
+			{
+			    *plo = 0xFFFF;
+			    *phi = 0x0000;
+			}
+			adu_patda_ucs2_minmax_1((ADUUCETAB *)adf_scb->adf_ucollation,
+				&upc, (UCS2*)pc, &plo, &phi);
+			pfx_len = max(plo-lo, phi-hi);
+		    }
+		}
+		else
+		{
+		    UCS2 *upc = (UCS2 *)pc;
+		    pc += v;
+		    while (upc < (UCS2 *)pc && pfx_len < pfx_len_lim)
+		    {
+			UCS2 ch = *pc++;
+			if (i == 0)
+			    lo[pfx_len] = hi[pfx_len] = ch;
+			else
+			{
+			    if (lo[pfx_len] > ch)
+				lo[pfx_len] = ch;
+			    if (hi[pfx_len] < ch)
+				hi[pfx_len] = ch;
+			}
+			pfx_len++;
+		    }
+		}
+		/* If still pattern left then this slot might not
+		** ever match the column */
+		if (v > lohicount - pfx_len_lim && *pc != PAT_MATCH)
+		    nomatch++;
+		if (v)
+		    /* No point looking further for this slot */
+		    pc = patbufend;
+		break;
+
+/*SET*/	    case opClass_S:/* Subset */
+		/* We have a low and a high character:
+		** Low at *pc (or +1 if range introducer) and high at the
+		** end of the set literal */
+		patseen = TRUE;
+		v = GETNUM(pc);
+		{
+		    UCS2 *lo_ch = (UCS2*)pc; /* PAT literals UCS2 aligned */
+		    UCS2 *hi_ch;
+		    /* The lower range char MIGHT be a range
+		    ** operator - if so get the next char */
+		    if (*lo_ch == U_RNG)
+			lo_ch++;
+		    /* Find the start of the upper range char - easy -
+		    ** it's the high end is the last on in the set */
+		    pc += v;
+		    hi_ch = (UCS2*)pc;
+		    hi_ch--;
+
+		    while (N > 0 && pfx_len < pfx_len_lim)
+		    {
+			if (pfx_len < pfx_len_lim)
+			{
+			    if (i == 0)
+			    {
+				lo[pfx_len] = *lo_ch;
+				hi[pfx_len] = *hi_ch;
+			    }
+			    else
+			    {
+				if (lo[pfx_len] > *lo_ch)
+				    lo[pfx_len] = *lo_ch;
+				if (hi[pfx_len] < *hi_ch)
+				    hi[pfx_len] = *hi_ch;
+			    }
+			    pfx_len++;
+			}
+			N--;
+		    }
+		}
+		/* If still pattern left then this slot might not
+		** ever match the column */
+		if (N > lohicount - pfx_len_lim && *pc != PAT_MATCH)
+		    nomatch++;
+		if (N)
+		    /* No point looking further for this slot */
+		    pc = patbufend;
+		break;
+
+/*BSET*/    case opClass_B:/* Bitset - for unicode */
+		/* We have a low and a high character:
+		** Low at *pc (or +1 if range introducer) and high at the
+		** end of the set literal */
+		patseen = TRUE;
+		n = N;
+		v = GETNUM(pc);
+		{
+		    UCS2 _lo_ch[4];
+		    UCS2 _hi_ch[4];
+		    const UCS2 *lo_ch = _lo_ch;
+		    const UCS2 *hi_ch = _hi_ch;
+		    UCS2 _lo_ch2[4];
+		    UCS2 _hi_ch2[4];
+		    _lo_ch[0] = v;
+		    v = GETNUM(pc);
+		    _hi_ch[0] = v * 8 + _lo_ch[0];
+		    pc += v;
+		    if (patdata->patdata.flags & AD_PAT_WO_CASE)
+		    {
+			UCS2 *lo_ch2 = _lo_ch2;
+			UCS2 *hi_ch2 = _hi_ch2;
+			_lo_ch2[0] = 0xFFFF;
+			_hi_ch2[0] = 0x0000;
+			lo_ch2 = _lo_ch2;
+			hi_ch2 = _hi_ch2;
+			adu_patda_ucs2_minmax_1((ADUUCETAB *)adf_scb->adf_ucollation,
+				&lo_ch, lo_ch+1, &lo_ch2, &hi_ch2);
+			lo_ch2 = _lo_ch2;
+			hi_ch2 = _hi_ch2;
+			adu_patda_ucs2_minmax_1((ADUUCETAB *)adf_scb->adf_ucollation,
+				&hi_ch, hi_ch+1, &lo_ch2, &hi_ch2);
+			lo_ch = _lo_ch2;
+			hi_ch = _hi_ch2;
+		    }
+		    while (N > 0 && pfx_len < pfx_len_lim)
+		    {
+			if (i == 0)
+			{
+			    lo[pfx_len] = *lo_ch;
+			    hi[pfx_len] = *hi_ch;
+			}
+			else
+			{
+			    if (lo[pfx_len] > *lo_ch)
+				lo[pfx_len] = *lo_ch;
+			    if (hi[pfx_len] > *hi_ch)
+				hi[pfx_len] = *hi_ch;
+			}
+			N--;
+			pfx_len++;
+		    }
+		}
+		/* If still pattern left then this slot might not
+		** ever match the column */
+		if (N > lohicount - pfx_len_lim && *pc != PAT_MATCH)
+		    nomatch++;
+		if (N)
+		    /* No point looking further for this slot */
+		    pc = patbufend;
+		break;
+
+/*NBSET*/   case opClass_NB:/* Bitset */
+		v = GETNUM(pc);	    /*skip offset*/
+		/*FALLTHROUGH*/
+
+/*NSET*/    case opClass_NS:/* Subset */
+		v = GETNUM(pc);
+		pc += v;
+anyn:		/* We know min length but no more */
+		patseen = TRUE;
+		if (!pfx_len && wild)
+		{
+		    /* Don't return range key if really a scan needed */
+	    	    adc_kblk->adc_tykey = ADC_KALLMATCH;
+		    goto common_return;
+		}
+		while (N > 0 && pfx_len < pfx_len_lim)
+		{
+		    lo[pfx_len] = AD_MIN_UNICODE;
+		    hi[pfx_len] = AD_MAX_UNICODE;
+		    N--;
+		    pfx_len++;
+		}
+		/* If still pattern left then this slot might not
+		** ever match the column */
+		if (N > lohicount - pfx_len_lim && *pc != PAT_MATCH)
+		    nomatch++;
+		if (N || wild)
+		    /* No point looking further for this slot */
+		    pc = patbufend;
+		break;
+
+	    }
+	}
+	/* We have to use the shortest of keys (least specific) */
+	if (pfx_len < pfx_len_lim)
+	    pfx_len_lim = pfx_len;
+	base += patlen;
+    }
+    if (nomatch == patdata->patdata.npats)
+    {
+	/* At present there is no useful way that we can
+	** make use of this fact so we leave things as a
+	** range lookup.
+	**
+	**  adc_kblk->adc_tykey = ADC_KNOMATCH;
+	**  goto common_return;
+	*/
+    }
+    if (!patseen && patdata->patdata.npats == 1)
+    {
+	/* As this is effectivly an EQ, we could do the following
+	** BUT it breaks REPEATABLE selects in that they loop endlessly!
+	**
+	**  adc_kblk->adc_tykey = ADC_KEXACTKEY;
+	**  lohicount = pfx_len_lim;
+	*/
+    }
+
+    {
+	register u_i4 j = pfx_len_lim;
+	register UCS2 *lo1 = lo, *hi1 = hi;
+
+	/* If we happen to have a full key match, drop the last char to keep range */
+	if (j >= lohicount && !patseen)
+	    j = lohicount-1;
+	/* CE terminators to the end of buffer */
+	while (j < lohicount)
+	{
+	    lo1[j] = AD_MIN_UNICODE;
+	    hi1[j] = AD_MAX_UNICODE;
+	    j++;
+	}
+    }
+common_return:
+    if (patdata != &_patdata && (PTR)patdata != adc_kblk->adc_kdv.db_data)
+	MEfree((PTR)patdata);
+    return db_stat;
+}
+
+
 /*{
 ** Name: adu_patcomp_summary - Summarise characteristics of pattern
 **
@@ -6862,10 +7888,10 @@ DB_DATA_VALUE	*eqv_dv)
 	if (eqv_dv &&
 	    (flags2 & AD_PAT2_LITERAL))
 	{
-	    /* Unicode literals will be of no use as they will
+	    /* Unicode CE literals will be of no use as they will
 	    ** be encoded as CE data so next bit only for
 	    ** non-unicode */
-	    if (~flags2 & AD_PAT2_UNICODE)
+	    if (~flags2 & AD_PAT2_UNICODE_CE)
 	    {
 		u_i1 *pc = &patdata->patdata.first_op;
 		i4 L = 0;
@@ -6882,10 +7908,13 @@ DB_DATA_VALUE	*eqv_dv)
 		    case DB_VCH_TYPE:
 		    case DB_VBYTE_TYPE:
 		    case DB_UTF8_TYPE:
+		    case DB_NVCHR_TYPE:
 			if (L <= len-(i4)sizeof(i2))
 			{
 			    if (L)
 				MEcopy(S, L, addr+sizeof(i2));
+			    if (eqv_dv->db_datatype == DB_NVCHR_TYPE)
+				L /= sizeof(UCS2);
 			    *(i2*)addr = L;
 			    return ADU_PAT_IS_LITERAL;
 			}
@@ -6893,6 +7922,7 @@ DB_DATA_VALUE	*eqv_dv)
 		    case DB_CHA_TYPE:
 		    case DB_CHR_TYPE:
 		    case DB_BYTE_TYPE:
+		    case DB_NCHR_TYPE:
 			if (L <= len)
 			{
 			    if (L)

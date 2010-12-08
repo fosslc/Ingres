@@ -106,6 +106,8 @@
 !            FEapply_money_format and FEapply_date_format
 !       16-sep-2010 (joea)
 !           Add adu_2strtomny_strict.
+!       19-oct-2010 (maspa05) b124551
+!           Removed adu_valuetomystr and added adu_sc930prtdataval
 !
 IDENT=libqlib
 GSMATCH=LEQUAL,126,0
@@ -762,7 +764,7 @@ SYMBOL_VECTOR=(IIbreak=PROCEDURE,-
 		adu_like_all=PROCEDURE,-
 		aduErrorFcn=PROCEDURE,-
 		adu_errorNV=PROCEDURE,-
-		adu_valuetomystr=PROCEDURE,-
+		SPARE, - !adu_valuetomystr
 		adu_0parsedate=PROCEDURE,-
 		adu_patcomp_summary=PROCEDURE,-
 		adu_decprec=PROCEDURE,-
@@ -774,7 +776,8 @@ SYMBOL_VECTOR=(IIbreak=PROCEDURE,-
                 FEapply_money_prec=PROCEDURE,-
                 FEapply_money_format=PROCEDURE,-
                 FEapply_date_format=PROCEDURE,-
-                adu_2strtomny_strict=PROCEDURE)
+                adu_2strtomny_strict=PROCEDURE, -
+		adu_sc930prtdataval=PROCEDURE)
 INGLIB:libui/library, -
 INGLIB:libqsys/library, -
 INGLIB:libq/library, -

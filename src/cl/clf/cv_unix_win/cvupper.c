@@ -5,6 +5,7 @@
 # include	<compat.h>
 # include	<gl.h>
 # include	<cm.h>
+# include	<cv.h>
 
 
 /**
@@ -56,6 +57,8 @@
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**      29-Nov-2010 (frima01) SIR 124685
+**          Add include of cv.h.
 **/
 
 /* # defines */

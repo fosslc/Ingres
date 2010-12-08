@@ -361,6 +361,10 @@
 **     06-Sep-2010 (Ralph Loen) Bug 124348
 **          Added version of SQLColAttribute_InternalCall() dependent on 
 **          the _WIN64 macro for compatibility with MS implementation.
+**     15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
+**     18-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Fix windows build for prototye cleanup changes.
 */
 #ifndef _INC_IDMSODBC
 #define _INC_IDMSODBC
@@ -460,9 +464,6 @@ typedef long  (__cdecl *LONGPROC)();
 #else
 #define INSTAPI EXPORT FAR PASCAL
 #endif  /* endif WIN32 */
-
-SQLINTEGER  INSTAPI SQLGetPrivateProfileString( LPCSTR, LPCSTR, LPCSTR, 
-    LPSTR, int, LPCSTR);
 
 /*
 **  SQL STATE values returned by driver itself:
@@ -2150,8 +2151,8 @@ RETCODE SQL_API SQLTablePrivileges_InternalCall(
                            
 RETCODE SQL_API SQLTransact_InternalCall(LPENV penv, LPDBC pdbc, UWORD fType);
 void    TraceOdbc (int iApi, ...);
-void    InitTrace();
-void    TermTrace();
+void    InitTrace(void);
+void    TermTrace(void);
 
 VOID odbc_cancel(LPSTMT pstmt);
 BOOL odbc_close(LPSTMT pstmt);
@@ -2160,6 +2161,20 @@ BOOL odbc_commitTran  (VOID * *tranHandle, LPSQLCA psqlca);
 BOOL odbc_rollbackTran(VOID * *tranHandle, LPSQLCA psqlca);
 BOOL odbc_query(SESS * pSession, LPSTMT  pstmt, IIAPI_QUERYTYPE apiQueryType, LPSTR pQueryText);
 VOID odbc_hexdump(char *, i4);
+BOOL odbc_getResult( IIAPI_GENPARM  *genParm, LPSQLCA psqlca, SQLUINTEGER cQueryTimeout);
+BOOL odbc_getQInfo( LPSTMT pstmt );
+BOOL GetServerInfo(SESS * pSession, LPSQLCA psqlca, LPDBC pdbc);
+RETCODE SqlToIngresAPI ( LPSQB pSqb, i2 lCmd, LPSTR pBuf);
+
+void FreeSqlcaMsgBuffers(LPSQLCAMSG * lpsqlcamsg);
+void UtSnap( LPCSTR  pTitle, const void  * pArea, long    nLength);
+void UtPrint (LPCSTR szFormat, ...);
+RETCODE GetWChar( LPVOID lpv, SQLWCHAR * szValue, SQLINTEGER cbValue,
+    SQLWCHAR * rgbValue, SQLINTEGER cbValueMax, SQLINTEGER *  pcbValue);
+UDWORD GetCharCharCommon( LPDESCFLD pard, CHAR * rgbData,
+    SQLINTEGER cbData, SIZE_TYPE sizeofNullTerm);
+int INSTAPI SQLGetPrivateProfileString( LPCSTR  szSection, LPCSTR  szEntry,
+    LPCSTR  szDefault, LPSTR   szBuffer, int     cbBuffer, LPCSTR  szFile);
 
 /*
 **  The GET_WM_COMMAND_ID macro is supposed to allow the same source

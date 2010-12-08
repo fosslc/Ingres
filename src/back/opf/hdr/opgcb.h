@@ -142,7 +142,12 @@ typedef ULT_VECTOR_MACRO(OPT_BMGLOBAL, OPT_GVALUES) OPT_GLOBAL;
 **	    Add .opf_inlist_thresh for control of eq keys on large inlists.
 **      17-Aug-2010 (horda03) b124274
 **          Add .ops_qep_flag for displaying QEPs in segments.
-[@history_line@]...
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Delete result-structure stuff, all done in PSF now.
+**	09-Nov-2010 (wanfr01) SIR 124714
+**	    Add ops_holdfactor
+**	13-Nov-2010 (wanfr01) SIR 124714
+**	    Removed unneeded opg_holdfactor
 */
 typedef struct _OPS_ALTER
 {
@@ -204,14 +209,6 @@ typedef struct _OPS_ALTER
 #define                 OPG_QSMEMSIZE   DB_QSMEMSIZE
 /* default number of bytes in a quicksort buffer
 */
-    i4              ops_storage;        /* default storage structure to use
-                                        ** when creating temporaries
-                                        ** - SET RET_INTO
-                                        ** - default is DB_SORT_STORE (sorted
-                                        ** heap)
-                                        */
-    bool            ops_compressed;     /* TRUE - if compressed storage
-                                        ** structure is required */
     bool            ops_qep;            /* TRUE - if QEP should be printed
                                         ** i.e. if SET QEP command executed */
     i4              ops_qep_flag;       /* ULD_FLAG_SEGMENTS - if Segmented QEP should be printed
@@ -265,6 +262,7 @@ typedef struct _OPS_ALTER
     f4		    ops_greedy_factor;	/* adjust ops_cost/jcost comparison
 					** in opn_corput() for greedy enum */
     bool	ops_nocardchk;		/* Set if in legacy 'ignore' mode */
+    f4		    ops_holdfactor;	/* holdfactor adjustment */
 }   OPS_ALTER;
 
 /*}

@@ -854,6 +854,8 @@ QEF_RCB	    *v_qer_p )
 **	    Call qed_u14_pre_commit() instead of qed_u11_ddl_commit(). The
 **	    former ignores autocommit state.
 **	    Fixes B44827, mulitple select from views cause cdb deadlock.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 */
 
 
@@ -869,7 +871,6 @@ QEF_RCB       *v_qer_p )
 			*rq_p = & rqr;
     TPR_CB		tpr,
 			*tp_p = & tpr;
-    i4			tp_opcode;
 
 
     MEfill(sizeof(tpr), '\0', (PTR) & tpr);

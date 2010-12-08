@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -59,9 +59,7 @@
 **  Name: OPCTUPLE.C - Routines that play with tuples
 **
 **  Description:
-{@comment_line@}...
 **
-{@func_list@}...
 **
 **
 **  History:    
@@ -105,8 +103,64 @@
 **	    correct general fix and breaks some non-outerjoin queries.
 **	3-Jun-2009 (kschendel) b122118
 **	    Minor cleanup: delete unused adbase parameters.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opc_materialize(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	QEN_ADF **qadf,
+	OPE_BMEQCLS *eqcmp,
+	OPC_EQ *ceq,
+	i4 *prowno,
+	i4 *prowsz,
+	i4 align_tup,
+	bool alloc_drow,
+	bool projone);
+void opc_hash_materialize(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	QEN_ADF **qadf,
+	OPE_BMEQCLS *eqcmp,
+	OPE_BMEQCLS *keqcmp,
+	OPC_EQ *ceq,
+	DB_CMP_LIST *cmplist,
+	i4 *prowno,
+	i4 *prowsz,
+	bool oj);
+void opc_kcompare(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	QEN_ADF **qadf,
+	OPO_ISORT eqcno,
+	OPC_EQ *ceq1,
+	OPC_EQ *ceq2);
+void opc_ecsize(
+	OPS_STATE *global,
+	OPO_ISORT eqcno,
+	i4 *ninstr,
+	i4 *nops);
+void opc_emsize(
+	OPS_STATE *global,
+	OPE_BMEQCLS *eqcmp,
+	i4 *ninstr,
+	i4 *nops);
+void opc_ecinstrs(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_ADF *cadf,
+	OPO_ISORT ineqcno,
+	OPC_EQ *ceq1,
+	OPC_EQ *ceq2);
+void opc_eminstrs(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_ADF *cadf,
+	OPE_BMEQCLS *eqcmp,
+	OPC_EQ *ceq1,
+	OPC_EQ *ceq2);
 
 /*{
 ** Name: OPC_MATERIALIZE	- Materialize a given set of attributes.

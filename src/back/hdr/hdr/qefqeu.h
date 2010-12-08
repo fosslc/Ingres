@@ -2,6 +2,9 @@
 **Copyright (c) 2004 Ingres Corporation
 */
 
+#ifndef QEFQEU_H_INCLUDED
+#define QEFQEU_H_INCLUDED
+
 /**
 ** Name: QEU.H - utility routine control blocks
 **
@@ -214,6 +217,8 @@ typedef struct
 **      27-May-2008 (coomi01) Bug 120413
 **          Add bit flag to qeu_flag to indicate presence of a new
 **          default value.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes: tighten function-pointer declarations.
 */
 struct _QEU_CB
 {
@@ -306,12 +311,12 @@ struct _QEU_CB
 /* Set if the qeu_maxlocks has a valid parameter to be used on table open*/
     i4	qeu_timeout;	    /* timeout specifier for table open */
     i4	qeu_maxlocks;	    /* maxlock specifier for table open */
-    PTR		qeu_f_qual;	    /*
+    i4		(*qeu_f_qual)(void *, void *); /*
 				    ** qualification function used inside QEF;
 				    ** initially defined to enable update of
 				    ** multiple rows; function must accept two
-				    ** PTRs as parameters, the first one will be
-				    ** a poinyter to t tuple, the second -
+				    ** pointers, the first one will be
+				    ** a pointer to a tuple, the second -
 				    ** qeu_f_qarg; return values will be as
 				    ** follows:
 				    */
@@ -319,7 +324,7 @@ struct _QEU_CB
 #define	    QEU_F_NEXT		    1	/* skip to next row */
 #define	    QEU_F_RETURN	    2	/* row qualified */
 
-    PTR		qeu_f_qarg;	    /* argument to QEF qualification function */
+    void	*qeu_f_qarg;	    /* argument to QEF qualification function */
 
     PTR		qeu_ddl_info;	    /*
 				    ** used for STAR CREATE/REGISTER/DROP to 
@@ -329,3 +334,8 @@ struct _QEU_CB
     i4		qeu_qmode;	    /* current query mode */
     DB_TRAN_ID	qeu_tran_id;	    /* current tran id */
 };
+
+
+
+
+#endif /* QEFQEU_H_INCLUDED */

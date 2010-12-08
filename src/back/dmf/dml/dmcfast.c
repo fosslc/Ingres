@@ -19,6 +19,7 @@
 #include    <dmf.h>
 #include    <dmccb.h>
 #include    <dmrcb.h>
+#include    <dmscb.h>
 #include    <dmxcb.h>
 #include    <dmtcb.h>
 #include    <dm.h>
@@ -29,6 +30,7 @@
 #include    <dm0p.h>
 #include    <dmftrace.h>
 #include    <dm0llctx.h>
+#include    <dml.h>
 
 /**
 ** Name: DMCFAST.C  - Consistency Point thread.
@@ -104,6 +106,8 @@
 **          Redefined name constants without trailing blanks.
 **	05-Dec-2008 (jonj)
 **	    SIR 120874: dm0p_? functions converted to DB_ERROR *
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dml.h to get dmc_fast_commit() prototype.
 **/
 
 /*

@@ -91,6 +91,8 @@ i4	adf_func();
 **	    Initialise the ADF_FN_BLK adf_dv_n member.
 **	19-Aug-2010 (kschendel) b124282
 **	    isescape deprecated, initialize pat-flags.
+**	19-Nov-2010 (kiria01) SIR 124690
+*	    Correct & symbolize collID checks.
 */
 STATUS
 afe_clinstd(cb, instd, ops, result)
@@ -128,8 +130,8 @@ DB_DATA_VALUE	*result;
 		fnblk.adf_dv[i] = *result;
 
 	    /* Keep collID in bounds */
-	    if ((u_i4)fnblk.adf_dv[i].db_collID > 6)
-		fnblk.adf_dv[i].db_collID = -1;
+	    if ((u_i4)fnblk.adf_dv[i].db_collID >= DB_COLL_LIMIT)
+		fnblk.adf_dv[i].db_collID = DB_UNSET_COLL;
 	}
 
 	/*	CALL THE FUNCTION	*/

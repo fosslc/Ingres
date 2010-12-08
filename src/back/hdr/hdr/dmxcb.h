@@ -68,6 +68,8 @@
 **	    DMX_XA_END_FAIL option bits.
 **	6-Jul-2006 (kschendel)
 **	    Comment update.
+**	2-Dec-2010 (kschendel)
+**	    Another comment update (fix nested comment)
 */
 typedef struct _DMX_CB
 {
@@ -86,7 +88,7 @@ typedef struct _DMX_CB
                                             ** SCF.  Every transaction
                                             ** must be associated with a 
                                             ** session. */
-    PTR             dmx_db_id;              /* DMF database id for session.
+    PTR             dmx_db_id;              /* DMF database id for session. */
 					/* Really an ODCB pointer, so it's the
 					** same for all threads of a session.
 					*/

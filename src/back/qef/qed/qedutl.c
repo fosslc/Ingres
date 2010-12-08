@@ -184,16 +184,12 @@
 **	    Supply session's SID to QSF in qsf_sid.
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 
 /*  Forward references */
-VOID	    qed_u10_trap();
-/*
-VOID	    qed_u12_map_rqferr();
-VOID	    qed_w2_prt_rqferr();
-VOID	    qed_w4_prt_qefcall();
-*/
 
 GLOBALREF   char    *IIQE_51_rqf_tab[];	    /* table of RQF op names */
 GLOBALREF   char    *IIQE_52_tpf_tab[];	    /* table of TPF op names */
@@ -408,7 +404,6 @@ RQR_CB	*v_rqr_p,
 QEF_RCB	*v_qer_p )
 {
     DB_STATUS	    status;
-    DB_ERROR	    err;
     QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     DD_LDB_DESC	    *ldb_p = v_rqr_p->rqr_1_site;
@@ -868,8 +863,6 @@ DD_DATE	    o_gmt_now )
     i4		    nfi;
     ADI_OP_ID	    op_date;
     ADI_FI_TAB	    fitab;
-    SCF_CB	    scf_cb;
-    SCF_SCI	    sci_list[1];
     DB_DATA_VALUE   dv_now;
     DB_DATA_VALUE   dv_date;
     DB_DATA_VALUE   dv_gmt;
@@ -1716,7 +1709,6 @@ TPR_CB	*v_tpr_p,
 QEF_RCB	*v_qer_p )
 {
     DB_STATUS	    status;
-    DB_ERROR	    err;
     bool	    log_err_59 = FALSE;
     i4	    i4_1, i4_2;
 

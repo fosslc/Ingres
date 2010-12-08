@@ -24,9 +24,9 @@
 # include	<er.h>
 # include	<erfi.h>
 
-#if defined(hp3_us5) || defined (any_hpux) || defined (hp9_mpe)
+#if defined (any_hpux)
 #define __YYSCLASS
-#endif /* hp3_us5 || hpux || hp9_mpe */
+#endif /* hpux */
 
 /**
 **  Name:	dgrammar.y  -  Grammar Describing the Derivation Strings
@@ -111,6 +111,8 @@
 **	    replace nat and longnat with i4
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */
 
 
@@ -131,15 +133,8 @@ GLOBALREF	bool	IIFVddpDebugPrint;
 ** ref gets macroexpanded into "extern int ((int) > 0? (int) : -(int))"
 ** which is clearly garbage, and won't compile, so stomp on the macro
 */
-# ifdef sqs_ptx
-# undef abs
-# endif
 
 # ifdef sparc_sol
-# undef abs
-# endif
-
-# ifdef ts2_us5
 # undef abs
 # endif
 
@@ -166,18 +161,9 @@ GLOBALREF	bool	IIFVddpDebugPrint;
 # define	yypvt		IIFVdpvt
 # define	yys		IIFVds
 # define	yy_yyv		IIFVd_yyv
-# if defined(hp3_us5) || defined (any_hpux) || defined (hp9_mpe)
+# if defined (any_hpux)
 # define	yymaxdepth	IIFVdmaxdepth
-# endif /* hp3_us5, hp8_us5, hp9_mpe */
-
-# if defined(dg8_us5) || defined(dgi_us5)
-# ifdef MAX
-# undef MAX
-# endif /* MAX */
-# ifdef MIN
-# undef MIN
-# endif /* MIN */
-# endif /* dg8_us5 dgi_us5 */
+# endif /* hpux */
 
 /* static's */
 

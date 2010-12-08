@@ -48,10 +48,10 @@
 **	   rename max_char to iimax_char_value since it conflicts with
 **	   limits.h max_char on sequent and the compat.h value is overwritten
 **	   Required as changes affect generic code per change 452604
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 [@history_template@]...
 **/
 

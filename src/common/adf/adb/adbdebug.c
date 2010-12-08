@@ -84,17 +84,13 @@
 ** History:
 **      28-oct-86 (thurston)
 **          Initial creation.
+**	09-nov-2010 (gupsh01) SIR 124685
+**	    Protype cleanup.
 [@history_template@]...
 */
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adb_trace(
 DB_DEBUG_CB *adb_debug_cb)
-# else
-DB_STATUS
-adb_trace( adb_debug_cb)
-DB_DEBUG_CB *adb_debug_cb;
-# endif
 {
     i4             ts = adb_debug_cb->db_trswitch;
     i4             tp = adb_debug_cb->db_trace_point;
@@ -162,7 +158,7 @@ DB_DEBUG_CB *adb_debug_cb;
 */
 
 VOID
-adb_optab_print()
+adb_optab_print(void)
 {
     ADI_OPRATION        *op;
 
@@ -214,7 +210,7 @@ adb_optab_print()
 [@history_template@]...
 */
 VOID
-adb_breakpoint()
+adb_breakpoint(void)
 {
 }
 

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -65,14 +65,20 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+bool opn_jmaps(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *nodep,
+	OPL_BMOJ *ojmap);
 
 /*{
 ** Name: opn_jmaps	- set various join operator tree maps
 **
 ** Description:
-{@comment_line@}...
 **
 ** Inputs:
 **      subquery                        ptr to subquery being analyzed
@@ -155,7 +161,6 @@
 **	    This change fixes bug 117513.
 **	27-Oct-2009 (kiria01) SIR 121883
 **	    Scalar sub-selects - protect subp->opv_eqcrequired from bad de-ref.
-[@history_line@]...
 */
 bool
 opn_jmaps(

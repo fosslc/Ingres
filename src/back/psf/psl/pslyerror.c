@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -79,7 +79,23 @@
 **	    system header macros with the same names.
 **	1-Feb-2004 (schka24)
 **	    Extract last-token finder into utility for partition def to use.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void psl_yerror(
+	i4 errtype,
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+void psl_sx_error(
+	i4 error,
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+void psl_yerr_buf(
+	PSS_SESBLK *sess_cb,
+	char *buf,
+	i4 buf_len);
 
 /*{
 ** Name: psl_yerror	- Handle a yacc error.
@@ -173,13 +189,7 @@ psl_yerror(
 {
     i4             err_code;
     char		buf[DB_ERR_SIZE+10];
-    i4			buf_cnt = 0;
-    i4			i;
-    u_char		*cur_char;
-    YACC_CB		*yacc_cb = (YACC_CB*) sess_cb->pss_yacc;
-    YYTOK_LIST		*tok_ptr;
     i4		lineno = sess_cb->pss_lineno;
-    u_char		*end_char;
     i4		err_no;
     register i4	qmode = psq_cb->psq_mode;
 

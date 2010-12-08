@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>getAirportDetails (DatabaseConnection)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File src/database_connection.rb, line 90</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">getAirportDetails</span>(<span class="ruby-identifier">airport</span>)
+    <span class="ruby-identifier">airportDetailResults</span> = <span class="ruby-identifier">execute</span>(<span class="ruby-node">&quot;SELECT DISTINCT ap_place, ap_ccode FROM airport WHERE ap_iatacode = '#{airport}' ORDER BY ap_place&quot;</span>)
+    <span class="ruby-identifier">countryCode</span> = <span class="ruby-constant">String</span>.<span class="ruby-identifier">new</span>
+    <span class="ruby-identifier">region</span> = <span class="ruby-constant">String</span>.<span class="ruby-identifier">new</span>
+    <span class="ruby-identifier">airportDetailResults</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span> <span class="ruby-identifier">airportDetails</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">region</span> = <span class="ruby-identifier">airportDetails</span>[<span class="ruby-value">0</span>] ; <span class="ruby-identifier">countryCode</span> = <span class="ruby-identifier">airportDetails</span>[<span class="ruby-value">1</span>] }
+    <span class="ruby-keyword kw">return</span> <span class="ruby-ivar">@codeCountries</span>[<span class="ruby-identifier">countryCode</span>], <span class="ruby-identifier">region</span>
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

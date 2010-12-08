@@ -310,7 +310,6 @@
 **	    making it the first in the chain.  (Bug #79195)
 **      17-may-1999 (stial01)
 **          qeq_vopen() QEF will defer lock escalation to DMF.
-[@history_template@]...
 **	17-mar-1999 (somsa01)
 **	    Added include of pc.h and lk.h to resolve references to locking
 **	    ids.
@@ -374,6 +373,8 @@
 **	    recording the valid entry on (yet another) list.
 **	29-Jun-2010 (kschendel)
 **	    Comment updates only, no code change.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 **/
 
 
@@ -884,9 +885,6 @@ bool		size_check)
     DMR_CB	    *dmr_cb;
     DMT_CB	    *dmt_cb;
     QEF_QP_CB       *qp = dsh->dsh_qp_ptr;
-    i4		    i;
-    QEE_RESOURCE    *resource;
-    QEF_RESOURCE    *qefresource;
     DMR_CHAR_ENTRY  dmr_char_entry;
 
     /* This call will prevent a server which implements CSswitch from
@@ -1064,8 +1062,6 @@ bool		size_check)
 	)
     {
 	QEF_AUD     *aud;
-	QEF_ART     *art;
-	i4          i;
 
 	aud = (QEF_AUD *)action->ahd_audit;
 	status = qeq_audit(qef_rcb, dsh, aud, &status);
@@ -2125,7 +2121,6 @@ qeq_validate_qp(QEF_RCB *qef_rcb, QEE_DSH *dsh, bool size_check)
 {
     DB_STATUS	status, status1;
     DMT_CB	*dmt_cb;
-    i4		i;
     PTR		*cbs = dsh->dsh_cbs;
     RDF_CB	rdf_cb;
     QEE_RESOURCE  *resource;
@@ -2539,10 +2534,12 @@ qeq_vopen(
 	** already set, in which case this must be a REPEATED re-use.)
 	*/
 	if (vl->vl_partition_cnt > 1)
+	{
 	    if (dsh->dsh_cbs[vl->vl_dmr_cb - 1] != NULL)
 		dsh->dsh_cbs[vl->vl_dmr_cb] = dsh->dsh_cbs[vl->vl_dmr_cb - 1];
 	    else
 		dsh->dsh_cbs[vl->vl_dmr_cb - 1] = dsh->dsh_cbs[vl->vl_dmr_cb];
+	}
 
 	if (vl->vl_flags & QEF_SET_INPUT)
 	{
@@ -3065,11 +3062,8 @@ bool		   desc )
     QEF_KATT	    *qef_katt;
     QEF_KAND	    *qef_kand;
     QEN_NOR	    *qen_nor;
-    QEN_NOR	    *qen_max;
     QEN_NOR	    *qen_1dup;	    /* duplicate values */
     QEN_NOR	    *qen_2dup;	    /* duplicate values */
-    QEN_NOR	    **qen_prev;	    /* points to next list ptr */
-    QEN_NOR	    **max_prev;	    /* pointer to next list ptr */
     QEN_NKEY	    *qen_nkey;
     PTR             dsh_key;
     DB_DATA_VALUE   adc_dv1;
@@ -3276,7 +3270,6 @@ PTR		   *excb_base,
 i4		   num_bases,
 PTR		   *param )
 {
-    DB_STATUS	    	status = E_DB_OK;
     i4			i;
 
     /* Convert each base to the correct address */

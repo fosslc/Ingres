@@ -43,6 +43,8 @@
 **	    Add prototype for TMsecs_to_stamp().
 **	14-jan-2009 (joea)
 **	    Do not hide TMhrnow prototype on VMS.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 /*
@@ -102,59 +104,43 @@ typedef struct
 
 
 FUNC_EXTERN STATUS  TMbreak(
-#ifdef CL_PROTOTYPED
 	SYSTIME		*tm, 
 	struct TMhuman	*human
-#endif
 );
 
 FUNC_EXTERN i4      TMcmp(
-#ifdef CL_PROTOTYPED
 	SYSTIME		*time1, 
 	SYSTIME		*time2
-#endif
 );
 
 FUNC_EXTERN i4      TMcmp_stamp(
-#ifdef CL_PROTOTYPED
 	TM_STAMP	*time1, 
 	TM_STAMP	*time2
-#endif
 );
 
 FUNC_EXTERN i4 TMcpu(
-#ifdef CL_PROTOTYPED
 	void
-#endif
 );
 
 FUNC_EXTERN STATUS  TMcvtsecs(
-#ifdef CL_PROTOTYPED
 	i4		secs, 
 	char		*buf
-#endif
 );
 
 FUNC_EXTERN VOID    TMend(
-#ifdef CL_PROTOTYPED
 	TIMER		*tm
-#endif
 );
 
 FUNC_EXTERN VOID    TMformat(
-#ifdef CL_PROTOTYPED
 	TIMER		*tm, 
 	i4		mode, 
 	char		*ident, 
 	char		decchar, 
 	char		*buf
-#endif
 );
 
 FUNC_EXTERN VOID    TMget_stamp(
-#ifdef CL_PROTOTYPED
 	TM_STAMP	*stamp
-#endif
 );
 
 # ifndef TMhrnow
@@ -164,28 +150,20 @@ FUNC_EXTERN STATUS  TMhrnow(
 # endif /* TMhrnow */
 
 FUNC_EXTERN STATUS  TMinit(
-#ifdef CL_PROTOTYPED
 	void
-#endif
 );
 
 FUNC_EXTERN VOID    TMnow(
-#ifdef CL_PROTOTYPED
 	SYSTIME	    *stime
-#endif
 );
 
 FUNC_EXTERN STATUS  TMperfstat(
-#ifdef CL_PROTOTYPED
     TM_PERFSTAT *stat,
     CL_SYS_ERR  *sys_err
-#endif
 );
 
 FUNC_EXTERN i4 TMsecs(
-#ifdef CL_PROTOTYPED
 	void
-#endif
 );
 
 FUNC_EXTERN void TMsecs_to_stamp(
@@ -193,50 +171,36 @@ FUNC_EXTERN void TMsecs_to_stamp(
 	TM_STAMP	*stamp);
 
 FUNC_EXTERN VOID    TMstamp_str(
-#ifdef CL_PROTOTYPED
 	TM_STAMP    *time, 
 	char	    *string
-#endif
 );
 
 FUNC_EXTERN VOID    TMstart(
-#ifdef CL_PROTOTYPED
 	TIMER	    *tm
-#endif
 );
 
 FUNC_EXTERN VOID    TMstr(
-#ifdef CL_PROTOTYPED
 	SYSTIME	    *timeval, 
 	char	    *timestr
-#endif
 );
 
 FUNC_EXTERN STATUS  TMstr_stamp(
-#ifdef CL_PROTOTYPED
 	char	    *string,     
 	TM_STAMP    *time
-#endif
 );
 
 FUNC_EXTERN STATUS  TMyrsize(
-#ifdef CL_PROTOTYPED
 	i4	    year, 
 	i4	    *daysinyear
-#endif
 );
 
 FUNC_EXTERN STATUS  TM_lookup_month(
-#ifdef CL_PROTOTYPED
 	char	    *month_str, 
 	i4	    *month_num
-#endif
 );
 
 FUNC_EXTERN VOID    TMzone(
-#ifdef CL_PROTOTYPED
 	i4	    *zone
-#endif
 );
 
 /*

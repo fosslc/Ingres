@@ -105,6 +105,11 @@ static STATUS init_child_thread(
 			  DM_OBJECT  **wloc_mask,
 			  DB_ERROR    *dberr);
 
+static STATUS load_index(
+			  DM2U_TPCB  *tp, 
+			  DM_OBJECT  *wloc_mask,
+			  DB_ERROR    *dberr);
+
 /*
 **
 **  Name: DM2UPUTI.C - Parallel Index creation utility routines.
@@ -165,6 +170,8 @@ static STATUS init_child_thread(
 **          Add "include <dm1h.h>". (b122075)
 **	25-Aug-2009 (kschendel) 121804
 **	    Need dmpbuild.h to satisfy gcc 4.3.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype static load_index()
 */
 
 
@@ -1442,7 +1449,7 @@ DB_ERROR   *dberr)
 **	11-Nov-2005 (jenjo02)
 **	    Check for external interrupts via XCB when available.
 */
-STATUS
+static STATUS
 load_index(
 DM2U_TPCB  *tp, 
 DM_OBJECT  *wloc_mask,

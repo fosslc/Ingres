@@ -4,6 +4,7 @@
 # ifndef CK_HDR_INCLUDED
 # define CK_HDR_INCLUDED
 
+#include    <pc.h>
 #include    <ckcl.h>
 
 /**CL_SPEC
@@ -29,6 +30,10 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototype for CK_spawnnow.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems
 **/
 
 FUNC_EXTERN STATUS  CKbegin(
@@ -87,5 +92,9 @@ FUNC_EXTERN STATUS  CKsave(
 			char		    *ckp_file,
 			u_i4		    ckp_l_file,
 			CL_ERR_DESC	    *sys_err);
+FUNC_EXTERN STATUS  CK_spawnnow(
+			char		    *command,
+			PID		    *pid,
+			CL_ERR_DESC	    *err_code);
 
 # endif /* CK_HDR_INCLUDED */

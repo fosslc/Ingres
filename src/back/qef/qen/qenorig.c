@@ -169,6 +169,8 @@
 **	    streamlining.
 **	11-May-2010 (kschendel) b123565
 **	    Rename dsh-root to dsh-parent.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 /* Local static procedure declarations */
@@ -1248,8 +1250,8 @@ i4		    function )
 loop_reset:
     if (reset && (qen_status->node_status != QEN0_INITIAL || 
 		qen_tkey == (QEN_TKEY *) NULL ||
-		(qen_status->node_status_flags & QEN16_ORIG_FIRST) &&
-		!(node_orig_flag & ORIG_UKEY)))
+		((qen_status->node_status_flags & QEN16_ORIG_FIRST) &&
+		!(node_orig_flag & ORIG_UKEY)) ) )
     {
 	if (qen_tkey && qen_status->node_status_flags & QEN16_ORIG_FIRST)
 	{
@@ -2145,7 +2147,6 @@ qen_keyprep(
     QEF_KEY	*qef_key;
     QEF_KOR	*qef_kor;
     QEF_KAND	*qef_kand;
-    QEF_KATT	*qef_katt;
     QEN_TKEY	*tkptr;
     QEN_NOR	*orkptr;
     QEN_NKEY	*nkptr;

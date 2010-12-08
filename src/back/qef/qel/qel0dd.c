@@ -102,6 +102,8 @@
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 GLOBALREF	char	IIQE_c0_usr_ingres[];
@@ -164,33 +166,10 @@ QEC_LINK	*v_lnk_p )
     DB_STATUS	    status;
     QES_DDB_SES	    *dds_p = & i_qer_p->qef_cb->qef_c2_ddb_ses;
     QED_DDL_INFO    *ddl_p = v_lnk_p->qec_1_ddl_info_p;
-    DD_2LDB_TAB_INFO	
-		    *tab_p = ddl_p->qed_d6_tab_info_p;
     QEC_D9_TABLEINFO    
 		    *tabinfo_p = v_lnk_p->qec_2_tableinfo_p;
 
 
-/*
-    bool	    obj_base_b = TRUE;	** assume required **
-
-
-    ** 1.  increment object_base in IIDD_DDB_OBJECT_BASE **
-
-
-    if (dds_p->qes_d7_ses_state == QES_4ST_REFRESH
-	&&
-	tab_p->dd_t3_tab_type != DD_4OBJ_INDEX)
-	obj_base_b = FALSE;			** preserve object base **
-
-    if (obj_base_b)
-    {
-	** not REGISTER WITH REFRESH **
-
-	status = qel_03_object_base(i_qer_p, v_lnk_p);
-	if (status)
-	    return(status);
-    }
-*/
     /* 2.  insert entry into IIDD_DDB_OBJECTS */
 
     status = qel_02_objects(i_qer_p, v_lnk_p);
@@ -837,15 +816,12 @@ QEC_LINK	*v_lnk_p )
 		    *ldbcols_p = & ldb_cols;
     QEQ_1CAN_QRY    *sel_p = v_lnk_p->qec_6_select_p,
     		    *ins_p = v_lnk_p->qec_22_insert_p;
-    DD_COLUMN_DESC  *coldesc_p,
-		    **cols_pp = tabinfo_p->dd_t8_cols_pp;
+    DD_COLUMN_DESC  **cols_pp = tabinfo_p->dd_t8_cols_pp;
     QEC_L3_COLUMNS  dd_columns,
 		    *ddcolumns_p = & dd_columns;
     i4		    tupcnt;
     i4		    ldb_delim = tabinfo_p->dd_t9_ldb_p->dd_i2_ldb_plus.
 				dd_p3_ldb_caps.dd_c10_delim_name_case;
-    i4		    ldb_reg = tabinfo_p->dd_t9_ldb_p->dd_i2_ldb_plus.
-				dd_p3_ldb_caps.dd_c6_name_case;
 
     /* See comments in header */
 

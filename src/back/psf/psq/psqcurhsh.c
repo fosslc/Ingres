@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 **
 */
 
@@ -80,9 +80,68 @@
 **          Use SIZE_TYPE for memory pool > 2Gig.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+u_i4 psq_crhsh(
+	DB_CURSOR_ID *cursid);
+i4 psq_crfind(
+	PSS_SESBLK *sess_cb,
+	DB_CURSOR_ID *cursor_id,
+	PSC_CURBLK **cursor,
+	DB_ERROR *err_blk);
+i4 psq_crffind(
+	PSS_SESBLK *sess_cb,
+	DB_CURSOR_ID *cursor_id,
+	PSC_CURBLK **cursor,
+	DB_ERROR *err_blk);
+u_i4 psq_clhsh(
+	i4 tabsize,
+	DB_ATT_NAME *name);
+i4 psq_clent(
+	i4 colno,
+	DB_ATT_NAME *colname,
+	DB_DT_ID type,
+	i4 length,
+	i2 precision,
+	PSC_CURBLK *cursor,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
+PSC_RESCOL *psq_ccol(
+	PSC_CURBLK *curblk,
+	DB_ATT_NAME *colname);
+void psq_crent(
+	PSC_CURBLK *curblk,
+	PSS_CURSTAB *curtab);
+i4 psq_crcreate(
+	PSS_SESBLK *sess_cb,
+	DB_CURSOR_ID *cursid,
+	i4 qmode,
+	PSC_CURBLK **curblk,
+	DB_ERROR *err_blk);
+i4 psq_victim(
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+i4 psq_delcursor(
+	PSC_CURBLK *curblk,
+	PSS_CURSTAB *curtab,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
+i4 psq_cltab(
+	PSC_CURBLK *cursor,
+	i4 numcols,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
+i4 psq_crclose(
+	PSC_CURBLK *cursor,
+	PSS_CURSTAB *curstab,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
+i4 psq_open_rep_cursor(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psq_crhsh	- Find hash bucket for cursor id

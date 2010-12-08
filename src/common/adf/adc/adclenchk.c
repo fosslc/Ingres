@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -140,15 +140,18 @@
 **          Added support for unicode long nvarchar datatype.
 **      16-oct-2006 (stial01)
 **          Added length check for locator datatypes
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      29-sep-2009 (joea)
 **          Add case for DB_BOO_TYPE in adc_1lenchk_rti.  Change
 **          adc_2lenchk_bool to use i1 as the underlying type.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. No need for the reduced length
+**	    as it doesn't use UCS2 for CEs.
 **/
 
 
@@ -320,23 +323,16 @@
 **          system dependent (defined in compat.h) but the prototype
 **          needs to be known/shared with user code for OME.
 **          Therefore, we make it a i4  (== int for users).
+**	09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_lenchk(
 ADF_CB             *adf_scb,
 i4                 adc_is_usr,
 DB_DATA_VALUE      *adc_dv,
 DB_DATA_VALUE	   *adc_rdv)
-# else
-DB_STATUS
-adc_lenchk( adf_scb, adc_is_usr, adc_dv, adc_rdv)
-ADF_CB             *adf_scb;
-i4                 adc_is_usr;
-DB_DATA_VALUE      *adc_dv;
-DB_DATA_VALUE	   *adc_rdv;
-# endif
 {
     i4		   	bdt = abs((i4) adc_dv->db_datatype);
     DB_STATUS		db_stat;
@@ -635,6 +631,7 @@ DB_DATA_VALUE	*adc_rdv)
 	}
 	else if ( (adc_dv->db_length <= 0) || 
 		  ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		   adc_dv->db_collID != DB_UCS_BASIC_COLL &&
 		   (adc_dv->db_length > adf_scb->adf_maxstring/2)) || 
 		  (adc_dv->db_length > adf_scb->adf_maxstring) || 
 		  (adc_dv->db_length > DB_MAXSTRING) )
@@ -991,7 +988,8 @@ DB_DATA_VALUE	*adc_rdv)
       {
         i4 maxlen = adf_scb->adf_maxstring;
 
-        if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+        if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		   adc_dv->db_collID != DB_UCS_BASIC_COLL)
             maxlen = adf_scb->adf_maxstring/2;
 
 	/* Set result length whether check fails or not */

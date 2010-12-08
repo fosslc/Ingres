@@ -30,6 +30,8 @@
 **	    replace nat and longnat with i4
 **	26-May-10 (gordy)
 **	    Log DBMS trace messages.
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 # ifndef __APITRACE_H__
@@ -115,6 +117,7 @@ II_EXTERN char		*IIapi_printEvent( IIAPI_EVENT evntNo );
 II_EXTERN char		*IIapi_printStatus( IIAPI_STATUS status );
 II_EXTERN char		*IIapi_printID( i4  id, i4  id_cnt, char **ids );
 II_EXTERN char		*IIapi_tranID2Str( IIAPI_TRAN_ID *tranID,char *buffer );
+II_EXTERN II_VOID	IIapi_nopDisplay( II_VOID );
 
 # else
 

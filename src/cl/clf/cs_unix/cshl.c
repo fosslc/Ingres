@@ -25,6 +25,7 @@
 #include    <cssminfo.h>
 #include    <clpoll.h>
 #include    <csinternal.h>
+#include    <exinternal.h>
 #include    <gcccl.h>
 #ifdef xCL_006_FCNTL_H_EXISTS
 #include    <fcntl.h>
@@ -40,6 +41,7 @@
 #include    <diracc.h>
 #include    <handy.h>
 #include    <pm.h>
+#include    <exinternal.h>
 #include    "cslocal.h"
 #include    "cssampler.h"
 
@@ -67,34 +69,11 @@ GLOBALDEF struct obj_list *ObjList = NULL;
 #include    <unwind.h>
 # endif
 
-# ifdef su4_u42
-#include    <sun4/asm_linkage.h>
-# endif
-
-# ifdef su4_cmw
-#include    <sun4/asm_linkage.h>
-# endif
-
-# if defined(sui_us5)
-# include <sys/asm_linkage.h>
-# endif
-
 # if defined(sparc_sol) || defined(a64_sol)
 # include <link.h>
 # include <sys/asm_linkage.h>
 # include <sys/frame.h>
 # include <sys/stack.h>
-# endif
-
-# if defined(dr6_us5)
-# include <sys/sparc/asm_linkage.h>
-# endif
-
-# if defined(sco_us5) || defined(sqs_ptx) || \
-     defined(usl_us5) || defined(nc4_us5) || \
-     defined(dgi_us5) || defined(sos_us5) || defined(sui_us5) || \
-     defined(int_lnx) || defined(int_rpl)
-void CS_sqs_pushf();
 # endif
 
 # if defined(ibm_lnx)
@@ -189,11 +168,6 @@ GLOBALDEF const char event_state_mask_names[] = EVENT_STATE_MASKS ;
 #undef _DEFINE
 #undef _DEFINESEND
 
-/*
-NO_OPTIM = su4_us5 su4_u42 dr6_us5 su4_cmw
-*/
-
-FUNC_EXTERN STATUS CS_null_handler( EX_ARGS     *exargs );
 
 /**
 **
@@ -218,7 +192,6 @@ FUNC_EXTERN STATUS CS_null_handler( EX_ARGS     *exargs );
 **			    thread id.
 *          CS_eradicate() - Fully shutdown the thread -- removing
 **			      it from any competion in the server.
-**          CS_dump_scb() - Dump the high level scb contents.
 **          CS_rcv_request() - Prime system to receive a request
 **				for new thread addition.
 **          CS_del_thread() - Final processing for deletion of a thread.
@@ -822,43 +795,34 @@ FUNC_EXTERN STATUS CS_null_handler( EX_ARGS     *exargs );
 **         SIR 123296
 **         Add LSB option, writable files are stored under ADMIN, logs under
 **         LOG and read-only under FILES location.
-[@history_template@]...
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Delete CS_SYSTEM ref, get from csinternal.
+**	    Lots of prototype fixes.
+**	    Untangle confusion about what stack dump output-fcn is and does.
+**	23-Nov-2010 (kschendel)
+**	    Drop a couple more obsolete ports missed in the last edit.
 **/
 
-
-/*
-** Typedef needed for CS_compress() and CS_del_thread()
-** must come before forward ref for CS_compress().
-** (sweeney)
-*/
-typedef u_short comp_t;
 
 /*
 **  Forward and/or External function references.
 */
 
-FUNC_EXTERN CS_SCB  *CS_xchg_thread();  /* Pick next thread to run */
-FUNC_EXTERN i4      CS_quantum();       /* timer AST to pick next thread */
-FUNC_EXTERN VOID    CS_toq_scan();      /* Scan request timeout queue */
-FUNC_EXTERN VOID    CS_eradicate();	/* unconditionally wipe out a session */
-FUNC_EXTERN VOID    CS_fmt_scb();	/* debug format an scb */
-FUNC_EXTERN STATUS  CS_admin_task();	/* add and delete threads */
-FUNC_EXTERN STATUS  CS_find_events();	/* find outstanding events */
-FUNC_EXTERN VOID    CS_move_async();
-FUNC_EXTERN VOID    CS_default_output_fcn(PTR arg1, i4 msg_length,
-					  char *msg_buffer);
-FUNC_EXTERN comp_t  CS_compress();      /* needed for CS_del_thread(); */
-FUNC_EXTERN VOID    CS_wake( PID pid );	
 
-# if defined(su4_u42) || defined(su4_cmw) || defined(dr6_us5)
-static VOID    	    CS_su4_dump_stack();/* sun4 support for CS_dump_stack */
-# endif /* su4_u42 su4_cmw dr6_us5 */
+static STATUS CS_admin_task(i4, CS_SCB *, i4 *, PTR);
+static void CS_toq_scan(i4, i4 *);	/* Scan request timeout queue */
+
+
 #ifdef axp_osf
-  VOID CS_axp_osf_dump_stack(); /* Digital UNIX support for CS_dump_stack */
+/* Digital UNIX support for CS_dump_stack */
+static VOID CS_axp_osf_dump_stack(CS_SCB *, CONTEXT *, PTR, TR_OUTPUT_FCN *, i4);
 #endif /* axp_osf */
+
 # if defined(sparc_sol) || defined(a64_sol)
-static VOID  CS_sol_dump_stack( CS_SCB *, ucontext_t *, VOID (*fcn)(), i4);
-i4 DIAGSymbolLookup(void *, unsigned long *, unsigned long *, char *, i4);
+# if defined(sparc_sol)
+static void CS_fudge_stack(CS_SCB *);
+#endif
+static VOID  CS_sol_dump_stack( CS_SCB *, ucontext_t *, PTR, TR_OUTPUT_FCN *, i4);
 # endif
 
 # if defined(any_hpux) && !defined(HPUX_DO_NOT_INCLUDE) && !defined(i64_hpu)
@@ -962,16 +926,16 @@ typedef struct previous_frame_def
 } PREV_FRAME_DEF;
 #endif
 
-static VOID CS_hp_dump_stack( CS_SCB *, ucontext_t *, VOID (*)(), i4 );
+static VOID CS_hp_dump_stack( CS_SCB *, ucontext_t *, PTR, TR_OUTPUT_FCN *, i4 );
 int U_get_previous_frame( struct current_frame_def *, struct previous_frame_def * );
 # endif /* any_hpux */
 
 #ifdef i64_hpu
-static VOID CS_i64_hpu_dump_stack(VOID (*)(), i4 );
+static VOID CS_i64_hpu_dump_stack(PTR, TR_OUTPUT_FCN *, i4 );
 #endif /* i64_hpu */
 
 #if defined(int_lnx) || defined(int_rpl) || defined(a64_lnx)
-VOID CS_lnx_dump_stack(CS_SCB *, ucontext_t *, VOID (*)(), i4 );
+VOID CS_lnx_dump_stack(CS_SCB *, ucontext_t *, PTR, TR_OUTPUT_FCN *, i4 );
 # endif /* int_lnx */
 
 #ifdef xCS_WAIT_INFO_DUMP
@@ -982,8 +946,6 @@ static VOID	    CS_display_sess_short();
 ** Definition of all global variables used by this file.
 */
 
-GLOBALREF CS_SYSTEM           Cs_srv_block;
-GLOBALREF CS_ADMIN_SCB	      Cs_admin_scb;
 GLOBALREF CS_SCB	      Cs_idle_scb;
 GLOBALREF i4		      CSslavepids[];
 
@@ -1072,8 +1034,7 @@ GLOBALDEF     i4              Cs_polltimeout = 30000;
 */
 
 CS_SCB	*
-CS_xchng_thread(scb)
-CS_SCB             *scb;
+CS_xchng_thread(CS_SCB *scb)
 {
     register i4         i;
     register CS_SCB	*new_scb = NULL;
@@ -1084,62 +1045,48 @@ CS_SCB             *scb;
     i4			oo_stacks = 0;
 #endif
 
-# if defined(su4_u42) || \
-     defined(dr6_us5) || defined(hp3_us5) || \
-     defined(sparc_sol) || defined(su4_cmw)
+# if defined(sparc_sol)
 # define gotit
     if (scb &&
 	scb->cs_registers[CS_SP] <=
-	(long)scb->cs_stk_area + sizeof(CS_STK_CB) + 64)
+	(SCALARP)scb->cs_stk_area + sizeof(CS_STK_CB) + 64)
 # endif
 
-# if defined(sco_us5) || defined(ds3_ulx) || \
-     defined(sqs_ptx) || defined(usl_us5) || \
-     defined(nc4_us5) || defined(dgi_us5) || defined(sos_us5) || \
-     defined(pym_us5) || defined(sui_us5) || defined(rmx_us5) || \
-     defined(ts2_us5) || defined(sgi_us5) || defined(int_lnx) || \
-     defined(int_rpl) || defined(rux_us5)
+# if defined(usl_us5) || defined(sgi_us5) || defined(int_lnx) || defined(int_rpl)
 # define gotit
     if (scb &&
 	scb->cs_sp <=
-	(long)scb->cs_stk_area + sizeof(CS_STK_CB) + 64)
+	(SCALARP)scb->cs_stk_area + sizeof(CS_STK_CB) + 64)
 # endif
 
-# if defined(hp8_us5) || defined(hp8_bls) || defined(hpb_us5) || defined(hp2_us5)
+# if defined(hp8_us5) || defined(hpb_us5) || defined(hp2_us5)
 # define gotit
     if (scb && CS_check_stack(&scb->cs_mach))
 # endif
 
-# ifdef dg8_us5
-# define gotit
-    if (scb &&
-        scb->cs_registers[ CS_SP ] <=
-        (long)scb->cs_stk_area + sizeof(CS_STK_CB) + 64)
-# endif /* dg8_us5 */
-
 # if defined(any_aix) && defined(BUILD_ARCH32)
 # define gotit
     if (scb && scb->cs_registers[CS_SP] <=
-			(long)scb->cs_stk_area + sizeof(CS_STK_CB) + 64)
+			(SCALARP)scb->cs_stk_area + sizeof(CS_STK_CB) + 64)
 # endif /* aix32 */
 
 # if defined(any_aix) && defined(BUILD_ARCH64)
 # define gotit
      if (scb && scb->cs_registers[CS_SP] <=
-                       (long)scb->cs_stk_area + sizeof(CS_STK_CB) + 128)
+                       (SCALARP)scb->cs_stk_area + sizeof(CS_STK_CB) + 128)
 # endif /* aix64 */
 
 #if defined(axp_osf) || defined(axp_lnx)
 # define gotit
     if (scb && scb->cs_sp <=
-                        (long)scb->cs_stk_area + sizeof(CS_STK_CB) + 128)
+                        (SCALARP)scb->cs_stk_area + sizeof(CS_STK_CB) + 128)
 
 # endif /* axp_osf */
 
 # if defined(ibm_lnx)
 # define gotit
     if (scb && scb->cs_registers[CS_SP] <=
-                        (long)scb->cs_stk_area + sizeof(CS_STK_CB) + 128)
+                        (SCALARP)scb->cs_stk_area + sizeof(CS_STK_CB) + 128)
 
 # endif /* ibm_lnx */
 
@@ -1256,7 +1203,7 @@ Missing_machine_dependent_scb_condition!!!
 	/*
 	** Serious problems.  The idle job is always ready.
 	*/
-	(*Cs_srv_block.cs_elog)(E_CS0007_RDY_QUE_CORRUPT, 0, 0);
+	(*Cs_srv_block.cs_elog)(E_CS0007_RDY_QUE_CORRUPT, NULL, 0, 0);
 	Cs_srv_block.cs_inkernel = 0;
 	if ( Cs_srv_block.cs_async )
 	    CS_move_async(new_scb);
@@ -1609,9 +1556,7 @@ i4	*mintim;
 **          to prevent attempts to CS_join_thread() on the wrong thread ID.
 */
 STATUS
-CS_alloc_stack(scb, errcode)
-CS_SCB             *scb;
-CL_ERR_DESC	   *errcode;
+CS_alloc_stack(CS_SCB *scb, CL_ERR_DESC *errcode)
 {
     i4             status = -1;
     CS_STK_CB		*stk_hdr;
@@ -1626,15 +1571,14 @@ CL_ERR_DESC	   *errcode;
 
      /* this declaration must go at the start of a {} block */
      /* see below for companion ifdef.			    */
-# if defined(sco_us5) || \
-    (defined(int_lnx) && defined(OS_THREADS_USED) && !defined(NO_INTERNAL_THREADS)) || \
+# if (defined(int_lnx) && defined(OS_THREADS_USED) && !defined(NO_INTERNAL_THREADS)) || \
     (defined(int_rpl) && defined(OS_THREADS_USED) && !defined(NO_INTERNAL_THREADS)) || \
     (defined(ibm_lnx) && defined(OS_THREADS_USED)) || \
     (defined(axp_lnx) && defined(OS_THREADS_USED)) || \
-     defined(usl_us5) || defined(dgi_us5) || defined(sui_us5)
+     defined(usl_us5)
      /* Include this code if you need stack pages from the server stack */
      CS_STK_CB *CSget_stk_pages();
-#endif /* sco_us5 usl_us5 sui_us5 dgi_us5 */
+#endif
 
     if (mmap_pagesize < ME_MPAGESIZE)
 	mmap_pagesize = ME_MPAGESIZE;
@@ -1650,14 +1594,7 @@ CL_ERR_DESC	   *errcode;
         {
 	    if ( stk_hdr->cs_reapable == TRUE )
 	    {
-#if defined(rux_us5)
-		pthread_t tid = *(pthread_t *)stk_hdr->cs_thread_id;
-		pthread_addr_t stat;
-
-		CS_join_thread(tid, &stat);
-#else
 		CS_join_thread(stk_hdr->cs_thread_id, (void **)&statptr );
-#endif
 		stk_hdr->cs_used = 0;
 		stk_hdr->cs_reapable = FALSE;
 	    }
@@ -1703,7 +1640,7 @@ CL_ERR_DESC	   *errcode;
 						/* the stack -- for	    */
 						/* CS_setup()		    */
 	stk_hdr = victim->cs_stk_area;
-	victim->cs_stk_area = 0;
+	victim->cs_stk_area = NULL;
     }
     else
 #endif
@@ -1744,12 +1681,11 @@ CL_ERR_DESC	   *errcode;
 #endif /* xCL_077_BSD_MMAP */
 
 	/* We need to allocate a new stack */
-# if defined(sco_us5) || \
-    (defined(int_lnx) && defined(OS_THREADS_USED) && !defined(NO_INTERNAL_THREADS)) || \
+# if (defined(int_lnx) && defined(OS_THREADS_USED) && !defined(NO_INTERNAL_THREADS)) || \
     (defined(int_rpl) && defined(OS_THREADS_USED) && !defined(NO_INTERNAL_THREADS)) || \
     (defined(ibm_lnx) && defined(OS_THREADS_USED)) || \
     (defined(axp_lnx) && defined(OS_THREADS_USED)) || \
-     defined(usl_us5) || defined(dgi_us5) || defined(sui_us5)
+     defined(usl_us5)
         /* Include this code if you need stack pages from the server stack */
 
         npages = (size+sizeof(CS_STK_CB)+ME_MPAGESIZE) / ME_MPAGESIZE;
@@ -1768,7 +1704,7 @@ CL_ERR_DESC	   *errcode;
 #endif
         if ( status != OK )
 	    return(E_CS002F_NO_FREE_STACKS);
-# endif	/* sco_us5 */
+# endif	/* stack pages */
 
 	stk_hdr->cs_begin = (char *)stk_hdr + sizeof(*stk_hdr);
 	stk_hdr->cs_size = npages * ME_MPAGESIZE;
@@ -1811,12 +1747,9 @@ CL_ERR_DESC	   *errcode;
 	    mmap_check = FALSE;
 	}
 
-#if defined(su4_u42) || defined(dr6_us5) || \
-    defined(sparc_sol) || \
-    defined(usl_us5) || defined(ris_us5) || defined(su4_cmw) || \
+#if defined(sparc_sol) || defined(usl_us5) || \
     defined(axp_osf) || defined(any_aix) || \
-    defined(dgi_us5) || defined(sui_us5) || defined(LNX) || \
-    defined(OSX)
+    defined(LNX) || defined(OSX)
 
 	/* 
 	** Try to remap the "protection page" so no real memory is used by it
@@ -1895,7 +1828,7 @@ CL_ERR_DESC	   *errcode;
 	stk_hdr->cs_prev->cs_next = stk_hdr;
 	Cs_srv_block.cs_stk_count++;
     }
-    scb->cs_stk_area = (char *) stk_hdr;
+    scb->cs_stk_area = stk_hdr;
     stk_hdr->cs_used = scb->cs_self;
     scb->cs_stk_size = size;
 
@@ -1923,17 +1856,13 @@ CL_ERR_DESC	   *errcode;
     {
 # endif /* OS_THREADS_USED */
 
-# if defined(su4_u42) || defined(dr6_us5) || \
-     defined(sparc_sol) || defined(su4_cmw)
+# if defined(sparc_sol)
 # define got1
     scb->cs_registers[CS_SP] = (long)stk_hdr->cs_orig_sp;
     CS_fudge_stack(scb);
 # endif
 
-# if defined(sco_us5) || defined(sqs_ptx) || \
-     defined(usl_us5) || defined(nc4_us5) || \
-     defined(dgi_us5) || defined(sos_us5) || defined(sui_us5) || \
-     defined(int_lnx) || defined(int_rpl)
+# if defined(usl_us5) || defined(int_lnx) || defined(int_rpl)
 # define got1
      scb->cs_sp = (long)stk_hdr->cs_orig_sp;
      CS_sqs_pushf(scb, CS_eradicate);
@@ -1948,67 +1877,15 @@ CL_ERR_DESC	   *errcode;
   scb->cs_id = 100;
 # endif /* ibm_lnx */
 
-# if defined(sun_u42) || defined(hp3_us5)
-# define got1
-    *(VOID (**)())stk_hdr->cs_orig_sp = CS_eradicate;
-    scb->cs_registers[CS_SP] = (long)stk_hdr->cs_orig_sp;
-# endif
-
-# if defined(ds3_ulx) || defined(rmx_us5) || defined(pym_us5) \
-  || defined(ts2_us5) || defined(sgi_us5) || defined(rux_us5)
+# if defined(sgi_us5)
 # define got1
     scb->cs_sp = (long)stk_hdr->cs_orig_sp;
 # endif
 
-# if defined(any_hpux) || defined(hp8_bls)
+# if defined(any_hpux)
 # define got1
 /* Note: will set up the stack when assigning initial starting addr */
 #endif
-
-# ifdef dg8_us5
-# define got1
-	/* Fake it out to return to CS_eradicate.
-	 * Make FP point back to itself.
-	 * Zero out saved registers.
-	 * Set saved SP to just after this frame.
-	 */
-	 /* Stack looks like :
-	  *  &CS_eradicate
-	  *  old fp ( really points back to itself )
-	  *  saved r2
-	  *   ......
-	  *  saved r9
-	  */
-	*(VOID (**)())((long *)stk_hdr->cs_orig_sp - 1) = CS_eradicate;
-	*((long *)stk_hdr->cs_orig_sp - 2)  = 
-		(long)((long *)(stk_hdr->cs_orig_sp) - 2);
-	*((long *)stk_hdr->cs_orig_sp - 3)  = 0x0;
-	*((long *)stk_hdr->cs_orig_sp - 4)  = 0x0;
-	*((long *)stk_hdr->cs_orig_sp - 5)  = 0x0;
-	*((long *)stk_hdr->cs_orig_sp - 6)  = 0x0;
-	*((long *)stk_hdr->cs_orig_sp - 7)  = 0x0;
-	*((long *)stk_hdr->cs_orig_sp - 8)  = 0x0;
-	*((long *)stk_hdr->cs_orig_sp - 9)  = 0x0;
-	*((long *)stk_hdr->cs_orig_sp - 10) = 0x0;
-	scb->cs_registers[ CS_SP ] = (long)((long *)stk_hdr->cs_orig_sp - 10);
-	scb->cs_registers[ CS_FP ] = (long)((long *)stk_hdr->cs_orig_sp - 2);
-	scb->cs_registers[ CS_R14 + 0 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 1 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 2 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 3 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 4 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 5 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 6 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 7 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 8 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 9 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 10 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 11 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 12 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 13 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 14 ] = 0x0;
-	scb->cs_registers[ CS_R14 + 15 ] = 0x0;
-# endif /* dg8_us5 */
 
 # if defined(any_aix) && defined(BUILD_ARCH32)
 # define got1
@@ -2092,10 +1969,8 @@ CL_ERR_DESC	   *errcode;
 [@history_template@]...
 */
 STATUS
-CS_deal_stack(stk_hdr)
-CS_STK_CB        *stk_hdr;
+CS_deal_stack(CS_STK_CB *stk_hdr)
 {
-    CL_ERR_DESC	errcode;
 
 # ifdef OS_THREADS_USED
     if ( CS_is_mt() )
@@ -2158,14 +2033,12 @@ CS_STK_CB        *stk_hdr;
 **	    Added new masks to discriminate I/O CSsuspends for reads or
 **	    writes.
 */
-STATUS
-CS_setup()
+void
+CS_setup(void)
 {
     CS_SCB              *scb = Cs_srv_block.cs_current;
-    STATUS		(*rtn)();
     STATUS		status;
     EX_CONTEXT		excontext;
-    FUNC_EXTERN STATUS	cs_handler();
     CL_ERR_DESC		errdesc;
     char		*cp;
     i4			nevents, msec;
@@ -2194,13 +2067,12 @@ CS_setup()
 	scb->cs_mode = CS_TERMINATE;
 	if (scb->cs_mask & CS_FATAL_MASK)
 	{
-	    (*Cs_srv_block.cs_elog)(E_CS00FF_FATAL_ERROR, 0, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS00FF_FATAL_ERROR, NULL, 0, 0);
 	    EXdelete();
-	    return(OK);
 	}
 	else
 	{
-	    (*Cs_srv_block.cs_elog)(E_CS0014_ESCAPED_EXCPTN, 0, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS0014_ESCAPED_EXCPTN, NULL, 0, 0);
 	}
 	scb->cs_mask |= CS_FATAL_MASK;
     }
@@ -2226,11 +2098,10 @@ CS_setup()
 		case CS_INPUT:
 		case CS_OUTPUT:
 		case CS_READ:
-		    rtn = Cs_srv_block.cs_process;
 		    break;
 
 		default:
-		    (*Cs_srv_block.cs_elog)(E_CS000C_INVALID_MODE, 0, 0);
+		    (*Cs_srv_block.cs_elog)(E_CS000C_INVALID_MODE, NULL, 0, 0);
 		    scb->cs_mode = CS_TERMINATE;
 		    continue;
 	    }
@@ -2278,7 +2149,7 @@ CS_setup()
 	    }
 
 	    status =
-		(*rtn)(scb->cs_mode,
+		(*Cs_srv_block.cs_process)(scb->cs_mode,
 			    scb,
 			    &scb->cs_nmode);
 	    if (status)
@@ -2321,7 +2192,7 @@ CS_setup()
 			break;
 
 		    default:
-			(*Cs_srv_block.cs_elog)(E_CS000D_INVALID_RTN_MODE, 0, 0);
+			(*Cs_srv_block.cs_elog)(E_CS000D_INVALID_RTN_MODE, NULL, 0, 0);
 			scb->cs_mode = CS_TERMINATE;
 			break;
 		}
@@ -2333,10 +2204,9 @@ CS_setup()
 	}
 	if (scb->cs_sem_count)
 	{
-	    (*Cs_srv_block.cs_elog)(E_CS001C_TERM_W_SEM, 0, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS001C_TERM_W_SEM, NULL, 0, 0);
 	}
 	EXdelete();
-	return(OK);
     }
     else if (scb == (CS_SCB *)&Cs_admin_scb)
     {
@@ -2461,7 +2331,6 @@ CS_setup()
 	CSterminate(CS_KILL, 0);
     }
     EXdelete();
-    return(OK);
 }
 
 
@@ -2514,7 +2383,7 @@ CS_aclr( CS_ASET *addr )    // -> register (r3)
 ** 
 */
 void
-CS_swuser()
+CS_swuser(void)
 {
         return;
 }
@@ -2549,9 +2418,9 @@ CS_swuser()
 **	    scheduler decides current thread should continue execution.
 */
 
-# if defined(any_hpux) || defined(hp8_bls)
+# if defined(any_hpux)
 VOID
-CS_swuser()
+CS_swuser(void)
 /**********************************************************************
 CS_swuser switches to a new user.  This routine isolates the machine
    independent stuff from the the machine specific stuff.
@@ -2711,10 +2580,9 @@ CS_SID                sid;
 [@history_template@]...
 */
 VOID
-CS_eradicate()
+CS_eradicate(void)
 {
     CS_SCB              *scb = Cs_srv_block.cs_current;
-    STATUS		status;
 
     CSp_semaphore(TRUE, &Cs_admin_scb.csa_sem);
 
@@ -2800,93 +2668,16 @@ CS_eradicate()
 **      22-Oct-2002 (hanal04) Bug 108986
 **          Created.
 */
-VOID CS_default_output_fcn( PTR arg1, i4 msg_len, char *msg_buffer)
+static STATUS
+CS_default_output_fcn( PTR arg1, i4 msg_len, char *msg_buffer)
 {
  CL_ERR_DESC err_code;
  
  ERsend (ER_ERROR_MSG, msg_buffer, msg_len, &err_code);
+ return (OK);
 }
  
 
-/*{
-** Name: CS_dump_scb	- Display the contents of an scb
-**
-** Description:
-**      This routine simply displays the scb via TRdisplay().  It is intended 
-**      primarily for interactive debugging.
-**
-** Inputs:
-**      sid                             sid of scb in question
-**      scb                             scb in question.  Either will do
-**                                      If scb is given, it is used.
-**
-** Outputs:
-**	Returns:
-**	    VOID
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-**      13-Nov-1986 (fred)
-**          Created.
-**	28-Jan-1991 (anton)
-**	    Added CS_CNDWAIT state
-**	08-sep-93 (swm)
-**	    Changed sid type from i4  to CS_SID to match recent CL
-**	    interface revision.
-**	    Fix TRdisplay() calls to use %p rather than %x for pointers.
-**	16-Mar-2001 (thaju02)
-**	    Removed reference to scb->cs_sm_root. (B104254)
-*/
-VOID
-CS_dump_scb(sid, scb)
-CS_SID             sid;
-CS_SCB             *scb;
-{
-
-    if (scb == (CS_SCB *)0)
-    {
-	scb = CS_find_scb(sid);
-	if (scb == (CS_SCB *)0)
-	{
-	    TRdisplay("No SCB found for sid %p%< (%d.)\n", sid);
-	    return;
-	}
-    }
-    TRdisplay("\n>>>CS_SCB found at %p<<<\n\n", scb);
-    TRdisplay("cs_next: %p\tcs_prev: %p\n", scb->cs_next, scb->cs_prev);
-    TRdisplay("cs_length: %d.\tcs_type: %x\n", scb->cs_length, scb->cs_type);
-
-# if defined(sun_u42) || defined(hp3_us5)
-    TRdisplay("cs_self: %p%< (%d.)\tcs_psl: %x\n", scb->cs_self, scb->cs_psl);
-# else
-    TRdisplay("cs_self: %p%< (%d.)\n", scb->cs_self);
-# endif
-    TRdisplay("cs_stk_area: %p\tcs_stk_size: %p%< (%d.)\n", scb->cs_stk_area,
-	    scb->cs_stk_size);
-    TRdisplay("cs_state: %w %<(%x)\tcs_mask: %v %<(%x)\n",
-	    cs_state_names,
-	    scb->cs_state,
-	    cs_mask_names,
-	    scb->cs_mask);
-    TRdisplay("cs_priority: %d.\tcs_base_priority: %d.\n",
-	    scb->cs_priority, scb->cs_base_priority);
-    TRdisplay("cs_timeout: %d.\t\n",
-		    scb->cs_timeout);
-    TRdisplay("cs_sem_count: %d.\n",
-			scb->cs_sem_count);
-    TRdisplay("\tcs_sm_next: %p\n", scb->cs_sm_next);
-    TRdisplay("cs_mode: %w%<(%x)\tcs_nmode: %w%<(%x)\n",
-		    "<invalid>,CS_INITATE,CS_INPUT,CS_OUTPUT,CS_TERMINATE,CS_EXCHANGE",
-		    scb->cs_mode,
-		    "<invalid>,CS_INITATE,CS_INPUT,CS_OUTPUT,CS_TERMINATE,CS_EXCHANGE",
-		    scb->cs_nmode);
-    TRdisplay("cs_rw_q.cs_q_next: %p\tcs_rw_q.cs_q_prev: %p\n",
-		scb->cs_rw_q.cs_q_next, scb->cs_rw_q.cs_q_prev);
-}
 
 /*{
 ** Name: CS_rcv_request	- Prime system to receive a request for new session
@@ -2919,7 +2710,8 @@ CS_SCB             *scb;
 [@history_template@]...
 */
 
-CS_rcv_request()
+STATUS
+CS_rcv_request(void)
 {
     STATUS	    status;
 
@@ -2929,7 +2721,7 @@ CS_rcv_request()
 	CL_ERR_DESC err;
 
 	SETCLERR(&err, status, 0);
-	(*Cs_srv_block.cs_elog)(E_CS0011_BAD_CNX_STATUS, &err, 0);
+	(*Cs_srv_block.cs_elog)(E_CS0011_BAD_CNX_STATUS, &err, 0, 0);
 	return(FAIL);
     }
     return(OK);
@@ -3007,8 +2799,8 @@ CS_rcv_request()
 **	16-dec-2002 (somsa01)
 **	    Changed type of ac_btime to match the type of cs_connect.
 */
-CS_del_thread(scb)
-CS_SCB		*scb;
+STATUS
+CS_del_thread(CS_SCB *scb)
 {
     static int		ac_ifi = -2;	/* Accounting file descriptor/status:
 					**	>=0	File is open
@@ -3034,12 +2826,12 @@ CS_SCB		*scb;
         	unsigned short ac_gid;  /* Unused */
         	short   ac_tty;         /* Unused */
         	i4      ac_btime;       /* Session start time */
-        	comp_t  ac_utime;       /* Session CPU time (secs*60) */
-        	comp_t  ac_stime;       /* Unused */
-        	comp_t  ac_etime;       /* Session elapsed time (secs*60) */
-        	comp_t  ac_mem;         /* average memory usage (unused) */
-        	comp_t  ac_io;          /* I/O between FE and BE */
-        	comp_t  ac_rw;          /* I/O to disk by BE */
+        	u_i2  ac_utime;       /* Session CPU time (secs*60) */
+        	u_i2  ac_stime;       /* Unused */
+        	u_i2  ac_etime;       /* Session elapsed time (secs*60) */
+        	u_i2  ac_mem;         /* average memory usage (unused) */
+        	u_i2  ac_io;          /* I/O between FE and BE */
+        	u_i2  ac_rw;          /* I/O to disk by BE */
         	char    ac_comm[8];     /* "IIDBMS" */
 	    }			acc_rec;
 
@@ -3126,7 +2918,7 @@ CS_SCB		*scb;
     ** CS_del_thread(). (sweeney)
     */
     if (acctstat != OK)
-        (*Cs_srv_block.cs_elog)(acctstat, 0, 0);
+        (*Cs_srv_block.cs_elog)(acctstat, NULL, 0, 0);
 #ifdef MCT
     gen_Vsem(&CL_acct_sem);
 #endif
@@ -3149,7 +2941,7 @@ CS_SCB		*scb;
         CSterminate(CS_CLOSE, &active_count);
     }
 
-    status = CS_deal_stack((CS_STK_CB *) scb->cs_stk_area);
+    status = CS_deal_stack(scb->cs_stk_area);
     status = (*Cs_srv_block.cs_scbdealloc)(scb);
     /*
     ** we used to return acctstat here if set. Since we now log from here
@@ -3171,7 +2963,7 @@ CS_SCB		*scb;
 **
 ** Outputs:
 **	Returns:
-**	    comp_t			converted number
+**	    u_i2			converted number
 **	Exceptions:
 **
 **
@@ -3185,11 +2977,10 @@ CS_SCB		*scb;
 **	    Changed to return type int
 [@history_template@]...
 */
-comp_t
-CS_compress(val)
-register time_t val;
+u_i2
+CS_compress(time_t val)
 {
-    register exp = 0, rnd = 0;
+    register u_i2 exp = 0, rnd = 0;
 
     while (val >= 8192)
     {
@@ -3206,7 +2997,7 @@ register time_t val;
             exp++;
         }
     }
-    return((comp_t)(exp<<13) + val);
+    return((u_i2)(exp<<13) + val);
 }
 
 /*{
@@ -3253,29 +3044,24 @@ register time_t val;
 **	04-Oct-2000 (jenjo02)
 **	    Deleted test for cs_mt; this function is only called
 **	    from CS code.
-[@history_template@]...
 */
-STATUS
-CS_admin_task(mode, scb, next_mode, io_area)
-i4                 mode;
-CS_ADMIN_SCB	   *scb;
-i4                 *next_mode;
-PTR                io_area;
+
+static STATUS
+CS_admin_task(i4 mode, CS_SCB *ascb, i4 *next_mode, PTR io_area)
 {
     STATUS              status = OK;
+    CS_ADMIN_SCB	*scb;
     CS_SCB		*dead_scb;
     CS_SCB		*next_dead;
     CL_ERR_DESC		error;
-    i4			uic;
-    i4			size;
     i4			task_added;
 
-SIprintf("CS_admin_task\n");
-    if (scb != &Cs_admin_scb)
+    if (ascb != &Cs_admin_scb.csa_scb)
     {
-	(*Cs_srv_block.cs_elog)(E_CS0012_BAD_ADMIN_SCB, 0, 0);
+	(*Cs_srv_block.cs_elog)(E_CS0012_BAD_ADMIN_SCB, NULL, 0, 0);
 	return(FAIL);
     }
+    scb = (CS_ADMIN_SCB *) &Cs_admin_scb;
     if (mode != CS_INITIATE)
     {
 	for (;;)
@@ -3395,8 +3181,7 @@ SIprintf("CS_admin_task\n");
 **	    Append thread_id to session_id if OS threads.
 */
 STATUS
-cs_handler(exargs)
-EX_ARGS	    *exargs;
+cs_handler(EX_ARGS *exargs)
 {
    
     /* liibi01 Cross integration from 6.4 ( Bug 64041 ).
@@ -3406,9 +3191,7 @@ EX_ARGS	    *exargs;
     */
 
     char        buf[ER_MAX_LEN];
-    char        exbuf[ER_MAX_LEN];
     i4          msg_language = 0;
-    char        msg_text[ER_MAX_LEN];
     i4          msg_length;
     i4          length;
     i4          i;
@@ -3511,8 +3294,7 @@ EX_ARGS	    *exargs;
 */
 
 void
-CSsigchld(sig)
-int sig;
+CSsigchld(i4 sig)
 {
 	i4 pid,i;
 
@@ -3561,7 +3343,7 @@ int sig;
 **	none
 **
 **	Returns:
-**	    0 - irrelavent UNIX signal handler
+**	    nothing
 **
 **	Exceptions:
 **	    none
@@ -3578,10 +3360,11 @@ int sig;
 **	31-jan-92 (bonobo)
 **	    Deleted double-question marks; ANSI compiler thinks they
 **	    are trigraph sequences.
+**	15-Nov-2010 (kschendel)
+**	    void, not int returning.
 */
-i4
-CSsigterm(sig)
-int	sig;
+void
+CSsigterm(i4 sig)
 {
     i4		i = 0;
 
@@ -3603,42 +3386,6 @@ int	sig;
 	(VOID) CSterminate(CS_COND_CLOSE, &i);
 	break;
     }
-    return(0);
-}
-
-/*{
-** Name: CS_exit_handler	- Terminate the server as gracefully as possible
-**
-** Description:
-**      This routine is called to cause the system to exit forcibly.
-**	It merely notes that the server is not dying voluntarily or nicely.
-**
-** Inputs:
-**      handler                         bool:  is called as an exit handler
-**
-** Outputs:
-**	Returns:
-**	    none
-**	Exceptions:
-**	    none
-**
-** Side Effects:
-**	    none
-**
-** History:
-**      12-jan-1987 (fred)
-**          Created.
-[@history_template@]...
-*/
-void
-CS_exit_handler(handler)
-i4                 handler;
-{
-    i4			status;
-    CS_SCB              *scb;
-
-    if (handler)
-	(*Cs_srv_block.cs_elog)(E_CS0015_FORCED_EXIT, 0, 0);
 }
 
 /*{
@@ -3676,12 +3423,8 @@ i4                 handler;
 [@history_template@]...
 */
 VOID
-CS_fmt_scb(scb, iosize, area)
-CS_SCB             *scb;
-i4                 iosize;
-char               *area;
+CS_fmt_scb(CS_SCB *scb, i4 iosize, char *area)
 {
-    i4                  length = 0;
     char		*buf = area;
     CS_STK_CB		*stk_hdr;
 
@@ -3712,8 +3455,7 @@ char               *area;
 	    &scb->cs_tag, scb->cs_self);
 	buf += STlength(buf);
 
-# if defined(ds3_ulx) || defined(rmx_us5) || defined(pym_us5) \
-  || defined(ts2_us5) || defined(sgi_us5) || defined(rux_us5)
+# if defined(sgi_us5)
 # define got2
         TRdisplay(buf, "SP: %x PC:%x EXSP: %x\r\n",
             scb->cs_sp, scb->cs_pc, scb->cs_exsp);
@@ -3722,49 +3464,7 @@ char               *area;
             break;
 # endif
 
-# if defined(sun_u42) || defined(hp3_us5)
-# define got2
-	STprintf(buf, "PSL: %x PC:%x\tRegisters below\r\n", 
-	    scb->cs_psl, scb->cs_pc);
-	buf += STlength(buf);
-	if (buf - area >= iosize)
-	    break;
-	STprintf(buf, "D0:%x D1:%x D2:%x D3:%x\r\n",
-	    scb->cs_registers[0],
-	    scb->cs_registers[1],
-	    scb->cs_registers[2],
-	    scb->cs_registers[3]);
-	buf += STlength(buf);
-	if (buf - area >= iosize)
-	    break;
-	STprintf(buf, "D4:%x D5:%x D6:%x D7:%x\r\n",
-	    scb->cs_registers[4],
-	    scb->cs_registers[5],
-	    scb->cs_registers[6],
-	    scb->cs_registers[7]);
-	buf += STlength(buf);
-	if (buf - area >= iosize)
-	    break;
-	STprintf(buf, "A0:%x A1:%x A2:%x A3:%x\r\n",
-	    scb->cs_registers[8],
-	    scb->cs_registers[9],
-	    scb->cs_registers[10],
-	    scb->cs_registers[11]);
-	buf += STlength(buf);
-	if (buf - area >= iosize)
-	    break;
-	STprintf(buf, "A4:%x A5:%x FP:%x SP:%x\r\n",
-	    scb->cs_registers[12],
-	    scb->cs_registers[13],
-	    scb->cs_registers[14],
-	    scb->cs_registers[15]);
-	buf += STlength(buf);
-	if (buf - area >= iosize)
-	    break;
-# endif	/* sun_u42 */
-
-# if defined(su4_u42) || defined(dr6_us5) ||  \
-     defined(sparc_sol) || defined(su4_cmw)
+# if defined(sparc_sol)
 # define got2
 	STprintf(buf, "SP: %x PC:%x EXSP: %x\r\n",
 	    scb->cs_registers[CS_SP], scb->cs_pc, scb->cs_exsp);
@@ -3773,10 +3473,7 @@ char               *area;
 	    break;
 # endif
 
-# if defined(sco_us5) || defined(sqs_ptx) || \
-     defined(usl_us5) || defined(nc4_us5) || \
-     defined(dgi_us5) || defined(sos_us5) || defined(sui_us5) || \
-     defined(int_lnx) || defined(int_rpl)
+# if defined(usl_us5) || defined(int_lnx) || defined(int_rpl)
 # define got2
 	STprintf(buf, "SP: %x FP: %x EXSP: %x \r\n",
 	    scb->cs_sp, scb->cs_fp, scb->cs_exsp );
@@ -3800,19 +3497,11 @@ char               *area;
 	    break;
 # endif /* ibm_lnx */
 
-# if defined(any_hpux) || defined(hp8_bls)
+# if defined(any_hpux)
 # define got2
         STprintf(buf, "RP: %x  SP: %x\n",
             scb->cs_mach.hp.cs_jmp_buf[0], scb->cs_mach.hp.cs_jmp_buf[1]);
 # endif	/* hp8_us5, hp8_bls */
-
-# ifdef dg8_us5
-# define got2
-        STprintf(buf, "R0:%x R30:%x R31:%x\r\n",
-                       scb->cs_registers[ CS_PC ],
-                       scb->cs_registers[ CS_FP ],
-                       scb->cs_registers[ CS_SP ] );
-# endif /* dg8_us5 */
 
 #if defined(any_aix)
 # define got2
@@ -3849,7 +3538,7 @@ Missing_machine_dependant code!
 /* check if stk_area null to prevent segv */
    if (scb->cs_stk_area != NULL)
 	{
-	  stk_hdr = (CS_STK_CB *) scb->cs_stk_area;
+	  stk_hdr = scb->cs_stk_area;
 	  STprintf(buf, "Stk begin: %p\tstk end: %p\r\n",
 	      stk_hdr->cs_begin,
 	      stk_hdr->cs_end);
@@ -3867,11 +3556,11 @@ Missing_machine_dependant code!
     }
 }
 
-STATUS
+void
 CS_breakpoint(void)
 {
-
-    return(OK);
+    /* Just a place to put a debugger breakpoint */
+    return;
 }
 
 /*
@@ -3967,7 +3656,7 @@ i4	*cpumeasure)
 	    {
 		SETCLERR(&err, 0, 0); 
 		err_recorded = 1;
-		(*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, &err, 0);
+		(*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, &err, 0, 0);
 	    }
 	    return;
 	}
@@ -3994,7 +3683,7 @@ i4	*cpumeasure)
 	    {
 		SETCLERR(&err, 0, 0); 
 		err_recorded = 1;
-		(*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, &err, 0);
+		(*Cs_srv_block.cs_elog)(E_CS0016_SYSTEM_ERROR, &err, 0, 0);
 	    }
 	    return;
 	}
@@ -4115,8 +3804,7 @@ i4	*cpumeasure)
 [@history_template@]...
 */
 VOID
-CS_move_async(scb)
-CS_SCB	    *scb;
+CS_move_async(CS_SCB *scb)
 {
     CS_SCB	*nscb, *ascb;
     i4		new_ready;
@@ -4413,13 +4101,13 @@ struct cnt {
         long ncall;
 } *countbase;
 
-CSprofend()
+static void CSprofend(void)
 {
     chdir("/tmp");
     monitor(0);
 }
 
-CSprofstart()
+void CSprofstart(void)
 {
     int	range, cntsiz, monsize; 
     SIZE_TYPE	pages;
@@ -4450,56 +4138,11 @@ CSprofstart()
     PCatexit(CSprofend);
 }
 #else
-CSprofend()
-{
-}
-
-CSprofstart()
+void CSprofstart(void)
 {
 }
 #endif
 
-# if defined(su4_u42) || defined(dr6_us5) || defined(su4_cmw)
-
-/*
-**	The following two routines, CS_su4_eradicate and CS_su4_setup, are
-**	dummy routines which simply call CS_eradicate and CS_setup,
-**	respectively.  They are used when fudging the stack for a new thread.
-**	By using these dummy routines, CS_fudge_stack can be coded
-**	independently of the stack size of the real CS_eradicate and CS_setup
-**	routines.  This means that the stack size of CS_eradicate and CS_setup
-**	may be changed, by adding debug statements or what-have-you, without
-**	any consequences as far as thread stack initialization is concerned.
-**
-**	WARNING: These functions cannot be optimized.  The fudged return
-**	address's into these routines have been calculated in such a way that
-**	they will skip past the assembler "prologue" of the functions.
-**	This "prologue" allocates stack space for the routine, which is no
-**	longer necessary, since it has already been done in CS_fudge_stack.
-**	Optimization will remove this prologue, which will invalidate the
-**	entry point into the routine.
-**
-**	WARNING: No code must be added to these two routines.  If any
-**	local variables, string constants or any other entity that may
-**	increase the stack size are added, stack corruption will result
-**	because the stacks have been pre-allocated in CS_fudge_stack with a
-**	fixed size.
-*/
-
-void
-CS_su4_eradicate()
-
-{
-	CS_eradicate();
-}
-
-STATUS
-CS_su4_setup()
-
-{
-	return(CS_setup());
-}
-# endif /* su4_u42 dr6_us5 */
 # ifdef sparc_sol
  
 /*
@@ -4514,10 +4157,6 @@ CS_su4_setup()
 void    CS_su4_eradicate();
 STATUS  CS_su4_setup();
  
-# endif /* su4_us5 */
- 
-# if defined(su4_u42) || defined(dr6_us5) || \
-     defined(sparc_sol) || defined(su4_cmw)
 
 /*
 ** Name: CS_fudge_stack()	- fudge stack for Sun 4
@@ -4562,11 +4201,8 @@ STATUS  CS_su4_setup();
 **          assembler version for su4_us5.
 */
 
-static 
-CS_fudge_stack(scb)
-
-CS_SCB *scb;
-
+static void
+CS_fudge_stack(CS_SCB *scb)
 {
 	register i4   i,*ip;
 	register char *sp,*fp;
@@ -4623,12 +4259,7 @@ CS_SCB *scb;
 	** will return to it. ip + 15 == %i7 == %r31
 	*/
 
-# ifdef sparc_sol
         *(ip + 15)  = (i4)CS_su4_eradicate - 4;
-# else
-        *(ip + 15)  = (i4)CS_su4_eradicate + 4;
-# endif /* su4_us5 */
-
 
 	/*
 	** Set stack pointer value in scb, so that CS_swuser can
@@ -4639,7 +4270,7 @@ CS_SCB *scb;
 	scb->cs_registers[CS_SP] = (long)sp;
 }
 
-# endif /* su4_u42 dr6_us5 su4_us5 */
+# endif /* sparc_sol */
 
 
 /*{
@@ -4666,7 +4297,7 @@ VOID
 CSdump_stack( void )
 {
     /* Dump this thread's stack, non-verbose */
-    CS_dump_stack(0,0,0,0);
+    CS_dump_stack(NULL, NULL,NULL,0,0);
 }
 
 /*{
@@ -4694,17 +4325,17 @@ CSdump_stack( void )
 **					value input is NULL then the current
 **					stack is assumed.
 **      pContext | ucp | stack_p        Platform specific argument for the
-**                                      context or stack pointer. This parm
-**                                      can only be used if scb is NULL.
+**                                      context or stack pointer.
+**	output_arg			Passed as-is to output_fcn.  If the
+**					supplied output_fcn doesn't require
+**					this arg, it can be NULL.
 **	output_fcn			Function to call to perform the output.
 **                                      This routine will be called as
-**                                          (*output_fcn)(newline_present,
+**                                          (*output_fcn)(output_arg,
 **                                                          length,
 **                                                          buffer)
-**                                      where buffer is the length character
-**                                      output string, and newline_present
-**                                      indicates whether a newline needs to
-**                                      be added to the end of the string.
+**					where buffer and length contain the
+**                                      output string
 **	verbose				Should we print some information about 
 **					where this diagnostic is coming from?
 **
@@ -4726,62 +4357,39 @@ CSdump_stack( void )
 **          Use CS_default_output_fcn() as a default output
 **          function if one is not supplied by the caller.
 */
-VOID
-#if defined(axp_osf)
-CS_dump_stack(pScb, pContext, output_fcn, verbose)
-CS_SCB *pScb;
-CONTEXT *pContext;
-VOID    (*output_fcn)();
-i4  	verbose;
-#else
-# if defined(any_hpux) || defined(int_lnx) || defined(int_rpl) || \
-     defined(a64_lnx) || defined(sparc_sol) || \
-     defined(a64_sol)
-CS_dump_stack( scb, ucp, output_fcn, verbose )
-CS_SCB *scb;
-ucontext_t *ucp;
-VOID (*output_fcn)();
-i4  verbose;
-# else
-CS_dump_stack(scb, stack_p, output_fcn, verbose)
-CS_SCB  *scb;
-u_i4   *stack_p;
-VOID    (*output_fcn)();
-i4  verbose;
-# endif /* hp8_us5 */
-#endif  /*axp_osf*/
+void
+CS_dump_stack(CS_SCB *scb, void *context, PTR arg, TR_OUTPUT_FCN *fcn, i4 verbose)
 {
-  if(output_fcn == NULL)
-  {
-      output_fcn = CS_default_output_fcn;
-  }
+
+    if(fcn == NULL)
+    {
+	arg = NULL;
+	fcn = CS_default_output_fcn;
+    }
 
 # if defined(axp_osf)
-	CS_axp_osf_dump_stack(pScb, pContext, output_fcn, verbose);
+	CS_axp_osf_dump_stack(scb, (CONTEXT *)context, arg, fcn, verbose);
 # endif /*axp_osf */
 
 /* These stack dump functions have not been modified to work in 64-bit yet */
 # if ! defined(LP64)
-# if defined(su4_u42) || defined(dr6_us5) || defined(su4_cmw)
-    CS_su4_dump_stack(scb, stack_p, output_fcn, verbose);
-# endif /* su4_u42 su4_cmw dr6_us5 */
 
 # if defined(any_hpux) && !defined(HPUX_DO_NOT_INCLUDE) && !defined(i64_hpu)
-    CS_hp_dump_stack( scb, ucp, output_fcn, verbose );
+    CS_hp_dump_stack( scb, (ucontext_t *)context, arg, fcn, verbose );
 # endif /* hp8_us5 */
 
 # endif /* LP64 */
 
 # if defined(int_lnx) || defined(int_rpl) || defined(a64_lnx)
-    CS_lnx_dump_stack( scb, ucp, output_fcn, verbose );
+    CS_lnx_dump_stack( scb, (ucontext_t *) context, arg, fcn, verbose );
 # endif /* int_lnx */
 
 # if defined(sparc_sol) || defined(a64_sol)
-    CS_sol_dump_stack(scb, ucp, output_fcn, verbose);
+    CS_sol_dump_stack(scb, (ucontext_t *) context, arg, fcn, verbose);
 # endif
 
 # if defined(i64_hpu)
-    CS_i64_hpu_dump_stack( output_fcn, verbose );
+    CS_i64_hpu_dump_stack( arg, fcn, verbose );
 # endif /* i64_hpu */
 
     return;
@@ -4850,15 +4458,14 @@ read_as(int fd, struct frame *fp, struct frame **savefp, uintptr_t *savepc)
 **      scb                             session id of stack to dumped.
 **                                      If scb is zero, dump the current stack.
 **	stack_p				The current stack.
+**	output_arg			Passed to output_fcn.
 **      output_fcn                      Function to call to perform the output.
 **                                      This routine will be called as
-**                                          (*output_fcn)(newline_present,
+**                                          (*output_fcn)(arg,
 **                                                          length,
 **                                                          buffer)
 **                                      where buffer is the length character
-**                                      output string, and newline_present
-**                                      indicates whether a newline needs to
-**                                      be added to the end of the string.
+**                                      output string.
 **      verbose                         Should we print some information about
 **                                      where this diagnostic is coming from?
 **
@@ -4873,11 +4480,8 @@ read_as(int fd, struct frame *fp, struct frame **savefp, uintptr_t *savepc)
 */
 
 static VOID
-CS_sol_dump_stack( scb, ucp, output_fcn, verbose)
-CS_SCB  *scb;
-ucontext_t	*ucp;
-VOID	(*output_fcn)();
-i4 verbose;
+CS_sol_dump_stack( CS_SCB *scb, ucontext_t *ucp, PTR output_arg,
+	TR_OUTPUT_FCN *output_fcn, i4 verbose)
 {
     char        name[GCC_L_PORT];
     char        verbose_string[80];
@@ -5025,7 +4629,7 @@ i4 verbose;
 
        {
             char sym[80];
-	    char buf[350];
+	    char buf[128+128+80+80+50+1];	/* +50 is slop */
 	    char traceline[128];
 	    char registerline[128];
 	    char stackline[80];
@@ -5089,7 +4693,7 @@ i4 verbose;
 	    else
 		stackline[0] = EOS;
 		
-	    TRformat(output_fcn, 1, buf, sizeof(buf) - 1, "%s%s%s%s",
+	    TRformat(output_fcn, output_arg, buf, sizeof(buf) - 1, "%s%s%s%s",
 		     verbose_string, traceline, registerline,stackline);
         }
 
@@ -5100,220 +4704,6 @@ i4 verbose;
 
 # endif /* su4_us5 su9_us5 a64_sol */
 
-# if defined(su4_u42) || defined(dr6_us5) || defined(su4_cmw)
- 
-/*{
-** Name: CS_su4_dump_stack()	- dump sun 4 stack trace.
-**
-** Description:
-**	Sun 4 implementation of CS_dump_stack().
-**
-**	Special assemply routine CS_getsp() is called to flush the register
-**	cache.  Following this "C" code can safely traverse the sun4 stack
-**	given the saved stack pointer found in the scb.  A stack dump is
-**	printed using the given output_fcn().
-**
-** Inputs:
-**      scb                             session id of stack to dumped.
-**                                      If scb is zero, dump the current stack.
-**	stack_p				The current stack.
-**      output_fcn                      Function to call to perform the output.
-**                                      This routine will be called as
-**                                          (*output_fcn)(newline_present,
-**                                                          length,
-**                                                          buffer)
-**                                      where buffer is the length character
-**                                      output string, and newline_present
-**                                      indicates whether a newline needs to
-**                                      be added to the end of the string.
-**      verbose                         Should we print some information about
-**                                      where this diagnostic is coming from?
-**
-** Outputs:
-**	none.
-**
-**	Returns:
-**	    VOID
-** History:
-**      12-feb-91 (mikem)
-**          Created (code provided by jeff anton).
-**      13-oct-93 (markm)
-**          Fix while() loop so that TRformat has the correct number of
-**          %x escapes and that the loop terminates correctly bug #50842
-**	31-dec-1993 (andys)
-**	    Add verbose argument.
-**	    Change loop termination to be when the stack pointer falls outside
-**	    where we know the stack should be.
-**	    Use u_i4 to make code more accurately reflect registers
-**	    especially when doing comparisons with other PTRs.
-**	    Change R_FP to R_15.
-**	    Remove pc == 0 termination condition. 
-**	19-sep-1995 (nick)
-**	    Added the current stack as a parameter - we can pass this from
-**	    exceptions where the SP is made available to the exception
-**	    handler.
-**	15-Mch-1996 (prida01)
-**	    Print out symbols in stack trace  for sun solaris
-**	18-Mch-1996 (prida01)
-**	    Correct the guard page check. We could be on an alternate stack
-**	    using signal handlers. Guard page is only 4k on these boxes
-**	02-apr-1998 (canor01)
-**	    Prevent walking the stack if there is no stack information in
-**	    the scb.
-**	24-Sep-1998 (jenjo02)
-**	    Show cur_scb instead of Cs_srv_block.cs_current when printing
-**	    the SCB identifier. cs_current is meaningless with OS threads.
-**      15-apr-1999 (devjo01)
-**          Get stack extent info "on the fly" if not already stored.
-**	06-jun-2000 (mosjo01)
-**	    su4_u42 does not have CS_get_stackinfo (just like dr6_us5).
-**      23-Sep-2002 (hanal04) Bug 108763
-**          Print the PC address even when the function name has been
-**          found. The function name does not allow you to isolate the
-**          axact line at which a function was called.
-*/
-
-#define R_L0    0
-#define R_L1    1
-#define R_L2    2
-#define R_L3    3
-#define R_L4    4
-#define R_L5    5
-#define R_L6    6
-#define R_L7    7
-#define R_I0    8
-#define R_I1    9
-#define R_I2    10
-#define R_I3    11
-#define R_I4    12
-#define R_I5    13
-#define R_I6    14
-#define R_FP    R_I6
-#define R_I7    15
-
-static VOID
-CS_su4_dump_stack(scb, stack_p, output_fcn, verbose)
-CS_SCB  *scb;
-u_i4   *stack_p;
-i4	(*output_fcn)();
-i4 verbose;
-{
-    char        buf[128];
-    char        name[GCC_L_PORT];
-    char        verbose_string[80];
-    u_i4   *sp;
-    i4		stack_depth = MAX_STK_UNWIND;
-    u_i4   stack_start;    /* highest poss stack address               */
-    u_i4   stack_end;      /* lowest poss stack address                */
-    PID         pid;            /* our process id                           */
-    PTR		sym;
-
-    if (scb)
-    {
-	/* We need to know the limits of the stack to walk it */
-	if ( scb->cs_stk_area == NULL )
-	    return;
-
-	sp = (u_i4 *) scb->cs_registers[0];
-    }
-    else
-    {
-	/*
-	** No passed scb: use the passed stack pointer if it exists or
-	** get the fp from the stack and use the current scb for termination.
-	*/
-	CSget_scb(&scb);
-	sp = stack_p ? stack_p : (u_i4 *) CS_getsp();
-    }
-
-    /* Get the limits of the stack */
-    if ( scb->cs_stk_area == NULL )
-    {
-        /* using OS provided stack, get limits */
-        char	*stack_base;
-	i4 stack_size;
-        i4   	status;
-
-#if !defined(dr6_us5) && !defined(su4_u42)
-        CS_get_stackinfo( &stack_base, &stack_size, &status );
-        if ( OK != status )
-	    return;
-#endif
-	stack_end = (u_i4)stack_base;
-        stack_start = stack_end - stack_size;	
-    }
-    else
-    {
-        /* stack caching case, we know the limits already */
-        stack_end = (u_i4)((CS_STK_CB *)scb->cs_stk_area)->cs_end;
-        stack_start =  (u_i4)((CS_STK_CB *)scb->cs_stk_area)->cs_begin;
-    }
-
-    /* liibi01 Cross integration from 6.4.( Bug 64042 )
-       Modified the stack dump function and now print the server name from 
-       Cs_srv_block.cs_name as the part of the output in errlog.log */
-
-    if (verbose)
-    {
-        STncpy(name, Cs_srv_block.cs_name, sizeof(Cs_srv_block.cs_name));
-	name[ sizeof(Cs_srv_block.cs_name) ] = EOS;
-
-        PCpid(&pid);
-	STprintf(verbose_string,"%-8.8s::[%-16.16s, %08.8x]: Stack dump pid %d: ",
-	    PMhost(), name, scb->cs_self, pid);
-    }
-    else
-    {
-        verbose_string[0] = EOS;
-    }
-
-    /* in case stack is corrupt, only print 100 levels so that we don't
-    ** loop here forever.
-    */
-    while ((stack_depth-- > 0) && sp)
-    {
-        u_i4 pc;
-
-	/*
-	**  we may be in the guard page ( i.e. sp < cs_begin ) hence
-	**  check for this before accessing the stack contents else we'll
-	**  SEGVIO here as well
-	*/
-	if (((u_i4)sp < stack_start) && 
-		((u_i4)sp >= stack_start - 0x1000))
-	{
-	    TRformat(output_fcn,1,buf,sizeof(buf) - 1,
-			"Hit guard page stack_start 0x%x stack 0x%x\n",
-			stack_start,(u_i4)sp);
-	    break;
-	}
-
-        pc = sp[R_I7];
-
-	/* When the pc is 0 we are at the end of the stack */
-	if (pc == 0) break;
-	sym = (PTR)DIAGSymbolLookupAddr(pc,0);
-	if (sym)
-        	TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-            	"%s%08x: (pc = %x) %s(%x,%x,%x,%x,%x,%x)\n",
-	    	verbose_string,
-            	(long)sp, pc, sym,
-            	sp[R_I0], sp[R_I1], sp[R_I2], sp[R_I3], sp[R_I4], sp[R_I5]);
-	else
-	
-        	TRformat(output_fcn, 1, buf, sizeof(buf) - 1,
-            	"%s%08x: %x(%x,%x,%x,%x,%x,%x)\n",
-	    	verbose_string,
-            	(long)sp, pc,
-            	sp[R_I0], sp[R_I1], sp[R_I2], sp[R_I3], sp[R_I4], sp[R_I5]);
-
-        sp = (u_i4 *) sp[R_FP];
-
-	if ((u_i4)sp > stack_end)
-                break;
-    }
-}
-# endif /* su4_u42 su5_us5 su4_cmw dr6_us5 */
 
 # if defined(any_hpux) && !defined(HPUX_DO_NOT_INCLUDE) && !defined(i64_hpu)
  
@@ -5340,15 +4730,14 @@ i4 verbose;
 **				comming from monitor will just return.
 **	ucp			The pointer to passed ucontext_t when
 **                              performing an exception stack trace
+**	output_arg		Passed to output_fcn.
 **      output_fcn              Function to call to perform the output.
 **                              This routine will be called as
-**                              (*output_fcn)(newline_present,
+**                              (*output_fcn)(output_arg,
 **                                            length,
 **                                            buffer)
 **                              where buffer is the length character
-**                              output string, and newline_present
-**                              indicates whether a newline needs to
-**                              be added to the end of the string.
+**                              output string.
 **      verbose                 Should we print some information about
 **                              where this diagnostic is coming from?
 **
@@ -5366,11 +4755,8 @@ i4 verbose;
 */
 
 static VOID
-CS_hp_dump_stack( scb, ucp, output_fcn, verbose )
-CS_SCB *scb;
-ucontext_t *ucp;
-VOID (*output_fcn)();
-i4 verbose;
+CS_hp_dump_stack( CS_SCB *scb, ucontext_t *ucp, PTR output_arg,
+	TR_OUTPUT_FCN *output_fcn, i4 verbose )
 {
     char        buf[128];
     char        name[GCC_L_PORT];
@@ -5465,11 +4851,11 @@ i4 verbose;
 	if ( sym )
         {
 #if defined(LP64)
-                TRformat( output_fcn, 1, buf, sizeof(buf) - 1,
-                        "%s %s %s\n", verbose_string, pc_string, sym);
+                TRformat( output_fcn, output_arg, buf, sizeof(buf) - 1,
+                        "%s %s %s", verbose_string, pc_string, sym);
 #else
-        	TRformat( output_fcn, 1, buf, sizeof(buf) - 1,
-            		"%s%08x: %s(%x,%x,%x,%x)\n",
+        	TRformat( output_fcn, output_arg, buf, sizeof(buf) - 1,
+            		"%s%08x: %s(%x,%x,%x,%x)",
 	    		verbose_string,
             		cur_frame.cursp, sym,
             		*(sp - 9), *(sp - 10), *(sp - 11), *(sp - 12) );
@@ -5478,11 +4864,11 @@ i4 verbose;
 	else
         {
 #if defined(LP64)
-                TRformat( output_fcn, 1, buf, sizeof(buf) - 1,
-                        "%s %s\n", verbose_string, pc_string);
+                TRformat( output_fcn, output_arg, buf, sizeof(buf) - 1,
+                        "%s %s", verbose_string, pc_string);
 #else
-        	TRformat( output_fcn, 1, buf, sizeof(buf) - 1,
-            		"%s%08x: %x(%x,%x,%x,%x)\n",
+        	TRformat( output_fcn, output_arg, buf, sizeof(buf) - 1,
+            		"%s%08x: %x(%x,%x,%x,%x)",
 	    		verbose_string,
             		cur_frame.cursp, cur_frame.currlo,
             		*(sp - 9), *(sp - 10), *(sp - 11), *(sp - 12) );
@@ -5521,12 +4907,15 @@ i4 verbose;
 **      Basic HP Itanium stack dump for current thread only.
 **      This will only dump the stack for the current thread.
 **
-** Inputs: None.
-*
-** Outputs:
+** Inputs:
+**	output_arg		Passed to output_fcn.
+**	output_fcn		Outputter routine, called as
+**				  (*output_fcn)(output_arg, len, buffer);
+**				with output in buffer of length len.
 **      verbose                 Should we print some information about
 **                              where this diagnostic is coming from?
 **
+** Outputs:
 **      Returns:
 **          VOID
 ** History:
@@ -5534,9 +4923,7 @@ i4 verbose;
 **          Created.
 */
 static VOID
-CS_i64_hpu_dump_stack(output_fcn, verbose)
-VOID (*output_fcn)();
-i4 verbose;
+CS_i64_hpu_dump_stack(PTR output_arg, TR_OUTPUT_FCN *output_fcn, i4 verbose)
 {
     char		buf[128];
     char		verbose_string[80];
@@ -5591,13 +4978,13 @@ i4 verbose;
 
         if(sym)
         {
-             TRformat( output_fcn, 1, buf, sizeof(buf) - 1,
-                    "%s %s %s\n", verbose_string, pc_string, sym);
+             TRformat( output_fcn, output_arg, buf, sizeof(buf) - 1,
+                    "%s %s %s", verbose_string, pc_string, sym);
         }
         else
         {
-            TRformat( output_fcn, 1, buf, sizeof(buf) - 1,
-                   "%s %s \n", verbose_string, pc_string);
+            TRformat( output_fcn, output_arg, buf, sizeof(buf) - 1,
+                   "%s %s ", verbose_string, pc_string);
         }
         status = _UNW_step(context);
     }
@@ -5606,10 +4993,7 @@ i4 verbose;
 }
 # endif /* i64_hpu */
 
-# if defined(sco_us5) || defined(sqs_ptx) || \
-     defined(usl_us5) || defined(nc4_us5) || \
-     defined(dgi_us5) || defined(sos_us5) || defined(sui_us5) || \
-     defined(int_lnx) || defined(int_rpl)
+# if defined(usl_us5) || defined(int_lnx) || defined(int_rpl)
 /*
 ** Name: CS_sqs_pushf()	- put return address of routine on indicated stack 
 **      for Symmetry
@@ -5642,9 +5026,7 @@ i4 verbose;
 **          Created.
 */
 void
-CS_sqs_pushf( scb, retfunc )
-register CS_SCB *scb;
-register void (*retfunc)();
+CS_sqs_pushf( CS_SCB *scb, void (*retfunc)(void) )
 {
  	 scb->cs_sp-=sizeof(long);
  	 *(long *)scb->cs_sp = (long)retfunc; 
@@ -5840,7 +5222,8 @@ CS_SCB *scb;
 **       CONTEXT       -   The context of the stack that received the
 **                         the exception.  May be NULL if dumping
 **			   stack from another session.
-**       output_fcn    -   Utility used to print stack to errlog
+**	output_arg	- Anything that output-fcn might need
+**      output_fcn	- TRformat fcn style utility used to send output
 **
 **    11-Nov-1998 (merja01)
 **      Changed routine to be called through CS_dump_stack.  Added
@@ -5870,11 +5253,8 @@ extern unsigned long _ftext;    /* Start address of the program text.*/
 extern unsigned long _etext;    /* First address above the program text.*/
 
 VOID
-CS_axp_osf_dump_stack(pScb, pContext, output_fcn, verbose)
-CS_SCB *pScb;
-CONTEXT *pContext;
-i4	(*output_fcn)();
-i4	verbose;
+CS_axp_osf_dump_stack(CS_SCB *pScb, CONTEXT *pContext, PTR output_arg,
+	TR_OUTPUT_FCN *output_fcn, i4 verbose)
 {
 
 #   define	AXP_REG_S0	 9
@@ -5922,7 +5302,7 @@ i4	verbose;
     if ( verbose )
     {
 	STprintf(msg_buffer,"-----------BEGIN STACK TRACE------------");
-	(*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+	(*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
 
 	/* Format session and Process info */
 	STlcopy(Cs_srv_block.cs_name, msg_buffer, sizeof(Cs_srv_block.cs_name));
@@ -5945,7 +5325,7 @@ i4	verbose;
     if ( EXdeclare(CS_null_handler, &ex_context) )
     {
 	STprintf(msg_buffer," Cannot wind further back.  Stack corrupted?");
-	(*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+	(*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
 	break;
     }
 
@@ -6010,7 +5390,7 @@ i4	verbose;
 	{
 	    STprintf(msg_buffer,
 	      "Error allocating memory in CS_axp_osf_dump_stack" );
-	    (*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+	    (*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
 	    return;
 	}
 	STprintf(fullpath, "%s%s", getenv("II_SYSTEM"), objpath);
@@ -6032,13 +5412,13 @@ i4	verbose;
     {
         STprintf(msg_buffer, "%sPC is zero - stack trace not available.",
 	  verbose_string);
-	(*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+	(*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
     }
     else if (context.sc_pc == context.sc_traparg_a0)
     {
         STprintf(msg_buffer, "%sbad PC (%p) - stack trace not available.",
           verbose_string, context.sc_traparg_a0);
-	(*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+	(*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
     }
     else
     {
@@ -6168,19 +5548,19 @@ i4	verbose;
 			  stk_cnt, context.sc_sp,
 			  context.sc_pc, procedureName,
 			  offsettxt, linenotxt );
-		(*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+		(*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
 	    }
 
 		STprintf( msg_buffer,
 		 "  $s0(r9)  0x%p  $s1(r10) 0x%p  $s2(r11) 0x%p",
 		  context.sc_regs[9], context.sc_regs[10],
 		  context.sc_regs[11] );
-		(*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+		(*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
 		STprintf( msg_buffer,
 		 "  $s3(r12) 0x%p  $s4(r13) 0x%p  $s5(r14) 0x%p  $s6(r15) 0x%p",
 		  context.sc_regs[12], context.sc_regs[13],
 		  context.sc_regs[14], context.sc_regs[15] );
-		(*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+		(*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
 
 	    if ( address == (ulong)CS_setup )
 	    {
@@ -6202,7 +5582,7 @@ i4	verbose;
     if ( verbose )
     {
 	STprintf(msg_buffer, "-----------END STACK TRACE----------");
-	(*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+	(*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
     }
 
     EXdelete();
@@ -6273,7 +5653,8 @@ i4	verbose;
 **			   for other sessions are only supported
 **			   if INTERNAL threads are used.
 **       ucp           -   User context pointer provided by OS.      
-**       output_fcn    -   Utility used to print stack to errlog
+**	output_arg	- Anything that output-fcn might need
+**      output_fcn	- TRformat fcn style utility used to send output
 **	 verbose       -   More text if non-zero.
 **
 **    20-Oct-2004 (devjo01)
@@ -6316,11 +5697,8 @@ i4	verbose;
 # define STACK_TRACE_FMT "%d: %p %s(%p %p %p %p)"
 # endif
 VOID
-CS_lnx_dump_stack(pScb, ucp, output_fcn, verbose)
-CS_SCB *pScb;
-ucontext_t *ucp;
-VOID	(*output_fcn)();
-i4	verbose;
+CS_lnx_dump_stack(CS_SCB *pScb, ucontext_t *ucp, PTR output_arg,
+	TR_OUTPUT_FCN *output_fcn, i4 verbose)
 {
 
 /* Largest plausible single stack frame to avoid runaway */
@@ -6371,7 +5749,7 @@ i4	verbose;
     if ( verbose )
     {
 	STprintf(msg_buffer,"-----------BEGIN STACK TRACE------------");
-	(*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+	(*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
 
 	/* Format session and Process info */
 	STlcopy(Cs_srv_block.cs_name, msg_buffer, sizeof(Cs_srv_block.cs_name));
@@ -6392,14 +5770,14 @@ i4	verbose;
 	if ( EXdeclare(CS_null_handler, &ex_context) )
 	{
 	    STprintf(msg_buffer,"Exception in stack unwind");
-	    (*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+	    (*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
 	    if ( !getsymbols )
 	    {
 		/* Two tries max */
 		break;
 	    }
 	    STprintf(msg_buffer,"Trying again without symbols");
-	    (*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+	    (*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
 	    symbols = NULL; /* Don't try to recover any malloced mem. */
 	    getsymbols = 0;
 	    EXdelete();
@@ -6476,7 +5854,7 @@ i4	verbose;
 		    currentframe->params[2], currentframe->params[3] );
 #endif
 
-	    (*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+	    (*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
 	    currentframe = currentframe->next_frame;
 	}
 
@@ -6487,7 +5865,7 @@ i4	verbose;
     if ( verbose )
     {
 	STprintf(msg_buffer, "-----------END STACK TRACE----------");
-	(*output_fcn)(NULL, STlength(msg_buffer), msg_buffer);
+	(*output_fcn)(output_arg, STlength(msg_buffer), msg_buffer);
     }
 
     EXdelete();

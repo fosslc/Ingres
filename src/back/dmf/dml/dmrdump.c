@@ -19,6 +19,7 @@
 #include    <dmccb.h>
 #include    <dmxcb.h>
 #include    <dmtcb.h>
+#include    <dml.h>
 #include    <dm0m.h>
 #include    <dm2r.h>
 #include    <dm1s.h>
@@ -71,6 +72,8 @@
 **	    SIR 120874: dm1s_? functions converted to DB_ERROR *
 **	25-Aug-2009 (kschendel) 121804
 **	    Need dm0m.h to satisfy gcc 4.3.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dml.h to get prototype for dmr_dump_data().
 **/
 
 /*{

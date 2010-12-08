@@ -284,6 +284,8 @@
 --#	08-Sep-10 (rajus01) Bug 124381, SD issue 146492
 --#	    Added mechanism_location.lp32 and mechanism_location.lp64 for
 --#	    hybrid platforms.
+--#	23-Nov-2010 (kschendel)
+--#	    Drop a couple obsolete platforms.
 --#
 -- configuration system preferences
 # ifdef NT_GENERIC
@@ -651,10 +653,7 @@
 #if defined(int_rpl)
 (PROG4PRFX).*.setup.(PROG2PRFX)_edit:           "/bin/vi" ;
 #elif defined(any_hpux) || defined(any_aix) || defined(sparc_sol) || \
-      defined(sos_us5) || defined(dr6_us5) || defined(usl_us5) || \
-      defined(pym_us5) || defined(sqs_ptx) || defined(rmx_us5) || \
-      defined(ts2_us5) || defined(rux_us5) || \
-      defined(a64_sol) || defined(LNX)
+      defined(a64_sol) || defined(LNX) || defined(usl_us5)
 (PROG4PRFX).*.setup.(PROG2PRFX)_edit:		"/usr/bin/vi" ;
 #else
 (PROG4PRFX).*.setup.(PROG2PRFX)_edit:		"/usr/ucb/vi";

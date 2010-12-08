@@ -203,23 +203,18 @@
 **	    Allow comparison between nullable and non-nullable values.
 **	16-apr-10 (smeke01) b123577
 **	    Allow comparison between char and varchar type values.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Ensure whole DBV copied.
+**	09-nov-2010 (gupsh01) SIR 124685
+**	    Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_compare(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE       *adc_dv1,
 DB_DATA_VALUE       *adc_dv2,
 i4                  *adc_cmp_result)
-# else
-DB_STATUS 
-adc_compare( adf_scb, adc_dv1, adc_dv2, adc_cmp_result)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE       *adc_dv1;
-DB_DATA_VALUE       *adc_dv2;
-i4                  *adc_cmp_result;
-# endif
 {
     i4			bdt1 = abs((i4) adc_dv1->db_datatype);
     i4			bdt2 = abs((i4) adc_dv2->db_datatype);
@@ -280,11 +275,9 @@ i4                  *adc_cmp_result;
 
 	if (!d1_isnull  && !d2_isnull)
 	{
-	    DB_DATA_VALUE   tmp_dv1;
-	    DB_DATA_VALUE   tmp_dv2;
+	    DB_DATA_VALUE   tmp_dv1 = *adc_dv1;
+	    DB_DATA_VALUE   tmp_dv2 = *adc_dv2;
 
-	    STRUCT_ASSIGN_MACRO(*adc_dv1, tmp_dv1);
-	    STRUCT_ASSIGN_MACRO(*adc_dv2, tmp_dv2);
 	    tmp_dv1.db_datatype = bdt1;
 	    tmp_dv2.db_datatype = bdt2;
 

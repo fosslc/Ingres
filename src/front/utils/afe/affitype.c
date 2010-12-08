@@ -31,11 +31,16 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      30-nov-2010 (gupsh01) SIR 124685
+**          Prototype cleanup.
 **/
 
 DB_STATUS	IIAFfiType();
 DB_STATUS	afe_opid();
-DB_STATUS	adi_op_info();
+FUNC_EXTERN DB_STATUS adi_op_info(ADF_CB      *adf_scb,
+                                  ADI_OP_ID   adi_opid,
+                                  ADI_OPINFO  *adi_info);
+
 
 /*{
 ** Name:	afe_fitype() -	Returns class of function.

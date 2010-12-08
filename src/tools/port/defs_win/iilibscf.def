@@ -34,6 +34,8 @@
 ;           Add function at 203 to avoid conflict with main.
 ;	29-Mar-2010 (kschendel) SIR 123485
 ;	    Delete copy functions no longer global.
+;	09-Nov-2010 (jonj) SIR 124685
+;	    Delete allocate_message, scs_gwinfo_subget, no longer global.
 ;
 
 EXPORTS
@@ -196,11 +198,11 @@ scs_enable		@156
 scs_facility		@157				
 scs_fhandler		@158				
 scs_format		@159				
-scs_gwinfo_subget		@160				
+;scs_gwinfo_subget		@160				
 scs_i_interpret		@161				
 scs_iformat		@162				
 ;    allocate_big_buffer
-allocate_message		@163				
+;allocate_message		@163				
 scs_raat_call		@164				
 scs_raat_term_msg		@165				
 ;    scs_raat_load

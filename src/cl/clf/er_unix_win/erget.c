@@ -30,6 +30,8 @@
 **	21-sep-2001 (somsa01)
 **	    If we're using semaphores, use it here too. This way, we
 **	    ERget() and ERslookup() in sync.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 /*
@@ -240,8 +242,7 @@
 **	    ERget() and ERslookup() in sync.
 */
 char *
-ERget(id)
-ER_MSGID id;
+ERget(ER_MSGID id)
 {
     STATUS	status;
     char	*msg;

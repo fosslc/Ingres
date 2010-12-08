@@ -21,6 +21,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Compiler warning fix
 */
 
 /*
@@ -129,7 +131,7 @@ typedef	struct
 		 ERx("do_del_gen")},
 		{OC_REPORT,	OC_RBFREP,	F_DE0008_Rep,	do_del_gen,
 		 ERx("do_del_gen")},
-		{(OOID)0,	(OOID)0,	(ER_MSGID)NULL,	(STATUS (*)())
+		{(OOID)0,	(OOID)0,	(ER_MSGID)0,	(STATUS (*)())
 									NULL,
 		 ERx("")},
 	};

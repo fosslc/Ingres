@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /*
@@ -148,23 +148,23 @@
 **	    Added prototype for separated pattern compiler.
 **	05-Jan-2008 (kiria01) SIR120473
 **	    Switch eptr to esc_dv to allow for tracking datatype
-**  28-Feb-2009 (thich01)
-**      Added geo_fromText function ref for spatial
-**  06-Mar-2009 (thich01)
-**      Added type specific fromText function refs for spatial.
-**  13-Mar-2009 (thich01)
-**      Added funtion refs for asText and asBinary
-**  20-Mar-2009 (thich01)
-**      Added fromBinary function refs for spatial
+**	28-Feb-2009 (thich01)
+**	    Added geo_fromText function ref for spatial
+**	06-Mar-2009 (thich01)
+**	    Added type specific fromText function refs for spatial.
+**	13-Mar-2009 (thich01)
+**	    Added funtion refs for asText and asBinary
+**	20-Mar-2009 (thich01)
+**	    Added fromBinary function refs for spatial
 **      22-Apr-2009 (Marty Bowes) SIR 121969
 **          Add adu_strgenerate_digit() and adu_strvalidate_digit()
 **          for the generation and validation of checksum values.
 **      01-Aug-2009 (martin bowes) SIR122320
 **          Added soundex_dm (Daitch-Mokotoff soundex)
-**  20-Aug-2009 (thich01)
-**      Add generic geom from text and from wkb.
-**  25-Aug-2009 (troal01)
-**      Added iigeomname, iigeomdimensions function refs for spatial
+**	20-Aug-2009 (thich01)
+**	    Add generic geom from text and from wkb.
+**	25-Aug-2009 (troal01)
+**	    Added iigeomname, iigeomdimensions function refs for spatial
 **	aug-2009 (stephenb)
 **		Remove various protos that are called outside ADF and
 **		prototype them in a more public location.
@@ -205,7 +205,18 @@
 **          money string constants.
 **	15-Jul-2010 (smeke01) b123950
 **	    Add function adu_norm_date_hash.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation - add adu_patcomp_kbld_uniCE
+**      23-Nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup. Moved some routines to adf.h eg 
+**	    adu_2prvalue, adu_2strtomny_strict,
+**      06-Dec-2010 (horda03)
+**          Rename adu_geometrycollection_srid_fromText and
+**          adu_geometrycollection_srid_fromWKB to have unique names within
+**          32 characters. A limitation for entries in a VMS object library.
 */
+#ifndef ADU_INT_HDR_INCLUDED
+#define ADU_INT_HDR_INCLUDED
 
 
 /*
@@ -238,10 +249,6 @@ typedef DB_STATUS ADU_NORM4_FUNC (ADF_CB         *adf_scb,
 				  DB_DATA_VALUE  *dv4,
 				  DB_DATA_VALUE  *rdv);
 
-FUNC_EXTERN ADU_NORM1_FUNC adu_ascii;       /* Routine to convert a variety of
-                                            ** datatypes into c, text, char,
-					    ** varchar, or longtext.
-                                            */
 FUNC_EXTERN ADU_NORM2_FUNC adu_ascii_2arg;  /* Support the two the
     	    	    	    	    	    ** arguments version of c(), 
                                             ** text(), char() and varchar()
@@ -258,15 +265,6 @@ FUNC_EXTERN ADU_NORM1_FUNC adu_bitlength;   /* Length of a bit operation */
 FUNC_EXTERN ADU_NORM1_FUNC adu_bitsize;     /* Provide declared size for bit 
 					    ** types 
 					    */
-FUNC_EXTERN ADU_NORM1_FUNC adu_1flt_coerce; /* Routine to coerce a variety of
-                                            ** datatypes into the f datatype.
-                                            */
-FUNC_EXTERN ADU_NORM1_FUNC adu_1dec_coerce; /* Routine to coerce a variety of
-                                            ** datatypes into decimal.
-                                            */
-FUNC_EXTERN ADU_NORM1_FUNC adu_1int_coerce; /* Routine to coerce a variety of
-                                            ** datatypes into the i datatype.
-                                            */
 FUNC_EXTERN ADU_NORM1_FUNC adu_bool_coerce; /* Routine to coerce a boolean
 					    ** into another boolean.
                                             */
@@ -291,10 +289,6 @@ FUNC_EXTERN ADU_NORM1_FUNC adu_trim;        /*Routine returns a text or varchar
 FUNC_EXTERN ADU_NORM2_FUNC adu_atrim;       /* Same as adu_trim , only using 
 					    ** ANSI semantics (also supports
 					    ** LEADING, TRAILING, BOTH options).
-                                            */
-FUNC_EXTERN ADU_NORM1_FUNC adu_dgmt;        /* Routine to format an absolute
-                                            ** date (in GMT), in the form:
-                                            ** 'yyyy.mm.dd hh:mm:ss GMT  '.
                                             */
 FUNC_EXTERN ADU_NORM1_FUNC adu_1dayofweek;  /* Routine to give the day of the
                                             ** week for a supplied date data
@@ -754,8 +748,8 @@ FUNC_EXTERN ADU_NORM2_FUNC adu_multipolygon_srid_fromText;
 FUNC_EXTERN ADU_NORM2_FUNC adu_multipolygon_srid_fromWKB;
 FUNC_EXTERN ADU_NORM2_FUNC adu_geometry_srid_fromText;
 FUNC_EXTERN ADU_NORM2_FUNC adu_geometry_srid_fromWKB;
-FUNC_EXTERN ADU_NORM2_FUNC adu_geometrycollection_srid_fromText;
-FUNC_EXTERN ADU_NORM2_FUNC adu_geometrycollection_srid_fromWKB;
+FUNC_EXTERN ADU_NORM2_FUNC adu_geomcollection_srid_fromText;
+FUNC_EXTERN ADU_NORM2_FUNC adu_geomcollection_srid_fromWKB;
 
 /* The following functions act on all geospatial types. */
 FUNC_EXTERN ADU_NORM1_FUNC adu_geom_asText; /* Convert a geometry to WKT. */
@@ -1061,6 +1055,7 @@ FUNC_EXTERN ADU_KEYBLD_FUNC adu_bitbldkey;  /* Create [V]BIT keys */
 
 FUNC_EXTERN ADU_KEYBLD_FUNC adu_patcomp_kbld;  /* Create 'HELEM' PAT keys */
 FUNC_EXTERN ADU_KEYBLD_FUNC adu_patcomp_kbld_uni;  /* Create 'HELEM' PAT keys */
+FUNC_EXTERN ADU_KEYBLD_FUNC adu_patcomp_kbld_uniCE;  /* Create 'HELEM' PAT keys */
 
 FUNC_EXTERN ADU_KEYBLD_FUNC adu_nvchbld_key; /* Routine to build a key for the
                                              ** nchar and nvarchar datatype.
@@ -1154,11 +1149,6 @@ FUNC_EXTERN DB_STATUS adu_lexnumcomp(ADF_CB     *adf_scb,
 				  i4		use_quel_pm,
 				  DB_DATA_VALUE	*dv1,
 				  DB_DATA_VALUE	*dv2,
-				  i4		*rcmp);
-
-/* Compare data values for 'integer' data. */
-FUNC_EXTERN DB_STATUS adu_isinteger(ADF_CB     *adf_scb,
-				  DB_DATA_VALUE	*dv1,
 				  i4		*rcmp);
 
 /* Compare data values for 'decimal' data. */
@@ -1351,11 +1341,6 @@ FUNC_EXTERN DB_STATUS adu_nvchr_trim(ADF_CB           *scb,
                                        DB_DATA_VALUE    *dv_1,
                                        DB_DATA_VALUE    *dv_result);
 
-/* Routine for coercing nchar and nvarchar types */
-FUNC_EXTERN DB_STATUS adu_nvchr_coerce(ADF_CB           *scb,
-                                       DB_DATA_VALUE    *dv_1,
-                                       DB_DATA_VALUE    *dv_2);
-
 /* Support the two argument version of nvarchar() */
 FUNC_EXTERN ADU_NORM2_FUNC adu_nvchr_2args;
 
@@ -1427,9 +1412,6 @@ FUNC_EXTERN VOID adu_prtype(DB_DATA_VALUE  *db_dv);
 
 FUNC_EXTERN VOID adu_prvalue(DB_DATA_VALUE  *db_dv);
 
-FUNC_EXTERN VOID adu_2prvalue(i4	     (*fcn)(char *, ...),
-			      DB_DATA_VALUE  *db_dv);
-
 FUNC_EXTERN VOID adu_prinstr(ADI_FI_ID  *instr);
 
 FUNC_EXTERN DB_STATUS adu_lolk(ADF_CB             *adf_scb,
@@ -1478,10 +1460,12 @@ FUNC_EXTERN DB_STATUS adu_nvchr_utf8_bldkey( ADF_CB          *scb,
 					ADC_KEY_BLK     *key_block);
 FUNC_EXTERN ADU_NORM1_FUNC adu_numeric_norm;
 
-FUNC_EXTERN DB_STATUS adu_2strtomny_strict( ADF_CB		*adf_scb,
-					DB_DATA_VALUE		*str_dv,
-					DB_DATA_VALUE		*mny_dv,
-					bool			strict);
-
+FUNC_EXTERN DB_STATUS adu_bool_istrue( ADF_CB *adf_scb,
+					DB_DATA_VALUE *dv1,
+					i4 *rcmp);
+FUNC_EXTERN DB_STATUS adu_bool_isfalse( ADF_CB *adf_scb,
+					DB_DATA_VALUE *dv1,
+					i4 *rcmp);
 FUNC_EXTERN ADU_NORM2_FUNC adu_aesdecrypt;
 FUNC_EXTERN ADU_NORM2_FUNC adu_aesencrypt;
+#endif /* ADU_INT_HDR_INCLUDED */

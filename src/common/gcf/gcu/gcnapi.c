@@ -55,6 +55,8 @@
 **	11-Aug-09 (gordy)
 **	    Remove string length restrictions.  Provide a more 
 **	    appropriate size of username buffer.
+**  15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**      Changes to eliminate compiler prototype warnings.
 */
 
 static char	gUserID[ GC_USERNAME_MAX + 1 ];
@@ -64,8 +66,9 @@ static bool node_found = FALSE;
 static int InitGCNInterface (void);
 static int gcn_api_call (int flag, PTR obj, int opcode, PTR value, PTR type);
 static i4 gcn_err_func (char * msg) { return 0; }
-static i4	gcn_api_response();
-static i4	gcn_api_slient();
+static i4 gcn_api_response(i4 msg_type, char *buf, i4 len);
+static i4 gcn_api_silent(i4 msg_type, char *buf, i4 len);
+static i4 gcnapi_get_int( char *p, i4 *i );
 
 /*
 ** Name: gcn_api_silent - suppress default message behaviour
@@ -513,7 +516,7 @@ gcn_api_response(i4 msg_type, char *buf, i4 len)
 **	Amount of buffer used.
 */
 
-i4
+static i4
 gcnapi_get_int( char *p, i4 *i )
 {
 	i4	i4val;

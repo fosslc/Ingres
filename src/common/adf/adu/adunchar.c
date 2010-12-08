@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2001, 2008 Ingres Corporation
+** Copyright (c) 2001, 2008, 2010 Ingres Corporation
 */
 # include       <compat.h>
 # include       <gl.h>
@@ -46,7 +46,7 @@ adu_ucs2_to_utf8 (
                 const UTF8*       targetEnd,
                 i2                *reslen);
 
-static bool check_utf8();
+static bool check_utf8(void);
 
 static DB_STATUS
 adu_nvchr_chartouni(
@@ -180,6 +180,8 @@ ad0_nvchr_casemap(
 **      21-Jun-2010 (horda03) b123926
 **          Because adu_unorm() and adu_utf8_unorm() are also called via 
 **          adu_lo_filter() change parameter order.
+**      02-Dec-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
 /*{
@@ -275,6 +277,8 @@ ad0_nvchr_casemap(
 **	7-jan-2007 (dougi)
 **	    Slight adjustment to above change to compute string end's using
 **	    number of Unicode chars, not simply bytes.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
 */
 
 DB_STATUS
@@ -310,13 +314,15 @@ i4                  *rcmp)
 	return (adu_error(adf_scb, E_AD5081_UNICODE_FUNC_PARM, 0));
     }
 
-    /* If Collation ID is default, try the byte-by-byte compare to see
-    ** if values are equal. This is much faster than the use of collation
+    /* If Collation ID is default, or UCS_BASIC try the byte-by-byte compare
+    ** to see if values are equal. This is much faster than the use of collation
     ** weights. If an alternate collation is being used or if the values
     ** are not bytewise equal, we drop to logic to call aduucmp(). */
 
     if (vcdv1->db_collID <= DB_UNICODE_COLL &&
-	vcdv2->db_collID <= DB_UNICODE_COLL)
+	vcdv2->db_collID <= DB_UNICODE_COLL ||
+	vcdv1->db_collID == DB_UCS_BASIC_COLL &&
+	vcdv2->db_collID == DB_UCS_BASIC_COLL)
     {
 	if( db_stat = adc_1lenchk_rti(adf_scb, 0, vcdv1, &local_dv1)) 
 	    return (db_stat);
@@ -426,7 +432,8 @@ i4                  *rcmp)
 
 	/* If bytewise compare is equal, return. Otherwise drop to 
 	** collation weight driven compare. */
-	if ((*rcmp = end_result) == 0)
+	if ((*rcmp = end_result) == 0 ||
+		vcdv1->db_collID == DB_UCS_BASIC_COLL)
             return(E_DB_OK);
     }
 
@@ -4583,7 +4590,7 @@ const    UCS4   halfBase = 0x0010000UL, halfMask = 0x3FFUL,
 **	    X-integration negated above fix, re-fix.
 */
 static bool
-check_utf8()
+check_utf8(void)
 {
     char        chname[CM_MAXATTRNAME+1];
     static	bool inited = FALSE;

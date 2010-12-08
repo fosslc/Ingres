@@ -1,26 +1,12 @@
 #
 # Jamfile file for cl!clf!me_unix
 #
+#	23-Nov-2010 (kschendel)
+#	    Delete obsolete nooptim's.
 
 SubDir ING_SRC cl clf me_unix ;
 
 IISUBSYS cl clf me_unix ;
-
-IINOOPTIM mepages.c : nc4_us5 ;
-IINOOPTIM memove.c : nc4_us5 ;
-IINOOPTIM meinitlst.c : nc4_us5 ;
-IINOOPTIM mefree.c : nc4_us5 ;
-IINOOPTIM mefill.c : nc4_us5 ;
-IINOOPTIM mefadd.c : dg8_us5 ;
-IINOOPTIM medump.c : dg8_us5 ;
-IINOOPTIM mecopytest.c : dg8_us5 ;
-IINOOPTIM meconsist.c : dg8_us5 ;
-IINOOPTIM me.c : dg8_us5 ;
-IINOOPTIM meadvise.c : dg8_us5 ;
-IINOOPTIM meaddrmg.c : dg8_us5 ;
-IINOOPTIM meactual.c : dg8_us5 ;
-IINOOPTIM lgkmkey.c : dg8_us5 ;
-IINOOPTIM iimemkey.c : dg8_us5 ;
 
 IIBINEXE mecopytest : mecopytest.c ;
 IINEEDLIBS mecopytest : COMPATLIB ;

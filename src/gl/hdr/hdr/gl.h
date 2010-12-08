@@ -78,6 +78,8 @@
 **	    Add prototype for iiCL_get_fd_table_size().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Prototype for iiCL_get_fd_table_size now in clnfile.h.
 **/
 
 /*
@@ -146,9 +148,5 @@ GLOBALREF char *SystemBuildName            ;
 GLOBALREF char *SystemNetutilName          ;
 GLOBALREF char *SystemCopyrightMsg         ;
 # endif /* NT_GENERIC */
-
-/* prototypes */
-
-FUNC_EXTERN i4 iiCL_get_fd_table_size();
 
 #endif /* GL_INCLUDE */

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -86,7 +86,19 @@
 **	    In ops_qinit(), moved the initialization of ops_gmask before
 **	    checking for !statementp. This fixes E_OP0791_ADE_INSTRGEN when
 **	    creating a procedure after the fixes for bug 109194.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 ops_gqtree(
+	OPS_STATE *global);
+void ops_qinit(
+	OPS_STATE *global,
+	PST_STATEMENT *statementp);
+void ops_init(
+	OPF_CB *opf_cb,
+	OPS_STATE *global);
 
 /*{
 ** Name: ops_gqtree	- get query tree from QSF
@@ -218,6 +230,10 @@ ops_gqtree(
 **	    Init opn_fragcolist for greedy enumeration.
 **	15-june-06 (dougi)
 **	    Add support for "before" triggers.
+**	21-Oct-2010 (kiria01) b123345
+**	    Do not assume PST_DV_TYPE is only present when the
+**	    context is a DBP. It may also be present from temporaries
+**	    created by the parser.
 [@history_template@]...
 */
 VOID
@@ -283,7 +299,18 @@ ops_qinit(
 	    + decvarp->pst_specific.pst_dbpvar->pst_first_varno - 1;
     }
     else
+    {
 	global->ops_parmtotal = global->ops_qheader->pst_numparm;
+	if (global->ops_procedure->pst_stmts->pst_type == PST_DV_TYPE)
+	{
+	    /* Support local variables that may have been introduced
+	    ** as temporaries */
+	    PST_DECVAR *decvarp = global->ops_procedure->
+				pst_stmts->pst_specific.pst_dbpvar;
+	    global->ops_parmtotal += decvarp->pst_nvars
+				+ decvarp->pst_first_varno - 1;
+	}
+    }
    {
         /* initialize outer join descriptors */
         global->ops_goj.opl_gbase = (OPL_GOJT *) NULL;
@@ -520,7 +547,7 @@ ops_init(
                                         ** optimizer */
         if (DB_FAILURE_MACRO(ulmstatus))
 	{
-	    opx_lerror(E_OP0002_NOMEMORY, 0);
+	    opx_lerror(E_OP0002_NOMEMORY, 0, 0, 0, 0, 0);
 	    opx_verror( ulmstatus, E_OP0002_NOMEMORY, 
 		global->ops_mstate.ops_ulmrcb.ulm_error.err_code);
 	}

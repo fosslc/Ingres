@@ -100,25 +100,19 @@
 ** History:
 **  16-may-1996 (sher03)
 **      Initial creation.
+**  19-Nov-2010 (kiria01) SIR 124690
+**	Ensure whole DBV copied.
+**    09-nov-2010 (gupsh01) SIR 124685
+**	Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_compr(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE       *adc_dv,
 i4                  adc_flag,
 char                *adc_buf,
-i4             *adc_outlen)
-# else
-DB_STATUS
-adc_compr( adf_scb, adc_dv, adc_flag, adc_buf, adc_outlen)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE       *adc_dv;
-i4                  adc_flag;
-char                *adc_buf;
-i4             *adc_outlen;
-# endif
+i4		    *adc_outlen)
 {
     DB_STATUS      db_stat = E_DB_OK;
     i4			bdt     = abs((i4) adc_dv->db_datatype);
@@ -152,12 +146,10 @@ i4             *adc_outlen;
        }
        else                 /* nullable */
        {
-         DB_DATA_VALUE  tmp_dv;
+         DB_DATA_VALUE tmp_dv = *adc_dv;
 
          tmp_dv.db_datatype = bdt;
-         tmp_dv.db_data     = adc_dv->db_data;
-         tmp_dv.db_prec     = adc_dv->db_prec;
-         tmp_dv.db_length   = adc_dv->db_length - 1;
+         tmp_dv.db_length--;
 
          db_stat = (*Adf_globs->Adi_dtptrs[mbdt]->
                       adi_dt_com_vect.adp_compr_addr)

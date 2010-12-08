@@ -30,45 +30,69 @@
 **	    replace nat and longnat with i4
 **      11-Jun-2004 (hanch04)
 **          Removed reference to CI for the open source release.
+**      29-Nov-2010 (frima01) SIR 124685
+**          Added prototypes and removed CL_PROTOTYPED ifdefs.
 **/
 
+/* actually encrypt or decrypt some information. */
+FUNC_EXTERN VOID     CIencrypt(
+	CI_KS		KS, 
+	bool 		decode_flag,
+	char 		*block);
+
+/* unpack bits to be crypted into an equal number of bytes, one bit per byte. */
+FUNC_EXTERN VOID     CIexpand(
+	PTR 		ate_bytes, 
+	PTR 		b_map);
+
+/* pack bits that have been crypted back into bytes. */
+FUNC_EXTERN VOID     CIshrink(
+	PTR 		b_map,
+	PTR 		ate_bytes);
+
+
 FUNC_EXTERN BITFLD   CIchksum(
-#ifdef	CL_PROTOTYPED
 	u_char	    *input,
 	i4	    size,
 	i4	    inicrc
-#endif
 );
 FUNC_EXTERN VOID     CIdecode(
-#ifdef	CL_PROTOTYPED
 	PTR	    cipher_text,
 	i4	    size,
 	CI_KS	    ks,
 	PTR	    plain_text
-#endif
 );
 FUNC_EXTERN VOID     CIencode(
-#ifdef	CL_PROTOTYPED
 	PTR	    plain_text,
 	i4	    size,
 	CI_KS	    ks,
 	PTR	    cipher_text
-#endif
 );
 FUNC_EXTERN VOID     CItobin(
-#ifdef	CL_PROTOTYPED
 	PTR	    textbuf,
 	i4	    *size,
 	u_char	    *block
-#endif
 );
 FUNC_EXTERN VOID     CItotext(
-#ifdef	CL_PROTOTYPED
 	u_char	    *block,
 	i4	    size,
 	PTR	    textbuf
-#endif
 );
+
+FUNC_EXTERN VOID     CIsetkey(
+	PTR	    key_str,
+	CI_KS	    KS);
+
+FUNC_EXTERN VOID
+CIrm_logical(
+	PTR     arg1_dummy,
+	PTR     arg2_dummy);
+
+FUNC_EXTERN VOID
+CImk_logical(
+	PTR     log_name,
+	PTR     equiv_str,
+	PTR     arg1_dummy);
 
 # ifndef E_CL2662_CI_BADSITEID
 # define E_CL2662_CI_BADSITEID	(E_CL_MASK + 0x2662)

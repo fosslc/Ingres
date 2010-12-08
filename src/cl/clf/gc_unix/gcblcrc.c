@@ -14,6 +14,8 @@
 **	    Added header and renamed.
 **	15-jul-93 (ed)
 **	    adding <gl.h> after <compat.h>
+**	15-nov-2010 (stephenb)
+**	    Add forward protos to quiet compiler.
 */
 
 /*
@@ -32,6 +34,10 @@ GLOBALDEF unsigned good_crc = 0xF0B8;		/* CCITT defined good CRC */
 /* Forward references */
 
 static unsigned calc_crc();
+int  add_crc( char *, int );
+static unsigned	calc_crc( char *, int );
+unsigned crca( unsigned, char );
+
 
 
 /*{
@@ -100,7 +106,7 @@ char *ptr;
 int cnt;
 {
     int i;
-    unsigned sum, crca();
+    unsigned sum;
 
     sum = 0xffff;			/* initialize sum to all ones */
     for( i=0; i<cnt; i++ ) 

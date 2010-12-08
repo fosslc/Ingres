@@ -357,6 +357,8 @@
 #	    Added -L/usr/lib32 to the linker options. This is required for
 #	    distributions who uses this as the default location for 32 bit
 #	    libraries on 64 bit systems (such as Arch Linux).
+#	23-Nov-2010 (kschendel)
+#	    Delete some more obsolete ports.
 #
 
 CMD=`basename /$0`
@@ -432,10 +434,6 @@ case "$config" in
 		NEWORDER_LIBS="play_NewOrder"
 		MNEWORDER_LIBS="PLAY_NEWORDER"
 		;;
-	rmx_us5)
-		NEWORDER_LIBS="play_NewOrder"
-		MNEWORDER_LIBS="PLAY_NEWORDER"
-		;;
 	*)
 		NEWORDER_LIBS="play_NewOrder ingres"
 		MNEWORDER_LIBS="PLAY_NEWORDER INGRES"
@@ -494,12 +492,6 @@ eval `egrep "VERS[ 	]*=|SLSFX[ 	]*=|MWSLSFX[	 ]*=|XERCVERS[	  ]*=|XERCLIB[	  ]*"
 
 
 case "$config" in
-    ris_us5) 
-	use_shared_libs=true
-	shlink_cmd="ld -K -bM:SRE -bE:expsym_list"
-	shlink_opts="-lc -lm -lld -liconv -e _nostart"
-	# LIBPATH="/lib:$ING_BUILD/lib" 	# for information purposes
-	;;
     r64_us5|\
     rs4_us5)
 	use_shared_libs=true
@@ -509,14 +501,7 @@ case "$config" in
 	shlink64_opts="$shlink32_opts"
 	# LIBPATH="/lib:$ING_BUILD/lib" 	# for information purposes
 	;;
-    ris_u64)
-	use_shared_libs=true
-        OBJECT_MODE="64" ; export OBJECT_MODE
-        shlink_cmd="ld -K -b64 -bE:expsym_list -G -bnoentry"
-        shlink_opts="-lld -liconv -lpthreads -lm_r -lc_r -lc"
-	# LIBPATH="/lib:$ING_BUILD/lib" 	# for information purposes
-	;;
-    su4_us5 | sui_us5 | su9_us5 | a64_sol)
+    su4_us5 | su9_us5 | a64_sol)
 	use_shared_libs=true
 	use_kerberos=true
 	shlink32_cmd="ld -G "
@@ -528,50 +513,6 @@ case "$config" in
 	krblink64_cmd="$krblink32_cmd"
 	krblink64_opts="$krblink32_opts"
 	;;
-    sos_us5)
-        use_shared_libs=true
-        shlink_cmd="ld -G "
-        shlink_opts=" -lm "
-        #LD_LIBRARY_PATH="$ING_BUILD/lib:/usr/lib:/lib"
-        ;;
-    dg8_us5)
-	use_shared_libs=true
-	shlink_cmd="ld -G "
-	shlink_opts=" -lthread -lm -lc "
-	# LD_LIBRARY_PATH="/lib:/usr/lib:$ING_BUILD/lib"
-	;;
-    dr6_us5)
-	use_shared_libs=true
-	shlink_cmd="ld -G "
-	shlink_opts=" -lm -lc "
-	# LD_LIBRARY_PATH="/lib:/usr/lib:$ING_BUILD/lib"
-	;;
-    dgi_us5)
-	use_shared_libs=true
-	shlink_cmd="ld -G "
-	shlink_opts=" -lm "
-	# LD_LIBRARY_PATH="/lib:/usr/lib:$ING_BUILD/lib"
-	;;
-    rux_us5)
-        use_shared_libs=true
-        shlink_cmd="ld -G "
-        shlink_opts=" "
-        # LD_LIBRARY_PATH="/lib:/usr/lib:/usr/ccs/lib:$ING_BUILD/lib"
-        ;;
-    rmx_us5)
-        use_shared_libs=true
-        shlink_cmd="ld -G "
-        shlink_opts=" "
-	krblink_cmd="ld -G "
-	krblink_opts=" "
-        # LD_LIBRARY_PATH="/lib:/usr/lib:/usr/ccs/lib:$ING_BUILD/lib"
-        ;;
-    ts2_us5)
-        use_shared_libs=true
-        shlink_cmd="ld -shared "
-        shlink_opts=" -lm -lc -lnsl -lsocket "
-        # LD_LIBRARY_PATH="/lib:/usr/lib:$ING_BUILD/lib"
-        ;;
     i64_hpu|\
     hp2_us5|\
     hpb_us5|\
@@ -607,12 +548,6 @@ case "$config" in
         shlink_opts=" -lm "
         # LD_LIBRARY_PATH="/usr/ccs/lib:$ING_BUILD/lib"
         ;; 
-    nc4_us5 | sqs_ptx)
-        use_shared_libs=true
-        shlink_cmd="ld -G "
-        shlink_opts=" -lm "
-        LD_LIBRARY_PATH="/lib:/usr/lib:$ING_BUILD/lib"
-        ;;
     sgi_us5)
 	use_shared_libs=true
 	shlink32_cmd="ld -shared -mips3"

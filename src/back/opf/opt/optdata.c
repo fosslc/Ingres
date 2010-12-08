@@ -86,14 +86,14 @@ struct	tab
 #define OPT_TEND (-99)
 GLOBALDEF const	struct tab	opf_sjtyps_tab[] =
 {
-        DB_ORIG,        "Orig",
-        DB_PR,          "Proj-rest",
-        DB_SJ,          "Join",     
-	DB_EXCH,	"Exchange",
-        DB_RSORT,       "Sort",     
-        DB_RISAM,       "Ref-isam", 
-        DB_RHASH,       "Ref-hash", 
-        DB_RBTREE,      "Ref-Btree",
-        OPT_TEND,       "???"
+        {DB_ORIG,        "Orig"},
+        {DB_PR,          "Proj-rest"},
+        {DB_SJ,          "Join"},     
+	{DB_EXCH,	"Exchange"},
+        {DB_RSORT,       "Sort"},     
+        {DB_RISAM,       "Ref-isam"}, 
+        {DB_RHASH,       "Ref-hash"}, 
+        {DB_RBTREE,      "Ref-Btree"},
+        {OPT_TEND,       "???"}
 };
 

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /*
@@ -133,7 +133,130 @@ NO_OPTIM = dgi_us5 rs4_us5 sgi_us5 i64_aix
 **	11-Mar-2008 (kschendel) b122118
 **	    Comment clarifications.  Remove the ojfilter stuff, since it
 **	    caused lots of extra meaningless grep hits.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/*
+** Forward Structure Definitions:
+*/
+typedef struct _OPN_STAT OPN_STAT;
+typedef struct _OPN_SJCB OPN_SJCB;
+
+/* TABLE OF CONTENTS */
+static bool opn_dremoved(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	bool *duprel);
+static void opn_sj1(
+	bool existence_only,
+	OPO_TUPLES otuples,
+	OPH_DOMAIN onunique,
+	OPH_DOMAIN jnunique,
+	OPO_BLOCKS iblocks,
+	OPO_TUPLES itpb,
+	OPO_BLOCKS *dio,
+	OPO_CPU *cpu);
+static OPO_BLOCKS opn_acap(
+	OPO_TUPLES r,
+	OPO_TUPLES m,
+	OPO_BLOCKS n,
+	f8 underflow);
+static OPO_BLOCKS opn_runs(
+	OPO_TUPLES m,
+	OPO_BLOCKS t);
+static void opn_stats(
+	OPN_SJCB *sjp,
+	OPO_ISORT jordering,
+	OPN_RLS *rlp,
+	OPN_SDESC *statp,
+	OPZ_IATTS *iattrp);
+static void opn_jstats(
+	OPN_SJCB *sjp,
+	OPO_ISORT jordering,
+	OPN_SDESC *jstatp,
+	OPN_SDESC *ostatp,
+	OPN_SDESC *istatp);
+static OPN_SDESC *opn_astatp(
+	OPN_SJCB *sjp);
+static OPN_SDESC *opn_fstatp(
+	OPN_SJCB *sjp,
+	OPO_ISORT ordering,
+	OPN_STAT *statp,
+	OPN_SDESC *ostatp,
+	OPN_SDESC *istatp);
+static void opn_highdups(
+	OPN_SJCB *sjp,
+	OPO_CO *ocop,
+	OPO_CO *icop,
+	OPO_TUPLES probes,
+	OPO_BLOCKS blocks_per_tuple,
+	OPO_BLOCKS *blockstouchedp,
+	OPO_BLOCKS *diop,
+	OPO_BLOCKS *datablockstouchedp,
+	OPO_CPU *cpup);
+static bool opn_sortcpu(
+	OPS_SUBQUERY *subquery,
+	OPO_TUPLES tuples,
+	OPE_IEQCLS jordering,
+	OPO_CO *cop);
+static OPO_BLOCKS opn_holdfactor(
+	OPS_SUBQUERY *subquery,
+	i4 pagesize);
+static void opn_sjcost(
+	OPN_SJCB *sjp,
+	OPO_CO *ocop,
+	OPO_CO *icop);
+static bool opn_tdeferred(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop,
+	OPV_IVARS basevar,
+	bool *nonindex,
+	bool *basefound,
+	bool *tempptr);
+static bool opn_deferred(
+	OPS_SUBQUERY *subquery,
+	OPO_COST *jcost,
+	OPO_CO *ocop,
+	OPO_CO *icop,
+	OPO_BLOCKS blocks,
+	OPO_TUPLES tuples,
+	OPS_WIDTH width,
+	bool *sortrequired);
+void opn_modcost(
+	OPS_SUBQUERY *subquery);
+static bool opn_tproc_cptest(
+	OPS_SUBQUERY *subquery,
+	OPV_BMVARS *omap,
+	OPV_BMVARS *imap);
+static OPN_STATUS opn_corput(
+	OPN_SJCB *sjp,
+	OPO_CO *ocop,
+	OPO_CO *icop,
+	OPN_RLS *orlp,
+	OPN_RLS *irlp,
+	OPN_RLS *rlp);
+bool opn_goodco(
+	OPS_SUBQUERY *subquery,
+	OPO_CO *cop);
+OPN_STATUS opn_calcost(
+	OPS_SUBQUERY *subquery,
+	OPO_ISORT jordering,
+	OPO_ISORT keyjoin,
+	OPN_SUBTREE *osbtp,
+	OPN_SUBTREE *isbtp,
+	OPN_SUBTREE *jsbtp,
+	OPN_RLS *orlp,
+	OPN_RLS *irlp,
+	OPN_RLS *rlp,
+	OPO_TUPLES tuples,
+	OPN_EQS *eqsp,
+	OPO_BLOCKS blocks,
+	OPN_EQS *oeqsp,
+	OPN_EQS *ieqsp,
+	OPN_JTREE *np,
+	OPL_IOUTER ojid,
+	bool kjonly);
 
 /*}
 ** Name: OPN_STAT
@@ -148,7 +271,7 @@ NO_OPTIM = dgi_us5 rs4_us5 sgi_us5 i64_aix
 **	    added support for the SORTMAX server startup parameter
 [@history_template@]...
 */
-typedef struct _OPN_STAT
+struct _OPN_STAT
 {
     OPO_TUPLES		tuples;		/* number of tuples in relation */
     OPN_RLS		*rlsp;		/* OPN_RLS descriptor for inner/outer */
@@ -163,7 +286,7 @@ typedef struct _OPN_STAT
     bool		allowed;	/* TRUE - if sort nodes are allowed
 					** since tuple counts are within the
 					** limits defined by SORTMAX */
-} OPN_STAT;
+};
 
 /*}
 ** Name: OPN_SJCB - simple join control block
@@ -193,7 +316,7 @@ typedef struct _OPN_STAT
 **	    This change fixes bug 104552.
 [@history_template@]...
 */
-typedef struct _OPN_SJCB
+struct _OPN_SJCB
 {
     OPS_SUBQUERY	*subquery;
     OPN_STAT		keying;         /* statistics describing inner with keying */
@@ -255,7 +378,7 @@ typedef struct _OPN_SJCB
                                         ** for the ordering */
     OPL_BMOJ		filter;		/* set of outer joins which have filter
 					** requirements satisfied by children */
-}   OPN_SJCB;
+};
 
 /*{
 ** Name: opn_dremoved	- check if duplicates are removed in this subtree
@@ -1030,15 +1153,13 @@ opn_highdups(
 **	    of already sorted data
 [@history_template@]...
 */
-bool
+static bool
 opn_sortcpu(
     OPS_SUBQUERY	*subquery, 
     OPO_TUPLES		tuples, 
     OPE_IEQCLS		jordering, 
     OPO_CO		*cop)
 {
-    bool	cheap_osort;	/* TRUE if CPU cost should be
-				** calculated */
     if ((tuples > 3.0)		/* magic number */
 	    &&
 	 (jordering != OPE_NOEQCLS)
@@ -2142,7 +2263,6 @@ hold file calculation is added at end of routine
 					** in inner relation */
 		OPO_BLOCKS	    iblocks2; /* number of blocks scanned
 					** for each new outer value */
-		OPO_BLOCKS	    datapages;
 		DMT_TBL_ENTRY	    *relation1p;
 
 		relation1p =  varp->opv_grv->opv_relation->rdr_rel;
@@ -4360,8 +4480,6 @@ opn_calcost(
                                             ** list */
     OPS_STATE           *global;
     OPL_IOUTER		maxoj;
-    i4		pagesize = -1;
-    i4		maxtupsize = -1;
     bool		spjoin = FALSE;
     bool	mixedcoll = FALSE;
 
@@ -4497,7 +4615,6 @@ opn_calcost(
     else
     {
 	OPE_BMEQCLS	*jeqcmap;
-	OPE_IEQCLS	jeqcls;
 
 	jeqcmap = subquery->ops_msort.opo_base->
 				opo_stable[jordering - maxeqcls]->opo_bmeqcls;

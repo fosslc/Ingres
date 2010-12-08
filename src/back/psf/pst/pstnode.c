@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -91,7 +91,6 @@
 **	10-Jan-2001 (jenjo02)
 **	    Added *PSS_SELBLK parm to psf_mopen(), psf_mlock(), psf_munlock(),
 **	    psf_malloc(), psf_mclose(), psf_mroot(), psf_mchtyp().
-[@history_template@]...
 **	18-Feb-05 (srisu02)
 **	    Fixed an AIX compilation error by typecasting the return value of 
 **          a call to ME_ALIGN_MACRO as i4 
@@ -101,18 +100,42 @@
 **          Replace sizeof(bool) by DB_BOO_LEN when dealing with DB_BOO_TYPE.
 **	18-Mar-2010 (kiria01) b123438
 **	    Initialize the data in the node if not passed in.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
-/*
-** Forward Function References
-*/
-bool
-pst_is_const_bool(PST_QNODE *node, bool *bval);
-
-/*
-[@#defines_of_other_constants@]
-[@type_definitions@]
-*/
+/* TABLE OF CONTENTS */
+i4 pst_node(
+	PSS_SESBLK *cb,
+	PSF_MSTREAM *stream,
+	PST_QNODE *left,
+	PST_QNODE *right,
+	i4 type,
+	char *value,
+	i4 vallen,
+	DB_DT_ID datatype,
+	i2 dataprec,
+	i4 datalen,
+	DB_ANYTYPE *datavalue,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk,
+	i4 flags);
+void pst_negate(
+	register DB_DATA_VALUE *dataval);
+void pst_map(
+	PST_QNODE *tree,
+	PST_J_MASK *map);
+bool pst_is_const_bool(
+	PST_QNODE *node,
+	bool *bval);
+void pst_not_bool(
+	PST_QNODE *node);
+DB_COLL_ID pst_apply_def_collID(
+	PSS_SESBLK *sess_cb,
+	DB_DT_ID dt,
+	DB_COLL_ID collID);
 
 /*
 ** Global Variable Definitions
@@ -368,7 +391,7 @@ pst_node(
     DB_DT_ID		adb_right;
     DB_DT_ID		adatatype;
     PST_QNODE		*node;
-    register PST_SYMBOL *symbol;
+    register PST_SYMBOL *symbol = NULL;
     PST_RT_NODE		*rnode;
     PTR			data_val = NULL;
     i4		err_code;
@@ -413,7 +436,8 @@ pst_node(
 	    /* Don't do tracing if couldn't get session control block */
 	    if (cb != (PSS_SESBLK *) NULL)
 	    {
-		if (ult_check_macro(&cb->pss_trace, 18, &val1, &val2))
+		if (ult_check_macro(&cb->pss_trace,
+				PSS_NEW_NODE_SUBTREE_TRACE, &val1, &val2))
 		{
 		    TRdisplay("Unary + on a constant node.\n");
 		    TRdisplay("Just return the sub-tree:\n\n\n");
@@ -447,7 +471,8 @@ pst_node(
 	    /* Don't do tracing if couldn't get session control block */
 	    if (cb != (PSS_SESBLK *) NULL)
 	    {
-		if (ult_check_macro(&cb->pss_trace, 18, &val1, &val2))
+		if (ult_check_macro(&cb->pss_trace,
+				PSS_NEW_NODE_SUBTREE_TRACE, &val1, &val2))
 		{
 		    TRdisplay("Unary - on a constant node.\n");
 		    TRdisplay("Just return the negated sub-tree:\n\n\n");
@@ -785,7 +810,8 @@ pst_node(
 	/* Don't do tracing if couldn't get session control block */
 	if (cb != (PSS_SESBLK *) NULL)
 	{
-	    if (ult_check_macro(&cb->pss_trace, 18, &val1, &val2))
+	    if (ult_check_macro(&cb->pss_trace,
+				PSS_NEW_NODE_SUBTREE_TRACE, &val1, &val2))
 	    {
 		TRdisplay("Just allocated top node of:\n\n\n");
 		status = pst_prmdump(*newnode, (PST_QTREE *) NULL,
@@ -1288,3 +1314,50 @@ pst_not_bool(PST_QNODE *node)
 	node->pst_sym.pst_value.pst_s_op.pst_fdesc = f;
     }
 } /* pst_not_bool */
+
+/*
+** Name: pst_apply_def_collID -- Apply collation ID defaults.
+**
+** Description:
+**	As its name suggests.
+**
+** Inputs:
+**	sess_cb		Session cb
+**	dt		datatype to consider
+**	collID		The collation ID.
+**
+** Outputs:
+**	None
+**	Returns potentially defaulted collation ID.
+**
+** History:
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Introduce to apply collation defaults.
+*/
+
+DB_COLL_ID
+pst_apply_def_collID(
+	PSS_SESBLK *sess_cb,
+	DB_DT_ID dt,
+	DB_COLL_ID collID)
+{
+    if (collID == DB_UNSET_COLL)
+    {
+	switch(abs(dt))
+	{
+	case DB_CHA_TYPE:
+	case DB_CHR_TYPE:
+	case DB_VCH_TYPE:
+	case DB_TXT_TYPE:
+	case DB_LVCH_TYPE:
+	    collID = sess_cb->pss_def_coll;
+	    break;
+	case DB_NCHR_TYPE:
+	case DB_NVCHR_TYPE:
+	case DB_LNVCHR_TYPE:
+	    collID = sess_cb->pss_def_unicode_coll;
+	    break;
+	}
+    }
+    return collID;
+}

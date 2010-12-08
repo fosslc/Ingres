@@ -69,6 +69,8 @@
 **	06-May-2005 (hanje04)
 **	    In MEshow, rename size_t variable to be sizet as it 
 **	    clashes with type size_t on Mac OSX.
+**	15-nov-2010 (stephenb)
+**	    Proto MEshow.
 [@history_template@]...
 **/
 
@@ -432,6 +434,7 @@ MEreqmem(
 	return(block);
 }
 
+#ifdef xDEBUG
 /*
 ** Debugging aid to display the allocated and free nodes
 **
@@ -441,7 +444,7 @@ MEreqmem(
 **    associated memory.
 */
 VOID
-MEshow()
+MEshow(void)
 {
     ME_NODE *node;
     PTR	    block;
@@ -494,3 +497,4 @@ MEshow()
 
     TRdisplay("Free nodes %d, size %d\n\n", nodes, sizet); 
 }
+#endif /*xDEBUG */

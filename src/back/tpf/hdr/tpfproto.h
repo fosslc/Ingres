@@ -36,6 +36,8 @@
 **	    and __LINE__ to the real function so that the next
 **	    poor sap that gets stuck with a E_TP0020_INTERNAL
 **	    has a fighting chance.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes.
 **/
 
 /* prototype declarations for TPF */
@@ -435,7 +437,7 @@ tpf_m5_startup_svr(
 	TPR_CB	*v_tpr_p);
 FUNC_EXTERN DB_STATUS
 tpf_m6_shutdown_svr(
-	i4	v_tpr_p);
+	TPR_CB	*v_tpr_p);
 FUNC_EXTERN DB_STATUS
 tpf_m7_init_sess(
 	TPR_CB	*v_tpr_p);

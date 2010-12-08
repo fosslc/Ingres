@@ -92,12 +92,12 @@
 **          AXP.OSF.
 **	16-Jun-2006 (kschendel)
 **	    NULL is pointer, not null char, fix annoying compiler warnings.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype as static returning VOID
 */
 
-ScfDiagQuery(output,error,scd)
-void (*output)();
-void (*error)();
-VOID  *scd;
+static VOID
+ScfDiagQuery( void (*output)(), void (*error)(), VOID  *scd )
 {
     SCD_SCB *scd_scb = (SCD_SCB *)scd;
     char buffer[80];
@@ -192,6 +192,8 @@ VOID  *scd;
 **  History:
 **	13-Mch-1996 (prida01)
 **	    Created.
+**	02-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototyped dmf_diag_dmp_pool()
 */
 
 scd_diag(diag_link)
@@ -228,7 +230,7 @@ void *diag_link;
 		switch (link->type)
 		{
 			case DMF_SELF_DIAGNOSTICS:
-					dmf_diag_dmp_pool(1);
+					dmf_diag_dmp_pool();
 					break;
 			case QSF_SELF_DIAGNOSTICS:
 					qsd_lru_dump();

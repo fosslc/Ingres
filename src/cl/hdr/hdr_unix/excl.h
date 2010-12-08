@@ -16,6 +16,8 @@
 **      The file contains the type used by EX and the definition of the
 **      EX functions.  These are used for exception handling.
 **
+**	This is the unix-only header variant.
+**
 ** History: 
  * Revision 1.5  89/02/06  12:53:22  jeff
  * Try using _setjmp once more
@@ -157,6 +159,9 @@
 **	15-Dec-2009 (frima01) Bug 122490
 **	    Added prototype for EXsetsig to eliminate gcc 4.3 warnings.
 **	    clconfig.h needs to be included as well for the return type.
+**	18-Nov-2010 (kschendel) SIR 124685
+**	    Not much point in having non-Unix conditionals in a unix only
+**	    header.  Delete the noise.
 **/
 
 /*
@@ -234,25 +239,6 @@ GLOBALREF i4	EXintr_count;
 
 /*	Standard Exceptions	*/
 
-# ifdef	VMS
-
-# define	EXFLTDIV	1172
-# define	EXFLTOVF	1164
-# define	EXFLTUND	1180
-# define	EXINTDIV	1156
-# define	EXINTOVF	1148
-
-# define	EXSEGVIO	0x0c			
-					/* access violation on vms */
-# define	EXBUSERR	0x0c			
-					/* access violation on vms */
-# define	EXINTR		0x651			
-					/* system-s-controlc -- operation 
-					** completed under ctl-c */
-# endif /* VMS */
-
-# ifdef UNIX
-
 # define	EXFLTDIV	(E_CL_MASK + E_EX_MASK + 0x60)
 # define	EXFLTOVF	(E_CL_MASK + E_EX_MASK + 0x61)
 # define	EXFLTUND	(E_CL_MASK + E_EX_MASK + 0x62)
@@ -287,11 +273,10 @@ GLOBALREF i4	EXintr_count;
 # define        EXHINTOVF       (E_CL_MASK + E_EX_MASK + 0x76)
 
 /* exception to indicate that subprocesses to be forcibly terminated */
-# if defined(sparc_sol) || defined (axp_osf) || defined (ds3_ulx)
+# if defined(sparc_sol) || defined (axp_osf)
 # define        EXCLEANUP       (E_CL_MASK + E_EX_MASK + 0x77)
 # endif
 
-# endif /* UNIX */
 
 /* Values handlers can return to effect processing of the exception. */
 
@@ -315,17 +300,7 @@ GLOBALREF i4	EXintr_count;
 # define	EXDECLARE	(E_CL_MASK + E_EX_MASK + 0xFF)
 
 
-# ifdef	VMS
-/* Special exception a handler is called with if it is going to be unwound */
-
-# define	EX_UNWIND	2336
-
-# endif /* VMS */
-# ifdef	UNIX
-
 # define	EX_UNWIND	(E_CL_MASK + E_EX_MASK + 0xFC)
-
-# endif /* UNIX */
 
 
 /*	Values for EXmath and Exinterrupt	*/
@@ -374,24 +349,6 @@ GLOBALREF i4	EXintr_count;
 
 # define	EX	i4
 
-# ifdef	VMS
-
-typedef struct
-{
-	i4	exarg_count;		/* Number of i4's in exarg_array */
-	EX	exarg_num;		/* The exception being raised */
-	i4	exarg_array[1];		/* arguments */
-} EX_ARGS;
-
-typedef struct
-{
-	i4	ex_context[16];
-}	EX_CONTEXT;
-
-# endif	/* VMS */
-
-# ifdef	UNIX
-
 typedef struct
 {
 	i4	exarg_count;		/* Number of i4's in exarg_array */
@@ -421,19 +378,11 @@ typedef struct ex_context
 # endif
 } EX_CONTEXT;
 
-# endif	/* UNIX */
 
 FUNC_EXTERN void EXsetup( 
 	STATUS (*handler)(EX_ARGS *args), 
 	EX_CONTEXT *context 
 );
-
-# ifdef UNIX
-FUNC_EXTERN STATUS EXaltstack( PTR ex_stack, i4  s_size);
-#ifdef CLCONFIG_H_INCLUDED
-FUNC_EXTERN TYPESIG (*EXsetsig( ))();
-#endif /* CLCONFIG_H_INCLUDED */
-# endif /* UNIX */
 
 /*
 **  Client types for EXsetclient.

@@ -183,6 +183,20 @@
 **      20-Apr-2010 (coomi01) b123602
 **          Make DOUBLE-BYTE a runtime test and bring into line with
 **          routine TDfgoto()
+**      27-may-2010 (huazh01)
+**          after finish making the change, on HP terminal (XS), output 
+**          display attribute if current display attribute is not the same as 
+**          previous on. (b123820)
+**      28-jul-2010 (huazh01)
+**          only apply the fix to b123820 if the previous display attribute
+**          is reverse video. (b124090)
+**      23-Aug-2010 (huazh01)
+**          On HP-UX, clean up display attribute if previous frame has a reverse 
+**          video field. (b124215)
+**      19-nov-2010 (huazh01)
+**          Ensure reverse video display attribute has been cleaned up properly 
+**          by writing a 'RE' to output buffer.
+**          (b124610)
 */
 u_char		TDsaveLast();
 
@@ -1332,6 +1346,8 @@ i4	wy;
 		char	zda;		/* work var for attr/font cleanup */
 		i4	wrk;		/* work var for HP term mumbo-jumbo */
                 bool    printAble = TRUE; 
+                bool    clr_da;         /* true if display attribute needs 
+                                        ** to be cleared. */
 
 # ifdef TRACING
 	if (dbgout == NULL)
@@ -1602,13 +1618,21 @@ i4	wy;
 				if (XS && !lcurwin)
 				{
 				    zda = (pda | pfonts | pcolor);
+
+                                    /* clear reverse video display */
+                                    clr_da = (*cda == _RVVID && 
+                                              *cda != (ndaval & _DAMASK)); 
+
 				    if ((!IITDcda_prev &&
 					*cda && !(!zda && ndaval)) ||
 					(IITDcda_prev &&
 					 ((zda && !*cda && ndaval) ||
 					  (!zda && *cda && !ndaval) ||
 					  (ndaval && (IITDcda_prev != *cda) &&
-					   (ndaval != *cda)))))
+					   (ndaval != *cda))))
+                                        ||
+                                        clr_da
+                                       )
 				    {
 					/*
 					** Handle the case of clearing
@@ -1666,6 +1690,17 @@ i4	wy;
 						win->_maxx;
 					}
 					_puts(CE);
+
+                                        /* end reverse video display (RE) after
+                                        ** we clear the rest of the line (CE). 
+                                        ** Note that this will also clear all
+                                        ** enhance video display attributes coz 
+                                        ** HP70092's termcap define RE, BE, EB,
+                                        ** UE, EA and EAW to the same value. 
+                                        */
+                                        if (clr_da) 
+                                           _puts(RE); 
+
 					clr_eol = TRUE;
 					MEfill((u_i2) (cscr->_maxx -
 					    (wx + invc_wx)), (u_char) ' ', csp);
@@ -2204,6 +2239,23 @@ i4	wy;
 			*/
 			if (XS && wx > lch)
 			{
+
+				/* output display attribute if previous
+                                ** one is not the same as the current one.
+                                */
+                                if (pda != *nda  &&
+                                   (pda & _DAMASK) == _RVVID)
+                                {
+                                   TDsmvcur(ly, lx, y, wx + invc_wx);
+                                   ly = y;
+                                   lx = wx + invc_wx;
+                                   fonts = (ndaval = *nda) & _LINEMASK;
+                                   da = ndaval & _DAMASK;
+                                   color = ndaval & _COLORMASK;
+
+                                   TDdaout(fonts, da, color);
+                                }
+
 				if ((wx + invc_wx) > cols_1)
 				{
 					pda = EOS;

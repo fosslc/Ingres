@@ -70,6 +70,8 @@
 **	    replace nat and longnat with i4
 **	30-mar-04 (toumi01)
 **	    move qefdsh.h below qefact.h for QEF_VALID definition
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
 
 
@@ -168,13 +170,6 @@ QEF_RCB		*i_qer_p )
     DB_STATUS		status,
 			sav_status = E_DB_OK;
     DB_ERROR		sav_error;
-    DB_ERROR		err_stub;
-    i4		ignore;
-    QES_DDB_SES		*dds_p = & i_qer_p->qef_cb->qef_c2_ddb_ses;
-/*
-    DD_LDB_DESC		*cdb_p = & dds_p->qes_d4_ddb_p->
-			    dd_d3_cdb_info.dd_i1_ldb_desc;
-*/
     QEP_PTR_UNION	ptr_union;
     QSF_RCB		qsf_rcb;
     QEF_CB		*qcb_p = i_qer_p->qef_cb;

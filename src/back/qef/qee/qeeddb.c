@@ -133,6 +133,8 @@
 **          Fix buffers that are dependent on DB_MAXNAME
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 **/
 
 
@@ -320,10 +322,6 @@ qee_d2_tmp(
 
 	tm_last.TM_secs = 0;
 	tm_last.TM_msecs = 0;
-/*	
-	PCpid(& pid);		** get process (server) id **
-	CVla(pid, pid_ascii);	** convert to ascii **
-*/
 	for (n = 0; n < ddq_p->qeq_d3_elt_cnt; n++)
 	{
 	    /* 3.  generate temporary table name */
@@ -1020,7 +1018,6 @@ qee_d9_undefall(
 		    sav_status = E_DB_OK;
     DB_ERROR	    sav_error;
     QES_DDB_SES	    *dds_p = & qef_rcb->qef_cb->qef_c2_ddb_ses;
-    PTR		    qso_handle;
     QES_RPT_HANDLE  *hand_p;
     i4		    i;
 

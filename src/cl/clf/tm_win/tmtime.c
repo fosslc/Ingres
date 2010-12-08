@@ -67,6 +67,8 @@
 **	    semaphore protect globals for MCT only
 **      06-aug-1999 (mcgem01)
 **          Replace nat and longnat with i4.
+**	23-Nov-2010 (kschendel)
+**	    Kind of silly to have unix platform tests in win-only source, fix.
 **/
 
 /* # defines */
@@ -128,9 +130,7 @@ GLOBALREF CS_SEMAPHORE  CL_misc_sem;
 **	    Only on systems where gettimeofday exists and it correctly supports
 **	    time zone information will it be used.
 */
-# ifdef NT_GENERIC
 # define timezone _timezone
-# endif
 
 VOID
 TMzone(zone)
@@ -246,11 +246,7 @@ SYSTIME	*stime;
     {
         struct timeval  t;
 	struct timezone tz;
-# ifdef dg8_us5
-        int gettimeofday ( struct timeval *, struct timezone * ) ;
-# else
 	int		gettimeofday();
-# endif
 
 # if defined(xCL_GETTIMEOFDAY_TIMEONLY)
 	gettimeofday(&t);

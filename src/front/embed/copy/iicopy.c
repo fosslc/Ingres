@@ -6122,6 +6122,8 @@ IICPsebSendEmptyBlob()
 ** History:
 **	14-Dec-2009 (kschendel) SIR 122974
 **	    Adapt original LOB handlers to new copy framework.
+**	08-Nov-2010 (gupsh01)
+**	    Fixed the adu_nvchr_fromutf8() call to use correct arguments.
 */
 
 static void
@@ -6233,14 +6235,20 @@ IIcpfrom_lobHandler(LOBULKFROM *lob_info)
 		seg_flags |= II_BCOPY;
 	    else if (lotype == DB_NCHR_TYPE)
 	    {
+		i4 uninorm_flag;
 		utf8_dv.db_data = (PTR) valstart;
 		utf8_dv.db_length = segbytes;
 		rdv.db_data = cgroup->cpg_ucv_buf;
 		rdv.db_length = cgroup->cpg_ucv_len;
 		((DB_NVCHR_STRING *)rdv.db_data)->count =
 			(cgroup->cpg_ucv_len - sizeof(i2)) / sizeof(UCS2);
+		
+		
+		uninorm_flag = lob_info->libq_cb->ii_lq_adf->adf_uninorm_flag;
+		lob_info->libq_cb->ii_lq_adf->adf_uninorm_flag = AD_UNINORM_NFC;
 		dbstat = adu_nvchr_fromutf8(lob_info->libq_cb->ii_lq_adf,
-				&utf8_dv, &rdv, 0);
+				&utf8_dv, &rdv);
+		lob_info->libq_cb->ii_lq_adf->adf_uninorm_flag = uninorm_flag;
 		if (dbstat != E_DB_OK)
 		{
 		    IICPwemWriteErrorMsg(E_CO0039_TUP_FORMAT_ERR,

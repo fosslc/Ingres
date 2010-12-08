@@ -15,7 +15,7 @@
 #	14-dec-2009 (toumi01) SIR 122403
 #	    Add aducrypt.c and adurijndael.c
 #	09-Mar-2010 (thich01)
-#	    Change adupoint.c to aduspatial.c
+#	    Add aduspatial.c
 
 
 SubDir ING_SRC common adf adu ;

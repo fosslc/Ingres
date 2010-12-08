@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -67,8 +67,19 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opn_recover(
+	OPS_SUBQUERY *subquery);
+static i4 opn_mhandler(
+	EX_ARGS *args);
+bool opn_timeout(
+	OPS_SUBQUERY *subquery);
+OPN_STATUS opn_ceval(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opn_recover	- recover from an out-of-memory error
@@ -340,6 +351,12 @@ opn_mhandler(
 **	    Add code to do quick exit for where-less idiot queries.
 **	13-Feb-2007 (kschendel)
 **	    Replace CSswitch with better CScancelCheck.
+**      21-sept-2010 (huazh01)
+**          Flag 'OPS_IDIOT_NOWHERE' can also be set for a query having
+**          only constant restrictions in its right branch of the query
+**          tree. After we got the first qep, do not immediately timeout 
+**          such type of query, otherwise, plans using secondary index 
+**          won't be considered. (b124342)
 [@history_template@]...
 */
 bool
@@ -350,7 +367,16 @@ opn_timeout(
                                         ** currently active user */
     OPS_STATE       *global;            /* ptr to global state variable */
 
-    if (subquery->ops_mask & OPS_IDIOT_NOWHERE && subquery->ops_bestco) return(TRUE);
+    /* OPS_IDIOT_NOWHERE can also be set for a query having only constant
+    ** restrictions in its right branch of the query tree. Do not immediately
+    ** time out such type of query, otherwise, plans using secondary index
+    ** won't be considered. (b124342)
+    */
+    if (subquery->ops_mask & OPS_IDIOT_NOWHERE && 
+        (subquery->ops_root->pst_right == NULL || 
+	subquery->ops_root->pst_right->pst_sym.pst_type == PST_QLEND ) &&
+        subquery->ops_bestco) 
+        return(TRUE);
 					    /* if idiot query (join, but no where)
 					    ** and we have valid plan, quit now */
 
@@ -665,7 +691,7 @@ opn_ceval(
 					    ** warning message to caller */
 	    else
 	    {
-		opx_lerror(E_OP0400_MEMORY, 0); /* Output to errlog.log as well kiria01-b116309 */
+		opx_lerror(E_OP0400_MEMORY, 0,0,0,0,0); /* Output to errlog.log as well kiria01-b116309 */
 		opx_error(E_OP0400_MEMORY); /* exit with a user error if the query
 					    ** cannot find at least one acceptable
 					    ** query plan */

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 1986, 2005, 2009 Ingres Corporation
+**Copyright (c) 1986, 2005, 2009, 2010 Ingres Corporation
 **
 */
 #ifndef __PSHPARSE_H_INC
@@ -565,6 +565,16 @@
 **	    Add trace point PS152 to trace some cache-dynamic decisions.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	5-Oct-2010 (kschendel) SIR 124544
+**	    Change some with-parsing prototypes for structure= cleanup.
+**	    Massive rework of WITH-parsing data structures, many PSS_WC_xxx
+**	    bits moved to dmu indicators..
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Cleaning up prototypes.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for setting installation wide collation defaults
+**	    and TP PS130 to augment parser to apply default collations to
+**	    columns that didn't specify a collation.
 */
 
 /*
@@ -576,8 +586,7 @@
 **    Y     0 (ps128)	-   print tracing info as YACC is shifting/reducing its
 **			    way through the query text
 **    N	    1 (ps129)	-   set printqry - print query buffer before
-**			    parsing the
-**			    query
+**			    parsing the query
 **    N	    3 (ps131)	-   print tracing info of the algorithm determining if
 **			    a user can grant permit on a given table or view
 **    N	    4 (ps132)	-   print tracing info of the algorithm determining
@@ -597,8 +606,7 @@
 **    Y	    18 (ps146)	-   print a subtree rooted in the newly allocated node
 **			    (pst_node)
 **    N     19 (ps147)  -   print psl scanner UNORM diagnostics
-**  ****    20 (ps148)	-   will never fire; used to print qualification tree as
-**			    it was being normalized (pst_norml)
+**    N	    20 (ps148)	-   Traces Register productions
 **    Y	    21 (ps149)	-   print number of children of opnode for which type
 **			    resolution is being performed; use SET TRACE
 **			    TERMINAL to get output on the screen (pst_resolve)
@@ -615,23 +623,20 @@
 **    			    for not null columns (used for testing this feature
 **    			    in 6.5; the feature has been disabled until 6.6 or
 **    			    whenever we need to implement SQL92 catalog support)
-**    N	    49 (ps177)	-   allow set-input procedures and statement-level rules
+**  ****    49 (ps177)	-   OBSOLETE? allow set-input procedures and statement-level rules
 **    			    to be created by the user (instead of only by QEF)
 **    Y	    50 (ps178)	-   print tracing info as the protection algorithm gets
 **			    applied to a query tree (psy_permit)
 **    Y	    51 (ps179)	-   print protection qualification trees as the permitsd
 **			    get applied to a query tree (psy_permit)
-**  ****    71 (ps199)	-   will never fire; used to print segments of output as
-**			    they are being stored in the buffer to be eventually
-**			    displayed as output of HELP PERMIT|INTEGRITY_VIEW
-**			    which are no longer supported in the BE (psy_print)
+**    Y     71 (ps199)	-   Traces psy_put data
 **    Y	    72 (ps200)	-   disable validation of integrity (psy_dinteg)
 **    N     73 (ps201)  -   in SQL disable error return when a duplicate key
 **			    or duplicate row error would normally be returned.
 **			    Instead just return 0 row count as is done in QUEL.
 **			    This has the benefit that in 1.1 open cursors will
 **			    not be closed as a result of the error.
-**    N	    74 (ps202)
+**    N	    74 (ps202)	-   Enable varchar bias over char for datatype resolution 
 **    Y     75 (ps203)  -   Call ulm_mappool() and ulm_print_pool() to dump
 **                          PSF memory in ULM.
 **
@@ -652,26 +657,29 @@
 ** -----------------------------------------------------------------------------
 */
 #define	    PSS_YACC_SHIFT_REDUCE_TRACE	    0	/* PS128 */
-#define	    PSS_PRINT_QRY_TRACE		    1
-#define	    PSS_TBL_VIEW_GRANT_TRACE	    3
-#define	    PSS_REPEAT_QRY_SHARE_TRACE	    4
-#define	    PSS_DBPROC_GRNTBL_ACTIVE_TRACE  5
+#define	    PSS_PRINT_QRY_TRACE		    1	/* PS129 */
+#define	    PSS_DEF_COLL_ON_EXISTING	    2	/* PS130 */
+#define	    PSS_TBL_VIEW_GRANT_TRACE	    3	/* PS131 */
+#define	    PSS_REPEAT_QRY_SHARE_TRACE	    4	/* PS132 */
+#define	    PSS_DBPROC_GRNTBL_ACTIVE_TRACE  5	/* PS133 */
 #define	    PSS_CURSOR_INFO_TRACE	    13	/* PS141 */
-#define	    PSS_DBPROC_TREE_BY_LINK_TRACE   14
-#define     PSS_DBPROC_TREE_BY_NEXT_TRACE   15
-#define	    PSS_LONG_QRY_TREE_TRACE	    16
+#define	    PSS_DBPROC_TREE_BY_LINK_TRACE   14	/* PS142 */
+#define     PSS_DBPROC_TREE_BY_NEXT_TRACE   15	/* PS143 */
+#define	    PSS_LONG_QRY_TREE_TRACE	    16	/* PS144 */
 #define     PSS_SHORT_QRY_TREE_TRACE        17	/* PS145 */
-#define	    PSS_NEW_NODE_SUBTREE_TRACE	    18
+#define	    PSS_NEW_NODE_SUBTREE_TRACE	    18	/* PS146 */
 #define     PSS_SCANNER_UNORM               19  /* PS147 */
+#define	    PSS_TRACE_REGISTER		    20	/* PS148 */
 #define	    PSS_OPNODE_CHILDREN_TRACE	    21	/* PS149 */
-#define	    PSS_ENABLE_DROP_SCHEMA	    22
+#define	    PSS_ENABLE_DROP_SCHEMA	    22	/* PS150 */
 #define	    PSS_AMBREP_64COMPAT		    23  /* PS151 */
 #define	    PSS_CACHEDYN_TRACE		    24	/* PS152 */
 #define	    PSS_PRINT_PSS_CONS		    47	/* PS175 */
-#define	    PSS_GENERATE_NOT_NULL_CONS	    48
-#define	    PSS_ALLOW_SET_PROC_STMT_RULE    49	/* PS177 */
-#define	    PSS_PRIVILEGE_CHECK_TRACE	    50
-#define	    PSS_PRINT_PERM_QUAL_TREE_TRACE  51
+#define	    PSS_GENERATE_NOT_NULL_CONS	    48	/* PS176 */
+#define	    PSS_ALLOW_SET_PROC_STMT_RULE    49	/* PS177 unused? */
+#define	    PSS_PRIVILEGE_CHECK_TRACE	    50	/* PS178 */
+#define	    PSS_PRINT_PERM_QUAL_TREE_TRACE  51	/* PS179 */
+#define	    PSS_PSY_PUT_TRACE		    71	/* PS199 */
 #define	    PSS_NO_INTEG_VALIDATION_TRACE   72	/* PS200 */
 #define	    PSS_ENABLE_NOERR_ON_DUPS	    73	/* PS201 */
 #define	    PSS_VARCHAR_PRECEDENCE	    74	/* PS202 */
@@ -1109,7 +1117,7 @@ typedef struct _PSS_RNGTAB
     i4		    pss_rgno;		/* Range variable number */
     i4		    pss_permit;		/* used to mark permission to use */
     char            pss_rgname[DB_TAB_MAXNAME]; /* Name of the range variable */
-    i4		    pss_rgtype;		/* type of range var */
+    PST_RGTYPE	    pss_rgtype;		/* type of range var */
 	/*   uses the following definitions from PST_RNGENTRY in psfparse.h
 	**	PST_TABLE 1 	-- table. 
 	**	PST_RTREE 2	-- QTREE. the table id and rdrinfo block
@@ -1827,6 +1835,8 @@ typedef struct _PSS_DECVAR PSS_DECVAR;  /* forward declaration */
 **          Used to disable cache dynamic on a statement level basis. 
 **          Currently only used with prepared statements with VLUPs in 
 **          the target list.
+**	11-Oct-2010 (kschendel) SIR 124544
+**	    Add result-structure and compression.
 */
 typedef struct _PSS_SESBLK
 {
@@ -1894,7 +1904,23 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					** PSQ_50DEFQRY	    - 5.0 repeat query
 					*/
     i2		    pss_rsdmno;		/* result domain number */
-    i2		    pss_create_compression;  /* Default table compression */
+    i2		    pss_create_compression;  /* Default table compression,
+					** stored as DMU_COMP_OFF/ON/HI.
+					*/
+    i2		    pss_result_struct;	/* Session result_structure */
+/* Note: at present (10.1), result_compression does not apply to simple
+** create table, but create_compression does.  The opposite is true for
+** create table as select (RETINTO).
+*/
+    bool	    pss_result_compression; /* TRUE if result_structure is
+					** compressed (e.g. cbtree)
+					*/
+    i4		    pss_idxstruct;	/* Default structure for secondary
+					** indexes.  Guaranteed to not be
+					** heap;  negative means "compression".
+					** Does not apply to Vectorwise
+					** indexes.
+					*/
     PSF_MSTREAM	    pss_ostream;	/* Mem. stream to alloc output object */
     PST_QNODE	    *pss_tlist;		/* Pointer to current target list */
     PTR		    pss_dbid;		/* Database id for this session */
@@ -1916,7 +1942,6 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
     PSF_MSTREAM	    pss_tstream;	/* Memory stream for text allocation */
     PSF_MSTREAM	    pss_cbstream;	/* Memory stream for cb allocation */
     struct _ADF_CB  *pss_adfcb;		/* ADF session control block */
-    i4		    pss_idxstruct;	/* Structure for new indexes */
     i4		    pss_udbid;		/* Unique database id */
     PST_PROTO	    *pss_proto;		/* ptr to list of prototype objects */
     PTR		    pss_pstream;	/* memory stream for prototypes */
@@ -2100,6 +2125,8 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					**   an existing one
 					*/
 
+/* notused			0x0001 */
+
 					/* set ==> found aggr in the tree */
 #define     PSS_AGINTREE		0x0002L
 
@@ -2260,12 +2287,8 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					** to flag presence of global temp table
 					** in repeated query
 					*/
-#define		PSS_CREATE_DGTT		0x200000L
-					/*
-					** to flag creation of global temp table
-					** to allow correct parsing of decimal columns
-					** if II_DECIMAL=","
-					*/
+/*	notused		    0x200000L */
+
 #define	 PSS_XTABLE_UPDATE		0x400000L
 					/*
 					** flag up xtable update
@@ -2322,10 +2345,8 @@ ULT_VECTOR_MACRO(PSS_TBITS, PSS_TVAO) pss_trace;
 					/* This is a keyset scrollable cursor
 					*/
     i4	pss_stmt_flags2;		/* yet more statement-level flags */
-#define		PSS_2_ENCRYPTION	0x0001L
-					/* table-level ENCRYPTION= parsed */
-#define		PSS_2_PASSPHRASE	0x0002L
-					/* table-level PASSPHRASE= parsed */
+/* Flags 0x01, 0x02 not used, available */
+
 #define     PSS_STMT_NO_CACHEDYN        0x0004L
                                         /* indicates this is query must not
                                         ** be cached */
@@ -2742,6 +2763,10 @@ i4		    pss_flattening_flags;
 #define		PSS_BATCH_OPTIM_SET	1 /* use optimization (if possible ) */
 #define		PSS_BATCH_OPTIM_UNSET	2 /* do not use optimization */
     struct PST_STK1 *pss_stk_freelist;
+    DB_COLL_ID	pss_def_coll;		/* Default collation for CHAR, VARCHAR, C,
+					** TEXT and LONG VARCHAR */
+    DB_COLL_ID	pss_def_unicode_coll;	/* Default collation for NCHAR, NVARCHAR and
+					** LONG NVARCHAR */
 } PSS_SESBLK;	
 
 /*
@@ -2886,15 +2911,22 @@ typedef struct _PSF_SERVBLK
 					*/
 #define     PSF_NOCHK_SINGLETON_CARD	   0x0080L
 
-    i2		    psf_create_compression;  /* DMU_C_xxx default create table
-					** compression from config.
+    i2		    psf_create_compression;  /* DMU_COMP_xxx default create
+					** table compression from config.
 					*/
+    i2		    psf_result_struct;	/* Default result_structure */
+    bool	    psf_result_compression; /* result structure is compressed */
     bool	    psf_vch_prec;	/* varchar precedence */
     char           *psf_server_class;   /* server_class of server */
+    DB_COLL_ID	    psf_def_coll;	/* Default collation for CHAR, VARCHAR,
+					** C, TEXT and LONG VARCHAR */
+    DB_COLL_ID	    psf_def_unicode_coll; /* Default collation for NCHAR,
+					** NVARCHAR and LONG NVARCHAR */
 } PSF_SERVBLK;
 
 /* Macro to get pointer to session's PSS_SESBLK directly from SCF's SCB */
-GLOBALREF	PSF_SERVBLK	*Psf_srvblk;
+GLOBALREF PSF_SERVBLK	*Psf_srvblk;
+GLOBALREF i4		Psf_init;
 
 #define	GET_PSS_SESBLK(sid) \
 	*(PSS_SESBLK**)((char *)sid + Psf_srvblk->psf_psscb_offset)
@@ -3290,6 +3322,9 @@ typedef struct _PSS_IFSTMT
 **	28-Oct-2008 (kiria01) SIR121012
 **	    For manipulating the pss_list it is necessary to have a list
 **	    head: .pss_head_stmt is added for this purpose.
+**	21-Oct-2010 (kiria01) b123345
+**	    Add PSS_NONDBP_INFO as flag indicating global statement context
+**	    for executing outside of DBPs.
 */
 typedef struct _PSS_DBPINFO
 {
@@ -3363,7 +3398,9 @@ typedef struct _PSS_DBPINFO
 					/* set ==> processing select statement
 					** of DBP FOR loop */
 #define PSS_INFORQ		((i4) 0x10)
-
+					/* set ==> a local dbpinfo for non-DBP
+					** use */
+#define PSS_NONDBP_INFO		((i4) 0x20)
     DB_PROCEDURE    pss_ptuple;		/* IIPROCEDURE row for this procedure */
     PST_STATEMENT   *pss_head_stmt;	/* This will point to the first allocated
 					** statement block; This is used so that
@@ -4117,9 +4154,9 @@ typedef struct _PSY_VIEWINFO
 
 /* used to keep track of "with null", "not default", "with system_maintained" */
 
-#define PSS_TYPE_NULL		    0x01
-#define PSS_TYPE_NDEFAULT	    0x02
-#define PSS_TYPE_SYS_MAINTAINED	    0x04
+#define PSS_TYPE_NULL		    0x0001
+#define PSS_TYPE_NDEFAULT	    0x0002
+#define PSS_TYPE_SYS_MAINTAINED	    0x0004
 
 /* additional types used to denote "not null", "with default", etc.
 **
@@ -4127,30 +4164,25 @@ typedef struct _PSY_VIEWINFO
 ** defaults in any order and we must prevent conflicting ones from being
 ** defined on the same column.
 */
-#define PSS_TYPE_NOT_NULL	    0x08    /* "not null"              */
-#define PSS_TYPE_NOT_SYS_MAINTAINED 0x10    /* "not system_maintained" */
-#define PSS_TYPE_DEFAULT	    0x20    /* ANY default--INGRES or user */
-#define PSS_TYPE_USER_DEFAULT	    0x40    /* user-defined default    */
+#define PSS_TYPE_NOT_NULL	    0x0008    /* "not null"              */
+#define PSS_TYPE_NOT_SYS_MAINTAINED 0x0010    /* "not system_maintained" */
+#define PSS_TYPE_DEFAULT	    0x0020    /* ANY default--INGRES or user */
+#define PSS_TYPE_USER_DEFAULT	    0x0040    /* user-defined default    */
 
 /* used for identity columns */
 
-#define	PSS_TYPE_GENALWAYS	    0x80    /* "generate always as identity" */
-#define	PSS_TYPE_GENDEFAULT	    0x100   /* "generate by default as identity" */
-#define	PSS_TYPE_NAMED_IDENT	    0x200   /* explicitly named identity seq */
+#define	PSS_TYPE_GENALWAYS	    0x0080    /* "generate always as identity" */
+#define	PSS_TYPE_GENDEFAULT	    0x0100   /* "generate by default as identity" */
+#define	PSS_TYPE_NAMED_IDENT	    0x0200   /* explicitly named identity seq */
+
+/* used for COLLATE */
+#define PSS_TYPE_COLLATE_SEEN	    0x0400
 
 /* used for encryption */
-#define PSS_ENCRYPT		    0x001
-#define PSS_ENCRYPT_SALT	    0x002
-#define PSS_ENCRYPT_CRC		    0x004
+#define PSS_ENCRYPT		    0x0800
+#define PSS_ENCRYPT_SALT	    0x1000
+#define PSS_ENCRYPT_CRC		    0x2000
 
-/*
-** size of the characteristic array for [CREATE] INDEX
-*/
-#define	PSS_MAX_INDEX_CHARS	    16
-/*
-** size of the characteristic arrsy for MODIFY
-*/
-#define	PSS_MAX_MODIFY_CHARS	    16
 /*
 ** maximum number of concurrent indexes that can be built 
 */
@@ -4621,7 +4653,8 @@ typedef struct _PSS_LTBL_INFO {
 **      3-Sep-2007 (kibro01) b119050
 **          It should not be possible to specify NOINDEX or INDEX = BASE TABLE
 **          STRUCTURE with any other options.
-
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Add DMU characteristics for index options.
 */
 typedef struct _PSS_CONS {
     struct _PSS_CONS   *pss_next_cons;
@@ -4670,37 +4703,51 @@ typedef struct _PSS_CONS {
 #define PSS_CONS_UPD_SETNULL	0x2000	/* ON UPDATE SET NULL */
 #define PSS_CONS_UPD_RESTRICT	0x4000	/* ON UPDATE RESTRICT */
 #define PSS_CONS_UPD_NOACT	0x8000	/* ON UPDATE NO ACTION */
-    PST_RESTAB	       pss_restab;	/* contains constraint index options */
+    PST_RESTAB	       pss_restab;	/* constraint index name, locn */
+    DMU_CHARACTERISTICS pss_dmu_chars;	/* constraint index options! */
 } PSS_CONS;
 
-#define PSS_WC_MAX_OPTIONS		35
+
+/* WITH-option parsing definitions.  WITH-parsing uses the same notion
+** of indicator and value that the DMU_CHARACTERISTICS structure uses,
+** but at parse time we need more indicators.  To avoid messy context
+** sensitivity and copying back and forth, we use the DMU_CHARACTERISTICS
+** indicator map, which has extra space in it to allow for our bits.
+** A quick runtime check ensures that there is enough space.
+**
+** Define the additional "option seen" indicators needed:
+*/
 
-#ifdef xxx
-typedef struct _PSS_WITH_CLAUSE
-{
-    char	pss_wc[((PSS_WC_MAX_OPTIONS+1)/BITS_IN(char)) + 1];
-} PSS_WITH_CLAUSE;
-#define PSS_WC_SET_MACRO(option, wc) BTset((char *)option, wc);
-#define PSS_WC_CLR_MACRO(option, wc) BTclear((char *)option, wc);
-#define PSS_WC_TST_MACRO(option, wc) BTtest((char *)option, wc);
-#define PSS_WC_ANY_MACRO(wc)\
-    (BTcount((char *)wc, sizeof(PSS_WITH_CLAUSE)) != 0 ? TRUE : FALSE)
-#endif
+enum pss_with_enum {
+	PSS_WC_AESKEY = DMU_CHARIND_LAST + 1,
+	PSS_WC_COMPRESSION,
+	PSS_WC_CONS_INDEX,
+	PSS_WC_ENCRYPT,
+	PSS_WC_EXTONLY,
+	PSS_WC_KEY,
+	PSS_WC_LOCATION,
+	PSS_WC_NEWLOCATION,
+	PSS_WC_NODEP_CHECK,
+	PSS_WC_NOJNL_CHECK,
+	PSS_WC_NPASSPHRASE,
+	PSS_WC_OLDLOCATION,
+	PSS_WC_PARTITION,
+	PSS_WC_PASSPHRASE,
+	PSS_WC_RANGE,
+	PSS_WC_ROW_SEC_AUDIT,
+	PSS_WC_ROW_SEC_KEY,
+	PSS_WC_SEC_AUDIT,
 
-typedef struct _PSS_WITH_CLAUSE
-{
-    char	pss_wc[PSS_WC_MAX_OPTIONS + 1]; /* element 0 not used */
-} PSS_WITH_CLAUSE;
+	PSS_WC_LAST	/* For sizing, BTcount */
+};
 
-#define PSS_WC_SET_MACRO(option, wc) *((char *)wc + option) = 1;
-#define PSS_WC_CLR_MACRO(option, wc) *((char *)wc + option) = 0;
-#define PSS_WC_TST_MACRO(option, wc) (*((char *)wc + option) ? TRUE : FALSE)
-#define PSS_WC_ANY_MACRO(wc)\
-(BTcount((char *)wc, sizeof(PSS_WITH_CLAUSE)*BITS_IN(char)) != 0 ? TRUE : FALSE)
 
 /* size used for string to pass into psl_command_string()
+** Long enough for DECLARE GLOBAL TEMPORARY TABLE AS SELECT
+** (which isn't actually used as a query name but might be).
+** Long enough for MODIFY (to TABLE_RECOVERY_DISALLOWED).
  */
-#define  PSL_MAX_COMM_STRING	40
+#define  PSL_MAX_COMM_STRING	50
 
 /*
 **  THE FOLLOWING STRUCTURE HAS BEEN MOVED INTO PSHPARSE.H FROM YYVARS.H (RIP)
@@ -4977,6 +5024,13 @@ typedef struct _PSS_WITH_CLAUSE
 **	    it has to be declared i2 here (or, a real DB_ANYTYPE union used),
 **	    or we pick up the wrong half on big-endian machines.
 **	    Causes cast(thing as varchar(30)) to be wrong.
+**	7-Oct-2010 (kschendel) SIR 124544
+**	    Add more with-clause flags and some stuff for WITH-option
+**	    semantics unification.  Delete with_clauses bitmap, we're
+**	    going to use the DMU_CHARACTERISTICS directly.
+**	21-Oct-2010 (kiria01) b123345
+**	    Add .nondbpinfo as pre-allocated dbpinfo data for outside of
+**	    DBP contexts.
 **/
 
 /* For passing opflags to arg_stack users */
@@ -4993,10 +5047,7 @@ typedef struct PSS_YYVARS_ {
 				    ** processing subselect in FROM clause */
 #define	    MAX_NESTING	    100
     YYAGG_NODE_PTR  *agg_list_stack[MAX_NESTING]; /* same depth as from list */
-    i4	    with_journaling;
-    i4	    with_location;
     i2	    with_dups;		    /* pst_alldups,pst_nodups,pst_dntcaredups */
-    i4	    is_heapsort;
     i4	    in_from_clause;
     i4	    in_where_clause;
     i4	    in_target_clause;
@@ -5005,7 +5056,7 @@ typedef struct PSS_YYVARS_ {
     i4	    in_update_set_clause;
     i4	    groupby_quantifier;	    /* new GROUP BY can have ALL/DISTINCT */
     i4	    in_rule;		    /* in rule statement */
-    i4            in_case_function;
+    i4      in_case_function;
 
     PST_J_MASK flists[MAX_NESTING];    /* assume no more that a nesting
 				    ** of 100 subselects.
@@ -5112,56 +5163,24 @@ typedef struct PSS_YYVARS_ {
 #define	PSS_RANGE_CLAUSE		9
 #define PSS_PARTITION_CLAUSE		10
 
-   PSS_WITH_CLAUSE	    with_clauses;
-				/*
-				** with_clauses keeps track of which WITH
-				** clauses have been seen by a particular
-				** statement. When a particular clause is
-				** parsed, the appropriate bit is set in the
-				** field. If the bit is already set, then
-				** this WITH clause has been given twice and
-				** the statement is rejected.
+    u_i4    qmode_bits;		/* Query mode expressed as a bit or bit-mask,
+				** see pslwithopt for values.  Set by
+				** psl-withopt-init.
 				*/
 
-#define PSS_WC_STRUCTURE		1
-#define PSS_WC_FILLFACTOR   		2
-#define PSS_WC_MINPAGES	    		3
-#define PSS_WC_MAXPAGES	    		4
-#define PSS_WC_LEAFFILL	    		5
-#define PSS_WC_NONLEAFFILL  		6
-#define PSS_WC_KEY	    		7
-#define PSS_WC_LOCATION	    		8
-#define PSS_WC_COMPRESSION  		9
-#define PSS_WC_NEWLOCATION  		10
-#define PSS_WC_OLDLOCATION  		11
-#define PSS_WC_DUPLICATES   		12
-#define PSS_WC_JOURNALING   		13
-#define	PSS_WC_ALLOCATION   		14
-#define PSS_WC_EXTEND	    		15
-#define PSS_WC_TABLE_OPTION 		16
-#define	PSS_WC_MAXINDEXFILL 		17
-#define	PSS_WC_RECOVERY	    		18
-#define	PSS_WC_UNIQUE_SCOPE 		19
-#define	PSS_WC_UNIQUE	    		20
-#define	PSS_WC_PERSISTENCE  		21
-#define	PSS_WC_CONCURRENT_ACCESS	22
-#define	PSS_WC_PAGE_SIZE		23
-#define	PSS_WC_PRIORITY			24
-#define	PSS_WC_CLUSTERED		25
-#define PSS_WC_ROW_SEC_AUDIT		26
-#define PSS_WC_ROW_SEC_KEY		27
-#define PSS_WC_ROW_NO_SEC_KEY		28
-#define PSS_WC_PARTITION		29
-#define	PSS_WC_DIMENSION		30
-#define PSS_WC_RANGE			31
-#define PSS_WC_CONS_INDEX		32
-#define PSS_WC_BLOBEXTEND		33
-#define PSS_WC_CONCURRENT_UPDATES	34
-#define	PSS_WC_AUTOSTRUCT		35
-#define PSS_WC_MAX			35
-#if PSS_WC_MAX > PSS_WC_MAX_OPTIONS
-blow chunks now!
-#endif
+    bool	secaudit;	/* TRUE if security_audit=(row) */
+    bool	extonly;	/* TRUE for extensions_only option */
+    i2		withkey_count;	/* Count of KEY= entries */
+
+    DMU_CHARACTERISTICS *cur_chars; /* WITH-option holder for whatever is
+				** being parsed.
+				** Either dmu_cb->dmu_chars, or in a
+				** constraint block, or a COPY dmu-chars.
+				** The WITH-option-seen indicator bit map
+				** is in this dmu-char.
+				*/
+    DB_ATT_NAME	    *secaudkey;	/* Security audit key if any (WITH-options) */
+    PST_RESKEY	    *withkey;	/* WITH KEY=() list */
 
     PSS_EXLIST	*exprlist;	/* points to the head of an expression list
 				** used in "... where select_expr (not) in
@@ -5174,8 +5193,9 @@ blow chunks now!
     bool	    named_parm;		/* TRUE if at least one named parm has*/
 					/* been processed for proc invocation */
     bool	    in_from_tproc;	/* TRUE if were parsing tproc */
-    i4		    isdbp;		/* TRUE for CREATE PROCEDURE stmt.    */
+    bool	    isdbp;		/* TRUE for CREATE PROCEDURE stmt.    */
     PSS_DBPINFO	    *dbpinfo;		/* holds info about current dbproc    */
+    PSS_DBPINFO	    nondbpinfo;		/* holds info about non dbp comands   */
     PST_QNODE	    *updcollst;		/* root of update column list	      */
 
     
@@ -5381,7 +5401,7 @@ blow chunks now!
 				** address of the range variable representing
 				** the view's simply underlying table
 				*/
-    PSS_RNGTAB		    *underlying_rel;
+    PSS_RNGTAB	    *underlying_rel;
     bool            bypass_actions;
                                 /*
                                 ** Bypass subsequent semantic actions
@@ -5450,9 +5470,6 @@ blow chunks now!
     bool	    inconstraint; /* TRUE - if compiling constraint def */
     bool	    in_orderby; /* TRUE - compiling order by clause */
     bool	    seq_ops;	/* TRUE - next/currval sequence operators have been issued */
-    bool	    create_with_key; /* TRUE: KEY=() WITH option in a
-				** CREATE TABLE-type context ??TEMP??
-				*/
     bool	    groupby_cube_rollup; /* TRUE - if we've already got 
 				** one of these */
     bool	    first_n_ok_depth; /* Trigger depth for first n */
@@ -5538,10 +5555,12 @@ blow chunks now!
     i4		    save_list_clause;  /* Saved $Ylist_clause during partition
 				** WITH (recursive WITH).
 				*/
-    PSS_WITH_CLAUSE save_with_clauses;  /* Saved $Ywith_clauses during
-				** partition WITH parsing, so that we don't
-				** confuse the partition WITH and the outer
-				** WITH.
+    char	    save_indicators[(DMU_ALLIND_LAST+BITSPERBYTE)/BITSPERBYTE];
+				/* Place to save cur_chars->dmu_indicators
+				** while recursively parsing a WITH-clause
+				** for a partition.  Partition-with is very
+				** limited and nothing else in the dmu chars
+				** is touched, just the indicators
 				*/
     DM_DATA	    part_locs;	/* Holding tank for a partition WITH-clause.
 				** When the with-clause is done, this gets
@@ -5561,15 +5580,8 @@ blow chunks now!
     char	    qry_name[PSL_MAX_COMM_STRING];  /* Current query name */
     i4		    qry_len;	/* length of the above string */
 
-    /* "create table as select" has the result column names in the select's
-    ** query tree.  The tree isn't hooked on to anything until the statement
-    ** is all done.  This doesn't help partition definition much, because
-    ** it's part of the WITH clause, which is part of the statement!  So
-    ** just prior to diving into the WITH clause, create-table-as-select will
-    ** jam a copy of the select query-tree pointer here, so that partition
-    ** definition can find column names.
-    */
-    PST_QNODE	    *part_crtas_qtree;  /* RETINTO select query expr */
+    /* Help quel retrieve parsing jump a gap... */
+    PST_QNODE	    *retinto_root;	/* RETINTO select query expr */
 
     /* The MODIFY statement has a variant for partitioned tables:
     ** modify master-table PARTITION logpart.logpart...
@@ -5582,7 +5594,12 @@ blow chunks now!
     i4		    md_part_logpart[DBDS_MAX_LEVELS];  /* Logical partitions
 					** for the MODIFY, -1 if not specified
 					*/
+    enum dmu_action_enum md_action;	/* MODIFY action, used by psl-
+					** command-string to generate a
+					** spiffier string if MODIFY
+					*/
     bool	    md_reconstruct;	/* TRUE if modify to reconstruct */
+    bool	    is_heapsort;	/* TRUE if modify to heapsort */
     i2		    save_pss_rsdmno[MAX_NESTING];	/* across derived table processing */
     i2		    cast_length;	/* N in cast(x to varchar(N)) */
     i4		    save_psq_mode;	/* ditto */
@@ -5592,6 +5609,7 @@ blow chunks now!
     PST_QNODE	    *tlist_stack[MAX_NESTING]; /* same depth as from list */
 
     bool            save_seq_ops[MAX_NESTING]; /* set of flags used for seq_op indicators */
+    DB_COLL_ID	    collID;
 }   PSS_YYVARS;
 
 
@@ -5613,28 +5631,9 @@ blow chunks now!
 typedef DB_STATUS (*PSS_CONS_QUAL_FUNC)(
                                         PTR             *qual_args,
                                         DB_INTEGRITY    *integ,
-                                        i4             *satisfies);
-FUNC_EXTERN STATUS
-psf_scctrace(
-	PTR	    arg1,
-	i4	    msg_length,
-	char        *msg_buffer);
-
+                                        i4             *satisfies,
+					PSS_SESBLK	*sess_cb);
 #define psf_display	TRformat
-
-FUNC_EXTERN VOID	psf_relay(
-	char	*msg_buffer);
-
-FUNC_EXTERN DB_STATUS	psfErrorFcn(
-	i4            errorno,
-	i4            detail,
-	i4            err_type,
-	i4            *err_code,
-	DB_ERROR      *err_blk,
-	PTR	      FileName,
-	i4	      LineNumber,
-	i4	      num_parms,
-	...);
 
 #ifdef HAS_VARIADIC_MACROS
 
@@ -5642,2788 +5641,10 @@ FUNC_EXTERN DB_STATUS	psfErrorFcn(
 	    psfErrorFcn( errorno,detail,err_type,err_code,err_blk, \
 	    		__FILE__,__LINE__,__VA_ARGS__)
 #else
-
 /* Variadic macros not supported */
 #define psf_error psf_errorNV
-
-FUNC_EXTERN DB_STATUS	psf_errorNV(
-	i4            errorno,
-	i4            detail,
-	i4            err_type,
-	i4            *err_code,
-	DB_ERROR      *err_blk,
-	i4	      num_parms,
-	...);
-
 #endif /* HAS_VARIADIC_MACROS */
 
-FUNC_EXTERN VOID
-psf_adf_error(
-	ADF_ERROR   *adf_errcb,
-	DB_ERROR    *err_blk,
-	PSS_SESBLK  *sess_cb);
-FUNC_EXTERN VOID
-psf_rdf_error(
-	i4	    rdf_opcode,
-	DB_ERROR    *rdf_errblk,
-	DB_ERROR    *err_blk);
-FUNC_EXTERN VOID
-psf_qef_error(
-	i4	    qef_opcode,
-	DB_ERROR    *qef_errblk,
-	DB_ERROR    *err_blk);
-FUNC_EXTERN DB_STATUS
-psf_mopen(
-	PSS_SESBLK  	   *sess_cb,
-	i4		   objtype,
-	PSF_MSTREAM	   *mstream,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psf_malloc(
-	PSS_SESBLK  	   *sess_cb,
-	PSF_MSTREAM	   *stream,
-	i4                size,
-	void		   *result,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psf_mclose(
-	PSS_SESBLK  	   *sess_cb,
-	PSF_MSTREAM        *stream,
-	DB_ERROR	    *err_blk);
-FUNC_EXTERN DB_STATUS
-psf_mroot(
-	PSS_SESBLK  	   *sess_cb,
-	PSF_MSTREAM        *mstream,
-	PTR		   root,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psf_mchtyp(
-	PSS_SESBLK  	*sess_cb,
-	PSF_MSTREAM     *mstream,
-	i4		objtype,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psf_mlock(
-	PSS_SESBLK  	*sess_cb,
-	PSF_MSTREAM     *mstream,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psf_munlock(
-	PSS_SESBLK  	*sess_cb,
-	PSF_MSTREAM     *mstream,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psf_symall(
-	PSS_SESBLK  *pss_cb,
-	PSQ_CB	    *psq_cb,
-	i4	    size);
-FUNC_EXTERN DB_STATUS
-psf_umalloc(
-	PSS_SESBLK  	*sess_cb,
-	PTR		mstream,
-	i4	    	msize,
-	PTR		*mresult,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN PSS_SESBLK*
-psf_sesscb();
-FUNC_EXTERN DB_STATUS
-psl_cp1_copy(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_Q_XLATE	*xlated_qry,
-	PTR		scanbuf_ptr,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_cp2_copstmnt(
-	PSS_SESBLK	*sess_cb,
-	PSQ_MODE	*qmode,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_cp3_copytable(
-	PSS_SESBLK	*sess_cb,
-	PSS_RNGTAB	*resrange,
-	DB_TAB_NAME	*tabname,
-	PSS_Q_XLATE	*xlated_qry,
-	DD_LDB_DESC	*ldbdesc,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_cp4_coparam(
-	PSS_SESBLK	*sess_cb,
-	PSS_Q_XLATE	*xlated_qry,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_cp5_cospecs(
-	PSS_SESBLK	*sess_cb,
-	PSS_Q_XLATE	*xlated_qry,
-	char		*domname,
-	PTR		scanbuf_ptr,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_cp6_entname(
-	PSS_SESBLK	*sess_cb,
-	char		*entname,
-	DB_ERROR	*err_blk,
-	PTR		*scanbuf_ptr);
-FUNC_EXTERN DB_STATUS
-psl_cp7_fmtspec(
-	PSS_SESBLK	*sess_cb,
-	DB_ERROR	*err_blk,
-	bool		w_nullval);
-FUNC_EXTERN DB_STATUS
-psl_cp8_coent(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	bool		parse_coent,
-	char		*type_name,
-	i4		len_prec_num,
-	i4		*type_lenprec,
-	char		*type_delim);
-FUNC_EXTERN DB_STATUS
-psl_cp9_nm_eq_nm(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	char		*value,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_cp10_nm_eq_str(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	char		*value,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_cp11_nm_eq_no(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	i4		value,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_cp12_nm_eq_qdata(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	char		*name,
-	DB_DATA_VALUE	*value,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_cp13_nm_single(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_copydelim(
-	char               *delimname,
-	char		   **delimchar);
-FUNC_EXTERN DB_STATUS
-psl_ct1_create_table(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_WITH_CLAUSE *with_clauses,
-	PSS_CONS	*cons_list);
-
-FUNC_EXTERN DB_STATUS
-psl_crtas_fixup_columns(
-	PSS_SESBLK	*sess_cb,
-	PST_QNODE	*newcolspec,
-	PST_QNODE	*query_expr,
-	PSQ_CB		*psq_cb);
-
-FUNC_EXTERN DB_STATUS
-psl_ct2s_crt_tbl_as_select(
-	PSS_SESBLK	*sess_cb,
-	PST_QNODE	*newcolspec,
-	PST_QNODE	*query_expr,
-	PSQ_CB		*psq_cb,
-	PST_J_ID	*join_id,
-	PSS_Q_XLATE	*xlated_qry,
-	PST_QNODE	*sort_list,
-	PST_QNODE	*first_n,
-	PST_QNODE	*offset_n);
-FUNC_EXTERN DB_STATUS
-psl_ct3_crwith(
-	PSS_SESBLK	*sess_cb,
-	i4		qmode,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_nm_eq_nm(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	char		*value,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_nm_eq_hexconst(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	u_i2		hexlen,
-	char		*hexvalue,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_nm_eq_no(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	i4		value,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk,
-	PSS_Q_XLATE	*xlated_qry);
-FUNC_EXTERN DB_STATUS
-psl_nm_eq_dec(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	f8		*value,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk,
-	PSS_Q_XLATE	*xlated_qry);
-FUNC_EXTERN DB_STATUS
-psl_ct6_cr_single_kwd(
-	PSS_SESBLK	*sess_cb,
-	char		*keyword,
-	PSS_WITH_CLAUSE	*with_clauses,
-	i4		qmode,
-	DB_ERROR	*err_blk,
-	PSS_Q_XLATE	*xlated_qry);
-FUNC_EXTERN DB_STATUS
-psl_lst_prefix(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	char		*prefix,
-	PSS_YYVARS	*yyvarsp);
-FUNC_EXTERN DB_STATUS
-psl_ct8_cr_lst_elem(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_YYVARS	*yyvarsp,
-	char		*element,
-	PST_RESKEY	**reskey,
-	PSS_Q_XLATE	*xlated_qry);
-FUNC_EXTERN DB_STATUS
-psl_ct9_new_loc_name(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	char		*loc_name,
-	char		*table_name,
-	PSS_WITH_CLAUSE *with_clauses,
-	PSS_Q_XLATE     *xlated_qry);
-FUNC_EXTERN DB_STATUS
-psl_ct10_crt_tbl_kwd(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_WITH_CLAUSE *with_clauses,
-	bool		temporary);
-FUNC_EXTERN DB_STATUS
-psl_ct11_tname_name_name(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	char		*name1,
-	char		*name2,
-	char		*name3,
-	char		**value);
-FUNC_EXTERN DB_STATUS
-psl_ct12_crname(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_OBJ_NAME	*tbl_spec);
-FUNC_EXTERN DB_STATUS
-psl_ct13_newcolname(
-	PSS_SESBLK	*sess_cb,
-	char		*column_name,
-	PSQ_CB          *psq_cb,
-	PSS_Q_XLATE     *xlated_qry,
-        PTR             *scanbuf_ptr);
-FUNC_EXTERN DB_STATUS
-psl_ct14_typedesc(
-	PSS_SESBLK	*sess_cb,
-	char		*type_name,
-	i4		num_len_prec_vals,
-	i4		*len_prec,
-	i4		null_def,
-	PST_QNODE	*default_node,
-	DB_TEXT_STRING	*default_text,
-	DB_IISEQUENCE	*identity_seq,
-	PSQ_CB		*psq_cb,
-	DB_COLL_ID	collationID,
-	i4		encrypt_spec);
-FUNC_EXTERN DB_STATUS
-psl_ct15_distr_with(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	char		*value,
-	PSS_Q_XLATE	*xlated_qry,
-	bool		quoted_val,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_ct16_distr_create(
-	PSS_SESBLK	*sess_cb,
-	PSS_Q_XLATE	*xlated_qry,
-	bool		simple_create,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_ct17_distr_specs(
-	PSS_SESBLK	*sess_cb,
-	PTR		scanbuf_ptr,
-	PSS_Q_XLATE	*xlated_qry,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_ct18s_type_qual(
-		    i4		qmode,
-		    i4	qual1,
-		    i4	qual2,
-		    PSS_SESBLK	*sess_cb,
-		    PSS_DBPINFO	*dbpinfo,
-		    DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_ct19s_constraint(
-		     PSS_SESBLK	  *sess_cb,
-		     i4	  type,
-		     PSY_COL	  *cons_cols,
-		     PSS_OBJ_NAME *ref_tabname,
-		     PSY_COL	  *ref_cols,
-		     PSS_TREEINFO *check_cond,
-		     PSS_CONS	  **consp,
-		     DB_ERROR	  *err_blk);
-FUNC_EXTERN DB_STATUS
-psl_ct20s_cons_col(
-		   PSS_SESBLK	*sess_cb,
-		   PSY_COL	**colp,
-		   char	  	*newcolname,
-		   DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_ct21s_cons_name(
-		    char	  *cons_name,
-		    PSS_CONS	  *cons,
-		    PSS_CONS	  **cons_listp);
-
-FUNC_EXTERN DB_STATUS
-psl_ct22s_cons_allowed(
-		       PSS_SESBLK *sess_cb,
-		       PSQ_CB     *psq_cb,
-		       PSS_YYVARS *yyvarsp);
-FUNC_EXTERN DB_STATUS
-psl_alter_table(
-		PSS_SESBLK	*sess_cb,
-		PSQ_CB		*psq_cb,
-		PSS_RNGTAB	*rngvar,
-		PSS_CONS	*cons_list);
-FUNC_EXTERN DB_STATUS
-psl_alt_tbl(
-	    PSS_SESBLK 	  *sess_cb,
-	    PSQ_CB	  *psq_cb,
-	    PSS_OBJ_NAME  *tbl_spec,
-	    PSS_RNGTAB	  **rngvarp);
-FUNC_EXTERN DB_STATUS
-psl_alt_tbl_col(
-	        PSS_SESBLK 	  *sess_cb,
-	        PSQ_CB	  	  *psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_alt_tbl_col_drop(
-	    	     PSS_SESBLK 	  *sess_cb,
-	    	     PSQ_CB	  	  *psq_cb,
-	             DB_ATT_NAME 	  attname,
-	             bool		  cascade); 
-FUNC_EXTERN DB_STATUS
-psl_alt_tbl_col_add(
-	    	    PSS_SESBLK 	  *sess_cb,
-	    	    PSQ_CB  	  *psq_cb,
-	            DB_ATT_NAME	  attname,
-	            PSS_CONS  	  *cons_list,
-		    i4		  altopt);
-FUNC_EXTERN DB_STATUS
-psl_alt_tbl_col_rename(
-                    PSS_SESBLK    *sess_cb,
-                    PSQ_CB        *psq_cb,
-                    DB_ATT_NAME   attname,
-                    DB_ATT_NAME   *newname);
-FUNC_EXTERN DB_STATUS
-psl_alt_tbl_rename(
-                     PSS_SESBLK    *sess_cb,
-                     PSQ_CB        *psq_cb,
-                     PSS_OBJ_NAME  *newname);
-FUNC_EXTERN DB_STATUS
-psl_verify_cons(
-		PSS_SESBLK	*sess_cb,
-		PSQ_CB		*psq_cb,
-		i4		newtbl,
-		struct _DMU_CB 	*dmu_cb,
-		PSS_RNGTAB   	*rngvar,
-		PSS_CONS   	*cons_list,
-		PST_STATEMENT	**stmt_listp);
-FUNC_EXTERN DB_STATUS
-psl_gen_alter_text(
-		   PSS_SESBLK	   *sess_cb,
-		   PSF_MSTREAM	   *mstream,
-		   SIZE_TYPE	   *memleft,
-		   DB_OWN_NAME	   *ownname,
-		   DB_TAB_NAME	   *tabname,
-		   PSS_CONS	   *cons,
-		   DB_TEXT_STRING  **query_textp,
-		   DB_ERROR	   *err_blk);
-FUNC_EXTERN VOID 
-psl_command_string(
-	i4  	    qmode, 
-	DB_LANG     language,
-	char 	    *command,
-	i4     *length);
-FUNC_EXTERN DB_STATUS
-psl_rg1_reg_distr_tv(
-	PSS_SESBLK	*sess_cb,
-	PSS_OBJ_NAME	*reg_name,
-	i4		ldb_obj_type,
-	PSS_Q_XLATE	*xlated_qry,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_rg2_reg_distr_idx(
-	PSS_SESBLK	*sess_cb,
-	char		*reg_name,
-	PSS_Q_XLATE	*xlated_qry,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_rg3_reg_tvi(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_rg4_regtext(
-	PSS_SESBLK	*sess_cb,
-	i4		ldb_obj_type,
-	PSS_Q_XLATE	*xlated_qry,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_rg5_ldb_spec(
-	PSS_SESBLK	*sess_cb,
-	char		*name,
-	i4		qmode,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_rg6_link_col_list(
-	char		*colname,
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_ds1_dircon(
-	PSQ_CB		*psq_cb,
-	char		*name1,
-	char		*name2,
-	bool		is_distrib);
-FUNC_EXTERN DB_STATUS
-psl_ds2_dir_exec_immed(
-	char		*name,
-	bool		is_distrib,
-	char		*exec_arg,
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_proc_func(
-	PSS_SESBLK	*sess_cb,
-	PSF_MSTREAM	*stream,
-	i4		op_code,
-	PST_QNODE	*arg,
-	PST_QNODE	**newnode,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN i4
-getfacil(
-	char               *code,
-	PSQ_MODE	   *facility,
-	i4                 *flagno);
-FUNC_EXTERN char *
-sconvert(
-	DB_TEXT_STRING     *string);
-FUNC_EXTERN DB_STATUS
-qdata_cvt(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	DB_DATA_VALUE	*fval,
-	DB_DT_ID	totype,
-	PTR		*value);
-FUNC_EXTERN VOID
-psl_quel_shareable(
-	PSS_SESBLK	*sess_cb,
-	i4		qry_mask,
-	bool		*shareable);
-FUNC_EXTERN DB_STATUS
-psl_rptqry_tblids(
-	PSS_SESBLK	*sess_cb,
-	PSS_USRRANGE	*rngtab,
-	PSF_MSTREAM     *mstream,
-	i4		qry_mode,
-	i4		*num_ids,
-	DB_TAB_ID	**id_list,
-	DB_ERROR        *err_blk);
-FUNC_EXTERN DB_STATUS
-psl_ci1_create_index(
-	PSS_SESBLK	*sess_cb,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		unique,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_ci2_index_prefix(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_WITH_CLAUSE *with_clauses,
-	i4		unique);
-FUNC_EXTERN DB_STATUS
-psl_ci3_indexrel(
-	PSS_SESBLK	*sess_cb,
-	PSS_OBJ_NAME	*tbl_spec,
-	DB_ERROR	*err_blk,
-	i4		qmode);
-FUNC_EXTERN DB_STATUS
-psl_ci4_indexcol(
-	PSS_SESBLK	*sess_cb,
-	char		*colname,
-	DB_ERROR	*err_blk,
-	bool		cond_add);
-FUNC_EXTERN DB_STATUS
-psl_ci5_indexlocname(
-	PSS_SESBLK	*sess_cb,
-	char		*loc_name,
-	PSS_OBJ_NAME	*index_spec,
-	PSS_WITH_CLAUSE *with_clauses,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_lst_elem(
-	PSS_SESBLK	*sess_cb,
-	PSS_YYVARS	*yyvarsp,
-	char		*element,
-	i4		qmode,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_lst_relem(
-	PSS_SESBLK	*sess_cb,
-	i4		list_clause,
-	f8		*element,
-	i4		qmode,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_ci7_index_woword(
-	PSS_SESBLK	*sess_cb,
-	char		*word,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_cv1_create_view(
-	PSS_SESBLK          *sess_cb,
-	PSQ_CB              *psq_cb,
-	PST_QNODE           *new_col_list,
-	PST_QNODE           *query_expr,
-	i4                 check_option,
-	PSS_YYVARS          *yyvarsp);
-FUNC_EXTERN DB_STATUS
-psl_cv2_viewstmnt(
-	PSS_SESBLK      *sess_cb,
-	PSQ_CB          *psq_cb,
-	PSS_YYVARS      *yyvarsp);
-FUNC_EXTERN DB_STATUS
-psl_validate_options(
-	PSS_SESBLK	*sess_cb,
-	i4		qmode,
-	PSS_WITH_CLAUSE	*options,
-	i4		sstruct,
-	i4		minp,
-	i4		maxp,
-	i4		dcomp,
-	i4		icomp,
-	i4		sliced_alloc,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_lm1_setlockstmnt(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_lm2_setlockkey(
-	PSS_SESBLK  *sess_cb,
-	char	    *char_name,
-	i4	    *char_type,
-	DB_ERROR    *err_blk);
-FUNC_EXTERN DB_STATUS
-psl_lm3_setlockparm_name(
-	i4	    char_type,
-	char	    *char_val,
-	PSS_SESBLK  *sess_cb,
-	DB_ERROR    *err_blk);
-FUNC_EXTERN DB_STATUS
-psl_lm4_setlockparm_num(
-	i4	    char_type,
-	i4	    char_val,
-	PSS_SESBLK  *sess_cb,
-	DB_ERROR    *err_blk);
-FUNC_EXTERN DB_STATUS
-psl_lm5_setlockmode_distr(
-	PSS_SESBLK  	*sess_cb,
-	char		*scanbuf_ptr,
-	PSS_Q_XLATE     *xlated_qry,
-	PSQ_CB    	*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_lm6_setlockscope_distr(
-	PSS_SESBLK  	*sess_cb,
-	PSS_RNGTAB	*rngvar,
-	PSS_Q_XLATE     *xlated_qry,
-	DB_ERROR    	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_md1_modify(
-	PSS_SESBLK	*sess_cb,
-	PSS_YYVARS	*yyvarsp,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_md2_modstmnt(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_YYVARS	*yyvarsp);
-FUNC_EXTERN DB_STATUS
-psl_md3_modstorage(
-	PSS_SESBLK	*sess_cb,
-	PSS_YYVARS	*yyvarsp,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_md4_modstorname(
-	PSS_SESBLK	*sess_cb,
-	char		*storname,
-	PSS_YYVARS	*yyvarsp,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_md5_modkeys(
-	PSS_SESBLK	*sess_cb,
-	PSS_YYVARS	*yyvarsp,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_md6_modbasekey(
-	PSS_SESBLK	*sess_cb,
-	i4		ascending,
-	i4		heapsort,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_md7_modkeyname(
-	PSS_SESBLK	*sess_cb,
-	char		*keyname,
-	PSS_YYVARS	*yyvarsp,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_md8_modtable(
-	PSS_SESBLK	*sess_cb,
-	PSS_OBJ_NAME	*tblspec,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_md9_modopt_word(
-	PSS_SESBLK	*sess_cb,
-	char		*word,
-	PSS_WITH_CLAUSE *with_clauses,
-	DB_ERROR	*err_blk);
-
-FUNC_EXTERN DB_STATUS
-psl_md_logpartname(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_YYVARS	*yyvarsp,
-	char		*logname);
-
-FUNC_EXTERN DB_STATUS
-psl_md_modpart(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_YYVARS	*yyvarsp);
-
-FUNC_EXTERN DB_STATUS
-psl_rngent(
-	PSS_USRRANGE       *rngtable,
-	i4		    scope,
-	char		   *varname,
-	DB_TAB_NAME	   *tabname,
-	PSS_SESBLK	   *cb,
-	bool		   tabonly,
-	PSS_RNGTAB	   **rngvar,
-	i4		   query_mode,
-	DB_ERROR	   *err_blk,
-	i4                *caller_info,
-	PST_J_ID	   *pjoin_id);
-FUNC_EXTERN DB_STATUS
-psl_drngent(
-	PSS_USRRANGE       *rngtable,
-	i4		    scope,
-	char		   *varname,
-	PSS_SESBLK	   *cb,
-	PSS_RNGTAB	   **rngvar,
-	PST_QNODE	   *root,
-	i4		    type,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psl_tprngent(
-	PSS_USRRANGE       *rngtable,
-	i4		    scope,
-	char		   *corrname,
-	i4		    dbpid,
-	PSS_SESBLK	   *cb,
-	PSS_RNGTAB	   **rngvar,
-	PST_QNODE	   *root,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psl0_rngent(
-	PSS_USRRANGE    *rngtable,
-	i4		scope,
-	char		*varname,
-	DB_TAB_NAME	*tabname,
-	PSS_SESBLK	*cb,
-	bool		tabonly,
-	PSS_RNGTAB	**rngvar,
-	i4		query_mode,
-	DB_ERROR	*err_blk,
-	i4		tbls_to_lookup,
-	i4		*caller_info,
-	i4		lookup_mask,
-	PST_J_ID	*pjoin_id);
-FUNC_EXTERN DB_STATUS
-psl_orngent(
-	PSS_USRRANGE    *rngtable,
-	i4		scope,
-	char		*varname,
-	DB_OWN_NAME	*ownname,
-	DB_TAB_NAME	*tabname,
-	PSS_SESBLK	*cb,
-	bool		tabonly,
-	PSS_RNGTAB	**rngvar,
-	i4		query_mode,
-	DB_ERROR	*err_blk,
-	i4             *caller_info);
-FUNC_EXTERN DB_STATUS
-psl0_orngent(
-	PSS_USRRANGE    *rngtable,
-	i4		scope,
-	char		*varname,
-	DB_OWN_NAME	*ownname,
-	DB_TAB_NAME	*tabname,
-	PSS_SESBLK	*cb,
-	bool		tabonly,
-	PSS_RNGTAB	**rngvar,
-	i4		query_mode,
-	DB_ERROR	*err_blk,
-	i4             *caller_info,
-	i4		lookup_mask);
-FUNC_EXTERN DB_STATUS
-psl_csequence(
-	PSS_SESBLK 	*cb,
-	DB_IISEQUENCE	*seqp,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_asequence(
-	PSS_SESBLK 	*cb,
-	DB_IISEQUENCE	*oldseqp,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_seq_parmcheck(
-	register PSS_SESBLK *cb,
-	register PSQ_CB	    *psq_cb,
-	DB_DATA_VALUE	    *pdv,
-	DB_IISEQUENCE	    *seqp,
-	i4		    flag,
-	bool		    minus);
-FUNC_EXTERN i4
-psl_scan(
-	register PSS_SESBLK *pss_cb,
-	register PSQ_CB	    *psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_subsel(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PST_QNODE	*subnode);
-FUNC_EXTERN PST_QNODE *
-psl_find_node(
-	PST_QNODE   *node,
-	PST_QNODE   **cursor,
-	PST_TYPE    type);
-FUNC_EXTERN PST_QNODE **
-psl_find_nodep(
-	PST_QNODE   **node,
-	PST_QNODE   ***cursor,
-	PST_TYPE    type);
-FUNC_EXTERN DB_STATUS
-psl_hcheck(
-	PSS_SESBLK	*cb,
-	PST_QNODE	*having,
-	PST_QNODE	*group,
-	PST_J_MASK	*fromlist);
-FUNC_EXTERN DB_STATUS
-psl_hcheckvar(
-	PST_QNODE	*having,
-	PST_QNODE	*group,
-	PST_J_MASK	*fromlist);
-FUNC_EXTERN DB_STATUS
-psl_curval(
-	PSS_SESBLK  *cb,
-	PSQ_CB	    *psq_cb,
-	PSC_CURBLK  *cursor,
-	PST_QNODE   **tree);
-FUNC_EXTERN DB_STATUS
-psl_shareable(
-	PSQ_CB	   		*psq_cb,
-	PSS_SESBLK 		*cb,
-	bool	    		*shareable,
-	DB_SHR_RPTQRY_INFO	**qry_info);
-FUNC_EXTERN VOID
-psl_backpatch(
-	PST_STATEMENT   *stmt,
-	PST_STATEMENT   *patch);
-FUNC_EXTERN bool
-psl_agfcn(
-	PST_QNODE *node);
-FUNC_EXTERN VOID
-psl_up(
-	PSS_SESBLK		*cb,
-	PSS_USRRANGE		*rngtab,
-	register PST_QTREE	*hdr,
-	bool			*flag,
-	i4			*reason);
-FUNC_EXTERN DB_STATUS
-psl_crsopen(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PSC_CURBLK	*crblk,
-	PST_QTREE	*tree,
-	bool		for_rdonly,
-	PST_QNODE	*updcollst,
-	bool		nonupdt,
-	PST_J_ID	num_joins,
-	bool		dynqp_comp);
-FUNC_EXTERN DB_STATUS
-psl_do_insert(
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb,
-	PST_QNODE	*root_node,
-	bool		*shareable_qp,
-	PST_QTREE	**tree,
-	i4		isdbp,
-	PST_J_ID	num_joins,
-	PSS_Q_XLATE	*xlated_qry,
-	DB_SHR_RPTQRY_INFO	**qry_info,
-	PST_QNODE	*sort_list,
-	PST_QNODE	*first_n,
-	PST_QNODE	*offset_n);
-FUNC_EXTERN DB_STATUS
-psl_p_tlist(
-	PST_QNODE	**tlist,
-	PSS_YYVARS	*yyvarsp,
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb);
-
-typedef struct _PSL_P_TELEM_LINK {
-	struct _PSL_P_TELEM_LINK *link;
-	PST_QNODE       *rt_node;
-} PSL_P_TELEM_LINK;
-typedef struct _PSL_P_TELEM_CTX {
-	PSS_SESBLK	*cb;
-	PSQ_CB		*psq_cb;
-	PSS_YYVARS	*yyvarsp;
-	PSS_RNGTAB      **rngtable;
-	PST_QNODE	*resolved_fwdvar;
-	PST_QNODE	*unresolved_fwdvar;
-	PSL_P_TELEM_LINK*link;
-	i4		qualdepth;
-	i4		xform_avg;
-} PSL_P_TELEM_CTX;
-FUNC_EXTERN DB_STATUS
-psl_ss_flatten(
-	PST_QNODE	**nodep,
-	PSS_YYVARS	*yyvarsp,
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_p_telem(
-	PSL_P_TELEM_CTX *ctx,
-	PST_QNODE	**node,
-	PST_QNODE	*father);
-FUNC_EXTERN VOID
-psl_set_jrel(
-	PST_J_MASK		*inner_rels,
-	PST_J_MASK		*outer_rels,
-	PST_J_ID		join_id,
-	register PSS_RNGTAB	**rng_vars,
-        DB_JNTYPE               join_type);
-FUNC_EXTERN DB_STATUS
-psl_check_key(
-	PSS_SESBLK	    *cb,
-	DB_ERROR	    *err_blk,
-	DB_DT_ID	    att_type);
-FUNC_EXTERN VOID
-psl_syn_info_msg(
-	PSS_SESBLK	*sess_cb,
-	PSS_RNGTAB	*rngvar,
-	PSS_OBJ_NAME	*obj_spec,
-	i4		owned_by,
-	i4		qry_len,
-	char		*qry,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_comment_col(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_COL_REF	*col_ref);
-FUNC_EXTERN VOID
-psl_insert_into_agg_list(
-	PST_QNODE	*var_node,
-	YYAGG_NODE_PTR	*agglist_elem,
-	YYAGG_NODE_PTR	**agg_list_stack,
-	i4		cur_scope,
-	PST_J_MASK	*rel_list);
-FUNC_EXTERN DB_STATUS
-psl_for_cond(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_DBPINFO	*dbpinfo,
-	PST_QNODE	**condition);
-FUNC_EXTERN DB_STATUS
-psl_ifkwd(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	PSS_DBPINFO	*dbpinfo,
-	PST_STATEMENT	**if_stmt_node);
-FUNC_EXTERN VOID
-psl_thenkwd(
-	PSS_DBPINFO     *dbpinfo);
-FUNC_EXTERN VOID
-psl_elsekwd(
-	PSS_DBPINFO     *dbpinfo);
-FUNC_EXTERN VOID
-psl_ifstmt(
-	PST_STATEMENT	    *if_node,
-	PST_QNODE	    *condition,
-	PST_STATEMENT	    *if_action,
-	PST_STATEMENT	    *else_action,
-	PSS_DBPINFO	    *dbpinfo);
-FUNC_EXTERN DB_STATUS
-psl_repeat_qry_id(
-	PSQ_CB			*psq_cb,
-	PSS_SESBLK		*sess_cb,
-	DB_CURSOR_ID		*fe_id,
-	PST_QTREE		*header,
-	DB_SHR_RPTQRY_INFO	*qry_info);
-FUNC_EXTERN DB_STATUS
-psl_qeucb(
-	PSS_SESBLK	*sess_cb,
-	i4		operation,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_init_dbp_stmt(
-	PSS_SESBLK	*sess_cb,
-	PSS_DBPINFO	*dbpinfo,
-	i4		qmode,
-	i4		type,
-	PST_STATEMENT	**stmt,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_cdbp_typedesc(
-	PSS_SESBLK	*sess_cb,
-	PSS_DBPINFO	*dbpinfo,
-	char		*type_name,
-	i4		num_len_prec_vals,
-	i4		*len_prec,
-	i4		null_def,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_send_setqry(
-	PSS_SESBLK	*sess_cb,
-	char		*str_2_send,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN i4
-psl_sscan(
-	register PSS_SESBLK *pss_cb,
-	register PSQ_CB	    *psq_cb);
-FUNC_EXTERN VOID
-psl_yinit(
-	PSS_SESBLK	*sess_cb);
-FUNC_EXTERN VOID
-psl_yerror(
-	i4                errtype,
-	PSS_SESBLK	   *sess_cb,
-	PSQ_CB		   *psq_cb);
-
-FUNC_EXTERN VOID
-psl_yerr_buf(
-	PSS_SESBLK	*sess_cb,
-	char		*buf,
-	i4		buf_len);
-
-FUNC_EXTERN VOID
-psl_sx_error(
-	i4	    error,
-	PSS_SESBLK  *sess_cb,
-	PSQ_CB	    *psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_cdbp_build_setrng(
-		      PSS_SESBLK    *sess_cb,
-		      PSQ_CB	    *psq_cb,
-		      PSS_DBPINFO   *dbpinfo, 
-		      PSS_RNGTAB    **dbprngp);
-FUNC_EXTERN DB_STATUS
-psl_fill_proc_params(
-		     PSS_SESBLK *sess_cb, 
-		     i4	num_params,
-		     QUEUE	*parmq,
-		     i4 num_rescols,
-		     QUEUE	*rescolq,
-		     i4	set_input_proc,
-		     DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_check_defaults(
-		   PSS_SESBLK	*sess_cb,
-		   PSS_RNGTAB	*resrng,
-		   PST_QNODE 	*root_node,
-		   i4		insert_into_view,
-		   DB_TAB_NAME	*view_name,
-		   DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_make_default_node(
-		      PSS_SESBLK    *sess_cb,
-		      PSF_MSTREAM   *mstream,
-		      PSS_RNGTAB    *rngvar,
-		      i2	    attno,
-		      PST_QNODE	    **newnode,
-		      DB_ERROR	    *err_blk);
-
-FUNC_EXTERN DB_STATUS
-psl_mk_const_similar(
-			PSS_SESBLK	*sess_cb,
-			PSF_MSTREAM	*mstream,
-			DB_DATA_VALUE	*templ,   
-			PST_QNODE	**cst,
-			DB_ERROR	*err_blk,
-			bool		*handled);
-/* Partition definition utilities in pslpart.c */
-FUNC_EXTERN DB_STATUS psl_partdef_new_dim(
-		PSS_SESBLK	*sess_cb,
-		PSQ_CB		*psq_cb,
-		PSS_YYVARS	*yyvarsp,
-		i4		distrule);
-
-FUNC_EXTERN DB_STATUS psl_partdef_nonval(
-		PSS_SESBLK	*sess_cb,
-		PSQ_CB		*psq_cb,
-		PSS_YYVARS	*yyvarsp,
-		i4		nparts);
-
-FUNC_EXTERN DB_STATUS psl_partdef_oncol(
-		PSS_SESBLK	*sess_cb,
-		PSQ_CB		*psq_cb,
-		PSS_YYVARS	*yyvarsp,
-		char		*colname);
-
-FUNC_EXTERN DB_STATUS psl_partdef_partlist(
-		PSS_SESBLK	*sess_cb,
-		PSQ_CB		*psq_cb,
-		PSS_YYVARS	*yyvarsp);
-
-FUNC_EXTERN DB_STATUS psl_partdef_pname(
-		PSS_SESBLK	*sess_cb,
-		PSQ_CB		*psq_cb,
-		PSS_YYVARS	*yyvarsp,
-		char		*partname,
-		bool		allow_ii);
-
-FUNC_EXTERN DB_STATUS psl_partdef_start(
-		PSS_SESBLK	*sess_cb,
-		PSQ_CB		*psq_cb,
-		PSS_YYVARS	*yyvarsp);
-
-FUNC_EXTERN DB_STATUS psl_partdef_value(
-		PSS_SESBLK	*sess_cb,
-		PSQ_CB		*psq_cb,
-		PSS_YYVARS	*yyvarsp,
-		i4		sign_flag,
-		DB_DATA_VALUE	*value);
-
-FUNC_EXTERN DB_STATUS psl_partdef_value_check(
-		PSS_SESBLK	*sess_cb,
-		PSQ_CB		*psq_cb,
-		PSS_YYVARS	*yyvarsp);
-
-FUNC_EXTERN DB_STATUS ppd_qsfmalloc(
-		PSQ_CB		*psq_cb,
-		i4		psize,
-		void		*pptr);
-
-FUNC_EXTERN DB_STATUS
-psq_alter(
-	PSQ_CB             *psq_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_bgn_session(
-	register PSQ_CB     *psq_cb,
-	register PSS_SESBLK *sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_clscurs(
-	PSQ_CB             *psq_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_crdump(
-	PSQ_CB             *psq_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN u_i4
-psq_crhsh(
-	DB_CURSOR_ID       *cursid);
-FUNC_EXTERN DB_STATUS
-psq_crfind(
-	PSS_SESBLK         *sess_cb,
-	DB_CURSOR_ID	   *cursor_id,
-	PSC_CURBLK         **cursor,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_crffind(
-	PSS_SESBLK         *sess_cb,
-	DB_CURSOR_ID	   *cursor_id,
-	PSC_CURBLK         **cursor,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN u_i4
-psq_clhsh(
-	i4                tabsize,
-	DB_ATT_NAME        *name);
-FUNC_EXTERN DB_STATUS
-psq_clent(
-	i4		   colno,
-	DB_ATT_NAME	   *colname,
-	DB_DT_ID	   type,
-	i4		   length,
-	i2		   precision,
-	PSC_CURBLK	   *cursor,
-	SIZE_TYPE	   *memleft,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN PSC_RESCOL *
-psq_ccol(
-	PSC_CURBLK         *curblk,
-	DB_ATT_NAME        *colname);
-FUNC_EXTERN VOID
-psq_crent(
-	PSC_CURBLK         *curblk,
-	PSS_CURSTAB        *curtab);
-FUNC_EXTERN DB_STATUS
-psq_crcreate(
-	PSS_SESBLK         *sess_cb,
-	DB_CURSOR_ID	   *cursid,
-	i4		   qmode,
-	PSC_CURBLK	   **curblk,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_victim(
-	PSS_SESBLK         *sess_cb,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_delcursor(
-	PSC_CURBLK         *curblk,
-	PSS_CURSTAB	   *curtab,
-	SIZE_TYPE	   *memleft,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_cltab(
-	PSC_CURBLK         *cursor,
-	i4		   numcols,
-	SIZE_TYPE	   *memleft,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_crclose(
-	PSC_CURBLK         *cursor,
-	PSS_CURSTAB	   *curstab,
-	SIZE_TYPE	   *memleft,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN i4
-psq_cvtdow(
-	char               *sdow);
-FUNC_EXTERN DB_STATUS
-psq_dlcsrrow(
-	PSQ_CB		*psq_cb,
-	PSS_SESBLK	*sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_delrng(
-	PSQ_CB             *psq_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_clrcache(
-	PSQ_CB             *psq_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_end_session(
-	register PSQ_CB    *psq_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_killses(
-	PSS_SESBLK         *sess_cb,
-	i4		   force,
-	DB_ERROR   	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_month(
-	char               *monthname,
-	i4		   *monthnum,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN i4
-psq_monsize(
-	i4     month,
-	i4	year);
-FUNC_EXTERN DB_STATUS
-psq_headdmp(
-	PSQ_CBHEAD         *cb_head);
-FUNC_EXTERN DB_STATUS
-psq_siddmp(
-	CS_SID             *sessid);
-FUNC_EXTERN DB_STATUS
-psq_lngdmp(
-	DB_LANG            qlang);
-FUNC_EXTERN DB_STATUS
-psq_decdmp(
-	DB_DECIMAL         *decimal);
-FUNC_EXTERN DB_STATUS
-psq_dstdmp(
-	DB_DISTRIB         distrib);
-FUNC_EXTERN DB_STATUS
-psq_booldmp(
-	i4                boolval);
-FUNC_EXTERN DB_STATUS
-psq_modedmp(
-	i2	mode);
-FUNC_EXTERN DB_STATUS
-psq_tbiddmp(
-	DB_TAB_ID          *tabid);
-FUNC_EXTERN DB_STATUS
-psq_ciddmp(
-	DB_CURSOR_ID	*cursid);
-FUNC_EXTERN DB_STATUS
-psq_errdmp(
-	DB_ERROR         *errblk);
-FUNC_EXTERN DB_STATUS
-psq_dtdump(
-	DB_DT_ID           dt_id);
-FUNC_EXTERN DB_STATUS
-psq_tmdmp(
-	DB_TAB_TIMESTAMP   *timestamp);
-FUNC_EXTERN DB_STATUS
-psq_jrel_dmp(
-	PST_J_MASK	*inner_rel,
-	PST_J_MASK	*outer_rel);
-FUNC_EXTERN DB_STATUS
-psq_upddmp(
-	i4                updtmode);
-FUNC_EXTERN DB_STATUS
-psq_str_dmp(
-        u_char      *str,
-        i4          len);
-FUNC_EXTERN DB_STATUS
-psq_parseqry(
-	register PSQ_CB     *psq_cb,
-	register PSS_SESBLK *sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_cbinit(
-	PSQ_CB     *psq_cb,
-	PSS_SESBLK *sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_cbreturn(
-	PSQ_CB     *psq_cb,
-	PSS_SESBLK *sess_cb,
-	DB_STATUS   ret_val);
-FUNC_EXTERN DB_STATUS
-psq_prmdump(
-	register PSQ_CB     *psq_cb);
-FUNC_EXTERN DB_STATUS
-psq_recreate(
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_open_rep_cursor(
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_dbpreg(
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *sess_cb);
-FUNC_EXTERN DB_STATUS
-psq_sesdump(
-	PSQ_CB             *psq_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN VOID
-psq_rngdmp(
-	PSS_RNGTAB         *rv);
-FUNC_EXTERN DB_STATUS
-psq_shutdown(
-	PSQ_CB             *psq_cb);
-FUNC_EXTERN DB_STATUS
-psq_srvdump(
-	register PSQ_CB    *psq_cb);
-FUNC_EXTERN DB_STATUS
-psq_startup(
-	PSQ_CB             *psq_cb);
-FUNC_EXTERN DB_STATUS
-psq_topen(
-	PTR                *header,
-	SIZE_TYPE	   *memleft,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_tadd(
-	PTR                header,
-	u_char		   *piece,
-	i4		   size,
-	PTR		   *result,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_rptqry_text(
-	PTR                header,
-	u_char		   *piece,
-	i4		   size,
-	PTR		   *result,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_tclose(
-	PTR		   header,
-	DB_ERROR           *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_tsubs(
-	PTR                header,
-	PTR		   piece,
-	u_char		   *newtext,
-	i4		   size,
-	PTR		   *newpiece,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_tout(
-	PSS_SESBLK	   *sess_cb,
-	PSS_USRRANGE	   *rngtab,
-	PTR                header,
-	PSF_MSTREAM	   *mstream,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_tmulti_out(
-	PSS_SESBLK	*sess_cb,
-	PSS_USRRANGE    *rngtab,
-	PTR             header,
-	PSF_MSTREAM	*mstream,
-	DB_TEXT_STRING	**txtp,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psq_store_text(
-	PSS_SESBLK	    *sess_cb,
-	PSS_USRRANGE	    *rngtab,
-	PTR		    header,
-	PSF_MSTREAM	    *mstream,
-	PTR		    *result,
-	bool		    return_db_text_string,
-	DB_ERROR	    *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_1rptqry_out(
-	PSS_SESBLK	*sess_cb,
-	PTR             header,
-	PSF_MSTREAM	*mstream,
-	i4		*txt_len,
-	u_char		**txt,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psq_tqrylen(
-	PTR                header,
-	i4		   *length);
-FUNC_EXTERN DB_STATUS
-psq_tcnvt(
-	PSS_SESBLK	   *sess_cb,
-	PTR                header,
-	DB_DATA_VALUE	   *dbval,
-	PTR		   *result,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_tinsert(
-	PTR                header,
-	u_char		   *piece,
-	i4		   size,
-	PTR		   *result,
-	PTR		   oldpiece,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN PTR
-psq_tbacktrack(
-	PTR         piece,
-	i4	    n);
-FUNC_EXTERN PTR
-psq_tbackfromlast(
-	PTR         piece,
-	i4	    n);
-FUNC_EXTERN void
-psq_tdelete(
-	PTR	    header,
-	PTR         piece);
-FUNC_EXTERN DB_STATUS
-psq_version(
-	PSQ_CB             *psq_cb);
-FUNC_EXTERN DB_STATUS
-psq_x_add(
-	PSS_SESBLK	    *sess_cb,
-	char		    *str_2_store,
-	PSF_MSTREAM	    *mem_stream,
-	i4		     buf_size,
-	PSS_Q_PACKET_LIST   *pkt_list,
-	i4		     str_len,
-	char		    *open_delim,
-	char		    *close_delim,
-	char		    *separator,
-	DB_ERROR	    *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_x_new(
-	PSS_SESBLK	    *sess_cb,
-	PSF_MSTREAM	    *mem_stream,
-	i4		     buf_size,
-	PSS_Q_PACKET_LIST   *pkt_list,
-	DB_ERROR	    *err_blk);
-FUNC_EXTERN DB_STATUS
-psq_x_backup(
-	PSS_Q_PACKET_LIST   *packet_list,
-	char		    *str);
-FUNC_EXTERN bool
-psq_same_site(
-	DD_LDB_DESC	    *ldb_desc1,
-	DD_LDB_DESC	    *ldb_desc2);
-FUNC_EXTERN DB_STATUS
-psq_prt_tabname(
-	PSS_SESBLK	    *sess_cb,
-	PSS_Q_XLATE	    *xlated_qry,
-	PSF_MSTREAM	    *mem_stream,
-	PSS_RNGTAB	    *rng_var,
-	i4		    qmode,
-	DB_ERROR	    *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_adparm(
-	PSS_SESBLK	   *sess_cb,
-	PSQ_CB		   *psq_cb,
-	PSF_MSTREAM        *stream,
-	i2		   parmno,
-	char		   *format,
-	PST_QNODE	   **newnode,
-	i4		   *highparm);
-FUNC_EXTERN DB_STATUS
-pst_2adparm(
-	PSS_SESBLK	   *sess_cb,
-	PSQ_CB		   *psq_cb,
-	PSF_MSTREAM        *stream,
-	i2		   parmno,
-	DB_DATA_VALUE	   *format,
-	PST_QNODE	   **newnode,
-	i4		   *highparm);
-FUNC_EXTERN DB_STATUS
-pst_adresdom(
-	char               *attname,
-	PST_QNODE	   *left,
-	PST_QNODE	   *right,
-	PSS_SESBLK	   *cb,
-	PSQ_CB		   *psq_cb,
-	PST_QNODE	   **newnode);
-FUNC_EXTERN DB_STATUS
-pst_rsdm_dt_resolve(
-	PST_QNODE	*right,
-	DMT_ATT_ENTRY	*coldesc,
-	PSS_SESBLK	*cb,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN DB_STATUS
-pst_clrrng(
-	PSS_SESBLK	   *sess_cb,
-	PSS_USRRANGE       *rngtab,
-	DB_ERROR           *err_blk);
-FUNC_EXTERN DMT_ATT_ENTRY *
-pst_coldesc(
-	PSS_RNGTAB         *rngentry,
-	char		   *colname,
-	i4		   colnamelen);
-FUNC_EXTERN DB_STATUS
-pst_prepare(
-	PSQ_CB             *psq_cb,
-	PSS_SESBLK         *sess_cb,
-	char		   *sname,
-	bool		   nonupdt,
-	bool		    repeat,
-	PTR		    stmt_offset,
-	PST_QNODE	   *updcollst);
-FUNC_EXTERN DB_STATUS
-pst_execute(
-	PSQ_CB             *psq_cb,
-	PSS_SESBLK         *sess_cb,
-	char		   *sname,
-	PST_PROCEDURE	   **pnode,
-	i4		   *maxparm,
-	PTR		   *parmlist,
-	bool		   *nonupdt,
-	bool		   *qpcomp,
-	PST_QNODE	   **updcollst,
-	bool		    rdonly);
-FUNC_EXTERN DB_STATUS
-pst_prmsub(
-	PSQ_CB		    *psq_cb,
-	PSS_SESBLK	    *sess_cb,
-	PST_QNODE	    **node,
-	DB_DATA_VALUE	    *plist[],
-	bool		    repeat_dyn);
-FUNC_EXTERN DB_STATUS
-pst_describe(
-	PSQ_CB		    *psq_cb,
-	PSS_SESBLK	    *sess_cb,
-	char		    *sname);
-FUNC_EXTERN DB_STATUS
-pst_cpdata(
-	PSS_SESBLK 	    *sess_cb, 
-	PSQ_CB		    *psq_cb, 
-	PST_QNODE 	    *tree,
-	bool		    use_qsf);
-FUNC_EXTERN DB_STATUS
-pst_commit_dsql(
-	PSQ_CB		    *psq_cb,
-	PSS_SESBLK	    *sess_cb);
-FUNC_EXTERN DB_STATUS
-pst_header(
-	PSS_SESBLK      *sess_cb,
-	PSQ_CB		*psq_cb,
-	i4		forupdate,
-	PST_QNODE	*sortlist,
-	PST_QNODE	*qtree,
-	PST_QTREE	**tree,
-	PST_PROCEDURE   **pnode,
-	i4		mask,
-	PSS_Q_XLATE	*xlated_qry);
-FUNC_EXTERN DB_STATUS
-pst_modhdr(
-	PSS_SESBLK         *sess_cb,
-	PSQ_CB		   *psq_cb,
-	i4		   forupdate,
-	PST_QTREE	   *header);
-FUNC_EXTERN bool
-pst_cdb_cat(
-	PSS_RNGTAB	*rng_tab,
-	PSQ_CB		*psq_cb);
-FUNC_EXTERN i4
-pst_hshname(
-	DB_ATT_NAME        *colname);
-FUNC_EXTERN DB_STATUS
-pst_node(
-	PSS_SESBLK	   *cb,
-	PSF_MSTREAM        *stream,
-	PST_QNODE	   *left,
-	PST_QNODE	   *right,
-	i4		   type,
-	char		   *value,
-	i4		   vallen,
-	DB_DT_ID	   datatype,
-	i2		   dataprec,
-	i4		   datalen,
-	DB_ANYTYPE	   *datavalue,
-	PST_QNODE	   **newnode,
-	DB_ERROR	   *err_blk,
-	i4		    flags);
-FUNC_EXTERN bool
-pst_is_const_bool(
-	PST_QNODE	   *node,
-	bool		   *bval);
-FUNC_EXTERN void pst_not_bool(
-	PST_QNODE	   *node);
-
-FUNC_EXTERN VOID
-pst_negate(
-	register DB_DATA_VALUE *dataval);
-FUNC_EXTERN VOID
-pst_map(
-	PST_QNODE   *tree,
-	PST_J_MASK  *map);
-FUNC_EXTERN DB_STATUS
-pst_node_size(
-	PST_SYMBOL	    *sym,
-	i4		    *symsize,
-	i4		    *datasize,
-	DB_ERROR	    *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_treedup(
-	PSS_SESBLK	   *sess_cb,
-	PSS_DUPRB	   *dup_rb);
-FUNC_EXTERN DB_STATUS
-pst_dmpres(
-	PST_RESTAB  *restab);
-FUNC_EXTERN STATUS
-pst_scctrace(
-	PTR	    arg1,
-	i4	    msg_length,
-	char        *msg_buffer);
-
-FUNC_EXTERN VOID	pst_display();
-
-/*
-FUNC_EXTERN VOID
-pst_display(
-	char               *format,
-	i4		    p1,
-	i4		    p2,
-	i4		    p3,
-	i4		    p4,
-	i4		    p5,
-	i4		    p6,
-	i4		    p7,
-	i4		    p8,
-	i4		    p9,
-	i4		    p10);
-*/
-FUNC_EXTERN VOID
-pst_dbpdump(
-	PST_PROCEDURE	*pnode,
-	i4		whichlink);
-FUNC_EXTERN DB_STATUS
-pst_rginit(
-	PSS_USRRANGE       *rangetab);
-FUNC_EXTERN DB_STATUS
-pst_rglook(
-	PSS_SESBLK	   *sess_cb,
-	PSS_USRRANGE       *rngtable,
-	i4		   scope,
-	char               *name,
-	bool		   getdesc,
-	PSS_RNGTAB	   **result,
-	i4		   query_mode,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_rgent(
-	PSS_SESBLK	   *sess_cb,
-	PSS_USRRANGE	   *rngtable,
-	i4		    scope,
-	char               *varname,
-	i4		   showtype,
-	DB_TAB_NAME	   *tabname,
-	DB_TAB_OWN	   *tabown,
-	DB_TAB_ID	   *tabid,
-	bool               tabonly,
-	PSS_RNGTAB	   **rngvar,
-	i4		   query_mode,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_rgdel(
-	PSS_SESBLK	   *sess_cb,
-	DB_TAB_NAME        *tabname,
-	PSS_USRRANGE       *rngtable,
-	DB_ERROR           *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_rgrent(
-	PSS_SESBLK	   *sess_cb,
-	PSS_RNGTAB         *rngvar,
-	DB_TAB_ID	   *tabid,
-	i4		   query_mode,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_rgcopy(
-	PSS_USRRANGE	    *fromtab,
-	PSS_USRRANGE	    *totab,
-	PSS_RNGTAB	    **resrng,
-	DB_ERROR	    *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_snscope(
-	PSS_USRRANGE       *rngtable,
-	PST_J_MASK	   *from_list,
-	i4		    offset);
-FUNC_EXTERN DB_STATUS
-pst_rescope(
-	PSS_USRRANGE       *rngtable,
-	PST_J_MASK	   *from_list,
-	i4		    offset);
-FUNC_EXTERN DB_STATUS
-pst_sent(
-	PSS_SESBLK	   *sess_cb,
-	PSS_USRRANGE	   *rngtable,
-	i4		    scope,
-	char               *varname,
-	i4		   showtype,
-	DB_TAB_NAME	   *tabname,
-	DB_TAB_OWN	   *tabown,
-	DB_TAB_ID	   *tabid,
-	bool               tabonly,
-	PSS_RNGTAB	   **rngvar,
-	i4		   query_mode,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_sdent(
-	PSS_USRRANGE       *rngtable,
-	i4		    scope,
-	char		   *varname,
-	PSS_SESBLK	   *cb,
-	PSS_RNGTAB	   **rngvar,
-	PST_QNODE	   *root,
-	i4		    type,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_slook(
-	PSS_USRRANGE       *rngtable,
-	PSS_SESBLK	   *cb,
-	DB_OWN_NAME        *schema_name,
-	char               *name,
-	PSS_RNGTAB	   **result,
-	DB_ERROR	   *err_blk,
-	bool		   scope_flag);
-FUNC_EXTERN DB_STATUS
-pst_stproc(
-	PSS_USRRANGE       *rngtable,
-	i4		    scope,
-	char		   *corrname,
-	i4		    dbpid,
-	PSS_SESBLK	   *cb,
-	PSS_RNGTAB	   **rngvar,
-	PST_QNODE	   *root,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_rgfind(
-	PSS_USRRANGE       *rngtable,
-	PSS_RNGTAB	   **result,
-	i4		   vno,
-	DB_ERROR	   *err_blk);
-
-FUNC_EXTERN DB_STATUS pst_rng_unfix(
-	PSS_SESBLK *sess_cb,
-	PSS_RNGTAB *rng_ptr,
-        DB_ERROR *errblk);
-
-FUNC_EXTERN DB_STATUS
-pst_rserror(
-	i4		lineno,
-	PST_QNODE       *opnode,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-pst_union_resolve(
-	PSS_SESBLK  *sess_cb,
-	PST_QNODE   *rootnode,
-	DB_ERROR    *error);
-FUNC_EXTERN DB_STATUS
-pst_parm_resolve(
-	PSS_SESBLK  *sess_cb,
-	PSQ_CB	    *psq_cb,
-	PST_QNODE   *resdom);
-FUNC_EXTERN DB_STATUS
-pst_resolve_table(
-	DB_TEXT_STRING	*obj_owner,
-	DB_TEXT_STRING  *obj_name,
-	DB_TEXT_STRING	*out);
-FUNC_EXTERN bool
-pst_convlit(
-	PSS_SESBLK  	*sess_cb,
-	PSF_MSTREAM     *stream,
-	DB_DATA_VALUE	*targdv,
-	PST_QNODE	*srcenode);
-FUNC_EXTERN DB_STATUS
-pst_ruledup(
-	PSS_SESBLK  	*sess_cb,
-	PSF_MSTREAM     *mstream,
-	i4		filter,
-	char		*col_mask,
-	PST_STATEMENT	*stmt_tree,
-	PST_STATEMENT	**stmt_dup,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-pst_showtab(
-	PSS_SESBLK	    *sess_cb,
-	i4		    showtype,
-	DB_TAB_NAME	    *tabname,
-	DB_TAB_OWN	    *tabown,
-	DB_TAB_ID	    *tabid,
-	bool		    tabonly,
-	PSS_RNGTAB	    *rngentry,
-	i4		    query_mode,
-	DB_ERROR	    *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_dbpshow(
-	PSS_SESBLK	*sess_cb,
-	DB_DBP_NAME	*dbpname,
-	PSS_DBPINFO	**dbpinfop,
-	DB_OWN_NAME	*dbp_owner,
-	DB_TAB_ID	*dbp_id,
-	i4		dbp_mask,
-	PSQ_CB		*psq_cb,
-	i4		*ret_flags);
-FUNC_EXTERN DB_STATUS
-pst_add_1indepobj(
-	PSS_SESBLK	*sess_cb,
-	DB_TAB_ID	*obj_id,
-	i4		obj_type,
-	DB_DBP_NAME     *dbpname,
-	PSQ_OBJ		**obj_list,
-	PSF_MSTREAM	*mstream,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN VOID
-pst_rdfcb_init(
-	RDF_CB	    *rdf_cb,
-	PSS_SESBLK  *sess_cb);
-FUNC_EXTERN DB_STATUS
-pst_ldbtab_desc(
-	PSS_SESBLK		*sess_cb,
-	QED_DDL_INFO		*ddl_info,
-	PSF_MSTREAM		*mem_stream,
-	i4			flag,
-	DB_ERROR		*err_blk);
-FUNC_EXTERN DB_STATUS
-pst_sdir(
-	PST_QNODE          *node,
-	char		   *direction,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_expsort(
-        PSS_SESBLK          *sess_cb,
-        PSF_MSTREAM         *stream,
-        PST_QNODE           *tlist,
-        PST_QNODE           **sort_list,
-        char                *expname,
-        PST_QNODE           **newnode,
-        PSQ_CB              *psq_cb);
-FUNC_EXTERN DB_STATUS
-pst_sqlsort(
-	PSS_SESBLK	    *sess_cb,
-	PSF_MSTREAM	    *stream,
-	PST_QNODE	    *tlist,
-	PST_QNODE	    *intolist,
-	PST_QNODE	    **sort_list,
-	PST_QNODE	    *expnode,
-	PST_QNODE	    **newnode,
-	PSQ_CB		    *psq_cb,
-	PSS_RNGTAB	    **rng_vars
-);
-FUNC_EXTERN DB_STATUS
-pst_varsort(
-	PSS_SESBLK		*sess_cb,
-	PSF_MSTREAM		*stream,
-	PST_QNODE		*tlist,
-	PST_QNODE		**sort_list,
-	register PSS_RNGTAB	*rngvar,
-	char			*colname,
-	PST_QNODE		**newnode,
-	PSQ_CB			*psq_cb);
-FUNC_EXTERN DB_STATUS
-pst_numsort(
-	PSS_SESBLK	    *sess_cb,
-	PSF_MSTREAM	    *stream,
-	PST_QNODE	    *tlist,
-	PST_QNODE	    **sort_list,
-	i2		    *expnum,
-	PST_QNODE	    **newnode,
-	PSQ_CB		    *psq_cb);
-FUNC_EXTERN PST_QNODE *
-pst_tlprpnd(
-	PST_QNODE          *from,
-	PST_QNODE          *onto);
-FUNC_EXTERN DB_STATUS
-pst_trdup(
-	PTR                stream,
-	PST_QNODE	   *tree,
-	PST_QNODE	   **dup,
-	SIZE_TYPE	   *memleft,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_trfix(
-	PSS_SESBLK	   *sess_cb,
-	PSF_MSTREAM	   *mstream,
-	PST_QNODE          *qtree,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN VOID
-pst_windup(
-	PST_QNODE          *reslist);
-FUNC_EXTERN DB_STATUS
-pst_crt_tbl_stmt(
-		 PSS_SESBLK *sess_cb, 
-		 i4  qmode,
-		 i4 operation, 
-		 DB_ERROR *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_rename_stmt(
-		 PSS_SESBLK *sess_cb, 
-		 i4  qmode,
-		 i4 operation, 
-		 DB_ERROR *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_ddl_header(
-	       PSS_SESBLK    *sess_cb,
-	       PST_STATEMENT *stmt,
-	       DB_ERROR      *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_attach_to_tree(
-		   PSS_SESBLK    *sess_cb, 
-		   PST_STATEMENT *stmt_list, 
-		   DB_ERROR      *err_blk);
-FUNC_EXTERN DB_STATUS
-pst_crt_schema(PSS_SESBLK *sess_cb, 
-	       i4	  qmode,
-	       DB_ERROR   *err_blk);
-FUNC_EXTERN DB_STATUS
-psy_alarm(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_aplid(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_asequence(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_caplid(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_csequence(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_aaplid(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_kaplid(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_dsequence(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_gsequence(
-	PSS_SESBLK	   *sess_cb,
-	DB_OWN_NAME	   *seq_own,
-	DB_NAME		   *seq_name,
-	i4		   seq_mask,
-	PSS_SEQINFO	   *seq_info,
-	DB_IISEQUENCE	   *seqp,
-	i4		   *ret_flags,
-	i4		   *privs,
-	i4		   qmode,
-	i4		   grant_all,
-	DB_ERROR	   *err_code);
-FUNC_EXTERN DB_STATUS
-psy_seqperm(
-	RDF_CB		*rdf_cb,
-	i4		*privs,
-	PSS_SESBLK      *sess_cb,
-	PSS_SEQINFO	*seq_info,
-	i4		qmode,
-	i4		grant_all,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_audit(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_comment(
-	PSY_CB	   *psy_cb,
-	PSS_SESBLK *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_dbpriv(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_rolepriv(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_ckdbpr(
-	PSQ_CB		    *psq_cb,
-	u_i4	    dbprmask);
-FUNC_EXTERN DB_STATUS
-psy_cproc(
-	PSY_CB	   *psy_cb,
-	PSS_SESBLK *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_kproc(
-	PSY_CB		*psy_cb,
-	PSS_SESBLK	*sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_gproc(
-	PSQ_CB		*psq_cb,
-	PSS_SESBLK	*sess_cb,
-	QSF_RCB		*qsf_rb,
-	RDF_CB		*rdf_cb,
-	DB_OWN_NAME	**alt_user,
-	DB_OWN_NAME	*dbp_owner,
-	i4		gproc_mask,
-	i4		*ret_flags);
-FUNC_EXTERN DB_STATUS
-psy_dgrant(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN bool
-psy_permit_ok(
-	i4		obj_mask,
-	PSS_SESBLK	*cb,
-	DB_OWN_NAME	*obj_owner);
-FUNC_EXTERN VOID
-psy_prvmap_to_str(
-	i4	    privs,
-	char	    *priv_str,
-	DB_LANG	    lang);
-FUNC_EXTERN VOID
-psy_init_rel_map(
-	PSQ_REL_MAP	*map);
-FUNC_EXTERN VOID
-psy_attmap_to_str(
-	DMT_ATT_ENTRY	    **attr_descr,
-	PSY_ATTMAP	    *attr_map,
-	register i4	    *offset,
-	char		    *str,
-	i4		    str_len);
-FUNC_EXTERN DB_STATUS
-psy_dbp_status(
-	PSY_TBL		*dbp_descr,
-	PSS_SESBLK	*sess_cb,
-	PSF_QUEUE	*grant_dbprocs,
-	i4		qmode,
-	i4		*dbp_mask,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_dbp_priv_check(
-	PSS_SESBLK	*sess_cb,
-	PSQ_CB		*psq_cb,
-	DB_DBP_NAME 	*dbpname,
-	DB_TAB_ID	*dbpid,
-	bool            *non_existant_dbp,
-	bool		*missing_obj,
-	i4		*dbp_mask,
-	i4		*privs,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_tbl_grant_check(
-	PSS_SESBLK	*sess_cb,
-	i4		qmode,
-	DB_TAB_ID	*grant_obj_id,
-	i4		*tbl_wide_privs,
-	PSY_COL_PRIVS   *col_specific_privs,
-	DB_TAB_ID	*indep_id,
-	i4		*indep_tbl_wide_privs,
-	PSY_COL_PRIVS   *indep_col_specific_privs,
-	i4		psy_flags,
-	bool		*insuf_privs,
-	bool		*quel_view,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_check_privs(
-	PSS_RNGTAB	    *rngvar,
-	i4		    *privs_to_find,
-	i4		    indep_tbl_wide_privs,
-	PSY_COL_PRIVS	    *indep_col_specific_privs,
-	PSS_SESBLK	    *sess_cb,
-	bool		    ps131,
-	DB_TAB_ID	    *grant_obj_id,
-	i4		    flags,
-	i4                  *fully_satisfied,
-	DB_ERROR	    *err_blk);
-FUNC_EXTERN DB_STATUS
-psy_dpermit(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_sqlview(
-	PSS_RNGTAB	    *rngvar,
-	PSS_SESBLK	    *sess_cb,
-	DB_ERROR	    *err_blk,
-	i4		    *issql);
-FUNC_EXTERN DB_STATUS
-psy_devent(
-	PSY_CB	   *psy_cb,
-	PSS_SESBLK *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_kevent(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_gevent(
-	PSS_SESBLK      *sess_cb,
-	DB_OWN_NAME	*event_own,
-	DB_TAB_NAME	*event_name,
-	DB_TAB_ID	*ev_id,
-	i4		ev_mask,
-	PSS_EVINFO	*ev_info,
-	i4		*ret_flags,
-	i4		*privs,
-	i4		qmode,
-	i4		grant_all,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_evperm(
-	RDF_CB		*rdf_cb,
-	i4		*privs,
-	PSS_SESBLK      *sess_cb,
-	PSS_EVINFO	*ev_info,
-	i4		qmode,
-	i4		grant_all,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_group(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_cgroup(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_agroup(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_dgroup(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_kgroup(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_integ(
-	PSF_MSTREAM	*mstream,
-	PST_QNODE	*root,
-	PSS_USRRANGE	*rngtab,
-	PSS_RNGTAB	*resvar,
-	i4		qmode,
-	PSS_SESBLK	*sess_cb,
-	PST_QNODE	**result,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_kinteg(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_kpermit(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_basetbl(
-	PSS_SESBLK	*sess_cb,
-	DB_TAB_ID	*view_id,
-	DB_TAB_ID	*tbl_id,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_kregproc(
-        PSY_CB          *psy_cb,
-        PSS_SESBLK      *sess_cb,
-        DB_TAB_NAME     *procname);
-FUNC_EXTERN DB_STATUS
-psy_loc(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_cloc(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_aloc(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_kloc(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_mapvars(
-	PST_QNODE   *tree,
-	i4	    map[],
-	DB_ERROR    *err_blk);
-FUNC_EXTERN DB_STATUS
-psy_maxquery(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_protect(
-	PSS_SESBLK	    *sess_cb,
-	PSS_USRRANGE	    *rngtab,
-	PST_QNODE	    *tree,
-	i4		    qmode,
-	DB_ERROR	    *err_blk,
-	PSF_MSTREAM	    *mstream,
-	i4	    	    *num_joins,
-	PSY_VIEWINFO	    *viewinfo[]);
-FUNC_EXTERN DB_STATUS
-psy_dbpperm(
-	PSS_SESBLK	*sess_cb,
-	RDF_CB		*rdf_cb,
-	PSQ_CB		*psq_cb,
-	i4		*required_privs);
-FUNC_EXTERN DB_STATUS
-psy_cpyperm(
-	PSS_SESBLK  *cb,
-	i4	    perms_required,
-	DB_ERROR    *err_blk);
-FUNC_EXTERN DB_STATUS
-proappl(
-	register  DB_PROTECTION *protup,
-	bool			*result,
-	PSS_SESBLK		*sess_cb,
-	DB_ERROR		*err_blk);
-FUNC_EXTERN i4
-prochk(
-	i4			privs,
-	i4			*domset,
-	register DB_PROTECTION	*protup,
-	PSS_SESBLK		*sess_cb);
-FUNC_EXTERN VOID
-psy_fill_attmap(
-	register i4	*map,
-	register i4	val);
-FUNC_EXTERN DB_STATUS
-psy_grantee_ok(
-	PSS_SESBLK	*sess_cb,
-	DB_PROTECTION	*protup,
-	bool		*applies,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_insert_objpriv(
-	PSS_SESBLK	*sess_cb,
-	DB_TAB_ID	*objid,
-	i4		objtype,
-	i4		privmap,
-	PSF_MSTREAM	*mstream,
-	PSQ_OBJPRIV	**priv_list,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_insert_colpriv(
-	PSS_SESBLK	*sess_cb,
-	DB_TAB_ID	*tabid,
-	i4		objtype,
-	register i4	*attrmap,
-	i4		privmap,
-	PSF_MSTREAM	*mstream,
-	PSQ_COLPRIV	**priv_list,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_check_objprivs(
-	PSS_SESBLK	*sess_cb,
-	i4		*required_privs,
-	PSQ_OBJPRIV	**priv_descriptor,
-	PSQ_OBJPRIV     **priv_list,
-	bool		*missing,
-	DB_TAB_ID	*id,
-	PSF_MSTREAM	*mstream,
-	i4		obj_type,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_print(
-	PSF_MSTREAM	   *mstream,
-	i4		    map[],
-	PSY_QTEXT	   **block,
-	u_char             *text,
-	i4		   length,
-	PSS_USRRANGE	   *rngtab,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psy_put(
-	PSF_MSTREAM        *mstream,
-	register char	   *inbuf,
-	register i4	   len,
-	PSY_QTEXT	   **block,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psy_txtalloc(
-	PSF_MSTREAM        *mstream,
-	PSY_QTEXT	   **newblock,
-	DB_ERROR	   *err_blk);
-FUNC_EXTERN DB_STATUS
-psy_qrymod(
-	PST_QNODE          *qtree,
-	PSS_SESBLK	   *sess_cb,
-	PSQ_CB		   *psq_cb,
-	PST_J_ID	   *num_joins,
-	i4		   *resp_mask);
-FUNC_EXTERN DB_STATUS
-psy_qminit(
-	PSS_SESBLK	    *sess_cb,
-	PSQ_CB		    *psq_cb,
-	PSF_MSTREAM	    *mstream);
-FUNC_EXTERN DB_STATUS
-psy_revoke(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_v2b_col_xlate(
-	DB_TAB_ID	*view_id,
-	i4		*view_attrmap,
-	DB_TAB_ID	*base_id,
-	i4		*base_attrmap);
-FUNC_EXTERN DB_STATUS
-psy_b2v_col_xlate(
-	DB_TAB_ID	*view_id,
-	i4		*view_attrmap,
-	DB_TAB_ID	*base_id,
-	i4		*base_attrmap);
-FUNC_EXTERN DB_STATUS
-psy_drule(
-	PSY_CB	   *psy_cb,
-	PSS_SESBLK *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_krule(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_rules(
-	PSS_SESBLK      *sess_cb,
-	i4		qmode,
-	PST_QNODE	*root,
-	DB_ERROR        *err_blk);
-FUNC_EXTERN DB_STATUS
-psy_create_synonym(
-	PSY_CB	   *psy_cb,
-	PSS_SESBLK *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_drop_synonym(
-	PSY_CB	   *psy_cb,
-	PSS_SESBLK *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_dschema(
-	PSY_CB	   *psy_cb,
-	PSS_SESBLK *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_vfind(
-	u_i2	    vn,
-	PST_QNODE   *vtree,
-	PST_QNODE   **result,
-	DB_ERROR    *err_blk);
-FUNC_EXTERN PST_QNODE *
-psy_qscan(
-	PST_QNODE   *root,
-	i4	    vn,
-	u_i2	    an);
-FUNC_EXTERN VOID
-psy_varset(
-	PST_QNODE	*root,
-	PST_VRMAP	*bitmap);
-FUNC_EXTERN DB_STATUS
-psy_subsvars(
-	PSS_SESBLK	*cb,
-	PST_QNODE	**proot,
-	PSS_RNGTAB	*rngvar,
-	PST_QNODE	*transtree,
-	i4		vmode,
-	PST_QNODE	*vqual,
-	PSS_RNGTAB	*resvar,
-	PST_J_MASK	*from_list,
-	i4		qmode,
-	DB_CURSOR_ID	*cursid,
-	i4		*mask,
-	PSS_DUPRB	*dup_rb);
-FUNC_EXTERN VOID
-psy_vcount(
-	PST_QNODE	*tree,
-	PST_VRMAP	*bitmap);
-FUNC_EXTERN DB_STATUS
-psy_user(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_cuser(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_auser(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN DB_STATUS
-psy_kuser(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb);
-FUNC_EXTERN PST_QNODE *
-psy_trmqlnd(
-	PST_QNODE *qual);
-FUNC_EXTERN DB_STATUS
-psy_apql(
-	PSS_SESBLK  *cb,
-	PSF_MSTREAM *mstream,
-	PST_QNODE   *qual,
-	PST_QNODE   *root,
-	DB_ERROR    *err_blk);
-FUNC_EXTERN DB_STATUS
-psy_mrgvar(
-	PSS_USRRANGE	*rngtab,
-	register i4	a,
-	register i4	b,
-	PST_QNODE	*root,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psy_mkempty(
-	PSS_SESBLK	    *sess_cb,
-	PSF_MSTREAM	*mstream,
-	DB_DATA_VALUE	*typeandlen,
-	PST_QNODE	**newnode,
-	DB_ERROR	*err_blk);
-
-FUNC_EXTERN DB_STATUS	psy_error();
-/*
-FUNC_EXTERN DB_STATUS
-psy_error(
-	i4            errorno,
-	i4		   qmode,
-	PSS_RNGTAB	   *rngvar,
-	DB_ERROR	   *err_blk,
-	i4		   p1,
-	PTR		   p2,
-	i4		   p3,
-	PTR		   p4,
-	i4		   p5,
-	PTR		   p6);
-*/
-FUNC_EXTERN DB_STATUS
-psy_view(
-	PSF_MSTREAM	*mstream,
-	PST_QNODE	*root,
-	PSS_USRRANGE	*rngtab,
-	i4		qmode,
-	PSS_SESBLK	*sess_cb,
-	DB_ERROR	*err_blk,
-	PST_J_ID	*num_joins,
-	i4		*resp_mask);
-FUNC_EXTERN DB_STATUS
-psy_vrscan(
-	i4	    with_check,
-	PST_QNODE   *root,
-	PST_QNODE   *vtree,
-	i4	    qmode,
-	PSS_RNGTAB  *resvar,
-	i4	    *rgno,
-	DB_ERROR    *err_blk);
-FUNC_EXTERN DB_STATUS
-psy_translate_nmv_map(
-	PSS_RNGTAB	*parent,
-	char		*parent_attrmap,
-	i4		rel_rgno,
-	char		*rel_attrmap,
-	VOID		(*treewalker)(),
-	DB_ERROR	*err_blk);
-					/*
-					** build a map of attrs to which a
-					** privilege will or will not apply
-					*/
-FUNC_EXTERN VOID
-psy_prv_att_map(			
-	char		*attmap,
-	bool		exclude_cols,
-	i4		*attr_nums,
-	i4		num_cols);
-					/*
-					** walk a tree and build a map of
-					** attributes of a given relation found
-					** in the tree
-					*/
-FUNC_EXTERN VOID
-psy_att_map(
-	PST_QNODE	*t,
-	i4		rgno,
-	char		*attrmap);
-	
-FUNC_EXTERN bool
-psy_view_is_updatable(
-	PST_QTREE	*tree_header,
-	i4		qmode,
-	i4		*reason);
-
-FUNC_EXTERN void
-psy_rl_coalesce(
-		  PST_STATEMENT **list1p,
-		  PST_STATEMENT *list2);
-
-FUNC_EXTERN DB_STATUS
-psl_cs01s_create_schema(
-        PSS_SESBLK      *sess_cb,
-        PSQ_CB          *psq_cb,
-        char            *authid);
-FUNC_EXTERN DB_STATUS
-psl_reorder_schema(
-        PSS_SESBLK      *sess_cb,
-        PSQ_CB          *psq_cb,
-        PST_PROCEDURE   *prnode);
-FUNC_EXTERN DB_STATUS
-psl_cs02s_create_schema_key(
-        PSS_SESBLK      *sess_cb,
-        PSQ_CB          *psq_cb);
-FUNC_EXTERN DB_STATUS
-psl_alloc_exec_imm(
-        PSS_SESBLK      *sess_cb,
-        PSQ_CB          *psq_cb,
-        char            *stmtstart,
-        i4              stmtlen,
-        PST_OBJDEP      *deplist,
-        i4              qmode,
-        i4              basemode);
-FUNC_EXTERN DB_STATUS
-psl_cs03s_create_table(
-        PSS_SESBLK      *sess_cb,
-        PSQ_CB          *psq_cb,
-        char            *stmtstart,
-        PST_OBJDEP      *deplist,
-        PSS_CONS        *cons_list);
-FUNC_EXTERN DB_STATUS
-psl_cs04s_create_view(
-        PSS_SESBLK      *sess_cb,
-        PSQ_CB          *psq_cb,
-        char            *stmtstart,
-        PST_OBJDEP      *deplist);
-FUNC_EXTERN DB_STATUS
-psl_cs05s_grant(
-        PSS_SESBLK      *sess_cb,
-        PSQ_CB          *psq_cb,
-        char            *stmtstart,
-        PST_OBJDEP      *deplist);
-FUNC_EXTERN DB_STATUS
-psl_cs06s_obj_spec(
-        PSS_SESBLK      *sess_cb,
-        PSQ_CB          *psq_cb,
-        PST_OBJDEP      **deplistp,
-        PSS_OBJ_NAME    *obj_spec,
-        u_i4       obj_use);
-FUNC_EXTERN DB_STATUS
-psl_d_cons(
-    PSS_SESBLK	    *sess_cb,
-    PSQ_CB	    *psq_cb,
-    PSS_RNGTAB	    *rngvar,
-    char	    *cons_name,
-    bool            drop_cascade);
-
-FUNC_EXTERN i4
-psl_find_column_number(
-	struct _DMU_CB  *dmu_cb,
-	DB_ATT_NAME     *col_name);
-FUNC_EXTERN DB_STATUS
-psl_must_be_string(
-	PSS_SESBLK	*sess_cb,
-	DB_DATA_VALUE	*in_val,
-	DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psl_norm_id_2_delim_id(
-		u_char		**ident,
-		i4		*ident_len,
-		u_char		*delim_id_buf,
-		DB_ERROR	*err_blk);
-FUNC_EXTERN DB_STATUS
-psq_destr_dbp_qep(
-		PSS_SESBLK	*sess_cb,
-		PTR		handle,
-		DB_ERROR	*err_blk);
-
-FUNC_EXTERN DB_STATUS
-psy_ubtid(
-	PSS_RNGTAB	    *rngvar,
-	PSS_SESBLK	    *sess_cb,
-	DB_ERROR	    *err_blk,
-	DB_TAB_ID	    *ubt_id);
-
-FUNC_EXTERN DB_STATUS
-psl_us1_with_nonkeyword(
-	PSY_CB	    *psy_cb,
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	char 	    *word
-);
-FUNC_EXTERN DB_STATUS
-psl_us2_with_nonkw_eq_nmsconst(
-	PSY_CB      *psy_cb, 
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	char	    *word1,
-	char	    *word2
-);
-FUNC_EXTERN DB_STATUS
-psl_us2_with_nonkw_eq_hexconst(
-	PSY_CB      *psy_cb, 
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	char	    *word1,
-	u_i2	    length,
-	char	    *word2
-);
-FUNC_EXTERN DB_STATUS
-psl_us3_usrpriv(
-	PSY_CB      *psy_cb, 
-	PSQ_CB	    *psq_cb,
-	char	    *word,
-	i4	    *privptr
-);
-FUNC_EXTERN DB_STATUS
-psl_us4_usr_priv_or_nonkw(
-	PSY_CB      *psy_cb, 
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	char	    *word,
-	i4	    privs
-);
-FUNC_EXTERN DB_STATUS
-psl_us5_usr_priv_def(
-	PSY_CB      *psy_cb, 
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	i4	    mode,
-	i4	    privs
-);
-FUNC_EXTERN DB_STATUS
-psl_as1_with_nonkeyword(
-	PSY_CB	    *psy_cb,
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	char 	    *word
-);
-FUNC_EXTERN DB_STATUS
-psl_as2_with_nonkw_eq_nmsconst(
-	PSY_CB      *psy_cb, 
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	char	    *word1,
-	char	    *word2
-);
-FUNC_EXTERN DB_STATUS
-psl_as3_alter_secaud(
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb
-);
-FUNC_EXTERN DB_STATUS
-psl_us12_set_nonkw_roll_nonkw(
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	char	    *word1,
-	char	    *svpt
-);
-FUNC_EXTERN DB_STATUS
-psl_us11_set_nonkw_roll_svpt(
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	char	    *word1,
-	char	    *svpt
-);
-FUNC_EXTERN DB_STATUS
-psl_us10_set_priv(
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	i4	    mode,
-	i4	    privs
-);
-FUNC_EXTERN DB_STATUS
-psl_us9_set_nonkw_eq_nonkw(
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	char	    *word1,
-	char	    *word2,
-	bool	    isnkw
-);
-FUNC_EXTERN DB_STATUS
-psl_us14_set_nonkw_eq_int(
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	char	    *word1,
-	i4	    word2
-);
-FUNC_EXTERN DB_STATUS
-psl_us15_set_nonkw(
-	PSQ_CB	    *psq_cb,
-	PSS_SESBLK  *cb,
-	char	    *word
-);
-
-FUNC_EXTERN DB_STATUS
-psy_do_alarm_fail(
-	PSS_SESBLK	   *sess_cb,
-	PSS_RNGTAB	   *rngvar,
-	i4		   qmode,
-	DB_ERROR	   *err_blk)
-;
-FUNC_EXTERN DB_STATUS
-psy_calarm(
-	PSY_CB	   *psy_cb,
-	PSS_SESBLK *sess_cb)
-;
-FUNC_EXTERN DB_STATUS
-psy_kalarm(
-	PSY_CB             *psy_cb,
-	PSS_SESBLK	   *sess_cb)
-;
-FUNC_EXTERN DB_STATUS
-psy_evraise(
-	PSS_SESBLK *sess_cb,
-	DB_EVENT_NAME *evname,
-	DB_OWN_NAME *evowner,
-	char	    *evtext,
-	i4	    ev_l_text,
-        DB_ERROR    *err_blk
-);
-FUNC_EXTERN DB_STATUS
-psy_evget_by_id(
-	PSS_SESBLK *sess_cb,
-	DB_TAB_ID  *ev_id,
-	DB_IIEVENT *evtuple,
-        DB_ERROR    *err_blk
-);
-FUNC_EXTERN  VOID
-psl_grantee_type_to_str(
-	i4	grantee_type,
-	char	**str,
-	i4	*str_len,
-	bool	by_word);
-
-FUNC_EXTERN DB_STATUS
-psl_al4_drop_alarm(
-	PSS_SESBLK  *cb,
-	PSY_CB	    *psy_cb,
-	PSQ_CB	    *psq_cb,
-	i4	    object_type
-);
-/* can't add prototype for psy_secaudit, because not all users
-** include SXF_EVENT definition; but extern it for at least its return type
-*/
-/*FUNC_EXTERN DB_STATUS psy_secaudit(); */
-/*
-** Moved above declaration to psyaudit.h so that we can prototype it without
-** worrying about SXF_EVENT, we'll just include psyaudit.h when we call 
-** psy_secaudit(), when we will also have to include sxf.h which contains
-** SXF_EVENT
-*/
-
-FUNC_EXTERN VOID
-psq_dbp_qp_ids(
-               PSS_SESBLK       *sess_cb,
-               char     	*fe_id,
-               DB_CURSOR_ID     *be_id,
-               DB_DBP_NAME      *dbp_name,
-               DB_OWN_NAME      *dbp_own_name);
-
-FUNC_EXTERN DB_STATUS
-psl_find_cons(
-	      PSS_SESBLK                *sess_cb,
-	      PSS_RNGTAB                *rngvar,
-	      PSS_CONS_QUAL_FUNC        qual_func,
-	      PTR                       *qual_args,
-	      DB_INTEGRITY              *integ,
-	      i4                        *found,
-	      DB_ERROR                  *err_blk);
-FUNC_EXTERN DB_STATUS
-psl_qual_ref_cons(
-                  PTR           *qual_args,
-                  DB_INTEGRITY  *integ,
-                  i4            *satisfies);
-
-FUNC_EXTERN bool
-psf_retry(
-	  PSS_SESBLK    *cb,
-	  PSQ_CB        *psq_cb,
-	  DB_STATUS     ret_val);
-
-FUNC_EXTERN bool
-psf_in_retry(
-	     PSS_SESBLK         *cb,
-	     PSQ_CB        	*psq_cb);
-
-FUNC_EXTERN DB_STATUS
-psl_dp1_dbp_nonkeyword(
-PSS_SESBLK  *cb,
-PSY_CB      *psy_cb,
-PSQ_CB      *psq_cb,
-char        *nonkw);
-
-FUNC_EXTERN DB_STATUS
-psl_find_iobj_cons(
-PSS_SESBLK      *sess_cb,
-PSS_RNGTAB      *rngvar,
-i4              *found,
-DB_ERROR        *err_blk);
-
-DB_STATUS
-psl_unorm_error(
-PSS_SESBLK *pss_cb,
-PSQ_CB      *psq_cb,
-DB_DATA_VALUE *rdv,
-DB_DATA_VALUE *dv1,
-DB_STATUS err_status);
-
-DB_STATUS
-psl_collation_check(
-	PSQ_CB		*psq_cb,
-	PSS_SESBLK	*cb,
-	DB_DATA_VALUE	*dv,
-	DB_COLL_ID	collID);
 
 /*
 ** PST_STK - stack structure to support flattening of heavily recursive
@@ -8454,30 +5675,6 @@ typedef struct _PST_STK
 
 #define PST_DESCEND_MARK ((PST_QNODE**)TRUE)
 
-STATUS 
-pst_push_item(PST_STK *, PTR);
-
-PTR
-pst_pop_item(PST_STK *);
-
-VOID
-pst_pop_all(PST_STK *);
-
-PST_QNODE *
-pst_parent_node(PST_STK *base, PST_QNODE *child);
-
-PST_QNODE *
-pst_antecedant_by_1type(PST_STK *base, PST_QNODE *child,
-	PST_TYPE t1);
-PST_QNODE *
-pst_antecedant_by_2types(PST_STK *base, PST_QNODE *child,
-	PST_TYPE t1,PST_TYPE t2);
-PST_QNODE *
-pst_antecedant_by_3types(PST_STK *base, PST_QNODE *child,
-	PST_TYPE t1, PST_TYPE t2, PST_TYPE t3);
-PST_QNODE *
-pst_antecedant_by_4types(PST_STK *base, PST_QNODE *child,
-	PST_TYPE t1, PST_TYPE t2, PST_TYPE t3, PST_TYPE t4);
 
 /* PST_STK_CMP - context for calling pst_qnode_compare.*/
 typedef struct _PST_STK_CMP
@@ -8496,33 +5693,2518 @@ typedef struct _PST_STK_CMP
     {PST_STK_INIT((_c).stk, _cb) \
     (_c).rngtabs=_rt;(_c).n_covno=0;}
 
-i4
-pst_qtree_compare(
-    PST_STK_CMP	*ctx,
-    PST_QNODE	**a,
-    PST_QNODE	**b,
-    bool	fixup);
 
-i4
-pst_qtree_compare_norm(
-    PST_STK_CMP	*ctx,
-    PST_QNODE	**a,
-    PST_QNODE	**b);
+/*
+** Prototypes for PSF
+** ALL included even if also exported into psfparse.h
+** excepting only those that have explicit header files
+** to reduce include overheads. Currently these are:
+**	psyaudit.h
+**	psydint.h
+**	psykview.h
+**	psyrereg.h
+** psldefau.c needs defines in psldef.h due to DMF_ATTR_ENTRY
+** Substantially created with cproto. Where existing include
+** files have been simple these are called out to for the definitions.
+** These simple ones have the file name matching the file they
+** describe and contain no awkward type references and allow
+** their implementation file to have few includes.
+*/
 
-PST_QNODE *
-pst_non_const_core(
-    PST_QNODE *node);
+/* psfcall.c */
+FUNC_EXTERN i4 psq_call(
+	i4 opcode,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN bool psf_retry(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	i4 ret_val);
+FUNC_EXTERN bool psf_in_retry(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psy_call(
+	i4 opcode,
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psfdebug.c */
+FUNC_EXTERN i4 psf_debug(
+	DB_DEBUG_CB *debug_cb);
+FUNC_EXTERN void psf_relay(
+	char *msg_buffer);
+FUNC_EXTERN i4 psf_scctrace(
+	PTR arg1,
+	i4 msg_length,
+	char *msg_buffer);
+/* psferror.c */
+FUNC_EXTERN i4 psf_verror(
+	i4 errorno,
+	i4 detail,
+	i4 err_type,
+	i4 *err_code,
+	DB_ERROR *err_blk,
+	PTR FileName,
+	i4 LineNumber,
+	i4 num_parms,
+	va_list);
+FUNC_EXTERN i4 psfErrorFcn(
+	i4 errorno,
+	i4 detail,
+	i4 err_type,
+	i4 *err_code,
+	DB_ERROR *err_blk,
+	PTR FileName,
+	i4 LineNumber,
+	i4 num_parms,
+	...);
+FUNC_EXTERN i4 psf_errorNV(
+	i4 errorno,
+	i4 detail,
+	i4 err_type,
+	i4 *err_code,
+	DB_ERROR *err_blk,
+	i4 num_parms,
+	...);
+FUNC_EXTERN void psf_adf_error(
+	ADF_ERROR *adf_errcb,
+	DB_ERROR *err_blk,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN void psf_rdf_error(
+	i4 rdf_opcode,
+	DB_ERROR *rdf_errblk,
+	DB_ERROR *err_blk);
+FUNC_EXTERN void psf_qef_error(
+	i4 qef_opcode,
+	DB_ERROR *qef_errblk,
+	DB_ERROR *err_blk);
+/* psfglob.c */
+/* psfmem.c */
+FUNC_EXTERN i4 psf_mopen(
+	PSS_SESBLK *sess_cb,
+	i4 objtype,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psf_malloc(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	i4 size,
+	void *result,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psf_mclose(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psf_mroot(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	PTR root,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psf_mchtyp(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	i4 objtype,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psf_mlock(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psf_munlock(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psf_symall(
+	PSS_SESBLK *pss_cb,
+	PSQ_CB *psq_cb,
+	i4 size);
+FUNC_EXTERN i4 psf_umalloc(
+	PSS_SESBLK *sess_cb,
+	PTR mstream,
+	i4 msize,
+	PTR *mresult,
+	DB_ERROR *err_blk);
+/* psfmo.c */
+FUNC_EXTERN i4 psf_mo_init(void);
+/* psfsesscb.c */
+FUNC_EXTERN PSF_SESSCB_PTR psf_sesscb(void);
+/* psftrmwh.c */
+#include "psftrmwh.h"
 
-DB_STATUS
-pst_qtree_norm(
-    PST_STK	*stk,
-    PST_QNODE	**nodep,
-    PSQ_CB	*psq_cb);
+/* pslalarm.c */
+FUNC_EXTERN i4 psl_al1_create_alarm(
+	PSS_SESBLK *cb,
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	i4 subject_type,
+	i4 object_type);
+FUNC_EXTERN i4 psl_al2_tbl_obj_spec(
+	PSS_SESBLK *cb,
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *obj_spec);
+FUNC_EXTERN i4 psl_al3_db_obj_spec(
+	PSS_SESBLK *cb,
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	char *objname,
+	bool is_delim);
+FUNC_EXTERN i4 psl_al4_drop_alarm(
+	PSS_SESBLK *cb,
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	i4 object_type);
+/* pslasec.c */
+FUNC_EXTERN i4 psl_as1_nonkeyword(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	char *word);
+FUNC_EXTERN i4 psl_as2_with_nonkw_eq_sconst(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	char *word2);
+FUNC_EXTERN i4 psl_as3_alter_secaud(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb);
+/* pslatbl.c */
+FUNC_EXTERN i4 psl_alter_table(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_CONS *cons_list);
+FUNC_EXTERN i4 psl_alt_tbl(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *tbl_spec,
+	PSS_RNGTAB **rngvarp);
+FUNC_EXTERN i4 psl_d_cons(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_RNGTAB *rngvar,
+	char *cons_name,
+	bool drop_cascade);
+FUNC_EXTERN i4 psl_alt_tbl_col(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_alt_tbl_col_drop(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DB_ATT_NAME attname,
+	bool cascade);
+FUNC_EXTERN i4 psl_alt_tbl_col_add(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DB_ATT_NAME attname,
+	PSS_CONS *cons_list,
+	i4 altopts);
+FUNC_EXTERN i4 psl_alt_tbl_col_rename(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DB_ATT_NAME attname,
+	DB_ATT_NAME *newattname);
+FUNC_EXTERN i4 psl_alt_tbl_rename(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *newTabName);
+/* pslcdbp.c */
+FUNC_EXTERN i4 psl_cdbp_build_setrng(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_DBPINFO *dbpinfo,
+	PSS_RNGTAB **dbprngp);
+FUNC_EXTERN i4 psl_fill_proc_params(
+	PSS_SESBLK *sess_cb,
+	i4 num_params,
+	QUEUE *parmq,
+	i4 num_rescols,
+	QUEUE *rescolq,
+	i4 set_input_proc,
+	DB_ERROR *err_blk);
+/* pslcons.c */
+FUNC_EXTERN i4 psl_verify_cons(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DMU_CB *dmu_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_CONS *cons_list,
+	PST_STATEMENT **stmt_listp);
+FUNC_EXTERN i4 psl_gen_alter_text(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	SIZE_TYPE *memleft,
+	DB_OWN_NAME *ownname,
+	DB_TAB_NAME *tabname,
+	PSS_CONS *cons,
+	DB_TEXT_STRING **query_textp,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_qual_ref_cons(
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *satisfies,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psl_find_cons(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_CONS_QUAL_FUNC qual_func,
+	PTR *qual_args,
+	DB_INTEGRITY *integ,
+	i4 *found,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_find_column_number(
+	DMU_CB *dmu_cb,
+	DB_ATT_NAME *col_name);
+FUNC_EXTERN i4 psl_find_iobj_cons(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	i4 *found,
+	DB_ERROR *err_blk);
+/* pslcopy.c */
+FUNC_EXTERN i4 psl_cp1_copy(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_Q_XLATE *xlated_qry,
+	PTR scanbuf_ptr,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_cp2_copstmnt(
+	PSS_SESBLK *sess_cb,
+	PSQ_MODE *qmode,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_cp3_copytable(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *resrange,
+	DB_TAB_NAME *tabname,
+	PSS_Q_XLATE *xlated_qry,
+	DD_LDB_DESC *ldbdesc,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_cp4_coparam(
+	PSS_SESBLK *sess_cb,
+	PSS_Q_XLATE *xlated_qry,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_cp5_cospecs(
+	PSS_SESBLK *sess_cb,
+	PSS_Q_XLATE *xlated_qry,
+	char *domname,
+	PTR scanbuf_ptr,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_cp6_entname(
+	PSS_SESBLK *sess_cb,
+	char *entname,
+	DB_ERROR *err_blk,
+	PTR *scanbuf_ptr);
+FUNC_EXTERN i4 psl_cp7_fmtspec(
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	bool w_nullval);
+FUNC_EXTERN i4 psl_cp8_coent(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	bool parse_coent,
+	char *type_name,
+	i4 len_prec_num,
+	i4 *type_lenprec,
+	char *type_delim);
+FUNC_EXTERN i4 psl_cp9_nm_eq_nm(
+	PSS_SESBLK *sess_cb,
+	char *name,
+	char *value,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_cp10_nm_eq_str(
+	PSS_SESBLK *sess_cb,
+	char *name,
+	char *value,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_cp11_nm_eq_no(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *name,
+	i4 value);
+FUNC_EXTERN i4 psl_cp12_nm_eq_qdata(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *name,
+	DB_DATA_VALUE *value,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_cp13_nm_single(
+	PSS_SESBLK *sess_cb,
+	char *name,
+	DB_ERROR *err_blk);
+/* pslcopyd.c */
+#include "pslcopyd.h"
+/* pslctbl.c */
+FUNC_EXTERN i4 psl_ct1_create_table(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_CONS *cons_list);
+FUNC_EXTERN i4 psl_crtas_fixup_columns(
+	PSS_SESBLK *sess_cb,
+	PST_QNODE *newcolspec,
+	PST_QNODE *query_expr,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_ct2s_crt_tbl_as_select(
+	PSS_SESBLK *sess_cb,
+	PST_QNODE *newcolspec,
+	PST_QNODE *query_expr,
+	PSQ_CB *psq_cb,
+	PST_J_ID *join_id,
+	PSS_Q_XLATE *xlated_qry,
+	PST_QNODE *sort_list,
+	PST_QNODE *first_n,
+	PST_QNODE *offset_n);
+FUNC_EXTERN i4 psl_ct3_crwith(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_ct9_new_loc_name(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *loc_name,
+	char *table_name);
+FUNC_EXTERN i4 psl_ct10_crt_tbl_kwd(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_ct11_tname_name_name(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *name1,
+	char *name2,
+	char *name3,
+	char **value);
+FUNC_EXTERN i4 psl_ct12_crname(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *tbl_spec);
+FUNC_EXTERN i4 psl_ct13_newcolname(
+	PSS_SESBLK *sess_cb,
+	char *column_name,
+	PSQ_CB *psq_cb,
+	PSS_Q_XLATE *xlated_qry,
+	PTR *scanbuf_ptr);
+FUNC_EXTERN i4 psl_ct14_typedesc(
+	PSS_SESBLK *sess_cb,
+	char *type_name,
+	i4 num_len_prec_vals,
+	i4 *len_prec,
+	i4 null_def,
+	PST_QNODE *default_node,
+	DB_TEXT_STRING *default_text,
+	DB_IISEQUENCE *idseqp,
+	PSQ_CB *psq_cb,
+	DB_COLL_ID collationID,
+	i4 encrypt_spec);
+FUNC_EXTERN i4 psl_ct15_distr_with(
+	PSS_SESBLK *sess_cb,
+	char *name,
+	char *value,
+	PSS_Q_XLATE *xlated_qry,
+	bool quoted_val,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_ct16_distr_create(
+	PSS_SESBLK *sess_cb,
+	PSS_Q_XLATE *xlated_qry,
+	bool simple_create,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_ct17_distr_specs(
+	PSS_SESBLK *sess_cb,
+	PTR scanbuf_ptr,
+	PSS_Q_XLATE *xlated_qry,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_ct18s_type_qual(
+	i4 qmode,
+	i4 qual1,
+	i4 qual2,
+	PSS_SESBLK *sess_cb,
+	PSS_DBPINFO *dbpinfo,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_ct19s_constraint(
+	PSS_SESBLK *sess_cb,
+	i4 type,
+	PSY_COL *cons_cols,
+	PSS_OBJ_NAME *ref_tabname,
+	PSY_COL *ref_cols,
+	PSS_TREEINFO *check_cond,
+	PSS_CONS **consp,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_ct20s_cons_col(
+	PSS_SESBLK *sess_cb,
+	PSY_COL **colp,
+	char *newcolname,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_ct21s_cons_name(
+	char *cons_name,
+	PSS_CONS *cons,
+	PSS_CONS **cons_listp);
+FUNC_EXTERN i4 psl_ct22s_cons_allowed(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+FUNC_EXTERN void psl_command_string(
+	i4 qmode,
+	PSS_SESBLK *sess_cb,
+	char *command,
+	i4 *length);
+/* pslcview.c */
+FUNC_EXTERN i4 psl_cv1_create_view(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *new_col_list,
+	PST_QNODE *query_expr,
+	i4 check_option,
+	PSS_YYVARS *yyvarsp);
+FUNC_EXTERN i4 psl_cv2_viewstmnt(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+/* psldbprv.c */
+FUNC_EXTERN i4 psl_dp1_dbp_nonkeyword(
+	PSS_SESBLK *cb,
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	char *nonkw);
+/* psldefau.c */
+/* psl_2col_ingres_default() & psl_1col_default()
+** defined in psldef.h due to DMF_ATTR_ENTRY */
+FUNC_EXTERN i4 psl_make_default_node(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	PSS_RNGTAB *rngvar,
+	i2 attno,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_check_defaults(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *resrng,
+	PST_QNODE *root_node,
+	i4 insert_into_view,
+	DB_TAB_NAME *view_name,
+	DB_ERROR *err_blk);
+/* psldistr.c */
+FUNC_EXTERN i4 psl_rg1_reg_distr_tv(
+	PSS_SESBLK *sess_cb,
+	PSS_OBJ_NAME *reg_name,
+	i4 ldb_obj_type,
+	PSS_Q_XLATE *xlated_qry,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_rg2_reg_distr_idx(
+	PSS_SESBLK *sess_cb,
+	char *reg_name,
+	PSS_Q_XLATE *xlated_qry,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_rg3_reg_tvi(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_rg4_regtext(
+	PSS_SESBLK *sess_cb,
+	i4 ldb_obj_type,
+	PSS_Q_XLATE *xlated_qry,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_rg5_ldb_spec(
+	PSS_SESBLK *sess_cb,
+	char *name,
+	i4 qmode,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_rg6_link_col_list(
+	char *colname,
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_ds1_dircon(
+	PSQ_CB *psq_cb,
+	char *name1,
+	char *name2,
+	bool is_distrib);
+FUNC_EXTERN i4 psl_ds2_dir_exec_immed(
+	char *name,
+	bool is_distrib,
+	char *exec_arg,
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_proc_func(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	i4 op_code,
+	PST_QNODE *arg,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk);
+/* pslgram.c */
+FUNC_EXTERN i4 getfacil(
+	char *code,
+	PSQ_MODE *facility,
+	i4 *flagno);
+FUNC_EXTERN char *sconvert(
+	DB_TEXT_STRING *string);
+FUNC_EXTERN i4 qdata_cvt(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	DB_DATA_VALUE *fval,
+	DB_DT_ID totype,
+	PTR *value);
+FUNC_EXTERN void psl_quel_shareable(
+	PSS_SESBLK *sess_cb,
+	i4 qry_mask,
+	bool *shareable);
+FUNC_EXTERN i4 psl_rptqry_tblids(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	PSF_MSTREAM *mstream,
+	i4 qry_mode,
+	i4 *num_ids,
+	DB_TAB_ID **id_list,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pslparse(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+/* pslindx.c */
+FUNC_EXTERN i4 psl_ci1_create_index(
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_ci2_index_prefix(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	i4 unique);
+FUNC_EXTERN i4 psl_ci3_indexrel(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_OBJ_NAME *tbl_spec);
+FUNC_EXTERN i4 psl_ci4_indexcol(
+	PSS_SESBLK *sess_cb,
+	char *colname,
+	DB_ERROR *err_blk,
+	bool cond_add);
+FUNC_EXTERN i4 psl_ci5_indexlocname(
+	PSS_SESBLK *sess_cb,
+	char *loc_name,
+	PSS_OBJ_NAME *index_spec,
+	PSQ_CB *psq_cb);
+/* psllkmd.c */
+FUNC_EXTERN i4 psl_lm1_setlockstmnt(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_lm2_setlockkey(
+	PSS_SESBLK *sess_cb,
+	char *char_name,
+	i4 *char_type,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_lm3_setlockparm_name(
+	i4 char_type,
+	char *char_val,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_lm4_setlockparm_num(
+	i4 char_type,
+	i4 char_val,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_lm5_setlockmode_distr(
+	PSS_SESBLK *sess_cb,
+	char *scanbuf_ptr,
+	PSS_Q_XLATE *xlated_qry,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_lm6_setlockscope_distr(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_Q_XLATE *xlated_qry,
+	DB_ERROR *err_blk);
+/* pslmdfy.c */
+FUNC_EXTERN i4 psl_md1_modify(
+	PSS_SESBLK *sess_cb,
+	PSS_YYVARS *yyvarsp,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_md2_modstmnt(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+FUNC_EXTERN i4 psl_md3_modunique(
+	PSS_SESBLK *sess_cb,
+	PSS_YYVARS *yyvarsp,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_md4_modstorname(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *storname);
+FUNC_EXTERN i4 psl_md5_modkeys(
+	PSS_SESBLK *sess_cb,
+	PSS_YYVARS *yyvarsp,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_md6_modbasekey(
+	PSS_SESBLK *sess_cb,
+	bool ascending,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_md7_modkeyname(
+	PSS_SESBLK *sess_cb,
+	char *keyname,
+	PSS_YYVARS *yyvarsp,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_md8_modtable(
+	PSS_SESBLK *sess_cb,
+	PSS_OBJ_NAME *tblspec,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_md_logpartname(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	char *logname);
+FUNC_EXTERN i4 psl_md_modpart(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+FUNC_EXTERN i4 psl_md_reconstruct(
+	PSS_SESBLK *sess_cb,
+	DMU_CB *dmucb,
+	DB_ERROR *err_blk);
+FUNC_EXTERN void psl_md_action_string(
+	PSS_SESBLK *sess_cb,
+	char *str,
+	i4 *length);
+/* pslpart.c */
+FUNC_EXTERN i4 psl_partdef_end(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+FUNC_EXTERN i4 psl_partdef_new_dim(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	i4 distrule);
+FUNC_EXTERN i4 psl_partdef_nonval(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	i4 nparts);
+FUNC_EXTERN i4 psl_partdef_oncol(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	char *colname);
+FUNC_EXTERN i4 psl_partdef_partlist(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+FUNC_EXTERN i4 psl_partdef_pname(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	char *pname,
+	bool allow_ii);
+FUNC_EXTERN i4 psl_partdef_start(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+FUNC_EXTERN i4 psl_partdef_value(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	i4 sign_flag,
+	DB_DATA_VALUE *value);
+FUNC_EXTERN i4 psl_partdef_value_check(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+FUNC_EXTERN i4 psl_partdef_with(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+FUNC_EXTERN i4 ppd_qsfmalloc(
+	PSQ_CB *psq_cb,
+	i4 psize,
+	void *pptr);
+/* pslrngfcn.c */
+FUNC_EXTERN i4 psl_rngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	DB_TAB_NAME *tabname,
+	PSS_SESBLK *cb,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk,
+	i4 *caller_info,
+	PST_J_ID *pjoin_id);
+FUNC_EXTERN i4 psl0_rngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	DB_TAB_NAME *tabname,
+	PSS_SESBLK *cb,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk,
+	i4 tbls_to_lookup,
+	i4 *caller_info,
+	i4 lookup_mask,
+	PST_J_ID *pjoin_id);
+FUNC_EXTERN i4 psl_drngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	PSS_SESBLK *cb,
+	PSS_RNGTAB **rngvar,
+	PST_QNODE *root,
+	i4 type,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_tprngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	i4 dbpid,
+	PSS_SESBLK *cb,
+	PSS_RNGTAB **rngvar,
+	PST_QNODE *root,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_orngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	DB_OWN_NAME *ownname,
+	DB_TAB_NAME *tabname,
+	PSS_SESBLK *cb,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk,
+	i4 *caller_info);
+FUNC_EXTERN i4 psl0_orngent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	DB_OWN_NAME *ownname,
+	DB_TAB_NAME *tabname,
+	PSS_SESBLK *cb,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk,
+	i4 *caller_info,
+	i4 lookup_mask);
+/* pslscan.c */
+FUNC_EXTERN i4 psl_scan(
+	register PSS_SESBLK *pss_cb,
+	register PSQ_CB *psq_cb);
+/* pslschma.c */
+FUNC_EXTERN i4 psl_cs01s_create_schema(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *authid);
+FUNC_EXTERN i4 psl_reorder_schema(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_PROCEDURE *prnode);
+FUNC_EXTERN i4 psl_cs02s_create_schema_key(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_alloc_exec_imm(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *stmtstart,
+	i4 stmtlen,
+	PST_OBJDEP *deplist,
+	i4 qmode,
+	i4 basemode);
+FUNC_EXTERN i4 psl_cs03s_create_table(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *stmtstart,
+	PST_OBJDEP *deplist,
+	PSS_CONS *cons_list);
+FUNC_EXTERN i4 psl_cs04s_create_view(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *stmtstart,
+	PST_OBJDEP *deplist);
+FUNC_EXTERN i4 psl_cs05s_grant(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *stmtstart,
+	PST_OBJDEP *deplist);
+FUNC_EXTERN i4 psl_cs06s_obj_spec(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_OBJDEP **deplistp,
+	PSS_OBJ_NAME *obj_spec,
+	u_i4 obj_use);
+/* pslseq.c */
+FUNC_EXTERN i4 psl_csequence(
+	PSS_SESBLK *cb,
+	DB_IISEQUENCE *seqp,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_asequence(
+	PSS_SESBLK *cb,
+	DB_IISEQUENCE *oldseqp,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_seq_parmcheck(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	DB_DATA_VALUE *pdv,
+	DB_IISEQUENCE *seqp,
+	i4 flag,
+	bool minus);
+/* pslsgram.c */
+typedef struct _PSL_P_TELEM_LINK {
+	struct _PSL_P_TELEM_LINK *link;
+	PST_QNODE       *rt_node;
+} PSL_P_TELEM_LINK;
+typedef struct _PSL_P_TELEM_CTX {
+	PSS_SESBLK	*cb;
+	PSQ_CB		*psq_cb;
+	PSS_YYVARS	*yyvarsp;
+	PSS_RNGTAB      **rngtable;
+	PST_QNODE	*resolved_fwdvar;
+	PST_QNODE	*unresolved_fwdvar;
+	PSL_P_TELEM_LINK*link;
+	i4		qualdepth;
+	i4		xform_avg;
+} PSL_P_TELEM_CTX;
+FUNC_EXTERN void psl_bp(void);
+FUNC_EXTERN void psl_bugbp(void);
+FUNC_EXTERN i4 psl_subsel(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *subnode);
+FUNC_EXTERN PST_QNODE *psl_find_node(
+	PST_QNODE *node,
+	PST_QNODE **cursor,
+	PST_TYPE type);
+FUNC_EXTERN PST_QNODE **psl_find_nodep(
+	PST_QNODE **nodep,
+	PST_QNODE ***cursor,
+	PST_TYPE type);
+FUNC_EXTERN i4 psl_hcheck(
+	PSS_SESBLK *cb,
+	PST_QNODE *having,
+	PST_QNODE *group,
+	PST_J_MASK *fromlist);
+FUNC_EXTERN i4 psl_hcheckvar(
+	PST_QNODE *having,
+	PST_QNODE *group,
+	PST_J_MASK *fromlist);
+FUNC_EXTERN i4 psl_curval(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PSC_CURBLK *cursor,
+	PST_QNODE **tree);
+FUNC_EXTERN i4 psl_shareable(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	bool *shareable,
+	DB_SHR_RPTQRY_INFO **qry_info);
+FUNC_EXTERN void psl_backpatch(
+	PST_STATEMENT *stmt,
+	PST_STATEMENT *patch);
+FUNC_EXTERN bool psl_agfcn(
+	PST_QNODE *node);
+FUNC_EXTERN void psl_up(
+	PSS_SESBLK *cb,
+	PSS_USRRANGE *rngtab,
+	register PST_QTREE *hdr,
+	bool *flag,
+	i4 *reason);
+FUNC_EXTERN i4 psl_crsopen(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PSC_CURBLK *crblk,
+	PST_QTREE *tree,
+	bool for_rdonly,
+	PST_QNODE *updcollst,
+	bool nonupdt,
+	PST_J_ID num_joins,
+	bool dynqp_comp);
+FUNC_EXTERN i4 psl_crskeyflag(
+	PSS_SESBLK *cb,
+	PST_QTREE *tree);
+FUNC_EXTERN i4 psl_p_tlist(
+	PST_QNODE **tlist,
+	PSS_YYVARS *yyvarsp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_p_telem(
+	PSL_P_TELEM_CTX *ctx,
+	PST_QNODE **node,
+	PST_QNODE *parent);
+FUNC_EXTERN void psl_set_jrel(
+	PST_J_MASK *inner_rels,
+	PST_J_MASK *outer_rels,
+	PST_J_ID join_id,
+	register PSS_RNGTAB **rng_vars,
+	DB_JNTYPE join_type);
+FUNC_EXTERN i4 psl_check_key(
+	PSS_SESBLK *cb,
+	DB_ERROR *err_blk,
+	DB_DT_ID att_type);
+FUNC_EXTERN void psl_syn_info_msg(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	PSS_OBJ_NAME *obj_spec,
+	i4 owned_by,
+	i4 qry_len,
+	char *qry,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_comment_col(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_COL_REF *col_ref);
+FUNC_EXTERN void psl_insert_into_agg_list(
+	PST_QNODE *var_node,
+	YYAGG_NODE_PTR *agglist_elem,
+	YYAGG_NODE_PTR **agg_list_stack,
+	i4 cur_scope,
+	PST_J_MASK *rel_list);
+FUNC_EXTERN i4 psl_for_cond(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_DBPINFO *dbpinfo,
+	PST_QNODE **condition);
+FUNC_EXTERN i4 psl_ifkwd(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_DBPINFO *dbpinfo,
+	PST_STATEMENT **if_stmt_node);
+FUNC_EXTERN void psl_thenkwd(
+	PSS_DBPINFO *dbpinfo);
+FUNC_EXTERN void psl_elsekwd(
+	PSS_DBPINFO *dbpinfo);
+FUNC_EXTERN void psl_ifstmt(
+	PST_STATEMENT *if_node,
+	PST_QNODE *condition,
+	PST_STATEMENT *if_action,
+	PST_STATEMENT *else_action,
+	PSS_DBPINFO *dbpinfo);
+FUNC_EXTERN i4 psl_repeat_qry_id(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	DB_CURSOR_ID *fe_id,
+	PST_QTREE *header,
+	DB_SHR_RPTQRY_INFO *qry_info);
+FUNC_EXTERN i4 psl_qeucb(
+	PSS_SESBLK *sess_cb,
+	i4 operation,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_init_dbp_stmt(
+	PSS_SESBLK *sess_cb,
+	PSS_DBPINFO *dbpinfo,
+	i4 qmode,
+	i4 type,
+	PST_STATEMENT **stmt,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_cdbp_typedesc(
+	PSS_SESBLK *sess_cb,
+	PSS_DBPINFO *dbpinfo,
+	char *type_name,
+	i4 num_len_prec_vals,
+	i4 *len_prec,
+	i4 null_def,
+	PSQ_CB *psq_cb,
+	DB_COLL_ID collID);
+FUNC_EXTERN i4 psl_send_setqry(
+	PSS_SESBLK *sess_cb,
+	char *str_2_send,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN void psl_grantee_type_to_str(
+	i4 grantee_type,
+	char **str,
+	i4 *str_len,
+	bool by_word);
+FUNC_EXTERN void psl_debug(void);
+FUNC_EXTERN i4 psl_must_be_string(
+	PSS_SESBLK *sess_cb,
+	DB_DATA_VALUE *in_val,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_norm_id_2_delim_id(
+	unsigned char **ident,
+	i4 *ident_len,
+	unsigned char *delim_id_buf,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psl_collation_check(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	DB_DATA_VALUE *dv,
+	DB_COLL_ID collID);
+FUNC_EXTERN i4 psl_ansi_strtodt(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	DB_DT_ID ansitype,
+	i4 intflds,
+	DB_TEXT_STRING *instr,
+	PST_QNODE **newnode,
+	DB_DATA_VALUE *dataval,
+	i2 secfrac);
+FUNC_EXTERN i4 psl_mk_const_similar(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	DB_DATA_VALUE *templ,
+	PST_QNODE **cst,
+	DB_ERROR *err_blk,
+	bool *handled);
+FUNC_EXTERN i4 psl_checklen(
+	char *ident,
+	u_i4 max,
+	char *objstr,
+	DB_ERROR *psq_error);
+FUNC_EXTERN i4 pslsparse(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+/* pslsscan.c */
+FUNC_EXTERN i4 psl_sscan(
+	register PSS_SESBLK *pss_cb,
+	register PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_unorm_error(
+	PSS_SESBLK *pss_cb,
+	PSQ_CB *psq_cb,
+	DB_DATA_VALUE *rdv,
+	DB_DATA_VALUE *dv1,
+	i4 err_status);
+/* pslssflat.c */
+FUNC_EXTERN i4 psl_ss_flatten(
+	PST_QNODE **nodep,
+	PSS_YYVARS *yyvarsp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_add_resdom_var(
+	PSS_SESBLK *cb,
+	PST_QNODE **chainp,
+	PST_QNODE *var);
+FUNC_EXTERN i4 psl_add_resdom_agh(
+	PSS_SESBLK *cb,
+	PST_QNODE **chainp,
+	PST_QNODE **aghp);
+FUNC_EXTERN PST_QNODE **psl_lu_resdom_var(
+	PSS_SESBLK *cb,
+	PST_QNODE **chainp,
+	PST_QNODE *var);
+/* pslstran.c */
+FUNC_EXTERN i4 psl_st0_settransaction(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_st1_settranstmnt(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_st2_settranisolation_level(
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	i4 isolation_level);
+FUNC_EXTERN i4 psl_st3_accessmode(
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	i4 accessmode);
+/* psltrace.c */
+FUNC_EXTERN void psl_trace(
+	PTR yacc_cb,
+	i4 onoroff);
+/* psluser.c */
+FUNC_EXTERN i4 psl_us1_with_nonkeyword(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word);
+FUNC_EXTERN i4 psl_us2_with_nonkw_eq_nmsconst(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	char *word2);
+FUNC_EXTERN i4 psl_us2_with_nonkw_eq_hexconst(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	u_i2 length,
+	char *word2);
+FUNC_EXTERN i4 psl_us3_usrpriv(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	char *word,
+	i4 *privptr);
+FUNC_EXTERN i4 psl_us4_usr_priv_or_nonkw(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word,
+	i4 privs);
+FUNC_EXTERN i4 psl_us5_usr_priv_def(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	i4 mode,
+	i4 privs);
+FUNC_EXTERN i4 psl_us9_set_nonkw_eq_nonkw(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	char *word2,
+	bool isnkw);
+FUNC_EXTERN i4 psl_us10_set_priv(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	i4 mode,
+	i4 privs);
+FUNC_EXTERN i4 psl_us11_set_nonkw_roll_svpt(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	char *svpt);
+FUNC_EXTERN i4 psl_us12_set_nonkw_roll_nonkw(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	char *word2);
+FUNC_EXTERN i4 psl_us14_set_nonkw_eq_int(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	i4 word2);
+FUNC_EXTERN i4 psl_us15_set_nonkw(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word);
+/* pslwithopts.c */
+FUNC_EXTERN void psl_withopt_init(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 psl_nm_eq_nm(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *option,
+	char *value);
+FUNC_EXTERN i4 psl_nm_eq_hexconst(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *option,
+	u_i2 valuelen,
+	char *value);
+FUNC_EXTERN i4 psl_nm_eq_no(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *option,
+	i4 value,
+	PSS_Q_XLATE *xlate);
+FUNC_EXTERN i4 psl_with_kwd(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *option,
+	PSS_Q_XLATE *xlate);
+FUNC_EXTERN i4 psl_withlist_prefix(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *option,
+	PSS_Q_XLATE *xlate);
+FUNC_EXTERN i4 psl_withlist_elem(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	char *value,
+	PSS_Q_XLATE *xlate);
+FUNC_EXTERN i4 psl_withlist_relem(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	f8 *element);
+FUNC_EXTERN i4 psl_withopt_post(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+/* pslyalloc.c */
+FUNC_EXTERN i4 psl_yalloc(
+	PTR stream,
+	SIZE_TYPE *memleft,
+	PTR *yacc_cb,
+	DB_ERROR *err_blk);
+FUNC_EXTERN void psl_yinit(
+	PSS_SESBLK *sess_cb);
+/* pslyerror.c */
+FUNC_EXTERN void psl_yerror(
+	i4 errtype,
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN void psl_sx_error(
+	i4 error,
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN void psl_yerr_buf(
+	PSS_SESBLK *sess_cb,
+	char *buf,
+	i4 buf_len);
 
-u_i4
-pst_qtree_size(
-    PST_STK	*stk,
-    PST_QNODE	*node);
+/* psqalter.c */
+FUNC_EXTERN i4 psq_alter(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+/* psqbgnses.c */
+FUNC_EXTERN i4 psq_bgn_session(
+	register PSQ_CB *psq_cb,
+	register PSS_SESBLK *sess_cb);
+/* psqclscrs.c */
+FUNC_EXTERN i4 psq_clscurs(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+/* psqcurdmp.c */
+FUNC_EXTERN i4 psq_crdump(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+/* psqcurhsh.c */
+FUNC_EXTERN u_i4 psq_crhsh(
+	DB_CURSOR_ID *cursid);
+FUNC_EXTERN i4 psq_crfind(
+	PSS_SESBLK *sess_cb,
+	DB_CURSOR_ID *cursor_id,
+	PSC_CURBLK **cursor,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_crffind(
+	PSS_SESBLK *sess_cb,
+	DB_CURSOR_ID *cursor_id,
+	PSC_CURBLK **cursor,
+	DB_ERROR *err_blk);
+FUNC_EXTERN u_i4 psq_clhsh(
+	i4 tabsize,
+	DB_ATT_NAME *name);
+FUNC_EXTERN i4 psq_clent(
+	i4 colno,
+	DB_ATT_NAME *colname,
+	DB_DT_ID type,
+	i4 length,
+	i2 precision,
+	PSC_CURBLK *cursor,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
+FUNC_EXTERN PSC_RESCOL *psq_ccol(
+	PSC_CURBLK *curblk,
+	DB_ATT_NAME *colname);
+FUNC_EXTERN void psq_crent(
+	PSC_CURBLK *curblk,
+	PSS_CURSTAB *curtab);
+FUNC_EXTERN i4 psq_crcreate(
+	PSS_SESBLK *sess_cb,
+	DB_CURSOR_ID *cursid,
+	i4 qmode,
+	PSC_CURBLK **curblk,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_victim(
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_delcursor(
+	PSC_CURBLK *curblk,
+	PSS_CURSTAB *curtab,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_cltab(
+	PSC_CURBLK *cursor,
+	i4 numcols,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_crclose(
+	PSC_CURBLK *cursor,
+	PSS_CURSTAB *curstab,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_open_rep_cursor(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+/* psqcvtdw.c */
+#include "psqcvtdw.h"
+/* psqdelcsr.c */
+FUNC_EXTERN i4 psq_dlcsrrow(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+/* psqdelrng.c */
+FUNC_EXTERN i4 psq_delrng(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psq_clrcache(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+/* psqendses.c */
+FUNC_EXTERN i4 psq_end_session(
+	register PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psq_killses(
+	PSS_SESBLK *sess_cb,
+	i4 force,
+	DB_ERROR *err_blk);
+/* psqmonth.c */
+#include "psqmonth.h"
+/* psqmscdmp.c */
+FUNC_EXTERN i4 psq_headdmp(
+	PSQ_CBHEAD *cb_head);
+FUNC_EXTERN i4 psq_siddmp(
+	CS_SID *sessid);
+FUNC_EXTERN i4 psq_lngdmp(
+	DB_LANG qlang);
+FUNC_EXTERN i4 psq_decdmp(
+	DB_DECIMAL *decimal);
+FUNC_EXTERN i4 psq_dstdmp(
+	DB_DISTRIB distrib);
+FUNC_EXTERN i4 psq_booldmp(
+	i4 boolval);
+FUNC_EXTERN i4 psq_modedmp(
+	i2 mode);
+FUNC_EXTERN i4 psq_tbiddmp(
+	DB_TAB_ID *tabid);
+FUNC_EXTERN i4 psq_ciddmp(
+	DB_CURSOR_ID *cursid);
+FUNC_EXTERN i4 psq_errdmp(
+	DB_ERROR *errblk);
+FUNC_EXTERN i4 psq_dtdump(
+	DB_DT_ID dt_id);
+FUNC_EXTERN i4 psq_tmdmp(
+	DB_TAB_TIMESTAMP *timestamp);
+FUNC_EXTERN i4 psq_jrel_dmp(
+	PST_J_MASK *inner_rel,
+	PST_J_MASK *outer_rel);
+FUNC_EXTERN i4 psq_upddmp(
+	i4 updtmode);
+FUNC_EXTERN i4 psq_str_dmp(
+	unsigned char *str,
+	i4 len);
+/* psqparse.c */
+FUNC_EXTERN i4 psq_parseqry(
+	register PSQ_CB *psq_cb,
+	register PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psq_cbinit(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psq_cbreturn(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	i4 ret_val);
+FUNC_EXTERN i4 psq_destr_dbp_qep(
+	PSS_SESBLK *sess_cb,
+	PTR handle,
+	DB_ERROR *err_blk);
+/* psqprmdmp.c */
+FUNC_EXTERN i4 psq_prmdump(
+	register PSQ_CB *psq_cb);
+/* psqrecr.c */
+FUNC_EXTERN i4 psq_recreate(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psq_dbpreg(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN void psq_dbp_qp_ids(
+	PSS_SESBLK *sess_cb,
+	char *fe_id,
+	DB_CURSOR_ID *be_id,
+	DB_DBP_NAME *dbp_name,
+	DB_OWN_NAME *dbp_own_name);
+/* psqsesdmp.c */
+FUNC_EXTERN i4 psq_sesdump(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN void psq_rngdmp(
+	PSS_RNGTAB *rv);
+/* psqshtdwn.c */
+FUNC_EXTERN i4 psq_shutdown(
+	PSQ_CB *psq_cb);
+/* psqsrvdmp.c */
+FUNC_EXTERN i4 psq_srvdump(
+	register PSQ_CB *psq_cb);
+/* psqstrt.c */
+FUNC_EXTERN i4 psq_startup(
+	PSQ_CB *psq_cb);
+/* psqtxtmod.c */
+FUNC_EXTERN i4 psq_topen(
+	PTR *header,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_tadd(
+	PTR header,
+	unsigned char *piece,
+	i4 size,
+	PTR *result,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_rptqry_text(
+	PTR header,
+	unsigned char *piece,
+	i4 size,
+	PTR *result,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_tclose(
+	PTR header,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_tsubs(
+	PTR header,
+	PTR piece,
+	unsigned char *newtext,
+	i4 size,
+	PTR *newpiece,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_tout(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	PTR header,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_1rptqry_out(
+	PSS_SESBLK *sess_cb,
+	PTR header,
+	PSF_MSTREAM *mstream,
+	i4 *txt_len,
+	unsigned char **txt,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_tqrylen(
+	PTR header,
+	i4 *length);
+FUNC_EXTERN i4 psq_tcnvt(
+	PSS_SESBLK *sess_cb,
+	PTR header,
+	DB_DATA_VALUE *dbval,
+	PTR *result,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_tinsert(
+	PTR header,
+	unsigned char *piece,
+	i4 size,
+	PTR *result,
+	PTR oldpiece,
+	DB_ERROR *err_blk);
+FUNC_EXTERN PTR psq_tbacktrack(
+	PTR piece,
+	i4 n);
+FUNC_EXTERN PTR psq_tbackfromlast(
+	PTR header,
+	i4 n);
+FUNC_EXTERN i4 psq_tmulti_out(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	PTR header,
+	PSF_MSTREAM *mstream,
+	DB_TEXT_STRING **txtp,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_store_text(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	PTR header,
+	PSF_MSTREAM *mstream,
+	PTR *result,
+	bool return_db_text_string,
+	DB_ERROR *err_blk);
+FUNC_EXTERN void psq_tdelete(
+	PTR header,
+	PTR piece);
+/* psqvers.c */
+FUNC_EXTERN i4 psq_version(
+	PSQ_CB *psq_cb);
+/* psqxlate.c */
+FUNC_EXTERN i4 psq_x_add(
+	PSS_SESBLK *sess_cb,
+	char *str_2_store,
+	PSF_MSTREAM *mem_stream,
+	i4 buf_size,
+	PSS_Q_PACKET_LIST *pkt_list,
+	i4 str_len,
+	char *open_delim,
+	char *close_delim,
+	char *separator,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_x_new(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mem_stream,
+	i4 buf_size,
+	PSS_Q_PACKET_LIST *pkt_list,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psq_x_backup(
+	PSS_Q_PACKET_LIST *packet_list,
+	char *str);
+FUNC_EXTERN bool psq_same_site(
+	DD_LDB_DESC *ldb_desc1,
+	DD_LDB_DESC *ldb_desc2);
+FUNC_EXTERN i4 psq_prt_tabname(
+	PSS_SESBLK *sess_cb,
+	PSS_Q_XLATE *xlated_qry,
+	PSF_MSTREAM *mem_stream,
+	PSS_RNGTAB *rng_var,
+	i4 qmode,
+	DB_ERROR *err_blk);
 
+/* pstadparm.c */
+FUNC_EXTERN i4 pst_adparm(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSF_MSTREAM *stream,
+	i2 parmno,
+	char *format,
+	PST_QNODE **newnode,
+	i4 *highparm);
+FUNC_EXTERN i4 pst_2adparm(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSF_MSTREAM *stream,
+	i2 parmno,
+	DB_DATA_VALUE *format,
+	PST_QNODE **newnode,
+	i4 *highparm);
+/* pstadrsdm.c */
+FUNC_EXTERN i4 pst_adresdom(
+	char *attname,
+	PST_QNODE *left,
+	PST_QNODE *right,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE **newnode);
+FUNC_EXTERN i4 pst_rsdm_dt_resolve(
+	PST_QNODE *right,
+	DMT_ATT_ENTRY *coldesc,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+/* pstclrrng.c */
+FUNC_EXTERN i4 pst_clrrng(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	DB_ERROR *err_blk);
+/* pstcoldsc.c */
+FUNC_EXTERN DMT_ATT_ENTRY *pst_coldesc(
+	PSS_RNGTAB *rngentry,
+	char *colname,
+	i4 colnamelen);
+/* pstddl.c */
+FUNC_EXTERN i4 pst_crt_tbl_stmt(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	i4 operation,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_rename_stmt(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	i4 operation,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_ddl_header(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT *stmt,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_attach_to_tree(
+	PSS_SESBLK *sess_cb,
+	PST_STATEMENT *stmt_list,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_crt_schema(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	DB_ERROR *err_blk);
+/* pstdsql.c */
+FUNC_EXTERN i4 pst_prepare(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	char *sname,
+	bool nonupdt,
+	bool repeat,
+	PTR stmt_offset,
+	PST_QNODE *updcollst);
+FUNC_EXTERN i4 pst_execute(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	char *sname,
+	PST_PROCEDURE **pnode,
+	i4 *maxparm,
+	PTR *parmlist,
+	bool *nonupdt,
+	bool *qpcomp,
+	PST_QNODE **updcollst,
+	bool rdonly);
+FUNC_EXTERN i4 pst_prmsub(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	PST_QNODE **nodep,
+	DB_DATA_VALUE *plist[],
+	bool repeat_dyn);
+FUNC_EXTERN i4 pst_describe(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	char *sname);
+FUNC_EXTERN i4 pst_commit_dsql(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 pst_get_stmt_mode(
+	PSS_SESBLK *sess_cb,
+	char *sname,
+	PSQ_STMT_INFO **stmt_info);
+FUNC_EXTERN i4 pst_descinput(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	char *sname);
+FUNC_EXTERN i4 pst_cpdata(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *tree,
+	bool use_qsf);
+/* pstheader.c */
+FUNC_EXTERN i4 pst_header(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	i4 forupdate,
+	PST_QNODE *sortlist,
+	PST_QNODE *qtree,
+	PST_QTREE **tree,
+	PST_PROCEDURE **pnode,
+	i4 mask,
+	PSS_Q_XLATE *xlated_qry);
+FUNC_EXTERN i4 pst_modhdr(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	i4 forupdate,
+	PST_QTREE *header);
+FUNC_EXTERN bool pst_cdb_cat(
+	PSS_RNGTAB *rng_tab,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN void pst_singlesite(
+	PSS_RNGTAB *rng_tab,
+	i4 *stype,
+	DD_LDB_DESC **save_ldb_desc);
+/* psthshnam.c */
+FUNC_EXTERN i4 pst_hshname(
+	DB_ATT_NAME *colname);
+/* pstnode.c */
+FUNC_EXTERN i4 pst_node(
+	PSS_SESBLK *cb,
+	PSF_MSTREAM *stream,
+	PST_QNODE *left,
+	PST_QNODE *right,
+	i4 type,
+	char *value,
+	i4 vallen,
+	DB_DT_ID datatype,
+	i2 dataprec,
+	i4 datalen,
+	DB_ANYTYPE *datavalue,
+	PST_QNODE **newnode,
+	DB_ERROR *err_blk,
+	i4 flags);
+FUNC_EXTERN void pst_negate(
+	register DB_DATA_VALUE *dataval);
+FUNC_EXTERN void pst_map(
+	PST_QNODE *tree,
+	PST_J_MASK *map);
+FUNC_EXTERN bool pst_is_const_bool(
+	PST_QNODE *node,
+	bool *bval);
+FUNC_EXTERN void pst_not_bool(
+	PST_QNODE *node);
+FUNC_EXTERN DB_COLL_ID pst_apply_def_collID(
+	PSS_SESBLK *sess_cb,
+	DB_DT_ID dt,
+	DB_COLL_ID collID);
+/* pstnorml.c */
+FUNC_EXTERN i4 pst_node_size(
+	PST_SYMBOL *sym,
+	i4 *symsize,
+	i4 *datasize,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_treedup(
+	PSS_SESBLK *sess_cb,
+	PSS_DUPRB *dup_rb);
+FUNC_EXTERN i4 pst_push_item(
+	PST_STK *base,
+	PTR item);
+FUNC_EXTERN PTR pst_pop_item(
+	PST_STK *base);
+FUNC_EXTERN void pst_pop_all(
+	PST_STK *base);
+FUNC_EXTERN PST_QNODE *pst_parent_node(
+	PST_STK *base,
+	PST_QNODE *child);
+FUNC_EXTERN PST_QNODE *pst_antecedant_by_1type(
+	PST_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1);
+FUNC_EXTERN PST_QNODE *pst_antecedant_by_2types(
+	PST_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2);
+FUNC_EXTERN PST_QNODE *pst_antecedant_by_3types(
+	PST_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2,
+	PST_TYPE t3);
+FUNC_EXTERN PST_QNODE *pst_antecedant_by_4types(
+	PST_STK *base,
+	PST_QNODE *child,
+	PST_TYPE t1,
+	PST_TYPE t2,
+	PST_TYPE t3,
+	PST_TYPE t4);
+FUNC_EXTERN i4 pst_qtree_compare(
+	PST_STK_CMP *ctx,
+	PST_QNODE **a,
+	PST_QNODE **b,
+	bool fixup);
+FUNC_EXTERN i4 pst_qtree_compare_norm(
+	PST_STK_CMP *ctx,
+	PST_QNODE **a,
+	PST_QNODE **b);
+FUNC_EXTERN PST_QNODE *pst_non_const_core(
+	PST_QNODE *node);
+FUNC_EXTERN i4 pst_qtree_norm(
+	PST_STK *stk,
+	PST_QNODE **nodep,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN u_i4 pst_qtree_size(
+	PST_STK *stk,
+	PST_QNODE *node);
+/* pstprmdmp.c */
+FUNC_EXTERN i4 pst_prmdump(
+	PST_QNODE *tree,
+	PST_QTREE *header,
+	DB_ERROR *error,
+	i4 facility);
+FUNC_EXTERN i4 pst_1prmdump(
+	PST_QNODE *tree,
+	PST_QTREE *header,
+	DB_ERROR *error);
+FUNC_EXTERN void pst_1fidop(
+	PST_QNODE *qnode,
+	char *buf);
+FUNC_EXTERN void pst_1ftype(
+	PST_QNODE *qnode,
+	char *buf);
+FUNC_EXTERN i4 pst_dmpres(
+	PST_RESTAB *restab);
+FUNC_EXTERN i4 pst_scctrace(
+	PTR arg1,
+	i4 msg_length,
+	char *msg_buffer);
+FUNC_EXTERN void pst_display(
+	char *format,
+	...);
+#ifdef xDEBUG
+void pst_dbpdump(
+	PST_PROCEDURE *pnode,
+	i4 whichlink);
+#endif
+#ifdef PST_DOT_DIAGS
+void pst_qtree_dot(
+	char *fname,
+	PSS_SESBLK *cb,
+	PST_QNODE *node);
+void pst_relations_dot(
+	char *fname,
+	PSS_SESBLK *cb,
+	PST_QNODE *node);
+void pst_proc_dot(
+	char *fname,
+	PST_PROCEDURE *proc);
+#endif
+/* pstrngfcn.c */
+FUNC_EXTERN i4 pst_rginit(
+	PSS_USRRANGE *rangetab);
+FUNC_EXTERN i4 pst_rglook(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *name,
+	bool getdesc,
+	PSS_RNGTAB **result,
+	i4 query_mode,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_rgent(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	i4 showtype,
+	DB_TAB_NAME *tabname,
+	DB_TAB_OWN *tabown,
+	DB_TAB_ID *tabid,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_rgdel(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_NAME *tabname,
+	PSS_USRRANGE *rngtable,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_rgrent(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	DB_TAB_ID *tabid,
+	i4 query_mode,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_rgcopy(
+	PSS_USRRANGE *fromtab,
+	PSS_USRRANGE *totab,
+	PSS_RNGTAB **resrng,
+	DB_ERROR *err_blk);
+FUNC_EXTERN void pst_snscope(
+	PSS_USRRANGE *rngtable,
+	PST_J_MASK *from_list,
+	i4 offset);
+FUNC_EXTERN void pst_rescope(
+	PSS_USRRANGE *rngtable,
+	PST_J_MASK *from_list,
+	i4 offset);
+FUNC_EXTERN i4 pst_sent(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *varname,
+	i4 showtype,
+	DB_TAB_NAME *tabname,
+	DB_TAB_OWN *tabown,
+	DB_TAB_ID *tabid,
+	bool tabonly,
+	PSS_RNGTAB **rngvar,
+	i4 query_mode,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_slook(
+	PSS_USRRANGE *rngtable,
+	PSS_SESBLK *cb,
+	DB_OWN_NAME *schema_name,
+	char *name,
+	PSS_RNGTAB **result,
+	DB_ERROR *err_blk,
+	bool scope_flag);
+FUNC_EXTERN i4 pst_sdent(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *corrname,
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB **rngvar,
+	PST_QNODE *root,
+	i4 type,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_stproc(
+	PSS_USRRANGE *rngtable,
+	i4 scope,
+	char *corrname,
+	i4 dbpid,
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB **rngvar,
+	PST_QNODE *root,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_rgfind(
+	PSS_USRRANGE *rngtable,
+	PSS_RNGTAB **result,
+	i4 vno,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_rng_unfix(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rng_ptr,
+	DB_ERROR *errblk);
+/* pstrserr.c */
+FUNC_EXTERN i4 pst_rserror(
+	i4 lineno,
+	PST_QNODE *opnode,
+	DB_ERROR *err_blk);
+/* pstrslv.c */
+FUNC_EXTERN i4 pst_resolve(
+	PSS_SESBLK *sess_cb,
+	ADF_CB *adf_scb,
+	register PST_QNODE *opnode,
+	DB_LANG lang,
+	DB_ERROR *error);
+FUNC_EXTERN i4 pst_union_resolve(
+	PSS_SESBLK *sess_cb,
+	PST_QNODE *rootnode,
+	DB_ERROR *error);
+FUNC_EXTERN i4 pst_parm_resolve(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_QNODE *resdom);
+FUNC_EXTERN bool pst_convlit(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	DB_DATA_VALUE *targdv,
+	PST_QNODE *srcenode);
+/* pstrslvtbl.c */
+FUNC_EXTERN i4 pst_resolve_table(
+	DB_TEXT_STRING *obj_owner,
+	DB_TEXT_STRING *obj_name,
+	DB_TEXT_STRING *out);
+/* pstrules.c */
+FUNC_EXTERN i4 pst_ruledup(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	i4 filter,
+	char *col_mask,
+	PST_STATEMENT *stmt_tree,
+	PST_STATEMENT **stmt_dup,
+	DB_ERROR *err_blk);
+/* pstshwtab.c */
+FUNC_EXTERN i4 pst_showtab(
+	PSS_SESBLK *sess_cb,
+	i4 showtype,
+	DB_TAB_NAME *tabname,
+	DB_TAB_OWN *tabown,
+	DB_TAB_ID *tabid,
+	bool tabonly,
+	PSS_RNGTAB *rngentry,
+	i4 query_mode,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_dbpshow(
+	PSS_SESBLK *sess_cb,
+	DB_DBP_NAME *dbpname,
+	PSS_DBPINFO **dbpinfop,
+	DB_OWN_NAME *dbp_owner,
+	DB_TAB_ID *dbp_id,
+	i4 dbp_mask,
+	PSQ_CB *psq_cb,
+	i4 *ret_flags);
+FUNC_EXTERN i4 pst_add_1indepobj(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_ID *obj_id,
+	i4 obj_type,
+	DB_DBP_NAME *dbpname,
+	PSQ_OBJ **obj_list,
+	PSF_MSTREAM *mstream,
+	DB_ERROR *err_blk);
+FUNC_EXTERN void pst_rdfcb_init(
+	RDF_CB *rdf_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 pst_ldbtab_desc(
+	PSS_SESBLK *sess_cb,
+	QED_DDL_INFO *ddl_info,
+	PSF_MSTREAM *mem_stream,
+	i4 flag,
+	DB_ERROR *err_blk);
+/* pstsort.c */
+FUNC_EXTERN i4 pst_sdir(
+	PST_QNODE *node,
+	char *direction,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 pst_expsort(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	PST_QNODE *tlist,
+	PST_QNODE **sort_list,
+	char *expname,
+	PST_QNODE **newnode,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 pst_varsort(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	PST_QNODE *tlist,
+	PST_QNODE **sort_list,
+	register PSS_RNGTAB *rngvar,
+	char *colname,
+	PST_QNODE **newnode,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 pst_numsort(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	PST_QNODE *tlist,
+	PST_QNODE **sort_list,
+	i2 *expnum,
+	PST_QNODE **newnode,
+	PSQ_CB *psq_cb);
+FUNC_EXTERN i4 pst_sqlsort(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *stream,
+	PST_QNODE *tlist,
+	PST_QNODE *intolist,
+	PST_QNODE **sort_list,
+	PST_QNODE *expnode,
+	PST_QNODE **newnode,
+	PSQ_CB *psq_cb,
+	PSS_RNGTAB **rng_vars);
+/* psttprpnd.c */
+#include "psttprpnd.h"
+/* psttrdup.c */
+FUNC_EXTERN i4 pst_trdup(
+	PTR stream,
+	PST_QNODE *tree,
+	PST_QNODE **dup,
+	SIZE_TYPE *memleft,
+	DB_ERROR *err_blk);
+/* psttrefix.c */
+FUNC_EXTERN i4 pst_trfix(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	PST_QNODE *qtree,
+	DB_ERROR *err_blk);
+/* pstwindup.c */
+#include "pstwindup.h"
+
+/* psyalarm.c */
+FUNC_EXTERN i4 psy_alarm(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_calarm(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_kalarm(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psyaplid.c */
+FUNC_EXTERN i4 psy_aplid(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_caplid(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_aaplid(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_kaplid(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psyaudit.c - see psyaudit.h */
+/* psycomment.c */
+FUNC_EXTERN i4 psy_comment(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psydbpriv.c */
+FUNC_EXTERN i4 psy_dbpriv(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_ckdbpr(
+	PSQ_CB *psq_cb,
+	u_i4 dbprmask);
+/* psydbproc.c */
+FUNC_EXTERN i4 psy_cproc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_kproc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_gproc(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb,
+	QSF_RCB *qsf_rb,
+	RDF_CB *rdf_cb,
+	DB_OWN_NAME **alt_user,
+	DB_OWN_NAME *dbp_owner,
+	i4 gproc_mask,
+	i4 *ret_flags);
+/* psydgrant.c */
+FUNC_EXTERN i4 psy_dgrant(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN bool psy_permit_ok(
+	i4 obj_mask,
+	PSS_SESBLK *cb,
+	DB_OWN_NAME *obj_owner);
+FUNC_EXTERN void psy_prvmap_to_str(
+	i4 privs,
+	char *priv_str,
+	DB_LANG lang);
+FUNC_EXTERN void psy_init_rel_map(
+	PSQ_REL_MAP *map);
+FUNC_EXTERN void psy_attmap_to_str(
+	DMT_ATT_ENTRY **attr_descr,
+	PSY_ATTMAP *attr_map,
+	register i4 *offset,
+	char *str,
+	i4 str_len);
+FUNC_EXTERN i4 psy_dbp_status(
+	PSY_TBL *dbp_descr,
+	PSS_SESBLK *sess_cb,
+	PSF_QUEUE *grant_dbprocs,
+	i4 qmode,
+	i4 *dbp_mask,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_dbp_priv_check(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	DB_DBP_NAME *dbpname,
+	DB_TAB_ID *dbpid,
+	bool *non_existant_dbp,
+	bool *missing_obj,
+	i4 *dbp_mask,
+	i4 *privs,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_tbl_grant_check(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	DB_TAB_ID *grant_obj_id,
+	i4 *tbl_wide_privs,
+	PSY_COL_PRIVS *col_specific_privs,
+	DB_TAB_ID *indep_id,
+	i4 *indep_tbl_wide_privs,
+	PSY_COL_PRIVS *indep_col_specific_privs,
+	i4 psy_flags,
+	bool *insuf_privs,
+	bool *quel_view,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_check_privs(
+	PSS_RNGTAB *rngvar,
+	i4 *privs_to_find,
+	i4 indep_tbl_wide_privs,
+	PSY_COL_PRIVS *indep_col_specific_privs,
+	PSS_SESBLK *sess_cb,
+	bool ps131,
+	DB_TAB_ID *grant_obj_id,
+	i4 flags,
+	i4 *fully_satisfied,
+	DB_ERROR *err_blk);
+FUNC_EXTERN void psy_prv_att_map(
+	char *attmap,
+	bool exclude_cols,
+	i4 *attr_nums,
+	i4 num_cols);
+/* psydint.c - see psydint.h */
+/* psydperm.c */
+FUNC_EXTERN i4 psy_dpermit(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_sqlview(
+	PSS_RNGTAB *rngvar,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	i4 *issql);
+/* psydschm.c */
+FUNC_EXTERN i4 psy_dschema(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psyevent.c */
+FUNC_EXTERN i4 psy_devent(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_kevent(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_gevent(
+	PSS_SESBLK *sess_cb,
+	DB_OWN_NAME *event_own,
+	DB_TAB_NAME *event_name,
+	DB_TAB_ID *ev_id,
+	i4 ev_mask,
+	PSS_EVINFO *ev_info,
+	i4 *ret_flags,
+	i4 *privs,
+	i4 qmode,
+	i4 grant_all,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_evperm(
+	RDF_CB *rdf_cb,
+	i4 *privs,
+	PSS_SESBLK *sess_cb,
+	PSS_EVINFO *ev_info,
+	i4 qmode,
+	i4 grant_all,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_evraise(
+	PSS_SESBLK *sess_cb,
+	DB_EVENT_NAME *evname,
+	DB_OWN_NAME *evowner,
+	char *evtext,
+	i4 ev_l_text,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_evget_by_id(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_ID *ev_id,
+	DB_IIEVENT *evtuple,
+	DB_ERROR *err_blk);
+/* psygroup.c */
+FUNC_EXTERN i4 psy_group(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_cgroup(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_agroup(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_dgroup(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_kgroup(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psyinteg.c */
+FUNC_EXTERN i4 psy_integ(
+	PSF_MSTREAM *mstream,
+	PST_QNODE *root,
+	PSS_USRRANGE *rngtab,
+	PSS_RNGTAB *resvar,
+	i4 qmode,
+	PSS_SESBLK *sess_cb,
+	PST_QNODE **result,
+	DB_ERROR *err_blk);
+/* psykintg.c */
+FUNC_EXTERN i4 psy_kinteg(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psykperm.c */
+FUNC_EXTERN i4 psy_kpermit(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psykview.c - see psykview.h */
+/* psyloc.c */
+FUNC_EXTERN i4 psy_loc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_cloc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_aloc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_kloc(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psymapvar.c */
+FUNC_EXTERN i4 psy_mapvars(
+	PST_QNODE *tree,
+	i4 map[],
+	DB_ERROR *err_blk);
+/* psymxqry.c */
+FUNC_EXTERN i4 psy_maxquery(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psypermit.c */
+FUNC_EXTERN i4 psy_protect(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	PST_QNODE *tree,
+	i4 qmode,
+	DB_ERROR *err_blk,
+	PSF_MSTREAM *mstream,
+	i4 *num_joins,
+	PSY_VIEWINFO *viewinfo[]);
+FUNC_EXTERN i4 psy_dbpperm(
+	PSS_SESBLK *sess_cb,
+	RDF_CB *rdf_cb,
+	PSQ_CB *psq_cb,
+	i4 *required_privs);
+FUNC_EXTERN i4 psy_cpyperm(
+	PSS_SESBLK *cb,
+	i4 perms_required,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 proappl(
+	register DB_PROTECTION *protup,
+	bool *result,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 prochk(
+	i4 privs,
+	i4 *domset,
+	register DB_PROTECTION *protup,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_do_alarm_fail(
+	PSS_SESBLK *sess_cb,
+	PSS_RNGTAB *rngvar,
+	i4 qmode,
+	DB_ERROR *err_blk);
+FUNC_EXTERN void psy_att_map(
+	PST_QNODE *t,
+	i4 rgno,
+	char *attrmap);
+FUNC_EXTERN void psy_fill_attmap(
+	register i4 *map,
+	register i4 val);
+FUNC_EXTERN i4 psy_grantee_ok(
+	PSS_SESBLK *sess_cb,
+	DB_PROTECTION *protup,
+	bool *applies,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_insert_objpriv(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_ID *objid,
+	i4 objtype,
+	i4 privmap,
+	PSF_MSTREAM *mstream,
+	PSQ_OBJPRIV **priv_list,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_insert_colpriv(
+	PSS_SESBLK *sess_cb,
+	DB_TAB_ID *tabid,
+	i4 objtype,
+	register i4 *attrmap,
+	i4 privmap,
+	PSF_MSTREAM *mstream,
+	PSQ_COLPRIV **priv_list,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_check_objprivs(
+	PSS_SESBLK *sess_cb,
+	i4 *required_privs,
+	PSQ_OBJPRIV **priv_descriptor,
+	PSQ_OBJPRIV **priv_list,
+	bool *missing,
+	DB_TAB_ID *id,
+	PSF_MSTREAM *mstream,
+	i4 obj_type,
+	DB_ERROR *err_blk);
+/* psyprint.c */
+FUNC_EXTERN i4 psy_print(
+	PSF_MSTREAM *mstream,
+	i4 map[],
+	PSY_QTEXT **block,
+	unsigned char *text,
+	i4 length,
+	PSS_USRRANGE *rngtab,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_put(
+	PSF_MSTREAM *mstream,
+	register char *inbuf,
+	register i4 len,
+	PSY_QTEXT **block,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_txtalloc(
+	PSF_MSTREAM *mstream,
+	PSY_QTEXT **newblock,
+	DB_ERROR *err_blk);
+/* psyqrymod.c */
+FUNC_EXTERN i4 psy_qrymod(
+	PST_QNODE *qtree,
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PST_J_ID *num_joins,
+	i4 *resp_mask);
+FUNC_EXTERN i4 psy_qminit(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSF_MSTREAM *mstream);
+/* psyrereg.c - see psyrereg.h */
+/* psyrevoke.c */
+FUNC_EXTERN i4 psy_revoke(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_v2b_col_xlate(
+	DB_TAB_ID *view_id,
+	i4 *view_attrmap,
+	DB_TAB_ID *base_id,
+	i4 *base_attrmap);
+FUNC_EXTERN i4 psy_b2v_col_xlate(
+	DB_TAB_ID *view_id,
+	i4 *view_attrmap,
+	DB_TAB_ID *base_id,
+	i4 *base_attrmap);
+/* psyrpriv.c */
+FUNC_EXTERN i4 psy_rolepriv(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psyrules.c */
+FUNC_EXTERN i4 psy_drule(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_krule(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN void psy_rl_coalesce(
+	PST_STATEMENT **list1p,
+	PST_STATEMENT *list2);
+FUNC_EXTERN i4 psy_rules(
+	PSS_SESBLK *sess_cb,
+	i4 qmode,
+	PST_QNODE *root,
+	DB_ERROR *err_blk);
+/* psyseq.c */
+FUNC_EXTERN i4 psy_csequence(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_dsequence(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_asequence(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_gsequence(
+	PSS_SESBLK *sess_cb,
+	DB_OWN_NAME *seq_own,
+	DB_NAME *seq_name,
+	i4 seq_mask,
+	PSS_SEQINFO *seq_info,
+	DB_IISEQUENCE *seqp,
+	i4 *ret_flags,
+	i4 *privs,
+	i4 qmode,
+	i4 grant_all,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_seqperm(
+	RDF_CB *rdf_cb,
+	i4 *privs,
+	PSS_SESBLK *sess_cb,
+	PSS_SEQINFO *seq_info,
+	i4 qmode,
+	i4 grant_all,
+	DB_ERROR *err_blk);
+/* psysynonym.c */
+FUNC_EXTERN i4 psy_create_synonym(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_drop_synonym(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psytrscan.c */
+FUNC_EXTERN i4 psy_vfind(
+	u_i2 vn,
+	PST_QNODE *vtree,
+	PST_QNODE **result,
+	DB_ERROR *err_blk);
+FUNC_EXTERN PST_QNODE *psy_qscan(
+	PST_QNODE *tree,
+	i4 vn,
+	u_i2 an);
+FUNC_EXTERN void psy_varset(
+	PST_QNODE *tree,
+	PST_VRMAP *bitmap);
+FUNC_EXTERN i4 psy_subsvars(
+	PSS_SESBLK *cb,
+	PST_QNODE **proot,
+	PSS_RNGTAB *rngvar,
+	PST_QNODE *transtree,
+	i4 vmode,
+	PST_QNODE *vqual,
+	PSS_RNGTAB *resvar,
+	PST_J_MASK *from_list,
+	i4 qmode,
+	DB_CURSOR_ID *cursid,
+	i4 *mask,
+	PSS_DUPRB *dup_rb);
+FUNC_EXTERN void psy_vcount(
+	PST_QNODE *tree,
+	PST_VRMAP *bitmap);
+/* psyuser.c */
+FUNC_EXTERN i4 psy_user(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_cuser(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_auser(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+FUNC_EXTERN i4 psy_kuser(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+/* psyutil.c */
+FUNC_EXTERN PST_QNODE *psy_trmqlnd(
+	PST_QNODE *qual);
+FUNC_EXTERN i4 psy_apql(
+	PSS_SESBLK *cb,
+	PSF_MSTREAM *mstream,
+	PST_QNODE *qual,
+	PST_QNODE *root,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_mrgvar(
+	PSS_USRRANGE *rngtab,
+	register i4 a,
+	register i4 b,
+	PST_QNODE *root,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_error(
+	i4 errorno,
+	i4 qmode,
+	PSS_RNGTAB *rngvar,
+	DB_ERROR *err_blk,
+	...);
+/* psyview.c */
+FUNC_EXTERN i4 psy_view(
+	PSF_MSTREAM *mstream,
+	PST_QNODE *root,
+	PSS_USRRANGE *rngtab,
+	i4 qmode,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	PST_J_ID *num_joins,
+	i4 *resp_mask);
+FUNC_EXTERN i4 psy_vrscan(
+	i4 with_check,
+	PST_QNODE *root,
+	PST_QNODE *vtree,
+	i4 qmode,
+	PSS_RNGTAB *resvar,
+	i4 *rgno,
+	DB_ERROR *err_blk);
+FUNC_EXTERN i4 psy_translate_nmv_map(
+	PSS_RNGTAB *parent,
+	char *parent_attrmap,
+	i4 rel_rgno,
+	char *rel_attrmap,
+	void (*treewalker)(PST_QNODE*, i4, char*),
+	DB_ERROR *err_blk);
+FUNC_EXTERN bool psy_view_is_updatable(
+	PST_QTREE *tree_header,
+	i4 qmode,
+	i4 *reason);
+FUNC_EXTERN i4 psy_ubtid(
+	PSS_RNGTAB *rngvar,
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	DB_TAB_ID *ubt_id);
 #endif /*__PSHPARSE_H_INC*/
 

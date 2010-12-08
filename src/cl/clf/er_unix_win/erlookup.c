@@ -112,6 +112,8 @@
 **          Will be revisited and submitted at a later date. 
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.  Move DESCRIPTOR defn to erloc.h.
 **/
 
 
@@ -162,30 +164,12 @@
 */
 
 
-/*}
-** Name: DESCRIPTOR - A message string descriptor.
-**
-** Description:
-**      A structure describing a variable length item in a message string system
-**	call.
-**
-** History:
-**     02-oct-1985 (derek)
-**          Created new for 5.0.
-*/
-typedef struct _DESCRIPTOR
-{
-    int             desc_length;        /* Length of the item. */
-    char            *desc_value;        /* Pointer to item. */
-}   DESCRIPTOR;
-
-
 /*
 **  Definition of static variables and forward static functions.
 */
 
-static  STATUS      er_exhandler();     /* Exception handler to catch any
-					** exceptions caused by message 
+static STATUS er_exhandler( EX_ARGS *ex_args ); /* Exception handler to catch
+					** any exceptions caused by message
 					** parameter processing.  This can
 					** happen when the message thinks
 					** there are more parameters than

@@ -190,6 +190,8 @@ NEEDLIBS = COMPAT MALLOCLIB
 **          from STATUS* to CL_ERR_DESC*.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	14-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 */
 
 # include <compat.h>
@@ -300,12 +302,18 @@ i4  Freesticks[ N ];
 
 /* function forward refs */
 
-VOID logger();
-char *maperr();
+static void eats( i4 n );
+static void thinks( i4 n );
+static VOID logger( i4 errnum, CL_ERR_DESC *arg1, i4 numargs, ... );
+static char *maperr(i4 );
+static void semerr( i4 rv, CS_SEMAPHORE *sp, char *msg );
+static i4 Psem( CS_SEMAPHORE *sp );
+static i4 Vsem( CS_SEMAPHORE *sp );
 
 /* ---------------- actual application ---------------- */
 
 # ifdef EX_DEBUG
+static void
 intfunc()
 {
 	SIfprintf(stderr, "Signal #%d received, continue processing\n", 
@@ -315,8 +323,8 @@ intfunc()
 
 /* get sticks for philosopher n */
 
-getsticks( n )
-i4  n;
+static void
+getsticks( i4 n )
 {
     /*
     ** While you can't get both sticks, give control to others who
@@ -350,8 +358,8 @@ i4  n;
 
 /* release sticks held by philosopher n */
 
-freesticks( n )
-i4  n;
+static void
+freesticks( i4 n )
 {
     Psem( &Freesem );
 
@@ -371,11 +379,10 @@ i4  n;
 
 /* A philsopher thread function, called out of CSdispatch */
 
-philosopher( mode, scb, next_mode )
-i4  mode;
-MY_SCB *scb;
-i4  *next_mode;
+static STATUS
+philosopher( i4 mode, CS_SCB *csscb, i4 *next_mode )
 {
+    MY_SCB *scb = (MY_SCB *) csscb;
     i4  bites = 0;
 
     switch( mode )
@@ -436,8 +443,8 @@ i4  *next_mode;
 
 /* Observe that philosopher n is eating */
 
-eats( n )
-i4  n;
+static void
+eats( i4 n )
 {
     i4 on, nn;
 
@@ -468,8 +475,8 @@ i4  n;
 
 /* Observe that philosopher n is thinking */
 
-thinks( n )
-i4  n;
+static void
+thinks( i4 n )
 {
     if( Noisy )
     {
@@ -490,8 +497,9 @@ i4  n;
 **	Setup global variables and add threads for each philosopher.
 **	Called by CSinitialize before threads are started
 */
-hello( csib )
-CS_INFO_CB *csib;
+
+static STATUS
+hello( CS_INFO_CB *csib )
 {
     i4  i;
     STATUS stat;
@@ -531,7 +539,8 @@ CS_INFO_CB *csib;
 
 /* Called when all thread functions return from the TERMINATE state */
 
-bye()
+static STATUS
+bye(void)
 {
     /* semaphore needed, called when all threads are dead */
     if( Noisy )
@@ -554,8 +563,8 @@ bye()
 
 /* request and wait for semaphore */
 
-Psem( sp )
-CS_SEMAPHORE *sp;
+static i4
+Psem( CS_SEMAPHORE *sp )
 {
     i4  rv;
 
@@ -566,8 +575,8 @@ CS_SEMAPHORE *sp;
 
 /* release a semaphore */
 
-Vsem( sp )
-CS_SEMAPHORE *sp;
+static i4
+Vsem( CS_SEMAPHORE *sp )
 {
     i4  rv;
 
@@ -578,10 +587,8 @@ CS_SEMAPHORE *sp;
 
 /* decode semaphore error */
 
-semerr( rv, sp, msg )
-i4  rv;
-CS_SEMAPHORE *sp;
-char *msg;
+static void
+semerr( i4 rv, CS_SEMAPHORE *sp, char *msg )
 {
     MY_SCB *scb;
 
@@ -603,8 +610,7 @@ char *msg;
 /* If we get semaphore errors, do simple decoding */
 
 char *
-maperr( rv )
-i4  rv;
+maperr( i4 rv )
 {
     switch( rv )
     {
@@ -617,26 +623,36 @@ i4  rv;
     case E_CS000A_NO_SEMAPHORE:
         return "E_CS000A_NO_SEMAPHORE";
 
-    case OK:
+    default:
 	return "";
     }
 }
 
 /* log function, called as the output when needed */
 
-VOID
-logger( errnum, arg1, arg2 )
-i4  errnum;
-CL_ERR_DESC* arg1;
-i4  arg2;
+static VOID
+logger( i4 errnum, CL_ERR_DESC *dum, i4 numargs, ... )
 {
     char buf[ ER_MAX_LEN ];
+    va_list args;
 
     if( ERreport( errnum, buf ) == OK )
     	SIfprintf(stderr, "%s\n", buf);
     else
+    {
+	char *arg1 = "";
+	i4 arg2 = 0;
+	if (numargs > 0)
+	{
+	    va_start(args, numargs);
+	    arg1 = va_arg(args, char *);
+	    if (numargs > 1)
+		arg2 = va_arg(args, i4);
+	    va_end(args);
+	}
 	SIfprintf(stderr, "ERROR %d (%x), %s %d\n", 
 		errnum, errnum, arg1, arg2 );
+    }
     if(errnum != E_CS0018_NORMAL_SHUTDOWN)
 	PCexit(FAIL);
     PCexit(OK);
@@ -647,42 +663,52 @@ i4  arg2;
 **
 ** 'type', passed by 6.1 CS, is ignored here for compatibility with 6.0 CS.
 */
-newscbf( newscb, crb, type )
-MY_SCB **newscb;
-PTR crb;
-i4  type;
+static STATUS
+newscbf( CS_SCB **newscb, void *crb, i4 type )
 {
     /* god this is ugly, making us store type here... */
 
-    *newscb = (MY_SCB*) calloc( 1, sizeof( **newscb ) );
+    *(MY_SCB **)newscb = (MY_SCB*) calloc( 1, sizeof( **newscb ) );
     return( NULL == *newscb );
 }
 
 /* release an scb */
 
-freescb( oldscb )
-MY_SCB *oldscb;
+static STATUS
+freescb( CS_SCB *oldscb )
 {
     free( oldscb );
+    return (OK);
 }
 
 /* Function used when CS_CB insists on having one and we don't care */
 
-fnull()
+static STATUS
+fnull1(void *dum1, i4 dum2)
 {
-    return( OK );
+    return (OK);
 }
 
-VOID
-vnull()
+static STATUS
+fnull2(i4 dum1, CS_SCB *dum2)
+{
+    return (OK);
+}
+static STATUS
+fnull3(CS_SCB *dum1, char *dum2, i4 dum3, i4 dum4)
+{
+    return (OK);
+}
+
+static VOID
+vnull(CS_SCB *dum)
 {
 }
 
 /* Function needed for read and write stub */
 
-rwnull( scb, sync )
-MY_SCB *scb;
-i4  sync;
+static STATUS
+rwnull( CS_SCB *dummy, i4 sync )
 {
     CS_SID sid;
 
@@ -691,6 +717,11 @@ i4  sync;
     return( OK );
 }
 
+static i4
+pidnull(void)
+{
+    return (1234);
+}
 
 /* Set up philosopher threads and run them.  No args accepted. */
 
@@ -700,7 +731,6 @@ char	*argv[];
 {
     CS_CB 	cb;
     i4  	rv;
-    i4  	err_code;
     i4  	f_argc;
     char 	**f_argv,*f_arr[3];
     CL_ERR_DESC syserr;
@@ -748,21 +778,21 @@ char	*argv[];
     cb.cs_stksize = (8 * 1024);	/* size of stack in bytes */
     cb.cs_scballoc = newscbf;	/* Routine to allocate SCB's */
     cb.cs_scbdealloc = freescb;	/* Routine to dealloc  SCB's */
-    cb.cs_saddr = fnull;	/* Routine to await session requests */
-    cb.cs_reject = fnull;	/* how to reject connections */
+    cb.cs_saddr = fnull1;	/* Routine to await session requests */
+    cb.cs_reject = fnull1;	/* how to reject connections */
     cb.cs_disconnect = vnull;	/* how to dis- connections */
     cb.cs_read = rwnull;	/* Routine to do reads */
     cb.cs_write = rwnull;	/* Routine to do writes */
     cb.cs_process = philosopher; /* Routine to do major processing */
-    cb.cs_attn = fnull;		/* Routine to process attn calls */
+    cb.cs_attn = fnull2;	/* Routine to process attn calls */
     cb.cs_elog = logger;	/* Routine to log errors */
     cb.cs_startup = hello;	/* startup the server */
     cb.cs_shutdown = bye;	/* shutdown the server */
-    cb.cs_format = fnull;	/* format scb's */
-    cb.cs_get_rcp_pid = fnull;   /* init to fix SEGV in CSMTp_semaphore*/
-    cb.cs_scbattach = vnull;     /* init to fix SEGV in CSMT_setup */
-    cb.cs_scbdetach = vnull;     /* init to fix SEGV in CSMT_setup */
-    cb.cs_stkcache = FALSE;     /* Match csoptions default - no stack caching */
+    cb.cs_format = fnull3;	/* format scb's */
+    cb.cs_get_rcp_pid = pidnull; /* init to fix SEGV in CSMTp_semaphore*/
+    cb.cs_scbattach = vnull;	/* init to fix SEGV in CSMT_setup */
+    cb.cs_scbdetach = vnull;	/* init to fix SEGV in CSMT_setup */
+    cb.cs_stkcache = FALSE;	/* Match csoptions default - no stack caching */
     cb.cs_format_lkkey = NULL;  /* Not used in this context. */
 
     /* now fudge argc and argv for CSinitiate */

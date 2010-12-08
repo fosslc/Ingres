@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2009 Ingres Corporation All Rights Reserved.
+** Copyright (c) 2009, 2010 Ingres Corporation All Rights Reserved.
 */
 
 package	com.ingres.gcf.jdbc;
@@ -30,6 +30,8 @@ package	com.ingres.gcf.jdbc;
 **            JDBC 4.0 SQLException hierarchy.
 **      13-Apr-09 (rajus01) SIR 121238
 **          This class now implements NClob to support NCS datatype.
+**	16-Nov-10 (gordy)
+**	    Added LOB locator streaming access.
 */
 
 import	java.io.InputStream;
@@ -313,6 +315,10 @@ position( Clob pattern, long start )
 **	    Created.
 **	26-Feb-07 (gordy)
 **	    Set buffer size.  Request deferred stream.
+**	16-Nov-10 (gordy)
+**	    LOB locator access can either be done in separate
+**	    requests for individual segments or as a single
+**	    streaming data request.
 */
 
 public InputStream
@@ -324,8 +330,11 @@ getAsciiStream()
     /*
     ** Generate a character stream representing the LOB
     ** and wrap it with a buffer to improve access.
+    **
+    ** Access can either be streaming or segmented.
     */
-    Reader rdr = new BufferedReader( super.getCharStream( false ),
+    boolean segment = ((conn.cnf_flags & conn.CNF_LOC_STRM) == 0);
+    Reader rdr = new BufferedReader( super.getCharStream( segment ),
 				     conn.cnf_lob_segSize );
 
     /*
@@ -357,6 +366,10 @@ getAsciiStream()
 **	    Created.
 **	26-Feb-07 (gordy)
 **	    Set buffer size.  Request deferred stream.
+**	16-Nov-10 (gordy)
+**	    LOB locator access can either be done in separate
+**	    requests for individual segments or as a single
+**	    streaming data request.
 */
 
 public Reader
@@ -368,8 +381,11 @@ getCharacterStream()
     /*
     ** Generate a character stream to represent the LOB
     ** and wrap it with a buffer to improve access.
+    **
+    ** Access can either be streaming or segmented.
     */
-    return( new BufferedReader( super.getCharStream( false ),
+    boolean segment = ((conn.cnf_flags & conn.CNF_LOC_STRM) == 0);
+    return( new BufferedReader( super.getCharStream( segment ),
 				conn.cnf_lob_segSize ) );
 } // getCharacterStream
 
@@ -398,6 +414,10 @@ getCharacterStream()
 **          Created.
 **	18-Jun-09 (rajus01)
 **	    Implemented.
+**	16-Nov-10 (gordy)
+**	    LOB locator access can either be done in separate
+**	    requests for individual segments or as a single
+**	    streaming data request.
 */
 
 public Reader
@@ -415,8 +435,11 @@ throws SQLException
     /*
     ** Generate a character stream to represent the LOB
     ** and wrap it with a buffer to improve access.
+    **
+    ** Access can either be streaming or segmented.
     */
-    return( new BufferedReader( super.getCharStream( pos, len ),
+    boolean segment = ((conn.cnf_flags & conn.CNF_LOC_STRM) == 0);
+    return( new BufferedReader( super.getCharStream( segment, pos, len ),
 				conn.cnf_lob_segSize ) );
 } // getCharacterStream
 
@@ -446,6 +469,10 @@ throws SQLException
 ** History:
 **	26-Feb-07 (gordy)
 **	    Created.
+**	16-Nov-10 (gordy)
+**	    Changed meaning of getByteStream() parameter.  Access is
+**	    always deferred until InputStream is accessed.  Access
+**	    can be segmented or streaming.  The latter is used here.
 */
 
 public Reader
@@ -453,7 +480,7 @@ get()
     throws SQLException
 {
     isValid();
-    return( super.getCharStream( true ) );
+    return( super.getCharStream( false ) );
 } // get
 
 

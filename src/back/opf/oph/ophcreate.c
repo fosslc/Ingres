@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 /*
@@ -81,7 +81,16 @@ NO_OPTIM =  sos_us5 i64_aix
 **	    replace nat and longnat with i4
 **	16-aug-2001 (toumi01)
 **	    speculative i64_aix NO_OPTIM change for beta xlc_r - FIXME !!!
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+OPH_HISTOGRAM *oph_create(
+	OPS_SUBQUERY *subquery,
+	OPH_HISTOGRAM *hp,
+	OPN_PERCENT initfact,
+	OPE_IEQCLS eqcls);
 
 /*{
 ** Name: oph_create	- create a normalized histogram

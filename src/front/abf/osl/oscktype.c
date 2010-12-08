@@ -253,9 +253,13 @@ oschktypes ( DB_DT_ID rtype, DB_DT_ID ltype )
 **      30-Oct-07 (kiria01) b117790
 **          Having introduced more number-string coercions, the assumption
 **          below has
+**	23-Nov-2010 (gupsh01) SIR 124685
+**	    Protype cleanup.
 */
-
-DB_STATUS	adi_ficoerce();		 
+DB_STATUS	adi_ficoerce(ADF_CB *adf_scb,
+			     DB_DT_ID	adi_from_did,
+			     DB_DT_ID	adi_into_did,
+			     ADI_FI_ID  *adi_fid);		 
 
 bool
 oschkstr ( DB_DT_ID type )

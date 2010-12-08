@@ -70,13 +70,15 @@
 **	10-Sep-2008 (jonj)
 **	    SIR 120874: Use CLRDBERR, SETDBERR to value DB_ERROR structure.
 **	    Use new form of uleFormat().
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Fix declaration of gwf_handler()
 */
 
 /*
 ** Definition of static variables and forward static functions.
 */
 
-static	STATUS	gwf_handler();	/* GWF catch-all exception handler. */
+static	STATUS	gwf_handler(EX_ARGS *ex_args);	/* GWF catch-all exception handler. */
 
 /*{
 ** Name: gwf_call	- Primary GWF entry point.

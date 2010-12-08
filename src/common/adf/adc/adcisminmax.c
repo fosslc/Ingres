@@ -164,19 +164,14 @@ GLOBALREF   u_char    *Bit_max;
 ** History:
 **	30-jul-90 (linda)
 **	    Written.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_isminmax(
 ADF_CB         *adf_scb,
 DB_DATA_VALUE  *adc_dv)
-# else
-DB_STATUS
-adc_isminmax( adf_scb, adc_dv)
-ADF_CB         *adf_scb;
-DB_DATA_VALUE  *adc_dv;
-# endif
 {
     i4			dt;
     i4			bdt;
@@ -301,6 +296,8 @@ DB_DATA_VALUE  *adc_dv;
 **          Argument is now a nat.  See adf.h for details.
 **	12-may-04 (inkdo01)
 **	    Added support for bigint.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Ensure whole DBV copied.
 */
 
 DB_STATUS
@@ -591,6 +588,7 @@ DB_DATA_VALUE	    *adc_dv)
 	      bit_dv.db_datatype = dt;
 	      bit_dv.db_length = len;
 	      bit_dv.db_prec = adc_dv->db_prec;
+	      bit_dv.db_collID = DB_NOCOLLATION;
 
 	      bit_dv.db_data = (PTR) Bit_min;
 	      db_stat = adc_compare(adf_scb, adc_dv, &bit_dv, &result);

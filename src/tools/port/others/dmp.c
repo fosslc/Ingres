@@ -15,6 +15,9 @@
 /*      Correctly construct 2 comment lines and a mispelled word            */
 /*      27-July-2000 (musro02)                                              */
 /*      ensure main begins in column 1 so mkming builds MING correctly      */
+/*	17-Nov-2010 (kschendel)
+**	    No need to forward-declare main, caused compiler warnings.
+*/
 /****************************************************************************/
 /*Define Dictionary*/                    /***********************************/
 #include <stdio.h>                       /* Make includes first part of file*/
@@ -31,13 +34,9 @@
 #endif
 
 /****************************************************************************/
-/****************************Function prototypes*****************************/
-main( int argc,   char *argv[],  char *envp[] );
-
-/****************************************************************************/
 /*****************************Program Body***********************************/
 
-main(int argc, char *argv[],  char *envp[])
+main(int argc, char *argv[])
 {
 
       FILE    *fpFilePointer;    /* Pointer to a file */

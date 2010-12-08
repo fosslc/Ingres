@@ -10,6 +10,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 */
 
 /*
@@ -137,9 +139,7 @@ struct spblk
 **	    changed CL_HAS_PROTOS to CL_PROTOTYPED
 */
 typedef i4  SP_COMPARE_FUNC( 
-# ifdef CL_PROTOTYPED
 			const char *key1, const char *key2 
-# endif
 );
 			    
 
@@ -173,7 +173,6 @@ typedef struct
     char	*name;		/* administative name */
 } SPTREE;
 
-# ifdef CL_HAS_PROTOS
 
 FUNC_EXTERN SPTREE *SPinit( SPTREE *t, SP_COMPARE_FUNC *compare );
 FUNC_EXTERN SPBLK *SPhead(SPTREE *t);
@@ -192,26 +191,6 @@ FUNC_EXTERN SPBLK *SPdeq(SPBLK **np);
 FUNC_EXTERN SPBLK *SPenq(SPBLK *n, SPTREE *q);
 
 FUNC_EXTERN VOID SPsplay(SPBLK *n, SPTREE *q);
-
-# else
-
-FUNC_EXTERN SPTREE *SPinit();	/* init tree */
-FUNC_EXTERN SPBLK *SPhead();	/* return first node in tree */
-FUNC_EXTERN VOID SPdelete();	/* delete node from tree */
-FUNC_EXTERN SPBLK *SPhead();	/* fast non-splaying head */
-FUNC_EXTERN SPBLK *SPtail();	/* fast non-splaying tail */
-FUNC_EXTERN SPBLK *SPnext();	/* return next node in tree */
-FUNC_EXTERN SPBLK *SPprev();	/* return previous node in tree */
-FUNC_EXTERN SPBLK *SPlookup();	/* find key in a tree */
-FUNC_EXTERN SPBLK *SPinstall();	/* enter an item, allocating or replacing */
-FUNC_EXTERN SPBLK *SPfhead();	/* fast non-splaying head */
-FUNC_EXTERN SPBLK *SPftail();	/* fast non-splaying tail */
-FUNC_EXTERN SPBLK *SPfnext();	/* fast non-splaying next */
-FUNC_EXTERN SPBLK *SPfprev();	/* fast non-splaying prev */
-FUNC_EXTERN SPBLK *SPdeq();	/* dequeue node */
-FUNC_EXTERN SPBLK *SPenq();	/* enqueue node */
-
-# endif
 
 # endif				/* SPTREE_H */
 

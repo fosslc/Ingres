@@ -100,13 +100,13 @@
 	declare integer constant IISQ_BYTE_TYPE = 23	! Byte - In/Out
 	declare integer constant IISQ_VBYTE_TYPE = 24	! Byte Varying - In/Out
 	declare integer constant IISQ_LBYTE_TYPE = 25	! Long Byte - Out
-	declare integer constant IISQ_GEOM_TYPE = 56;   ! Spatial 
-	declare integer constant IISQ_POINT_TYPE = 57;
-	declare integer constant IISQ_MPOINT_TYPE = 58;
-	declare integer constant IISQ_LINE_TYPE = 59;
-	declare integer constant IISQ_MLINE_TYPE = 61;
-	declare integer constant IISQ_POLY_TYPE = 62;
-	declare integer constant IISQ_MPOLY_TYPE = 63;
-        declare integer constant IISQ_NBR_TYPE = 64;
-	declare integer constant IISQ_GEOMC_TYPE = 65;
+	declare integer constant IISQ_GEOM_TYPE = 56    ! Spatial 
+	declare integer constant IISQ_POINT_TYPE = 57
+	declare integer constant IISQ_MPOINT_TYPE = 58
+	declare integer constant IISQ_LINE_TYPE = 59
+	declare integer constant IISQ_MLINE_TYPE = 61
+	declare integer constant IISQ_POLY_TYPE = 62
+	declare integer constant IISQ_MPOLY_TYPE = 63
+        declare integer constant IISQ_NBR_TYPE = 64
+	declare integer constant IISQ_GEOMC_TYPE = 65
 

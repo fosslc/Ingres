@@ -12,6 +12,7 @@
 # include	<si.h>
 # include	<st.h>
 # include       <me.h>
+# include	<ex.h>
 # include	"pclocal.h"
 # include	<PCerr.h>
 
@@ -149,6 +150,8 @@
 **	    Remove redundant adb feature.
 **      18-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**      15-nov-2010 (stephenb)
+**          Include ex.h for prototyping.
 */
 
 

@@ -28,7 +28,6 @@ C			  258, to match with the IISQD_NAMELEN in
 C			  IISQLDA (iisqlda.h). (hweho01) SIR 121123 
 C       17-aug-2010     - Add spatial IISQ types skipped 60 for SECL 
 C                         consistency. (thich01)
-c
 
 C
 C IISQLVAR - Single element of SQLDA variable as described in manual.

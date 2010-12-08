@@ -10,6 +10,7 @@
 #include    <st.h>
 #include    <tm.h>
 #include    <cm.h>
+#include    <cv.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
 #include    <cui.h>
@@ -754,7 +755,6 @@ bool		from_drop_alarm)
 						** alarm */
     char		obj_type;
     char		*alarm_name;
-    DB_TAB_ID		atab;
     DB_STATUS	    	status, local_status;
     i4	    	error;
     DB_ERROR 		e_error;
@@ -1308,6 +1308,9 @@ qeu_qalarm_by_name(
 ** History:
 **	26-nov-93 (robf)
 **	   Created
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning fixes, CMcpychar not to be used with single letter
+**	    ascii constants.  (array out of bounds warnings.)
 */
 static DB_STATUS
 qeu_gen_alarm_name(
@@ -1332,25 +1335,21 @@ qeu_gen_alarm_name(
     char	id_str[20], *id_p = id_str;
     DB_ERROR	err_blk;
 
-    CMcpychar("$", p);
-    CMnext(p);
+    *p++ = '$';
     for (j = 0; j < 5; j++)
 	CMcpyinc(obj_name, p);
-    CMcpychar("_", p);
-    CMnext(p);
+    *p++ = '_';
     if(obj_type==DBOB_TABLE)
-	CMcpychar("T",p);
+	*p++ = 'T';
     else if(obj_type==DBOB_DATABASE)
-	CMcpychar("D",p);
+	*p++ = 'D';
     else
     {
 	/* Unknown object type */
 	*err_code=E_QE0018_BAD_PARAM_IN_CB;
 	return E_DB_ERROR;
     }
-    CMnext(p);
-    CMcpychar("_", p);
-    CMnext(p);
+    *p++ = '_';
 
     /* convert alarm id into a hex string */
     seedToDigits(alarm_id, id_str, qef_rcb );
@@ -1383,12 +1382,10 @@ qeu_gen_alarm_name(
     }
 
     /* blank pad */
-    for (p = alarm_name + len_trans, limit = alarm_name + DB_ALARM_MAXNAME;
-	 p < limit;
-	 CMnext(p))
-    {
-	CMcpychar(" ", p);
-    }
+    p = alarm_name + len_trans;
+    limit = alarm_name + DB_ALARM_MAXNAME;
+    while (p < limit)
+	*p++ = ' ';
 
     return(E_DB_OK);
 }	

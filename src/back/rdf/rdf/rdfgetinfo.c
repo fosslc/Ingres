@@ -6478,6 +6478,9 @@ rdu_special_proc( char *prcname, char *owner, bool upcase)
 **	17-april-2008 (dougi)
 **	    Re-enable RDR_BY_ID for procedures until we figure out why it was
 **	    disabled. It is very useful for table procedures.
+**	27-May-2010 (wanfr01)
+**	    Bug 123824 - rdf_shared_sessions needs to be initialized to 1
+**	    during procedure initialization.
 */
 
 static DB_STATUS
@@ -6912,6 +6915,7 @@ rdu_procedure(	RDF_GLOBAL         *global,
 		rdf_ulhobject->rdf_sprocedure_parameter = RDF_SNOTINIT;
 		rdf_ulhobject->rdf_procedure = NULL;
 		rdf_ulhobject->rdf_defaultptr = NULL;
+		rdf_ulhobject->rdf_shared_sessions = 1;
 		global->rdf_ulhobject = rdf_ulhobject; /* save ptr
 				    ** to the resource which is to be updated */
 		rdf_ulhobject->rdf_sysinfoblk = (RDR_INFO *)

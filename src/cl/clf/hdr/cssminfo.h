@@ -131,11 +131,16 @@
 **	    Update some of the function declarations to fix gcc 4.3 problems.
 **	29-Sep-2009 (frima01) 121804
 **	    Add CS_get_cb_dbg prototype to avoid warnings from gcc 4.3
+**	15-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 # ifndef CLCONFIG_H_INCLUDED
         error "didn't include clconfig.h before cssminfo.h"
 # endif
+
+#include <pc.h>
+
 
 # ifdef xCL_NEED_SEM_CLEANUP
 # include <lo.h>
@@ -156,12 +161,24 @@ typedef struct _CS_SHM_IDS CS_SHM_IDS;
 */
 
 FUNC_EXTERN VOID CS_get_cb_dbg(PTR     *address);
-FUNC_EXTERN STATUS CS_create_sys_segment(i4, i4, CL_ERR_DESC *);    /* create sys cntrl block seg */
-FUNC_EXTERN STATUS CS_map_sys_segment();       /* map system cntrl block seg */
+FUNC_EXTERN STATUS CS_create_sys_segment(i4, i4, CL_ERR_DESC *);  /* create sys cntrl block seg */
+FUNC_EXTERN STATUS CS_map_sys_segment(CL_ERR_DESC *);  /* map system cntrl block seg */
 FUNC_EXTERN STATUS CS_alloc_serv_segment(SIZE_TYPE, u_i4 *, PTR *, CL_ERR_DESC *);    /* create serv shared mem seg */
 FUNC_EXTERN STATUS CS_map_serv_segment(u_i4, PTR *, CL_ERR_DESC *);      /* map serv shared mem seg. */
 FUNC_EXTERN STATUS CS_destroy_serv_segment(u_i4, CL_ERR_DESC *);  /* destroy serv shared mem seg */
 FUNC_EXTERN bool CS_is_server(i4);
+
+/* Unix or VMS only */
+#ifndef NT_GENERIC
+FUNC_EXTERN void CS_set_server_connect(char *);
+FUNC_EXTERN STATUS CS_find_server_slot(i4 *);
+FUNC_EXTERN STATUS CS_init_pseudo_server(u_i4 *);
+FUNC_EXTERN STATUS CS_des_installation(void);
+FUNC_EXTERN STATUS CS_find_servernum(PID, i4 *);
+FUNC_EXTERN void CS_clockinit(CS_SMCNTRL *);
+#endif
+
+
 # if defined(NT_GENERIC) && defined(IMPORT_DLL_DATA)
 GLOBALDLLREF CS_SMCNTRL *Cs_sm_cb;
 # else              /* NT_GENERIC && IMPORT_DLL_DATA */

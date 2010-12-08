@@ -72,6 +72,8 @@
 **	    Can't get transaction rates but through LG, so they'll
 **	    just show as zero until someone comes up with a better
 **	    idea.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **
 ****************************************************************************/
 
@@ -95,11 +97,13 @@
 
 GLOBALREF CSSAMPLERBLKPTR CsSamplerBlkPtr;
 GLOBALREF HANDLE          hCsSamplerSem;
-GLOBALREF CS_SYSTEM	  Cs_srv_block;
 GLOBALREF char		  CSsamp_index_name[];
 GLOBALREF bool		  CSsamp_stopping;
 
 /* Forward References */
+static u_i4 
+ElfHash(const unsigned char *name);
+
 static VOID
 AddLock( LK_LOCK_KEY	LkKey,
 	 i4 		thread_type );
@@ -437,7 +441,7 @@ CS_sampler(void)
 **
 ****************************************************************************/
 
-u_i4 
+static u_i4 
 ElfHash(const unsigned char *name)
 {
     u_i4 	h = 0,
@@ -454,8 +458,7 @@ ElfHash(const unsigned char *name)
 }
 
 
-static
-VOID
+static VOID
 AddMutex( CS_SEMAPHORE *CsSem,
 	  i4 		thread_type )
 {

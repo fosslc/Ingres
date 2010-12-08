@@ -683,6 +683,9 @@ DM_OBJECT	   *obj)
 **	    Add buf_cr_undo, buf_cr_where to DM0P_BUFFER stuff.
 **	05-Oct-2010 (jonj) B124549
 **	    Add more stuff from the CRIB, show RCB's CRIB.
+**	18-Apr-2010 (wanfr01) b123594
+**	    Display buf_cpprep in DM101 output
+**
 */
 static STATUS
 ex_handler(
@@ -1227,8 +1230,8 @@ TRdisplay("\n%.4s Control Block @0x%p..0x%p owned by 0x%x for %d bytes.\n\n",
 		    b->buf_lock_key.lk_key4,
 		    b->buf_partno);
 		TRdisplay(
-		    "%8* REF=%2d CPCNT=%5d PRI=%2d TYPE=%w HASHB=%d TABB=%d\n",
-		    b->buf_refcount, b->buf_cpcount, b->buf_priority,
+		    "%8* CPPREP = %d, REF=%2d CPCNT=%5d PRI=%2d TYPE=%w HASHB=%d TABB=%d\n",
+		    b->buf_cpprep,b->buf_refcount, b->buf_cpcount, b->buf_priority,
 		    BMCB_PAGE_TYPES, b->buf_type,
 		    b->buf_hash_bucket, 
 		    b->buf_tabq_bucket);

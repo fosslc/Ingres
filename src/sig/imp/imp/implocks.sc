@@ -85,13 +85,15 @@
 ##	    SIR 114907
 ##	    Remove declaration of timebuf as it's not referenced and causes
 ##	    errors on Max OSX
-##
+**	1-Dec-2010 (kschendel)
+**	    Fix warnings (string.h)
 */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include "imp.h"
+#include <string.h>
 
 exec sql include sqlca;
 exec sql include 'impcommon.sc';

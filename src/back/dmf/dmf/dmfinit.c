@@ -329,6 +329,10 @@
 **     02-Apr-2010(hweho01) SIR 122757
 **          Setup svcb_directio_align unconditionally by calling 
 **          DIget_directio_align(). 
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Fixed dmf_sxf_djc() prototype.
+**      16-Nov-2010 (horda03) b124691
+**          Correct AST handling on VMS (use SS$_WASSET to detect if ASTs were enabled)
 [@history_template@]...
 **/
 
@@ -343,7 +347,9 @@ GLOBALREF DMP_DCB *dmf_jsp_dcb;	/* Current DCB  */
 
 static  PTR         dmf_adf_svcb = 0;	/* Adf's server control block */
 static  PTR	    dmf_sxf_svcb = 0;	/* Sxf's server control block */ 
-static  DB_STATUS   dmf_sxf_djc();	/* Dmf/Sxf mapping function */
+static  DB_STATUS   dmf_sxf_djc (	/* Dmf/Sxf mapping function */
+			DM_OPERATION operation,
+			void *control_block );
 static  DML_XCB	    dmf_jsp_xcb; 
 static  DML_SCB	    dmf_jsp_scb;	
 static    STATUS  ex_handler(
@@ -1467,9 +1473,7 @@ dmf_setup_directio(void)
 */
 
 static DB_STATUS
-dmf_sxf_djc (operation, control_block)
-DM_OPERATION        operation;
-PTR		    control_block;
+dmf_sxf_djc ( DM_OPERATION operation, void *control_block )
 {
     DMC_CB	    *cb = (DMC_CB *)control_block;
     DB_STATUS	    status=E_DB_OK;
@@ -1816,9 +1820,9 @@ ex_handler(
 EX_ARGS		    *ex_args)
 {
     i4	    err_code;
+#ifdef VMS
     i4	    status;
 
-#ifdef VMS
     status = sys$setast(0);
 #endif
     
@@ -1838,8 +1842,8 @@ EX_ARGS		    *ex_args)
 
     dmf_svcb->svcb_status |= SVCB_CHECK;
 #ifdef VMS
-    if (status == SS$_WASSET) 
-        sys$setast(1);
+    if (status == SS$_WASSET)
+	sys$setast(1);
 #endif
     return (EXDECLARE);
 }

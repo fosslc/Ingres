@@ -31,6 +31,8 @@
 --#     05-Sep-2008 (lunbr01) Bug/Sir 119985
 --#         Change default statuses for all net protocols except "tcp_ip"
 --#         to OFF for Windows, making it the sole default.
+--#	1-Dec-2010 (kschendel)
+--#	    Fix piccolo dirt at end of file, causing warning.
 --#
 (PROG4PRFX).$.(PROG2PRFX)start.$.gcb:		0, MAX = 1;
 
@@ -123,4 +125,4 @@
 (PROG4PRFX).$.gcb.$.nvlspx.status:       OFF;
 (PROG4PRFX).$.gcb.$.nvlspx.port:         "";
 
-# endif /* NT_GENERIC */<<<<
+# endif /* NT_GENERIC */

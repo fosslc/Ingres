@@ -268,6 +268,10 @@
 **	    Added support for rename table /columns.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.  CMcpychar is not to be used with
+**	    single character constant strings, causes "out of array bounds"
+**	    errors, and is unnecessary.
 **/
 
 /*	definitions needed by the static function declarations	*/
@@ -835,10 +839,10 @@ makeObjectName(
 #define	CHECK_CONSTRAINT		1
 #define	REFERENTIAL_CONSTRAINT		2
 
-static	char	*constraintTypes[ ] =	{
-	"U",			/* unique constraint */
-	"C",			/* check constraint */
-	"R"			/* referential constraint */
+static	char	constraintTypes[ ] =	{
+	'U',			/* unique constraint */
+	'C',			/* check constraint */
+	'R'			/* referential constraint */
 };
 
 #define	TABLE_STUB_LENGTH	5
@@ -853,7 +857,6 @@ qea_constructConstraintName(
 )
 {
     DB_STATUS	status = E_DB_OK;
-    i4		i = 0;
     i4		j;
     char	digitString[ 20 ], *digitStringPtr = digitString;
     u_i4	caseTranslationFlags =
@@ -864,14 +867,11 @@ qea_constructConstraintName(
     u_i4	untranslatedStringLength, translatedStringLength;
     char	*limit;
 
-    CMcpychar("$", p);
-    CMnext(p);
+    *p++ = '$';
     for ( j = 0; j < TABLE_STUB_LENGTH; j++ )
     {	CMcpyinc( tableName, p ); }
-    CMcpychar("_", p);
-    CMnext(p);
-    CMcpychar( constraintTypes[ constraintType ], p );
-    CMnext(p);
+    *p++ = '_';
+    *p++ = constraintTypes[ constraintType ];
 
     /* turn CONSTRAINT ID into a string of hex digits */
 
@@ -899,10 +899,10 @@ qea_constructConstraintName(
     else { status = E_DB_OK; }
 
     /* blank pad */
-    for ( p = constraintName + translatedStringLength,
-	  limit = constraintName + DB_MAXNAME;
-	 p < limit;
-	 CMnext( p ) )	{	CMcpychar( " ", p ); }
+    p = constraintName + translatedStringLength;
+    limit = constraintName + DB_MAXNAME;
+    while (p < limit)
+	*p++ = ' ';
 
     return( status );
 }	/* qea_constructConstraintName */
@@ -965,20 +965,14 @@ qea_co_obj_name(
     char	*limit;
     char	id_str[20], *id_p = id_str;
 
-    CMcpychar("$", p);
-    CMnext(p);
+    *p++ = '$';
     for (j = 0; j < TABLE_STUB_LENGTH; j++)
 	CMcpyinc(vname, p);
-    CMcpychar("_", p);
-    CMnext(p);
-    CMcpychar("C", p);
-    CMnext(p);
-    CMcpychar("O", p);
-    CMnext(p);
-    CMcpychar(obj_type, p);
-    CMnext(p);
-    CMcpychar("_", p);
-    CMnext(p);
+    *p++ = '_';
+    *p++ = 'C';
+    *p++ = '0';
+    *p++ = *obj_type;
+    *p++ = '_';
 
     /* convert view id into a hex string */
     seedToDigits(view_id, id_str);
@@ -996,12 +990,10 @@ qea_co_obj_name(
 	return(status);
 
     /* blank pad */
-    for (p = obj_name + len_trans, limit = obj_name + DB_MAXNAME;
-	 p < limit;
-	 CMnext(p))
-    {
-	CMcpychar(" ", p);
-    }
+    p = obj_name + len_trans;
+    limit = obj_name + DB_MAXNAME;
+    while (p < limit)
+	*p++ = ' ';
 
     return(E_DB_OK);
 }	/* qea_co_obj_name */
@@ -2720,8 +2712,6 @@ qea_checkConstraint(
 		( char * ) dsh->dsh_row[ details->qci_internalConstraintName ];
     ULM_RCB		*ulm =
 	    ( ULM_RCB * ) dsh->dsh_row[ details->qci_ulm_rcb ];
-    DB_TAB_ID		*constraintID =
-	    ( DB_TAB_ID * ) dsh->dsh_row[ details->qci_constraintID ];
     DB_TAB_ID		*constrainedTableID =
 	    ( DB_TAB_ID * ) dsh->dsh_row[ details->qci_constrainedTableID ];
 					 /* id of table constraint is on */
@@ -2736,8 +2726,6 @@ qea_checkConstraint(
     DB_NAME		*ruleNameArray[ 1 ];
     DB_IIDBDEPENDS	*tuplePTR;
     DB_IIDBDEPENDS	*tuples[ 1 ];
-    i4			*initialState =
-			( i4  * ) dsh->dsh_row[ details->qci_initialState ];
     struct state_table_entry	*stateTableEntry;
 
     /*
@@ -3118,7 +3106,6 @@ qea_referentialConstraint(
     i4		error;
     QEF_CREATE_INTEGRITY_STATEMENT	*details = &qea_act->qhd_obj.
 						qhd_createIntegrity;
-    DB_INTEGRITY	*integrityTuple = details->qci_integrityTuple;
     PST_INFO		*pstInfo =
 		( PST_INFO * ) dsh->dsh_row[ details->qci_pstInfo ];
     ULM_RCB		*ulm =
@@ -3126,13 +3113,7 @@ qea_referentialConstraint(
     DB_TAB_ID		*constraintID =
 	    ( DB_TAB_ID * ) dsh->dsh_row[ details->qci_constraintID ];
     DB_TEXT_STRING	*execImmediateText;
-    char		*referringTableName =
-			( char * ) &details->qci_cons_tabname;
-    char		*referredTableName =
-			( char * ) &details->qci_ref_tabname;
     i4			*state = ( i4  * ) dsh->dsh_row[ details->qci_state ];
-    i4			*initialState =
-			( i4  * ) dsh->dsh_row[ details->qci_initialState ];
     u_i4		modflags = 0;
     struct state_table_entry	*stateTableEntry;
 
@@ -3704,7 +3685,6 @@ qea_uniqueConstraint(
     DB_STATUS		status = E_DB_OK;
     QEF_CREATE_INTEGRITY_STATEMENT	*details = &qea_act->qhd_obj.
 						qhd_createIntegrity;
-    DB_INTEGRITY	*integrityTuple = details->qci_integrityTuple;
     PST_INFO		*pstInfo =
 		( PST_INFO * ) dsh->dsh_row[ details->qci_pstInfo ];
     ULM_RCB		*ulm =
@@ -3820,7 +3800,6 @@ unique_noindex_splice:	/* for now, this is how index creation is bypassed */
 	    status = writeIIDBDEPENDStuples( dsh, ulm, tuples, 1 );
 	    if ( status != E_DB_OK )	return( status );
 
-unique_basetab_splice:	/* base table structures rejoin here. */
 	    /* make iikey entries */
 
 	    status = populateIIKEY( dsh, ulm, constraintID,
@@ -3897,11 +3876,8 @@ linkRefObjects(
     DB_STATUS		status = E_DB_OK;
     QEF_CREATE_INTEGRITY_STATEMENT	*details = &qea_act->qhd_obj.
 						qhd_createIntegrity;
-    DB_INTEGRITY	*integrityTuple = details->qci_integrityTuple;
     ULM_RCB		*ulm =
 	    ( ULM_RCB * ) dsh->dsh_row[ details->qci_ulm_rcb ];
-    DB_TAB_ID		*constraintID =
-	    ( DB_TAB_ID * ) dsh->dsh_row[ details->qci_constraintID ];
     DB_TAB_ID		*constrainedTableID =
 	    ( DB_TAB_ID * ) dsh->dsh_row[ details->qci_constrainedTableID ];
 					 /* id of table constraint is on */
@@ -4235,7 +4211,6 @@ addString(
     i4			punctuation,
     i4			addQuotes )
 {
-    DB_STATUS		status = E_DB_OK;
     i4			totalLength = 0;
     char		*string;
 
@@ -4568,8 +4543,6 @@ makeCheckConstraintRuleText(
 	    ( ULM_RCB * ) dsh->dsh_row[ details->qci_ulm_rcb ];
     DMT_ATT_ENTRY	**constrainedTableAttributeArray =
     ( DMT_ATT_ENTRY ** ) dsh->dsh_row[ details->qci_cnstrnedTabAttributeArray ];
-    DB_TAB_ID		*constrainedTableID =
-	    ( DB_TAB_ID * ) dsh->dsh_row[ details->qci_constrainedTableID ];
     char		*tableName = ( char * ) &details->qci_cons_tabname;
     char		*schemaName = ( char * ) &details->qci_cons_ownname;
     DB_TEXT_STRING	*checkCondition = details->qci_checkRuleText;
@@ -6457,8 +6430,6 @@ textOfIndexOnRefingTable(
     EVOLVING_STRING	evolvingString;
     DMT_ATT_ENTRY	**constrainedTableAttributeArray =
     ( DMT_ATT_ENTRY ** ) dsh->dsh_row[ details->qci_cnstrnedTabAttributeArray ];
-    DB_TAB_ID		*constrainedTableID =
-	    ( DB_TAB_ID * ) dsh->dsh_row[ details->qci_constrainedTableID ];
     PTR			collistp;
     char		*tableName = ( char * ) &details->qci_cons_tabname;
     char		*schemaName = ( char * ) &details->qci_cons_ownname;
@@ -6539,10 +6510,10 @@ textOfIndexOnRefingTable(
 	    /* WITH COMPRESSION = (data) (optional).  If no compression,
 	    ** add WITH FILLFACTOR = 100 which is best for uncompressed btree.
 	    */
-	    if (details->qci_compress & PST_DATA_COMP)
+	    if (details->qci_autocompress == DMU_COMP_ON)
 		addString(&evolvingString, withDataComp, STlength(withDataComp),
 			NO_PUNCTUATION, NO_QUOTES);
-	    else if (details->qci_compress & PST_HI_DATA_COMP)
+	    else if (details->qci_autocompress == DMU_COMP_HI)
 		addString(&evolvingString, withHidataComp, STlength(withHidataComp),
 			NO_PUNCTUATION, NO_QUOTES);
 	    else
@@ -6879,8 +6850,6 @@ static char	isNull[ ] =
 **				p3 = 'constraintName' )
 */
 
-
-static char	referentialType[ ] = "'Referential'";
 
 static char	endProcedure[ ] = "; ENDIF; END";
 
@@ -7548,7 +7517,6 @@ textOfDeleteCascadeRefedProcedure(
     ULM_RCB		*ulm =
 	    ( ULM_RCB * ) dsh->dsh_row[ details->qci_ulm_rcb ];
     char		*tableName = ( char * ) &details->qci_cons_tabname;
-    char		*refedTableName = ( char * ) &details->qci_ref_tabname;
     char		*internalConstraintName =
 		( char * ) dsh->dsh_row[ details->qci_internalConstraintName ];
     char		*schemaName = ( char * ) &details->qci_cons_ownname;
@@ -7563,7 +7531,6 @@ textOfDeleteCascadeRefedProcedure(
     i4			pass;
     char		unnormalizedName[ UNNORMALIZED_NAME_LENGTH ];
     i4			unnormalizedNameLength;
-    char		*constraintName = GET_CONSTRAINT_NAME( );
 
 
     /* create the procedure name */
@@ -7733,7 +7700,6 @@ textOfDeleteSetNullRefedProcedure(
     ULM_RCB		*ulm =
 	    ( ULM_RCB * ) dsh->dsh_row[ details->qci_ulm_rcb ];
     char		*tableName = ( char * ) &details->qci_cons_tabname;
-    char		*refedTableName = ( char * ) &details->qci_ref_tabname;
     char		*internalConstraintName =
 		( char * ) dsh->dsh_row[ details->qci_internalConstraintName ];
     char		*schemaName = ( char * ) &details->qci_cons_ownname;
@@ -7748,7 +7714,6 @@ textOfDeleteSetNullRefedProcedure(
     i4			pass;
     char		unnormalizedName[ UNNORMALIZED_NAME_LENGTH ];
     i4			unnormalizedNameLength;
-    char		*constraintName = GET_CONSTRAINT_NAME( );
 
 
     /* create the procedure name */
@@ -8227,7 +8192,6 @@ textOfUpdateCascadeRefedProcedure(
     ULM_RCB		*ulm =
 	    ( ULM_RCB * ) dsh->dsh_row[ details->qci_ulm_rcb ];
     char		*tableName = ( char * ) &details->qci_cons_tabname;
-    char		*refedTableName = ( char * ) &details->qci_ref_tabname;
     char		*schemaName = ( char * ) &details->qci_cons_ownname;
     char		*nameOfUpdateRefedProcedure =
 	  ( char * ) dsh->dsh_row[ details->qci_nameOfUpdateRefedProc ];
@@ -8241,7 +8205,6 @@ textOfUpdateCascadeRefedProcedure(
     EVOLVING_STRING	evolvingString;
     char		unnormalizedName[ UNNORMALIZED_NAME_LENGTH ];
     i4			unnormalizedNameLength;
-    char		*constraintName = GET_CONSTRAINT_NAME( );
 
     /* create the procedure name */
 
@@ -8428,7 +8391,6 @@ textOfUpdateSetNullRefedProcedure(
     ULM_RCB		*ulm =
 	    ( ULM_RCB * ) dsh->dsh_row[ details->qci_ulm_rcb ];
     char		*tableName = ( char * ) &details->qci_cons_tabname;
-    char		*refedTableName = ( char * ) &details->qci_ref_tabname;
     char		*schemaName = ( char * ) &details->qci_cons_ownname;
     char		*nameOfUpdateRefedProcedure =
 	  ( char * ) dsh->dsh_row[ details->qci_nameOfUpdateRefedProc ];
@@ -8442,7 +8404,6 @@ textOfUpdateSetNullRefedProcedure(
     EVOLVING_STRING	evolvingString;
     char		unnormalizedName[ UNNORMALIZED_NAME_LENGTH ];
     i4			unnormalizedNameLength;
-    char		*constraintName = GET_CONSTRAINT_NAME( );
 
     /* create the procedure name */
 
@@ -9409,12 +9370,8 @@ textOfUniqueIndex(
     EVOLVING_STRING	evolvingString;
     DMT_ATT_ENTRY	**constrainedTableAttributeArray =
     ( DMT_ATT_ENTRY ** ) dsh->dsh_row[ details->qci_cnstrnedTabAttributeArray ];
-    DB_TAB_ID		*constrainedTableID =
-	    ( DB_TAB_ID * ) dsh->dsh_row[ details->qci_constrainedTableID ];
     char		*tableName = ( char * ) &details->qci_cons_tabname;
     char		*schemaName = ( char * ) &details->qci_cons_ownname;
-    char		*ixstruct = "BTREE";
-    char		*withopt;
     i4			pass;
     i4			unpaddedLength;
     char		unnormalizedName[ UNNORMALIZED_NAME_LENGTH ];
@@ -9489,10 +9446,10 @@ textOfUniqueIndex(
 	    /* WITH COMPRESSION = (data) (optional).  If no compression,
 	    ** add WITH FILLFACTOR = 100 which is best for uncompressed btree.
 	    */
-	    if (details->qci_compress & PST_DATA_COMP)
+	    if (details->qci_autocompress == DMU_COMP_ON)
 		addString(&evolvingString, withDataComp, STlength(withDataComp),
 			NO_PUNCTUATION, NO_QUOTES);
-	    else if (details->qci_compress & PST_HI_DATA_COMP)
+	    else if (details->qci_autocompress == DMU_COMP_HI)
 		addString(&evolvingString, withHidataComp, STlength(withHidataComp),
 			NO_PUNCTUATION, NO_QUOTES);
 	    else
@@ -9587,7 +9544,8 @@ textOfUniqueIndex(
 **	    Written as part of support for constraint index with options.
 **      8-Oct-2010 (hanal04) Bug 124561
 **          Add handling of compression settings.
-[@history_line@]...
+**	18-Oct-2010 (kschendel) SIR 124544
+**	    Replace individual qci_idx_xxx things with DMU characteristics.
 */
 
 static char	withLocation[ ] = ", LOCATION=(";
@@ -9600,13 +9558,11 @@ addWithopts(
     char	*ixstruct = "BTREE";
     char	withstring[80];		/* space for assembling options */
     char	*withopt = &withstring[0];
-    char        *compression = "unsupported";
 
 
-    /* Add the structure type */
-    if (details->qci_idx_struct && 
-		details->qci_idx_struct != DB_BTRE_STORE)
-     switch (details->qci_idx_struct) {
+    /* Add the structure type, if none it's btree */
+    if (BTtest(DMU_STRUCTURE, details->qci_dmu_chars.dmu_indicators))
+     switch (details->qci_dmu_chars.dmu_struct) {
       case DB_ISAM_STORE:
 	ixstruct = "ISAM ";
 	break;
@@ -9619,75 +9575,80 @@ addWithopts(
 
     /* Now check for the various index with clause options */
 
-    if (details->qci_compress)
+    if (BTtest(DMU_KCOMPRESSION, details->qci_dmu_chars.dmu_indicators)
+      || BTtest(DMU_DCOMPRESSION, details->qci_dmu_chars.dmu_indicators))
     {
-        switch (details->qci_compress) {
-         case PST_INDEX_COMP:
-            compression = "KEY";
-            break;
+	char compression[20];	/* Longest is "nokey,nodata" */
 
-         case PST_NO_INDEX_COMP:
-            compression = "NOKEY";
-            break;
-
-         case PST_DATA_COMP:
-            compression = "DATA";
-            break;
-
-         case PST_NO_DATA_COMP:
-            compression = "NODATA";
-            break;
-        }
+	compression[0] = '\0';
+	if (BTtest(DMU_KCOMPRESSION, details->qci_dmu_chars.dmu_indicators))
+	{
+	    if (details->qci_dmu_chars.dmu_kcompress == DMU_COMP_ON)
+		STcat(compression, "KEY");
+	    else
+		STcat(compression, "NOKEY");
+	}
+	if (BTtest(DMU_DCOMPRESSION, details->qci_dmu_chars.dmu_indicators))
+	{
+	    if (compression[0] != '\0')
+		STcat(compression, ",");
+	    if (details->qci_dmu_chars.dmu_dcompress == DMU_COMP_OFF)
+		STcat(compression, "NODATA");
+	    else if (details->qci_dmu_chars.dmu_dcompress == DMU_COMP_ON)
+		STcat(compression, "DATA");
+	    else
+		STcat(compression, "HIDATA");	/* Should be impossible */
+	}
         sprintf(withopt, ", COMPRESSION=(%s)", compression);
         addString( evolvingString, withopt, STlength(withopt),
             NO_PUNCTUATION, NO_QUOTES);
     }
 
-    if (details->qci_idx_fillfac)
+    if (BTtest(DMU_DATAFILL,details->qci_dmu_chars.dmu_indicators))
     {
-	sprintf(withopt, ", FILLFACTOR=%d", details->qci_idx_fillfac);
+	sprintf(withopt, ", FILLFACTOR=%d", details->qci_dmu_chars.dmu_fillfac);
 	addString( evolvingString, withopt, STlength(withopt),
 	    NO_PUNCTUATION, NO_QUOTES);
     }
-    if (details->qci_idx_leaff)
+    if (BTtest(DMU_LEAFFILL,details->qci_dmu_chars.dmu_indicators))
     {
-	sprintf( withopt, ", LEAFFILL=%d", details->qci_idx_leaff);
+	sprintf( withopt, ", LEAFFILL=%d", details->qci_dmu_chars.dmu_leaff);
 	addString( evolvingString, withopt, STlength(withopt),
 	    NO_PUNCTUATION, NO_QUOTES);
     }
-    if (details->qci_idx_nonleaff)
+    if (BTtest(DMU_IFILL,details->qci_dmu_chars.dmu_indicators))
     {
-	sprintf( withopt, ", NONLEAFFILL=%d", details->qci_idx_nonleaff);
+	sprintf( withopt, ", NONLEAFFILL=%d", details->qci_dmu_chars.dmu_nonleaff);
 	addString( evolvingString, withopt, STlength(withopt),
 	    NO_PUNCTUATION, NO_QUOTES);
     }
-    if (details->qci_idx_page_size)
+    if (BTtest(DMU_PAGE_SIZE,details->qci_dmu_chars.dmu_indicators))
     {
-	sprintf( withopt, ", PAGE_SIZE=%d", details->qci_idx_page_size);
+	sprintf( withopt, ", PAGE_SIZE=%d", details->qci_dmu_chars.dmu_page_size);
 	addString( evolvingString, withopt, STlength(withopt),
 	    NO_PUNCTUATION, NO_QUOTES);
     }
-    if (details->qci_idx_minpgs)
+    if (BTtest(DMU_MINPAGES,details->qci_dmu_chars.dmu_indicators))
     {
-	sprintf( withopt, ", MINPAGES=%d", details->qci_idx_minpgs);
+	sprintf( withopt, ", MINPAGES=%d", details->qci_dmu_chars.dmu_minpgs);
 	addString( evolvingString, withopt, STlength(withopt),
 	    NO_PUNCTUATION, NO_QUOTES);
     }
-    if (details->qci_idx_maxpgs)
+    if (BTtest(DMU_MAXPAGES,details->qci_dmu_chars.dmu_indicators))
     {
-	sprintf( withopt, ", MAXPAGES=%d", details->qci_idx_maxpgs);
+	sprintf( withopt, ", MAXPAGES=%d", details->qci_dmu_chars.dmu_maxpgs);
 	addString( evolvingString, withopt, STlength(withopt),
 	    NO_PUNCTUATION, NO_QUOTES);
     }
-    if (details->qci_idx_alloc)
+    if (BTtest(DMU_ALLOCATION,details->qci_dmu_chars.dmu_indicators))
     {
-	sprintf( withopt, ", ALLOCATION=%d", details->qci_idx_alloc);
+	sprintf( withopt, ", ALLOCATION=%d", details->qci_dmu_chars.dmu_alloc);
 	addString( evolvingString, withopt, STlength(withopt),
 	    NO_PUNCTUATION, NO_QUOTES);
     }
-    if (details->qci_idx_extend)
+    if (BTtest(DMU_EXTEND, details->qci_dmu_chars.dmu_indicators))
     {
-	sprintf( withopt, ", EXTEND=%d", details->qci_idx_extend);
+	sprintf( withopt, ", EXTEND=%d", details->qci_dmu_chars.dmu_extend);
 	addString( evolvingString, withopt, STlength(withopt),
 	    NO_PUNCTUATION, NO_QUOTES);
     }
@@ -11029,6 +10990,8 @@ makeObjectName(
 **	    Written.
 **	27-May-2010 (gupsh01) Bug 123823
 **	    Fix error handling code.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Alter action now in dmu_action.
 */
 DB_STATUS
 qea_renameExecute(
@@ -11039,9 +11002,7 @@ qea_renameExecute(
     QEF_CB		*qef_cb = dsh->dsh_qefcb;
     QEF_RENAME_STATEMENT *details = &(qea_act->qhd_obj.qhd_rename);
     DB_STATUS		status = E_DB_OK;
-    DB_STATUS		securityStatus = E_DB_OK;
     i4			error;
-    i4			renameType;
     dsh->dsh_error.err_code = E_QE0000_OK;
 
     /* Check if we have a good request */
@@ -11070,14 +11031,11 @@ qea_renameExecute(
 	bool                qsf_obj = FALSE;    /* TRUE if holding QSF object */
 	bool                dmu_atbl_rename_col = FALSE;
 	bool                dmu_atbl_rename_tab = FALSE;
-	DMU_CHAR_ENTRY 	    *char_entry;
-	i4		    char_count;
 	DB_TEXT_STRING      *out_txt = (DB_TEXT_STRING *) NULL;
     	DB_TEXT_STRING      **result;
 	QEU_CB		    *qeu_cb =  ( QEU_CB * ) qea_act->qhd_obj.
 							qhd_rename.qrnm_ahd_qeuCB;
 	int		    opcode = qeu_cb->qeu_d_op;
-	i4		    iter;
 
 	result = &out_txt;
 	MEfill(sizeof(old_name), 0, (PTR)&old_name);
@@ -11190,20 +11148,13 @@ qea_renameExecute(
             obj_type = (DB_QMODE) DB_TABLE;
 
         /* Find out the mode for rename operation */
-	if ( (opcode == DMU_ALTER_TABLE) &&
-        	(char_entry = (DMU_CHAR_ENTRY*) dmu_ptr->dmu_char_array.data_address) &&
-               	(char_count = dmu_ptr->dmu_char_array.data_in_size / sizeof(DMU_CHAR_ENTRY) ) )
-        {
-            for (iter = 0; iter < char_count; iter++)
-            {
-                if (char_entry[iter].char_id == DMU_ALTER_TYPE)
-                {
-                       dmu_atbl_rename_col = (char_entry[iter].char_value == DMU_C_ALTCOL_RENAME);
-                       dmu_atbl_rename_tab = (char_entry[iter].char_value == DMU_C_ALTTBL_RENAME);
-                       break;
-                }
-            }
-        }
+	if (opcode == DMU_ALTER_TABLE)
+	{
+	    if (dmu_ptr->dmu_action == DMU_ALT_TBL_RENAME)
+		dmu_atbl_rename_tab = TRUE;
+	    else if (dmu_ptr->dmu_action == DMU_ALT_COL_RENAME)
+		dmu_atbl_rename_col = TRUE;
+	}
 	if (dmu_atbl_rename_tab)
        	{
             STmove(dmu_ptr->dmu_table_name.db_tab_name, '\0', 

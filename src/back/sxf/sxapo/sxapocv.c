@@ -33,11 +33,12 @@ i4		 sxapo_evtype_to_msgid(SXF_EVENT evtype);
 VOID		 sxapo_msgid_default(i4 msgid,DB_DATA_VALUE  *desc);
 VOID 	 	 sxapo_priv_to_str(i4 priv,DB_DATA_VALUE *pstr,bool term);
 
-static DB_STATUS sxapo_alloc_msgdesc();
+static DB_STATUS sxapo_alloc_msgdesc(SXAPO_MSG_DESC **m);
 static VOID sxapo_incr( CS_SEMAPHORE *sem, i4 *counterp );
 static DB_STATUS sxapo_add_msgid(i4 msgid, DB_DATA_VALUE  *desc);
 static STATUS   sxa_cvt_handler( EX_ARGS *ex_args );
 static STATUS 	sxa_check_adferr( ADF_CB *adf_scb );
+static DB_STATUS sxapo_find_msgid(i4 msgid,DB_DATA_VALUE *desc);
 
 static CS_SEMAPHORE SXapomsg_sem ZERO_FILL; /* Semaphore to protect 
 					       message list*/
@@ -72,6 +73,8 @@ static SXAPO_MSG_DESC *mroot=NULL;
 **	    can destroy those handles when the memory is freed.
 **	24-sep-1997 (hanch04)
 **	    cast NULL to (CL_ERR_DESC *) remove compile errors
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes
 */
 
 /*
@@ -171,7 +174,7 @@ sxapo_msgid_to_desc(i4 msgid, DB_DATA_VALUE *desc)
 **	4-jan-94 (stephenb)
 **	    Renamed sxapo_find_msgid to be used in sxapo.
 */
-DB_STATUS
+static DB_STATUS
 sxapo_find_msgid(i4 msgid,DB_DATA_VALUE *desc)
 {
 	SXAPO_MSG_DESC *m;

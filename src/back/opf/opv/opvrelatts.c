@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -72,10 +72,35 @@
 **        Fix for bug 93767: in opv_relatts, initialize var_ptr->opv_itemp
 **        to OPD_NOTEMP rather than 0 to prevent inadvertant use of
 **        temp table vars in tree-to-text.
-[@history_line@]...
 **      12-oct-2000 (stial01)
 **          Init opv_kpleaf
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+void opv_virtual_table(
+	OPS_SUBQUERY *subquery,
+	OPV_VARS *lrvp,
+	OPV_IGVARS grv);
+static void opo_pco(
+	OPS_SUBQUERY *subquery,
+	OPV_VARS *varp,
+	OPV_IVARS joinopvar,
+	OPE_IEQCLS eqcls,
+	bool init);
+static void opv_rls(
+	OPS_SUBQUERY *subquery,
+	OPV_VARS *varp,
+	OPV_IVARS varno,
+	bool init);
+OPV_IVARS opv_relatts(
+	OPS_SUBQUERY *subquery,
+	OPV_IGVARS grv,
+	OPE_IEQCLS eqcls,
+	OPV_IVARS primary);
+void opv_tstats(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opv_virtual_table	- initialize virtual table structure

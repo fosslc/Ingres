@@ -135,6 +135,8 @@ static DB_STATUS term_tran(
 **	    Added include adf.h.
 **	12-Nov-2008 (jonj)
 **	    SIR 120874 Use new form uleFormat.
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Return int instead of VOID to agree with function prototype.
 [@history_template@]...
 **/
 
@@ -180,9 +182,9 @@ static DB_STATUS term_tran(
 */
 
 # ifdef	II_DMF_MERGE
-VOID MAIN(argc, argv)
+int MAIN(argc, argv)
 # else
-VOID 
+int 
 main(argc, argv)
 # endif
 i4                  argc;
@@ -192,6 +194,9 @@ char		    *argv[];
     MEadvise(ME_INGRES_ALLOC);
 # endif
     PCexit(lartool(argc, argv));
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 /*{

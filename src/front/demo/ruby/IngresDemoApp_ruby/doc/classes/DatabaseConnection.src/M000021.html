@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>getConnectionInfo (DatabaseConnection)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File src/database_connection.rb, line 351</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">getConnectionInfo</span>(<span class="ruby-identifier">xmlFileName</span> = <span class="ruby-constant">FPConstants</span>.<span class="ruby-identifier">emptyString</span>)
+    <span class="ruby-keyword kw">if</span> (<span class="ruby-ivar">@connecting</span> <span class="ruby-operator">!=</span> <span class="ruby-keyword kw">true</span>) <span class="ruby-keyword kw">then</span>
+      <span class="ruby-identifier">disconnect</span> 
+    <span class="ruby-keyword kw">end</span>
+    <span class="ruby-keyword kw">if</span> (<span class="ruby-identifier">xmlFileName</span> <span class="ruby-operator">==</span> <span class="ruby-constant">FPConstants</span>.<span class="ruby-identifier">emptyString</span>) <span class="ruby-keyword kw">then</span>
+      <span class="ruby-identifier">xmlFileName</span> = <span class="ruby-constant">FPConstants</span>.<span class="ruby-identifier">defaultDBConfigPath</span> <span class="ruby-operator">+</span> <span class="ruby-value str">&quot;/&quot;</span> <span class="ruby-operator">+</span> <span class="ruby-constant">FPConstants</span>.<span class="ruby-identifier">defaultDBConfigFilename</span>
+    <span class="ruby-keyword kw">end</span>
+    <span class="ruby-keyword kw">if</span> (<span class="ruby-constant">File</span>.<span class="ruby-identifier">exist?</span>(<span class="ruby-identifier">xmlFileName</span>)) <span class="ruby-keyword kw">then</span>
+      <span class="ruby-identifier">xml</span> = <span class="ruby-constant">REXML</span><span class="ruby-operator">::</span><span class="ruby-constant">Document</span>.<span class="ruby-identifier">new</span>(<span class="ruby-constant">File</span>.<span class="ruby-identifier">open</span>(<span class="ruby-identifier">xmlFileName</span>, <span class="ruby-value str">&quot;r&quot;</span>))
+      <span class="ruby-ivar">@database</span> = <span class="ruby-identifier">getDetail</span>(<span class="ruby-identifier">xml</span>, <span class="ruby-value str">&quot;database&quot;</span>)
+      <span class="ruby-ivar">@password</span> = <span class="ruby-identifier">getDetail</span>(<span class="ruby-identifier">xml</span>, <span class="ruby-value str">&quot;password&quot;</span>)
+      <span class="ruby-ivar">@username</span> = <span class="ruby-identifier">getDetail</span>(<span class="ruby-identifier">xml</span>, <span class="ruby-value str">&quot;username&quot;</span>)
+      <span class="ruby-ivar">@instance</span> = <span class="ruby-identifier">getDetail</span>(<span class="ruby-identifier">xml</span>, <span class="ruby-value str">&quot;instance&quot;</span>)
+      <span class="ruby-ivar">@hostname</span> = <span class="ruby-identifier">getDetail</span>(<span class="ruby-identifier">xml</span>, <span class="ruby-value str">&quot;hostname&quot;</span>)
+      <span class="ruby-ivar">@defaultProfileEmailAddress</span> = <span class="ruby-identifier">getDetail</span>(<span class="ruby-identifier">xml</span>, <span class="ruby-value str">&quot;defaultProfileEmailAddress&quot;</span>)
+    <span class="ruby-keyword kw">else</span>
+      <span class="ruby-ivar">@database</span> = <span class="ruby-constant">FPConstants</span>.<span class="ruby-identifier">dbConnectionDefaultDatabase</span>
+      <span class="ruby-ivar">@password</span> = <span class="ruby-constant">FPConstants</span>.<span class="ruby-identifier">dbConnectionDefaultPassword</span>
+      <span class="ruby-ivar">@username</span> = <span class="ruby-constant">FPConstants</span>.<span class="ruby-identifier">dbConnectionDefaultUser</span>
+      <span class="ruby-ivar">@instance</span> = <span class="ruby-constant">FPConstants</span>.<span class="ruby-identifier">dbConnectionDefaultInstance</span>
+      <span class="ruby-ivar">@hostname</span> = <span class="ruby-constant">FPConstants</span>.<span class="ruby-identifier">dbConnectionDefaultHost</span>
+      <span class="ruby-ivar">@defaultProfileEmailAddress</span> = <span class="ruby-constant">FPConstants</span>.<span class="ruby-identifier">dbConnectionDefaultProfileEmailAddress</span>
+    <span class="ruby-keyword kw">end</span>
+    <span class="ruby-keyword kw">if</span> (<span class="ruby-ivar">@connecting</span> <span class="ruby-operator">!=</span> <span class="ruby-keyword kw">true</span>) <span class="ruby-keyword kw">then</span>
+      <span class="ruby-identifier">connect</span>
+    <span class="ruby-keyword kw">end</span>
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

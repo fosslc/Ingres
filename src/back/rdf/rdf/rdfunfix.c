@@ -284,6 +284,8 @@ NO_OPTIM=nc4_us5
 **	    about to be destroyed.
 **	    Need to pass infoblk to the deulh routines
 **	    Added sanity check for rdf_shared_sessions
+**	27-may-2010 (wanfr01) Bug 123824
+**	    Enable sanity check/trace message for rdf_shared_sessions.
 */
 DB_STATUS
 rdf_unfix(  RDF_GLOBAL	*global,
@@ -413,13 +415,12 @@ rdf_unfix(  RDF_GLOBAL	*global,
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
 	CSadjust_counter(&global->rdf_ulhobject->rdf_shared_sessions, -1);
-/*
 	if (global->rdf_ulhobject->rdf_shared_sessions < 0)
 	{
-                TRdisplay ("%@  Warning:  rdf_shared_session count = %d.  Resetting to zero.\n",global->rdf_ulhobject->rdf_shared_sessions);
+            TRdisplay ("%@  Warning:  rdf_shared_session mask %x count = %d.  Resetting to zero.\n",rdf_cb->rdf_rb.rdr_types_mask,global->rdf_ulhobject->rdf_shared_sessions);
+
 		global->rdf_ulhobject->rdf_shared_sessions = 0;
 	}
-*/
 	status = rdu_rsemaphore(global);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);

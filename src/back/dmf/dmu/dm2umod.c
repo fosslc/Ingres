@@ -50,6 +50,7 @@ NO_OPTIM=dr6_us5 i64_aix
 #include    <dm1cx.h>
 #include    <dm2umct.h>
 #include    <dm2umxcb.h>
+#include    <dmu.h>
 #include    <dm2u.h>
 #include    <dmftrace.h>
 #include    <dma.h>
@@ -710,6 +711,9 @@ NO_OPTIM=dr6_us5 i64_aix
 **	    dm2u-create wants compression now.
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Remove table name,owner from log records.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    Replace dmu char array with dmu-characteristics.  Get rid of
+**	    error-prone DM2U_KEY_ARRAY which is really a dmu key array.
 **/
 
 /*
@@ -782,7 +786,7 @@ static DB_STATUS do_online_modify(
 			i4		    modoptions,
 			i4		    mod_options2,
 			i4		    kcount,
-			DM2U_KEY_ENTRY	    **key,
+			DMU_KEY_ENTRY	    **key,
 			i4		    db_lockmode,
 			DB_TAB_ID	    *modtemp_tabid,
 			i4		    *tup_info,
@@ -1521,7 +1525,7 @@ DB_ERROR        *dberr)
     i4			next_cmp;
     i4			key_map[(DB_MAX_COLS + 31) /32];
     DB_TAB_TIMESTAMP	timestamp;
-    i4			error, local_error;
+    i4			local_error;
     DB_STATUS		status, local_status;
     DB_TAB_NAME		table_name;
     DB_OWN_NAME		owner_name;
@@ -1542,7 +1546,6 @@ DB_ERROR        *dberr)
     DB_LOC_NAME	        *locnArray, *orig_locnArray;
     DB_LOC_NAME         *PartLoc;
     i4             	loc_count, oloc_count, Mloc_count;
-    i4             	compare;
     i4			journal;
     i4			dm0l_jnlflag;
     u_i4		db_sync_flag;
@@ -1560,7 +1563,6 @@ DB_ERROR        *dberr)
     i4			size_align;
     i4             	timeout = 0;
     i4             	TableLockList, lk_id;
-    f8		     	*range_entry;
     i2		     	name_id;
     i4               	name_gen, base_name_gen;
     DB_TRAN_ID       	*tran_id;
@@ -1581,7 +1583,7 @@ DB_ERROR        *dberr)
     i4			all_sources;
     DB_TAB_ID		*part_tabid;
     DMU_PHYPART_CHAR	*part;
-    i4			Tallocation, Textend;
+    i4			Textend;
     DB_TAB_ID		master_tabid;
     i4			old_nparts, new_nparts;
     bool		is_table_debug;
@@ -1694,7 +1696,7 @@ DB_ERROR        *dberr)
 
 	if (!mcb->mcb_temporary)
 	{
-	    i4		length;
+	    u_i4	length;
 	    LK_LKB_INFO	lock_info;
 	    i4		control_lock_mode;
 
@@ -1946,8 +1948,8 @@ CRC errors right now, so comment out and revisit when time allows.
 	*/
 	if ( mcb->mcb_temporary && !mcb->mcb_clustered )
 	{
-	    if ( mcb->mcb_page_size && mcb->mcb_page_size != t->tcb_table_io.tbio_page_size || 
-		 mcb->mcb_page_type && mcb->mcb_page_type != t->tcb_table_io.tbio_page_type )
+	    if ( (mcb->mcb_page_size && mcb->mcb_page_size != t->tcb_table_io.tbio_page_size) || 
+		 (mcb->mcb_page_type && mcb->mcb_page_type != t->tcb_table_io.tbio_page_type) )
 	    {
 		SETDBERR(dberr, 0, E_DM0183_CANT_MOD_TEMP_TABLE);
 		break;
@@ -3967,7 +3969,7 @@ CRC errors right now, so comment out and revisit when time allows.
 
 			/*  Allow alternate sort direction in HEAP. */
 
-			if (mcb->mcb_key[i]->key_order == DM2U_DESCENDING)
+			if (mcb->mcb_key[i]->key_order == DMU_DESCENDING)
 			{
 			    m->mx_cmp_list[next_cmp].cmp_direction++;
 			    key_order[i]++;
@@ -5226,7 +5228,7 @@ i4		unique,
 i4		merge,
 i4         truncate,
 i4         kcount,
-DM2U_KEY_ENTRY  **key,
+DMU_KEY_ENTRY  **key,
 i4         db_lockmode,
 i4		allocation,
 i4		extend,
@@ -5280,10 +5282,8 @@ DB_ERROR	*dberr)
     DM_PATH         	*phys_location;
     i4         	phys_length;
     DM0C_CNF		*config = 0;
-    i4             error;
     DB_TAB_TIMESTAMP    timestamp;
     LG_LSN		lsn;
-    i4             local_error;
     bool	    	file_closed = FALSE;
     bool            	config_open = FALSE;
     i4         	setrelstat= 0;
@@ -5295,16 +5295,9 @@ DB_ERROR	*dberr)
     i4		sysmod_tupadds;
     bool		upcase;
     DM2U_INDEX_CB	index_cb;
-    DM_OBJECT           *mem_ptr = (DM_OBJECT *)0;
-    i4             table_cnt = 0;
-    i4             table_max = 0;
-    u_i4                *tabids;
-    u_i4                *cur_tabid;
-    char                *recbuf;
     i4			oldpgtype;
     i4			oldpgsize;
     DM2U_MOD_CB		local_mcb, *mcb = &local_mcb;
-    STATUS		cl_stat;
     i4			NumAtts;
     DMP_MISC		*AttMem = NULL;
     DMF_ATTR_ENTRY 	**AttList;
@@ -5461,7 +5454,7 @@ DB_ERROR	*dberr)
 	    att_ptr = t->tcb_key_atts[i];
 	    MEmove(att_ptr->attnmlen, att_ptr->attnmstr, ' ',
 		DB_ATT_MAXNAME, key_list[i]->key_attr_name.db_att_name);
-	    key_list[i]->key_order = DM2U_ASCENDING;
+	    key_list[i]->key_order = DMU_ASCENDING;
 	
 	}
 	/* Note, all the system sconcur tables except the iidevices
@@ -5492,7 +5485,7 @@ DB_ERROR	*dberr)
 		    allocation, extend, newpgtype, newpgsize,
 		    (DB_QRY_ID *)0, (DM_PTR *)NULL,
 		    (DM_DATA *)NULL, (i4)0, (i4)0,
-		    (DMU_FROM_PATH_ENTRY *)NULL, (DM_DATA *)0, 
+		    (DMU_FROM_PATH_ENTRY *)NULL, NULL,
 		    0, 0, (f8*)NULL, 0, NULL, 0, NULL /* DMU_CB */,
 		    dberr);
 	if (status != E_DB_OK)
@@ -5532,7 +5525,7 @@ DB_ERROR	*dberr)
 	mcb->mcb_modoptions = modoptions;
 	mcb->mcb_mod_options2 = mod_options2;
 	mcb->mcb_kcount = kcount;
-	mcb->mcb_key = (DM2U_KEY_ENTRY**)key_list;
+	mcb->mcb_key = (DMU_KEY_ENTRY**)key_list;
 	mcb->mcb_db_lockmode = db_lockmode;
 	mcb->mcb_allocation = allocation;
 	mcb->mcb_extend = extend;
@@ -5608,7 +5601,7 @@ DB_ERROR	*dberr)
 		att_ptr = t->tcb_key_atts[i];
 		MEmove(att_ptr->attnmlen, att_ptr->attnmstr, ' ',
 		    DB_ATT_MAXNAME, key_list[i]->key_attr_name.db_att_name);
-		key_list[i]->key_order = DM2U_ASCENDING;
+		key_list[i]->key_order = DMU_ASCENDING;
 	
 	    }
 	    status = dm2t_close(r, DM2T_NOPURGE, dberr);
@@ -5642,7 +5635,7 @@ DB_ERROR	*dberr)
 	    index_cb.indxcb_min_pages = min_pages;
 	    index_cb.indxcb_max_pages = max_pages;
 	    index_cb.indxcb_kcount = kcount;
-	    index_cb.indxcb_key = (DM2U_KEY_ENTRY **)key_list;
+	    index_cb.indxcb_key = (DMU_KEY_ENTRY **)key_list;
 	    index_cb.indxcb_acount = kcount;
 	    index_cb.indxcb_db_lockmode = db_lockmode;
 	    index_cb.indxcb_allocation = allocation;
@@ -5661,7 +5654,7 @@ DB_ERROR	*dberr)
 	    index_cb.indxcb_tab_owner = 0;
 	    index_cb.indxcb_reltups = reltups;
 	    index_cb.indxcb_gw_id = 0;
-	    index_cb.indxcb_char_array = (DM_DATA *)0;
+	    index_cb.indxcb_dmu_chars = NULL;
 	    index_cb.indxcb_relstat2 = IIRELIDXrelstat2;
 	    index_cb.indxcb_tbl_pri = 0;
 	    index_cb.indxcb_errcb = dberr;
@@ -6402,7 +6395,6 @@ DB_ERROR	    *dberr)
 {
     DM2U_SPCB		*sp;
     DB_STATUS		status = E_DB_OK;
-    i4			error;
 
     /*
     ** There must be a 1-1 correspondence between
@@ -6559,7 +6551,7 @@ DB_ERROR	*dberr)
     DM2U_TPCB		*tp;
     DMP_TCB             *t;
     DMP_DCB             *dcb = m->mx_dcb;
-    i4			i, k, n;
+    i4			i, n;
     DB_STATUS		status = E_DB_OK;
     DB_STATUS		local_status;
     i4			local_err_code;
@@ -6567,9 +6559,7 @@ DB_ERROR	*dberr)
     i4			endpage, page;
     DB_TAB_NAME		table_name;
     DMP_MISC		*buf_cb = (DMP_MISC *)0;
-    DMP_LOCATION	*loc;
     DML_XCB		*xcb = m->mx_xcb;
-    LG_LSN		lsn;
     u_i4		db_sync_flag;
     u_i4		directio_align = dmf_svcb->svcb_directio_align;
     u_i4		size;
@@ -6987,9 +6977,8 @@ DB_ERROR      	    *dberr)
     DM2U_TPCB		*tp;
     DM2U_M_CONTEXT	*mct;
     DB_STATUS		status;
-    i4			i,j,k;
+    i4			i,k;
     i4             	local_error;
-    DB_TAB_TIMESTAMP	timestamp;
     DMP_TCB		*t;
     DMP_TCB		*old_tcb = NULL;
     DMP_TCB		*ParentTCB;
@@ -7006,7 +6995,6 @@ DB_ERROR      	    *dberr)
     DM2T_KEY_ENTRY	*keys;
     DMP_TCB		*build_tcb;
     DB_TAB_ID		build_table_id;
-    DB_TAB_NAME		table_name;
     i4			recovery;
     i4			build_flag;
     DMP_ET_LIST		*etlist_ptr, *extension_list = 0, *build_etlist = 0;
@@ -7855,8 +7843,6 @@ logModifyData(i4 log_id, i4 flags,
 	DB_ERROR *dberr)
 {
     DB_STATUS status = E_DB_OK;		/* Called routine status */
-    DM_DATA locns[NUM_LOCN_TRACK];	/* Location arrays we're tracking */
-    i4 dim;				/* Partdef dimension number */
 
     /* See if there's anything that needs to be done */
     if (part_def == NULL && ppchar_addr == NULL)
@@ -8076,7 +8062,6 @@ logPPchar(i4 log_id, i4 flags,
     PTR cur_posn;			/* Where we are writing at present */
     PTR rawdata;			/* Build up raw data here */
     PTR rawend;				/* End of above, for convenience */
-    i4	error;
 
     /* First pass: figure out total size needed, and compute the
     ** layout for location arrays that we're tracking.
@@ -8452,7 +8437,6 @@ dm2u_catalog_modify(DM2U_MOD_CB *mcb, DMP_RCB *r,
     i4 action;			/* modoptions2 bitmask action */
     i4 journal;			/* Table-is-journaled for updating */
     i4 logged_action;		/* Action for ALTER log record (bogus) */
-    i4 local_error;
     LG_LSN toss_lsn;		/* Needed but not used */
 
     xcb = mcb->mcb_xcb;
@@ -8690,7 +8674,7 @@ DMU_CB		    *dmu,
 i4		    modoptions,
 i4		    mod_options2,
 i4		    kcount,
-DM2U_KEY_ENTRY	    **key,
+DMU_KEY_ENTRY	    **key,
 i4		    db_lockmode,
 DB_TAB_ID	    *modtemp_tabid,
 i4		    *tup_info,
@@ -8726,7 +8710,6 @@ DB_ERROR	    *dberr)
     DB_TAB_ID		newpart_tabid;
     DB_TAB_ID		new_ixid;
     DB_TAB_ID		newpart_ixid;
-    i4			index = 0;
     i4			view = 0;
     i4			duplicates;
     i4			attr_count;
@@ -8734,7 +8717,6 @@ DB_ERROR	    *dberr)
     DMF_ATTR_ENTRY     **attr_ptrs;
     i4			i,k;
     DB_STATUS           status;
-    DM_TID              tid;
     DB_TAB_TIMESTAMP	timestamp;
     LG_LSN		lsn;
     i4			setrelstat= 0;
@@ -8743,7 +8725,6 @@ DB_ERROR	    *dberr)
     DMP_TCB		*online_tcb = (DMP_TCB *)0;
     i4			extend = 0;
     i4			allocation = 0;
-    i4			nofiles = 0;
     i4			local_error;
     i4			error;
     DB_STATUS		local_status;
@@ -8758,9 +8739,8 @@ DB_ERROR	    *dberr)
     DB_ERROR		local_dberr;
     i4			temp_tup_cnt;
     i4			base_relstat2;
-    DB_TAB_NAME		modbase_name;
-    DM2U_KEY_ENTRY	*keys;
-    DM2U_KEY_ENTRY	**key_ptrs;
+    DMU_KEY_ENTRY	*keys;
+    DMU_KEY_ENTRY	**key_ptrs;
 
     LK_LOCK_KEY         lock_key;
     LK_LKID             lkid;
@@ -8768,7 +8748,6 @@ DB_ERROR	    *dberr)
     DM2U_MOD_CB		local_mcb, *mcb = &local_mcb;
 
     /* following added for partitioned tbl */
-    DMP_TCB		*pt = (DMP_TCB *)0;
     DB_PART_DEF		dmu_part_def;
     DM2U_SPCB		*sp;
     DMP_MISC		*omisc_cb = (DMP_MISC *)0;
@@ -8777,14 +8756,12 @@ DB_ERROR	    *dberr)
     DM2U_OSRC_CB	*osrc;
     DMP_MISC		*loc_misc_cb = (DMP_MISC *)0;
     DB_LOC_NAME		*locnArray = 0;
-    i4			parts = 0;
     i4			destroy_flag;
     DMP_MISC		*pp_misc_cb = (DMP_MISC *)0;
     DMU_PHYPART_CHAR	*o_partitions = (DMU_PHYPART_CHAR *)0;
 
     /* following used to log rnl_lsn list */
     DMP_RNL_ONLINE      *rnl;   
-    i4                  lsn_cnt;
     i4                  logged, cnt, still_to_log;
 
     /* Needed to tidy up sidefile if online modify fails */
@@ -8931,11 +8908,11 @@ DB_ERROR	    *dberr)
 	relstat2 = t->tcb_rel.relstat2;
 
 	status = dm0m_allocate(sizeof (DMP_MISC) + 
-		(i4)(t->tcb_rel.relatts * sizeof (DMF_ATTR_ENTRY)) + 
-		(i4)(t->tcb_rel.relatts * sizeof(DMF_ATTR_ENTRY *)) + 
-		(i4)(t->tcb_rel.relatts * sizeof(DM2U_KEY_ENTRY)) + 
-		(i4)(t->tcb_rel.relatts * sizeof(DM2U_KEY_ENTRY *)),
-		0, (i4)MISC_CB, (i4)MISC_ASCII_ID, (char *)0, 
+		(i4)(t->tcb_rel.relatts * sizeof (DMF_ATTR_ENTRY)) +
+		(i4)(t->tcb_rel.relatts * sizeof(DMF_ATTR_ENTRY *)) +
+		(i4)(t->tcb_rel.relatts * sizeof(DMU_KEY_ENTRY)) +
+		(i4)(t->tcb_rel.relatts * sizeof(DMU_KEY_ENTRY *)),
+		0, (i4)MISC_CB, (i4)MISC_ASCII_ID, (char *)0,
 		(DM_OBJECT **)&misc_cb, dberr);
 	if (status != E_DB_OK)
 	    break;
@@ -8943,8 +8920,8 @@ DB_ERROR	    *dberr)
 	attrs = (DMF_ATTR_ENTRY *)(misc_cb + 1);
 	misc_cb->misc_data = (char*)attrs;
 	attr_ptrs = (DMF_ATTR_ENTRY **)(attrs + (t->tcb_rel.relatts));
-	keys = (DM2U_KEY_ENTRY *)(attr_ptrs + t->tcb_rel.relatts);
-	key_ptrs = (DM2U_KEY_ENTRY **)(keys + t->tcb_rel.relatts);
+	keys = (DMU_KEY_ENTRY *)(attr_ptrs + t->tcb_rel.relatts);
+	key_ptrs = (DMU_KEY_ENTRY **)(keys + t->tcb_rel.relatts);
 
 	for ( i = 0; i < t->tcb_rel.relatts; i++ )
 	{
@@ -8997,7 +8974,7 @@ DB_ERROR	    *dberr)
 		    m->mx_page_type, m->mx_page_size,
 		    (DB_QRY_ID *)0, (DM_PTR *)NULL,
 		    (DM_DATA *)NULL, (i4)0, (i4)0,
-		    (DMU_FROM_PATH_ENTRY *)NULL, (DM_DATA *)0, 
+		    (DMU_FROM_PATH_ENTRY *)NULL, NULL,
 		    0, 0, (f8*)NULL, 0, &dmu_part_def, 0,
 		    NULL /* DMU_CB */, dberr);
 
@@ -9031,7 +9008,7 @@ DB_ERROR	    *dberr)
 	    dm2u_index_cb.indxcb_min_pages = 0;
 	    dm2u_index_cb.indxcb_max_pages = 0;
 	    dm2u_index_cb.indxcb_kcount = kcount;
-	    dm2u_index_cb.indxcb_key = (DM2U_KEY_ENTRY **)key_ptrs;
+	    dm2u_index_cb.indxcb_key = (DMU_KEY_ENTRY **)key_ptrs;
 	    dm2u_index_cb.indxcb_acount = attr_count; /* acount = #atts */
 	    dm2u_index_cb.indxcb_db_lockmode = db_lockmode;
 	    dm2u_index_cb.indxcb_allocation = 0;
@@ -9050,7 +9027,7 @@ DB_ERROR	    *dberr)
 	    dm2u_index_cb.indxcb_tab_owner = 0;
 	    dm2u_index_cb.indxcb_reltups = 0;
 	    dm2u_index_cb.indxcb_gw_id = 0;
-	    dm2u_index_cb.indxcb_char_array = (DM_DATA *)0;
+	    dm2u_index_cb.indxcb_dmu_chars = NULL;
 	    dm2u_index_cb.indxcb_relstat2 = relstat2;
 	    dm2u_index_cb.indxcb_tbl_pri = 0;
 	    dm2u_index_cb.indxcb_errcb = dberr;
@@ -9139,11 +9116,11 @@ DB_ERROR	    *dberr)
                     m->mx_page_type, m->mx_page_size,
                     (DB_QRY_ID *)0, (DM_PTR *)NULL,
                     (DM_DATA *)NULL, (i4)0, (i4)0,
-                    (DMU_FROM_PATH_ENTRY *)NULL, (DM_DATA *)0,
-                    0, 0, (f8*)NULL, 0, 
+                    (DMU_FROM_PATH_ENTRY *)NULL, NULL,
+                    0, 0, (f8*)NULL, 0,
 		    &dmu_part_def, sp->spcb_partno,
 		    NULL /* DMU_CB */, dberr);
-	
+
 		dm0m_deallocate((DM_OBJECT **)&loc_misc_cb);
 
 		if (status != E_DB_OK) 
@@ -9405,7 +9382,9 @@ DB_ERROR	    *dberr)
 		STmove(ix_dmu->dmu_index_name.db_tab_name, ' ', 
 		    sizeof (ix_dmu->dmu_index_name.db_tab_name), 
 		    ix_dmu->dmu_index_name.db_tab_name);
-		ix_dmu->dmu_flags_mask |= DMU_ONLINE_START;
+		/* Pass "online start" as if it were from psf/qef */
+		BTset(DMU_CONCURRENT_ACCESS, ix_dmu->dmu_chars.dmu_indicators);
+		ix_dmu->dmu_chars.dmu_flags |= DMU_FLAG_CONCUR_U;
 		ix_dmu->dmu_dupchk_tabid.db_tab_base = 0;
 		ix_dmu->dmu_dupchk_tabid.db_tab_index = 0;
 	    }
@@ -9669,7 +9648,7 @@ DB_ERROR	    *dberr)
 						ix_dmu->dmu_index_name);
 		/* use parent table row count */
 		ix_dmu->dmu_on_reltups = *tup_info;
-		ix_dmu->dmu_flags_mask &= ~(DMU_ONLINE_START);
+		BTclear(DMU_CONCURRENT_UPDATES, ix_dmu->dmu_chars.dmu_indicators);
 	    }
 	    if ( status )
 	        break;
@@ -9998,10 +9977,7 @@ DB_ERROR	    *dberr)
     i4		event;
     i4		event_mask;
     i4		length;
-    i4             local_error;
-    bool		have_transaction = FALSE;
     bool		purge_complete = FALSE;
-    char		line_buffer[132];
     DB_STATUS		status = E_DB_OK;
     i4		error;
 
@@ -10671,7 +10647,6 @@ DB_ERROR	    *dberr)
 		}
 		else if (dberr->err_code == E_DM0055_NONEXT)
 		{
-		    DB_STATUS		local_stat = E_DB_OK;
 		    bool		found = FALSE;
 
 		    /* 
@@ -11076,8 +11051,6 @@ DM2R_KEY_DESC	*key_desc,
 DM_TID		*tid,
 DB_ERROR	*dberr)
 {
-    DM0L_DEL		*log_del;
-    DM0L_REP		*log_rep;
     DMP_TCB		*t = base_rcb->rcb_tcb_ptr;
     DMP_TCB		*pt = position_rcb->rcb_tcb_ptr;
     i4			i;
@@ -11283,7 +11256,6 @@ DB_ERROR	*dberr)
     i4			i;
     DM2U_OSRC_CB	*osrc = 0;
     DM2U_OSRC_CB	*cand = omcb->omcb_osrc_next;
-    i4			error;
 
     if (cand->osrc_rnl_rcb != cand->osrc_master_rnl_rcb)
     {
@@ -11417,7 +11389,6 @@ DB_ERROR        *dberr)
     i4			mem_needed;
     i4			keys_given;
     i4			compare, match;
-    i4			localerr = 0;
     DM_OBJECT		*mem_ptr = 0;
     DM_TID		dupchk_tid, tid;
     u_i4		i = 0;
@@ -11896,7 +11867,7 @@ DB_ERROR		*dberr)
 		m->mx_page_type, m->mx_page_size,
 		(DB_QRY_ID *)0, (DM_PTR *)NULL,
 		(DM_DATA *)NULL, (i4)0, (i4)0,
-		(DMU_FROM_PATH_ENTRY *)NULL, (DM_DATA *)0,
+		(DMU_FROM_PATH_ENTRY *)NULL, NULL,
 		0, 0, (f8*)NULL, 0, dmu_part_def, partno,
 		NULL /* DMU_CB */, dberr);
 

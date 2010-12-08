@@ -8,7 +8,8 @@
 ;	     in a need of some additional symbols to be exported.
 ;	30-Oct-2008 (jonj)
 ;	    SIR 120874: Add psfErrorFcn, psf_errorNV
-;
+;	08-Nov-2010 (kiria01) SIR 124685
+;	    Added psf_verror
 
 EXPORTS
 	pslparse	@1
@@ -52,3 +53,4 @@ EXPORTS
  	psy_call		@39
  	psfErrorFcn		@40
  	psf_errorNV		@41
+	psf_verror		@42

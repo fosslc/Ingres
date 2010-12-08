@@ -912,21 +912,15 @@ DB_DATA_VALUE	    *dv[ADI_MAX_OPERANDS+1])
 ** History:
 **	16-apr-90 (jrb)
 **	    Created.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adf_exec_quick(
 ADF_CB		*adf_scb,
 ADI_FI_ID	fid,
 DB_DATA_VALUE	*dvarr)
-# else
-DB_STATUS
-adf_exec_quick( adf_scb, fid, dvarr)
-ADF_CB		*adf_scb;
-ADI_FI_ID	fid;
-DB_DATA_VALUE	*dvarr;
-# endif
 {
     DB_STATUS	    db_stat;
     DB_STATUS	    (*func)();

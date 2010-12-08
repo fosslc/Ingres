@@ -11,6 +11,7 @@
 # include <cs.h>
 # include <mo.h>
 
+# include <csinternal.h>
 # include "csmgmt.h"
 
 /**

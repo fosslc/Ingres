@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -54,9 +54,14 @@
 **	11-oct-1993 (tad)
 **	    Bug #56449
 **	    Changed %x to %p for pointer values in psq_crdump().
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psq_crdump(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *sess_cb);
 
 /*{
 ** Name: psq_crdump	- Dump cursor control block given cursor and session ids
@@ -330,7 +335,7 @@ psq_crdump(
     /* Now do the set of columns for update.  psc_updmap is a bit map. */
     TRdisplay("\tpsc_updmap:\t");
     thisline = 0;
-    for (i = 0; i < sizeof(cursor->psc_updmap) * BITSPERBYTE; i++)
+    for (i = 0; i < (i4)sizeof(cursor->psc_updmap) * BITSPERBYTE; i++)
     {
 	if (BTtest(i, (char *) &cursor->psc_updmap))
 	{
@@ -377,7 +382,7 @@ psq_crdump(
     */
     TRdisplay("\tpsc_iupdmap:\t");
     thisline = 0;
-    for (i = 0; i < sizeof(cursor->psc_iupdmap) * BITSPERBYTE; i++)
+    for (i = 0; i < (i4)sizeof(cursor->psc_iupdmap) * BITSPERBYTE; i++)
     {
 	if (BTtest(i, (char *) &cursor->psc_iupdmap))
 	{
@@ -400,7 +405,7 @@ psq_crdump(
     */
     TRdisplay("\tpsc_expmap:\t");
     thisline = 0;
-    for (i = 0; i < sizeof(cursor->psc_expmap) * BITSPERBYTE; i++)
+    for (i = 0; i < (i4)sizeof(cursor->psc_expmap) * BITSPERBYTE; i++)
     {
 	if (BTtest(i, (char *) &cursor->psc_expmap))
 	{

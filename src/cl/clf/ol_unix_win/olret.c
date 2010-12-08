@@ -36,6 +36,8 @@
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**      29-Nov-2010 (frima01) SIR 124685
+**          Added void return type to OLretassign.
 */
 
 /*{
@@ -53,6 +55,7 @@
 **		retvalue -	The place the put the value.
 **
 */
+void
 OLretassign(value, rettype, retvalue)
 double	*value;
 i4	rettype;

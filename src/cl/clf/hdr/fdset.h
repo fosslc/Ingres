@@ -1,6 +1,10 @@
 /*
 ** Copyright (c) 2004 Ingres Corporation
 */
+
+#ifndef FDSET_H_INCLUDED
+#define FDSET_H_INCLUDED
+
 /*
 ** History:
 **	(Author and creation date unknown)
@@ -32,7 +36,8 @@
 **	    Add support for i64_aix
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
-**
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Multiple-inclusion protection.
 */
 
 # ifndef CLCONFIG_H_INCLUDED
@@ -94,3 +99,4 @@ ITS)))
 S)))
 # endif /* xCL_021_SELSTRUCT */
 
+#endif /* FDSET_H_INCLUDED */

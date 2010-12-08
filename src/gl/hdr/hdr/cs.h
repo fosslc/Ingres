@@ -6,6 +6,7 @@
 
 #include    <cscl.h>
 #include    <tm.h>	    /* needed for CSstatistics */
+#include    <tr.h>
 #if defined(axp_osf)
 # include <c_asm.h>
 #endif   /* defined(axp_osf) */
@@ -129,6 +130,10 @@
 **          remove one of them.
 **	17-may-2010 (stephenb)
 **	    Fix typo in above change.
+**      04-nov-2010 (joea)
+**          Add prototype for CSMTset_scb.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    More prototype fixes.
 **/
 
 /* Adjust counter */
@@ -212,6 +217,8 @@ FUNC_EXTERN STATUS CSw_semaphore(
 	    i4		    type,
 	    char	    *string
 );
+
+FUNC_EXTERN void CS_cp_sem_cleanup(char *, CL_ERR_DESC *);
 
 /* fetch the session id */
 #define CSget_sid IICSget_sid
@@ -382,7 +389,7 @@ FUNC_EXTERN STATUS CSmonitor(
 	    i4		*next_mode,
 	    char	*command,
 	    i4		powerful,
-	    i4		(*print_fcn)()
+	    TR_OUTPUT_FCN *print_fcn
 );
 
 #define CS_is_mt IICS_is_mt
@@ -476,6 +483,9 @@ FUNC_EXTERN VOID CSdump_stack( void );
 
 #define CScancelCheck IICScancelCheck
 FUNC_EXTERN void CScancelCheck(CS_SID sid);
+
+
+FUNC_EXTERN void CS_breakpoint(void);
 
 
 # if defined(OS_THREADS_USED) && (defined(UNIX) || defined(VMS))
@@ -602,7 +612,7 @@ struct	_CS_FUNCTIONS {
 		    i4		*next_mode,
 		    char	*command,
 		    i4		powerful,
-		    i4		(*print_fcn)());
+		    TR_OUTPUT_FCN *print_fcn);
     VOID 	(*IIresume_from_AST)(
 		    CS_SID	sid);	
     STATUS 	(*IIsuspend_for_AST)(
@@ -893,7 +903,7 @@ FUNC_EXTERN STATUS CSMTmonitor(
 	    i4		*next_mode,
 	    char	*command,
 	    i4		powerful,
-	    i4		(*print_fcn)()
+	    TR_OUTPUT_FCN *print_fcn
 );
 
 #define CSMTinitiate IICSMTinitiate
@@ -908,10 +918,14 @@ FUNC_EXTERN STATUS CSMTinitiate(
 #define CSMTcancelCheck IICSMTcancelCheck
 FUNC_EXTERN void IICSMTcancelCheck(CS_SID sid);
 
+#undef CSMTset_scb
+#define CSMTset_scb IICSMTset_scb
+FUNC_EXTERN void CSMTset_scb(CS_SCB *scb);
+
 # endif /* OS_THREADS_USED && (UNIX || VMS) */
 
 FUNC_EXTERN STATUS IICSmon_register( char *prefix,
-                              i4 (*entry_fcn)(i4 (*)(PTR,i4,char*), char *) );
+                              i4 (*entry_fcn)(TR_OUTPUT_FCN *, char *) );
 
 FUNC_EXTERN STATUS IICSmon_deregister( char *prefix );
 

@@ -30,10 +30,10 @@
 **          Compiler version: Compaq C V6.1-019 -- V6.1-110.
 **	10-Sep-2008 (jonj)
 **	    SIR 120874: Add include of sc0e.h, use new form sc0ePut().
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 */
 
 /*

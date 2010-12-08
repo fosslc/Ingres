@@ -11,7 +11,6 @@
 #	30-Sep-2010 (troal01)
 #	    Fixed a typo in set option WITH_GEO
 
-
 #set: config32 int_w32
 #set: config a64_win
 #set: build 00

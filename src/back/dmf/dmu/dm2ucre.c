@@ -46,6 +46,7 @@
 #include    <dm2umct.h>
 #include    <dm2umxcb.h>
 #include    <dm2u.h>
+#include    <dmpecpn.h>
 #include    <cm.h>
 #include    <st.h>
 #include    <cui.h>
@@ -502,7 +503,7 @@ NO_OPTIM=su4_cmw i64_aix
 **	gwrowcount			The number of rows in the gateway table
 **					at the time it is registered.
 **	gwsource			The 'source' for the gateway object.
-**	char_array			Array of table attributes
+**	dmu_chars			Address of DMU_CHARACTERISTICS
 **	tbl_pri				Table's cache priority.
 **
 ** Outputs:
@@ -1018,7 +1019,7 @@ DM_DATA		    *gwchar_array,
 i4		    gw_id,
 i4		    gwrowcount,
 DMU_FROM_PATH_ENTRY *gwsource,
-DM_DATA		    *char_array,
+DMU_CHARACTERISTICS *dmu_chars,
 i4		    dimension,
 i4		    hilbertsize,
 f8 		    *range,
@@ -1046,12 +1047,10 @@ DB_ERROR	    *errcb)
     DB_TAB_TIMESTAMP	timestamp;
     DM_TID		tid;
     DM2R_KEY_DESC	key_desc[2];
-    DB_TRAN_ID 		tran_id;
     CL_ERR_DESC		sys_err;
     i4		compare;
     i4		error, local_error;
     i4		status, local_status;
-    i4		bad_name;
     i4		jrnl_on = 0;
     i4		journal = 0;
     i4		extension = 0;
@@ -1077,7 +1076,6 @@ DB_ERROR	    *errcb)
     i4		grant_mode;
     i4		dm0l_create_flags = 0;
     i4		journal_flag;
-    bool		no_rowlabkey = FALSE;
     bool		have_raw_loc = FALSE;
     DMP_ETAB_CATALOG    etab_record;
     bool	dd_reg_tbl_idx = FALSE;
@@ -1089,7 +1087,6 @@ DB_ERROR	    *errcb)
     u_i2		dmu_enc_aeskeylen;
     i4			alen;
     i4			attr_nametot;
-    char		*cp;
 
     /* List of all the system catalogs with fixed table ID numbers.
     ** Any ii-table excluding blob etabs and user partitions that
@@ -1276,7 +1273,6 @@ DB_ERROR	    *errcb)
 	    {DM_B_PNAME_TAB_ID, DM_I_PNAME_TAB_ID},
 	    TCB_CATALOG | TCB_NOUPDT | TCB_PROALL, 0},
     };
-    char		*name_ptr;
 
     /* If the DMU_CB was passed in grab values from it. We are still
     ** passing in individual args that could come from here. Where
@@ -1431,6 +1427,9 @@ DB_ERROR	    *errcb)
         */
 
 	if (!extension && (relstat2 & TCB2_PARTITION) == 0)
+            /* If any of these checks come up true then compare will be 0
+            ** which indicates a catalog table.
+            */
 	    compare = STncasecmp((char *)table_name->db_tab_name,
 				 "ii", 2 ) &&
 				  STncasecmp((char *)table_name->db_tab_name,
@@ -2868,7 +2867,7 @@ DB_ERROR	    *errcb)
 	    status = dmf_gwt_register(scb->scb_gw_session_id, table_name, owner,
 		&ntab_id, attr_count, attr_nametot, attr_entry,
 		gwchar_array, gwattr_array,
-		xcb, gwsource, gw_id, &tup_cnt, &pg_cnt, char_array, errcb);
+		xcb, gwsource, gw_id, &tup_cnt, &pg_cnt, dmu_chars, errcb);
 	    if (status)
 		break;
 

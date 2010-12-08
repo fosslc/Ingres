@@ -196,7 +196,8 @@
 **	04-Oct-2007 (bonro01)
 **	    SEP fails to display diffs under Windows because last change
 **	    conflicts with windows specific code.
-**
+**	1-Dec-2010 (kschendel)
+**	    Fix compiler warnings.
 */
 
 struct page_chain {
@@ -772,7 +773,7 @@ open_log(char *testPrefix,char *testSufix,char *username,char *errbuff)
     {
 	append_line(ERx("/*"),1);
 
-	copyright_year(&year);
+	copyright_year(&year[0]);
 	STprintf(buffer, ERx("Copyright (c) %s Ingres Corporation"), &year);
 	append_line(buffer, 1);
 	append_line(ERx(" "), 1);
@@ -867,7 +868,7 @@ append_sepfile(SEPFILE	*sepptr)
     STATUS                 ioerr ;
     char                   buffer [SCR_LINE] ;
     FILE                  *fptr = sepptr->_fptr ;
-    char                  *endptr, prev_char=NULL ;
+    char                  *endptr, prev_char=EOS ;
     i4                     count, i ;
 #ifdef NT_GENERIC
     char                  *ptr = NULL;

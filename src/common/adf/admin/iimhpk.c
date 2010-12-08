@@ -39,6 +39,8 @@
 **          Back out change for bug 108637
 **          Previous change breaks platforms that need ALIGNMENT_REQUIRED.
 **          iiadd.h should be taken from $II_SYSTEM/ingres/files/iiadd.h
+**      02-Dec-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
  
 /*
@@ -76,6 +78,73 @@ u_char		*c_to;
 /*
 **  Definition of static variables and forward static functions.
 */
+II_STATUS IIMHpkint( PTR         pkin,
+		     int         prec,
+		     int         scale,
+		     PTR         pkout);
+
+II_STATUS IIMHpkceil( PTR         pkin,
+		     int         prec,
+		     int         scale,
+		     PTR         pkout);
+
+II_STATUS IIMHpkabs( PTR         pkin,
+		     int         prec,
+		     int         scale,
+		     PTR         pkout);
+
+II_STATUS IIMHpkneg( PTR         pkin,
+		     int         prec,
+		     int         scale,
+		     PTR         pkout);
+
+II_STATUS IIMHpkadd( PTR         pk1,
+		     int         p1,
+		     int         s1,
+		     PTR         pk2,
+		     int         p2,
+		     int         s2,
+		     PTR         pkout,
+		     int         *pout,
+		     int         *sout);
+
+II_STATUS IIMHpksub( PTR         pk1,
+	   	     int         p1,
+	   	     int         s1,
+	   	     PTR         pk2,
+	   	     int         p2,
+	   	     int         s2,
+	   	     PTR         pkout,
+	   	     int         *pout,
+	   	     int         *sout);
+
+II_STATUS IIMHpkmul( PTR         pk1,
+		     int         p1,
+	   	     int         s1,
+	   	     PTR         pk2,
+		     int         p2,
+		     int         s2,
+		     PTR         pkout,
+		     int         *pout,
+		     int         *sout);
+
+II_STATUS IIMHpkdiv( PTR         pk1,
+		     int         p1,
+		     int         s1,
+		     PTR         pk2,
+		     int         p2,
+		     int         s2,
+		     PTR         pkout,
+		     int         *pout,
+		     int         *sout);
+
+int IIMHpkcmp( PTR         pk1,
+	       int         p1,
+	       int         s1,
+	       PTR         pk2,
+	       int         p2,
+	       int         s2);
+
 
 /*
 [@static_variable_or_function_definition@]...
@@ -114,11 +183,11 @@ u_char		*c_to;
 */
  
 II_STATUS
-IIMHpkint(pkin, prec, scale, pkout)
-PTR         pkin;
-int         prec;
-int         scale;
-PTR         pkout;
+IIMHpkint(
+PTR         pkin,
+int         prec,
+int         scale,
+PTR         pkout)
 {
     u_char      *po;            /* pointer to output */
     int		sc = scale;	/* scale counter */
@@ -169,11 +238,11 @@ PTR         pkout;
 */
  
 II_STATUS
-IIMHpkceil(pkin, prec, scale, pkout)
-PTR         pkin;
-int         prec;
-int         scale;
-PTR         pkout;
+IIMHpkceil(
+PTR         pkin,
+int         prec,
+int         scale,
+PTR         pkout)
 {
     u_char      *spo;                   /* walks thru scale digits */
     u_char      *ppo;                   /* for adding one to pkout */
@@ -275,11 +344,11 @@ PTR         pkout;
 */
  
 II_STATUS
-IIMHpkabs(pkin, prec, scale, pkout)
-PTR         pkin;
-int         prec;
-int         scale;
-PTR         pkout;
+IIMHpkabs(
+PTR         pkin,
+int         prec,
+int         scale,
+PTR         pkout)
 {
     u_char      *signptr = (u_char *)pkout + prec / 2;
 
@@ -322,11 +391,11 @@ PTR         pkout;
 */
  
 II_STATUS
-IIMHpkneg(pkin, prec, scale, pkout)
-PTR         pkin;
-int         prec;
-int         scale;
-PTR         pkout;
+IIMHpkneg
+(PTR         pkin,
+int         prec,
+int         scale,
+PTR         pkout)
 {
     u_char      *signptr = (u_char *)pkout + prec / 2;
  
@@ -383,16 +452,16 @@ PTR         pkout;
 */
  
 II_STATUS
-IIMHpkadd(pk1, p1, s1, pk2, p2, s2, pkout, pout, sout)
-PTR         pk1;
-int         p1;
-int         s1;
-PTR         pk2;
-int         p2;
-int         s2;
-PTR         pkout;
-int         *pout;
-int         *sout;
+IIMHpkadd(
+PTR         pk1,
+int         p1,
+int         s1,
+PTR         pk2,
+int         p2,
+int         s2,
+PTR         pkout,
+int         *pout,
+int         *sout)
 {
     u_char      *ptr1 = (u_char *)pk1 + p1 / 2;    /* ptr's walk thru addends */
     u_char      *ptr2 = (u_char *)pk2 + p2 / 2;    /* and result from end to  */
@@ -592,16 +661,15 @@ int         *sout;
 */
  
 II_STATUS
-IIMHpksub(pk1, p1, s1, pk2, p2, s2, pkout, pout, sout)
-PTR         pk1;
-int         p1;
-int         s1;
-PTR         pk2;
-int         p2;
-int         s2;
-PTR         pkout;
-int         *pout;
-int         *sout;
+IIMHpksub( PTR         pk1,
+	   int         p1,
+	   int         s1,
+	   PTR         pk2,
+	   int         p2,
+	   int         s2,
+	   PTR         pkout,
+	   int         *pout,
+	   int         *sout)
 {
     u_char      *ptr1 = (u_char *)pk1 + p1 / 2;    /* ptr's walk thru numbers */
     u_char      *ptr2 = (u_char *)pk2 + p2 / 2;	   /* and result from end to  */
@@ -824,16 +892,16 @@ int         *sout;
 */
 
 II_STATUS
-IIMHpkmul(pk1, p1, s1, pk2, p2, s2, pkout, pout, sout)
-PTR         pk1;
-int         p1;
-int         s1;
-PTR         pk2;
-int         p2;
-int         s2;
-PTR         pkout;
-int         *pout;
-int         *sout;
+IIMHpkmul(
+PTR         pk1,
+int         p1,
+int         s1,
+PTR         pk2,
+int         p2,
+int         s2,
+PTR         pkout,
+int         *pout,
+int         *sout)
 {
     u_char	*ptr1 = (u_char *)pk1 + p1 / 2;	/* end of multiplicand */
     u_char	*ptr2 = (u_char *)pk2 + p2 / 2;	/* end of multiplier */
@@ -1020,16 +1088,16 @@ int         *sout;
 */
  
 II_STATUS
-IIMHpkdiv(pk1, p1, s1, pk2, p2, s2, pkout, pout, sout)
-PTR         pk1;
-int         p1;
-int         s1;
-PTR         pk2;
-int         p2;
-int         s2;
-PTR         pkout;
-int         *pout;
-int         *sout;
+IIMHpkdiv(
+PTR         pk1,
+int         p1,
+int         s1,
+PTR         pk2,
+int         p2,
+int         s2,
+PTR         pkout,
+int         *pout,
+int         *sout)
 {
     u_char	*ptr1 = (u_char *)pk1 + p1 / 2;	/* end of dividend */
     u_char	*ptr2 = (u_char *)pk2 + p2 / 2;	/* end of divisor */
@@ -1333,13 +1401,13 @@ int         *sout;
 */
  
 int
-IIMHpkcmp(pk1, p1, s1, pk2, p2, s2)
-PTR         pk1;
-int         p1;
-int         s1;
-PTR         pk2;
-int         p2;
-int         s2;
+IIMHpkcmp(
+PTR         pk1,
+int         p1,
+int         s1,
+PTR         pk2,
+int         p2,
+int         s2)
 {
     u_char      *ptr1 = (u_char *)pk1;
     u_char      *ptr2 = (u_char *)pk2;

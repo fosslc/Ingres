@@ -1,6 +1,5 @@
-/* Copyright (c) 1986, 2005 Ingres Corporation
-**
-**
+/*
+** Copyright (c) 1986, 2005, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -518,7 +517,40 @@
 **	    Add set [no]create_compression.
 **      17-Aug-2010 (horda03) b124274
 **          Add SEGMENTED as a keyword for SET QEP SEGMENTED.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for SET SESSION *COLLATION*
 **/
+
+/* TABLE OF CONTENTS */
+typedef struct _KEYINFO KEYINFO;
+
+i4 psl_sscan(
+	register PSS_SESBLK *pss_cb,
+	register PSQ_CB *psq_cb);
+static i4 multi_word_keyword(
+	PSS_SESBLK *pss_cb,
+	PSQ_CB *psq_cb,
+	const KEYINFO *tret,
+	unsigned char *this_char,
+	unsigned char *qry_end,
+	i4 *ret_valp);
+static i4 psl_unorm(
+	PSS_SESBLK *pss_cb,
+	PSQ_CB *psq_cb,
+	i4 token);
+static bool psl_dtunorm(
+	ADF_CB *adf_cb,
+	i2 idt);
+i4 psl_unorm_error(
+	PSS_SESBLK *pss_cb,
+	PSQ_CB *psq_cb,
+	DB_DATA_VALUE *rdv,
+	DB_DATA_VALUE *dv1,
+	i4 err_status);
 
 /*
 **  Defines of other constants.
@@ -569,13 +601,13 @@ typedef struct _SECONDARY
 **     28-jan-86 (jeff)
 **          Modified from old Key_info struct.
 */
-typedef struct _KEYINFO
+struct _KEYINFO
 {
     i4              token;              /* The token to be returned */
     i4		    tokval;             /* Value of the token */
     i4              num2ary;            /* Number of possible 2nd words */
     SECONDARY       *secondary;         /* Table of second words */
-}   KEYINFO;
+};
 
 /*
 ** Definition of all global variables owned by this file.
@@ -1372,8 +1404,8 @@ static const KEYINFO                Key_info[] = {
 /* 207 */	       { /*SIMILAR*/0,	    0,	SIMILARSIZE,(SECONDARY *)Similarwords},
 /* 208 */	       {/* GENERATED */ 0,  0, GENERATEDSIZE, (SECONDARY *)
 								Generatedwords},
-/* 209 */	       { AUTOINCREMENT,	    0,	0,	(SECONDARY *) NULL   },
-/* 210 */	       { IDENTITY,	    0,	0,	(SECONDARY *) NULL   },
+/* 209 */	       { AUTOINCREMENT,	    0,	0,	(SECONDARY *)NULL   },
+/* 210 */	       { IDENTITY,	    0,	0,	(SECONDARY *)NULL   },
 /* 211 */	       {/*OVERRIDING */ 0,  0, OVERRIDINGSIZE, (SECONDARY *)
                                                                Overridingwords},
 /* 212 */              { FALSECONST,        0,  0,      (SECONDARY *)NULL },
@@ -1382,8 +1414,9 @@ static const KEYINFO                Key_info[] = {
 /* 215 */	       { SINGLETON,	    0,	0,	(SECONDARY *)NULL },
 /* 216 */	       { RENAME,    PSL_GOVAL,	0,	(SECONDARY *)NULL },
 /* 217 */	       { ENCRYPT,	    0,  0,	(SECONDARY *)NULL },
-/* 218 */              { SEGMENTED,         0,  0,      (SECONDARY *) NULL   },
-/* 219 */              { SRID,              0,  0,      (SECONDARY *)NULL },
+/* 218 */              { SEGMENTED,         0,  0,      (SECONDARY *)NULL },
+/* 219 */              { COLLATION,         0,  0,      (SECONDARY *)NULL },
+/* 220 */              { SRID,              0,  0,      (SECONDARY *)NULL }
 };
 
 /* Alternate keyword lists for inside WITH parsing (specifically, when
@@ -1508,27 +1541,6 @@ static const KEYTABLE alt_part_kwds =
 	sizeof(alt_part_index) / sizeof(alt_part_index[0]),
 	&alt_part_info[0]
 };
-	
-
-/* Local procedure declarations */
-
-static i4 multi_word_keyword(PSS_SESBLK *pss_cb,
-	PSQ_CB *psq_cb,
-	const struct _KEYINFO *tret,
-	u_char *this_char,
-	u_char *qry_end,
-	i4 *ret_valp);
-
-static i4 
-psl_unorm(
-PSS_SESBLK *pss_cb,
-PSQ_CB	    *psq_cb,
-i4	    token);
-
-static bool
-psl_dtunorm(
-ADF_CB          *adf_cb,
-i2		idt);
 
 
 /*{
@@ -1770,6 +1782,9 @@ i2		idt);
 **	    error (bug 121953).
 **	26-Aug-2009 (kschendel) b121804
 **	    Fix compiler warnings with new prototypes in cm.h.
+**	5-Oct-2010 (kschendel) SIR 124544
+**	    Don't need separate decimal-comma flag for DGTT, PSS_CREATE_STMT
+**	    is good enough.
 */
 i4
 psl_sscan(
@@ -1793,7 +1808,9 @@ psl_sscan(
     i4		    lineno = 0;
     i4		    nonwhite = 0;
     DB_STATUS	    status;
+# ifdef BYTE_ALIGN
     i4		    left;
+# endif
     bool	    leave_loop = TRUE;
     const KEYTABLE  *kwd_table;
     bool	    hexconst_0xNN = FALSE;
@@ -2083,8 +2100,8 @@ common_datetime_lit:
 		register u_char *string;
 		register i4     length;
 		register i4     left;
-		register i4     c;
-		register i4     hex_num;
+		register i4     c = 0;
+		register i4     hex_num = 0;
 		u_char		*start;
 		register i4     hex_size = 0;
 		bool		hexconst_end = FALSE;
@@ -2259,8 +2276,7 @@ common_datetime_lit:
 	    if (pss_cb->pss_decimal != ',' || next_char >= qry_end ||
 		!CMdigit(next_char + 1) || ret_val == NAME ||
                ( pss_cb->pss_decimal == ',' && 
-		 ((pss_cb->pss_stmt_flags & PSS_CREATE_STMT) ||
-		 ( pss_cb->pss_stmt_flags & PSS_CREATE_DGTT)) ))
+		 (pss_cb->pss_stmt_flags & PSS_CREATE_STMT)) )
 	    {
 		CMnext(next_char);
 		pss_cb->pss_nxtchar = next_char;
@@ -2342,8 +2358,8 @@ digits:
 	    ** any.  If there isn't any, it will leave next_char pointing
 	    ** to the place after the integer part of the number.
 	    */
-	    dot_or_comma = !( ((pss_cb->pss_stmt_flags & PSS_CREATE_STMT) || 
-		(pss_cb->pss_stmt_flags & PSS_CREATE_DGTT)) && decimal == ',' )
+	    dot_or_comma = !( (pss_cb->pss_stmt_flags & PSS_CREATE_STMT)
+				&& decimal == ',' )
 		|| (pss_cb->pss_stmt_flags & PSS_DEFAULT_VALUE)
 		|| (pss_cb->pss_stmt_flags & PSS_DBPROC_LHSVAR);
 	    if (dot_or_comma &&  c == decimal
@@ -2563,7 +2579,7 @@ digits:
             {
 		/* Unicode literal - U&'...'. */
 
-		i4	i, j, hcount;
+		i4	i, hcount;
                 DB_NVCHR_STRING	*utoken, *uchunk;
 		u_char	*curristr;	/* start of current input segment */
 		i4	ulen;		/* length (so far) of token */
@@ -3957,7 +3973,6 @@ tokreturn:
     if (ret_val == SELECT)
     {
 	pss_cb->pss_stmt_flags &= ~PSS_CREATE_STMT;
-	pss_cb->pss_stmt_flags &= ~PSS_CREATE_DGTT;
     }
 
     if (ret_val == UCONST || ret_val == QDATA || (utf8 && ret_val == SCONST))
@@ -4050,7 +4065,7 @@ multi_word_keyword(PSS_SESBLK *pss_cb, PSQ_CB *psq_cb,
 {
     i4 compval;
     i4 lines = 0;
-    register i4 ii_try;
+    register i4 ii_try = 0;
     register i4	low;
     register i4	high;
     SECONDARY *second;
@@ -4375,7 +4390,6 @@ i4	    token)
     char		*name;
     DB_NVCHR_STRING	*norm_nvchr;
     DB_TEXT_STRING	*norm_text;
-    char		*norm_name;
     DB_DATA_VALUE	dv1;
     DB_DATA_VALUE	rdv;
     DB_DATA_VALUE	*pop[2];
@@ -4412,6 +4426,8 @@ i4	    token)
 	nvchr = yacc_cb->yylval.psl_utextype;
 	dv1.db_datatype = DB_NVCHR_TYPE;
 	dv1.db_length = (nvchr->count * sizeof(UCS2)) + DB_CNTSIZE;
+	dv1.db_collID = DB_UNSET_COLL;
+	dv1.db_prec = 0;
 	dv1.db_data = (PTR)nvchr;
 	rdv.db_datatype = DB_NVCHR_TYPE;
     }
@@ -4420,6 +4436,8 @@ i4	    token)
 	text = yacc_cb->yylval.psl_textype;
 	dv1.db_datatype = DB_VCH_TYPE;
 	dv1.db_length = text->db_t_count + DB_CNTSIZE;
+	dv1.db_collID = DB_UNSET_COLL;
+	dv1.db_prec = 0;
 	dv1.db_data = (PTR)text;
 	rdv.db_datatype = DB_VCH_TYPE;
 
@@ -4481,6 +4499,8 @@ i4	    token)
 	/* For NAME tokens, don't normalize the null, just add it back */
 	namelen = STlength(name);
 	dv1.db_length = namelen;
+	dv1.db_collID = DB_UNSET_COLL;
+	dv1.db_prec = 0;
 	dv1.db_data = (PTR)name;
 	rdv.db_datatype = DB_VCH_TYPE;
     }
@@ -4600,7 +4620,8 @@ dv1.db_length, rdv.db_length);
 	pss_cb->pss_symnext = save_symnext;
 	return (token);
     }
-    else if (ult_check_macro(&pss_cb->pss_trace, 19, &val1, &val2))
+    else if (ult_check_macro(&pss_cb->pss_trace,
+			PSS_SCANNER_UNORM, &val1, &val2))
     {
 	i4	t1 = dv1.db_datatype;
 	i4	t2 = rdv.db_datatype;
@@ -4726,9 +4747,7 @@ DB_STATUS err_status)
     ADF_CB		*adf_cb;
     i4			val1, val2;
     char		*p;
-    char		*n = NULL;
     i4			i;
-    i4			cnt = 0;
     i4			t1 = dv1->db_datatype;
     i4			t2 = rdv->db_datatype;
     i4			error;
@@ -4742,7 +4761,8 @@ DB_STATUS err_status)
     adf_cb = (ADF_CB*) pss_cb->pss_adfcb;
 
     /* "set trace point ps147" to see the data causing the error */
-    if (ult_check_macro(&pss_cb->pss_trace, 19, &val1, &val2))
+    if (ult_check_macro(&pss_cb->pss_trace,
+			PSS_SCANNER_UNORM, &val1, &val2))
     {
 	TRdisplay(" UNORM ERROR:(%d) (%d,%d)\n", err_status,
 	    (i4)dv1->db_datatype, (i4)dv1->db_length);
@@ -4777,7 +4797,8 @@ DB_STATUS err_status)
 	}
     }
 
-    if (ult_check_macro(&pss_cb->pss_trace, 19, &val1, &val2))
+    if (ult_check_macro(&pss_cb->pss_trace,
+			PSS_SCANNER_UNORM, &val1, &val2))
     {
 	TRdisplay("UNORM ERROR: fix arg (%d,%d) cnt(%d) try again\n",
 	(i4)dv1->db_datatype, (i4)dv1->db_length, cnt);

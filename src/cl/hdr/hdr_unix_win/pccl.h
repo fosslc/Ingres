@@ -94,7 +94,13 @@
 **          get the pid means get THE pid. We also define the same macro
 **          in a sensible fashion for all other platforms so that we will
 **          not fall foul of build errors.
-**	    
+**      15-nov-2010 (stephenb)
+**          Add proto for PCspawn.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Include unistd.h for getpgrp() on linux.  unistd.h probably
+**	    should be included in compat, todo for later.
 */
 
 # ifndef	PID
@@ -133,6 +139,8 @@ typedef enum
 # else
 # define	PID		i4
 # ifdef LNX
+/* FIXME unistd.h probably should be included in compat.h -- do here for now. */
+#include <unistd.h>
 # define        PCpid(pid)     *pid = getpgrp()
                 /* For Uniqueness on Linux, we may need to avoid the abiguity of the above macro 
                 */ 
@@ -218,23 +226,17 @@ typedef enum
 
 #ifndef NT_GENERIC
 FUNC_EXTERN i4  PCfork( 
-#ifdef CL_PROTOTYPED
 	STATUS *status
-#endif
 #else
 FUNC_EXTERN PID PCfork(
-#ifdef CL_PROTOTYPED
 	LPTHREAD_START_ROUTINE	thread_func,
 	LPVOID			func_arg,
 	STATUS			*status
-#endif
 #endif /* NT_GENERIC */
 );
 
 FUNC_EXTERN STATUS PCwait(
-#ifdef CL_PROTOTYPED
 	PID	proc
-#endif
 );
 
 FUNC_EXTERN STATUS PCdocmdline( 
@@ -255,18 +257,23 @@ FUNC_EXTERN STATUS PCdowindowcmdline(
 		CL_ERR_DESC *   err_code);
 
 FUNC_EXTERN STATUS  PCdoexeclp64(
-#ifdef CL_PROTOTYPED
             	i4		argc,
             	char		**argv,
 	    	bool		exitonerror
-#endif
 );
 
 FUNC_EXTERN STATUS  PCdoexeclp32(
-#ifdef CL_PROTOTYPED
             	i4		argc,
             	char		**argv,
 	    	bool		exitonerror
-#endif
 );
+FUNC_EXTERN STATUS PCspawn(
+	i4 		argc,
+	char		**argv,
+	i1		wait,
+	LOCATION	*in_name,
+	LOCATION	*out_name,
+	PID		*pid
+);
+i4	PCreap_withThisPid(int targetPid);
 

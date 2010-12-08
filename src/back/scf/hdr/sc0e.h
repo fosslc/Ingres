@@ -45,6 +45,8 @@
 **	29-Oct-2008 (jonj)
 **	    SIR 120874: Add non-variadic macros and functions for
 **	    compilers that don't support them.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Unconditionally prototype sc0ePutNV()
 **/
 
 /* Used where function pointer needed and __FILE__, __LINE__ unknown */
@@ -62,6 +64,13 @@ FUNC_EXTERN VOID sc0ePutFcn(
                           i4 num_params,
                           ...);
 
+FUNC_EXTERN VOID sc0ePutNV(
+			  DB_ERROR *dberror,
+			  i4	err_code,
+                          CL_ERR_DESC *os_error,
+                          i4 num_params,
+                          ...);
+
 #ifdef HAS_VARIADIC_MACROS
 
 /* The preferred macro form, including dberror */
@@ -75,13 +84,6 @@ FUNC_EXTERN VOID sc0ePutFcn(
 
 /* Variadic macros not supported */
 #define sc0ePut sc0ePutNV
-
-FUNC_EXTERN VOID sc0ePutNV(
-			  DB_ERROR *dberror,
-			  i4	err_code,
-                          CL_ERR_DESC *os_error,
-                          i4 num_params,
-                          ...);
 
 #define sc0e_put sc0e_putAsFcn
 

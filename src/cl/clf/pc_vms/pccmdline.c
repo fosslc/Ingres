@@ -130,6 +130,10 @@
 **          Replace READONLY/WSCREADONLY by const.
 **      22-dec-2008 (stegr01)
 **          Itanium VMS port
+**      16-Nov-2010 (horda03) b124691
+**          Inside a threaded server ASTs should be disabled.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems, 
 **/
 
 /* Note:  DCLCOMLINE is the size of the mailbox buffer used to communicate with
@@ -197,7 +201,6 @@ static int	write();
 static int	read(II_VMS_CHANNEL chan, char *buf, int *size);
 static int	trnlog();
 static int	mailbox();
-static int	PCcleanup();
 static int	PCexith();
 static STATUS	getprocdets();	
 static STATUS	PCfewrite();
@@ -569,6 +572,7 @@ CL_ERR_DESC	*error)	/* Error return */
 	char		is_param_specifier = FALSE;
 	char		prev_was_white = FALSE;
 	char            *cp;	
+        EX              ex;
 
 	CL_CLEAR_ERR(error);
 	if (log != 0)
@@ -597,7 +601,7 @@ CL_ERR_DESC	*error)	/* Error return */
 		*/
 		if ( mbxchan != 0 )
 		{
-			PCcleanup();
+			PCcleanup(ex);
 		}
 		flag = 0;
 
@@ -1005,7 +1009,7 @@ CL_ERR_DESC	*error)	/* Error return */
 	** Bad error.  Cancel timer, free event flags.
 	*/
    errreturn:
-	PCcleanup();
+	PCcleanup(ex);
 	EXinterrupt(EX_ON);
 	return error->error = rval;
 }
@@ -1144,16 +1148,18 @@ char	*buf)
 static
 PCitimer()
 {
-	sys$setast(0);
+        EX ex;
+	i4 asts_enabled = (sys$setast(0) == SS$_WASSET);
+
 	if (incom)
 	{
 		sys$setimr(EFN$C_ENF, deltim, PCitimer, timerid, 0);
 	}
 	else
 	{
-		PCcleanup();
+		PCcleanup(ex);
 	}
-	sys$setast(1);
+	if (asts_enabled) sys$setast(1);
 }
 
 static int
@@ -1255,8 +1261,8 @@ PCexith()
 ** Description:
 **	Close mail box and terminate sub-process.
 */
-static
-PCcleanup()
+void
+PCcleanup(EX except)
 {
 	sys$cantim(timerid, 0);
 	sys$dassgn(statchan);

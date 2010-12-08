@@ -342,6 +342,10 @@ FUNC_EXTERN	bool	IIUFmro_MoreOutput();
 **	29-oct-98 (kitch01)
 **		Remove the 13-may-97 change completely. Testing shows that it is
 **		now not required. Bug 93979.
+**       2-Dec-2010 (hanal04) Bug 124652
+**              If no rows are printed and the empty report has not been forced
+**              to the printer we need to remove the ra*.tmp file we created
+**              in II_TEMPORARY.
 */
 
 
@@ -468,7 +472,18 @@ LOCATION  *loc;		/* file where the report will be written */
 			return (FALSE);
 		/* suppress message if undocumented flag is given */
 		else if (!St_copyright)
+                {
 			SIprintf(ERget(S_RW0045_No_data_in_table));
+                        if (St_rf_open && loc)
+                        {
+                            /* No rows and not forced to printer, delete
+                            ** the raXXXXXXXXXXXXX.tmp file to clean up.
+                            */
+                            SIclose (En_rf_unit);
+                            LOdelete(loc);
+                            St_rf_open = FALSE; /* so r_exit() knows */
+                        }
+                }
 	}
 	SIflush(stdout);
 	return(TRUE);

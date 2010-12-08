@@ -6827,6 +6827,10 @@ dm0l_load(
 **	    Ensure the misc_data pointer in a MISC_CB is set correctly and
 **	    that we correctly allocate sizeof(DMP_MISC), not sizeof(DM_OBJECT)
 **	    since that's what we're actually using (the type is MISC_CB)
+**	08-Nov-2010 (jonj) b124636
+**	    Don't write P1 records for inactive transactions. They haven't
+**	    written a BT so any subsequent log writes will induce
+**	    E_DMA407_LG_WRITE_NOT_FIRST.
 */
 DB_STATUS
 dm0l_secure(
@@ -6885,205 +6889,209 @@ dm0l_secure(
 			E_DM9370_DM0L_SECURE, dberr, status));
 	}
 
-	status = dm0m_allocate(LG_MAX_RSZ + sizeof(DMP_MISC),
-		(i4)0, (i4)MISC_CB,
-		(i4)MISC_ASCII_ID, (char *)NULL, &mem_ptr, dberr);
-	if (status != OK)
+	/* No P1 records for inactive transactions */
+	if ( tr.tr_status & TR_ACTIVE )
 	{
-	    uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
-		    (char *)NULL, (i4)0, (i4 *)NULL, err_code, 0);
-	    uleFormat(NULL, E_DM9425_MEMORY_ALLOCATE, (CL_ERR_DESC *)NULL, ULE_LOG,
-		    NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 1,
-		    0, LG_MAX_RSZ + sizeof(DMP_MISC));
-	    SETDBERR(dberr, 0, E_DM9370_DM0L_SECURE);
-	    return (E_DB_ERROR);
-	}
-
-	/*	Initialize the DM0L_SECURE log record. */
-
-	p1 = (DM0L_P1 *) ((char *)mem_ptr + sizeof(DMP_MISC));
-	((DMP_MISC*)mem_ptr)->misc_data = (char*)p1;
-	p1->p1_header.type = DM0LP1;
-	p1->p1_header.flags = 0;
-	p1->p1_flag = 0;
-
-	/* Get the locks held in the transaction lock list. */
-
-	length = 0;
-	i = 0;
-	count = (LG_MAX_RSZ - sizeof(DM0L_P1)) / sizeof(LK_BLKB_INFO);
-
-	for (context = 0;;)
-	{
-	    LK_BLKB_INFO	    *lkb = (LK_BLKB_INFO *)lk_buffer;
-
-	    if (status = LKshow(LK_S_TRAN_LOCKS, lock_id, 0, 0, buf_size,
-			    lk_buffer, (u_i4 *)&length, (u_i4 *)&context,
-			    &sys_err))
+	    status = dm0m_allocate(LG_MAX_RSZ + sizeof(DMP_MISC),
+		    (i4)0, (i4)MISC_CB,
+		    (i4)MISC_ASCII_ID, (char *)NULL, &mem_ptr, dberr);
+	    if (status != OK)
 	    {
-		dm0m_deallocate(&mem_ptr);
-		return(log_error(E_DM901D_BAD_LOCK_SHOW, &sys_err, LK_S_TRAN_LOCKS,
-			E_DM9370_DM0L_SECURE, dberr, status));
+		uleFormat(dberr, 0, (CL_ERR_DESC *)NULL, ULE_LOG, NULL,
+			(char *)NULL, (i4)0, (i4 *)NULL, err_code, 0);
+		uleFormat(NULL, E_DM9425_MEMORY_ALLOCATE, (CL_ERR_DESC *)NULL, ULE_LOG,
+			NULL, (char *)NULL, (i4)0, (i4 *)NULL, err_code, 1,
+			0, LG_MAX_RSZ + sizeof(DMP_MISC));
+		SETDBERR(dberr, 0, E_DM9370_DM0L_SECURE);
+		return (E_DB_ERROR);
 	    }
 
-	    if (length < sizeof(LK_BLKB_INFO))
-		break;
+	    /*	Initialize the DM0L_SECURE log record. */
 
-	    for (lk_count = (length / sizeof(LK_BLKB_INFO)); lk_count; lk_count--)
+	    p1 = (DM0L_P1 *) ((char *)mem_ptr + sizeof(DMP_MISC));
+	    ((DMP_MISC*)mem_ptr)->misc_data = (char*)p1;
+	    p1->p1_header.type = DM0LP1;
+	    p1->p1_header.flags = 0;
+	    p1->p1_flag = 0;
+
+	    /* Get the locks held in the transaction lock list. */
+
+	    length = 0;
+	    i = 0;
+	    count = (LG_MAX_RSZ - sizeof(DM0L_P1)) / sizeof(LK_BLKB_INFO);
+
+	    for (context = 0;;)
 	    {
-		/* Only log write locks. */
+		LK_BLKB_INFO	    *lkb = (LK_BLKB_INFO *)lk_buffer;
 
-		if (lkb->lkb_grant_mode == LK_X || lkb->lkb_grant_mode == LK_SIX ||
-		    lkb->lkb_grant_mode == LK_IX)
+		if (status = LKshow(LK_S_TRAN_LOCKS, lock_id, 0, 0, buf_size,
+				lk_buffer, (u_i4 *)&length, (u_i4 *)&context,
+				&sys_err))
 		{
-		    STRUCT_ASSIGN_MACRO(*lkb, p1->p1_type_lk[i]);
-		    i++;
-		    if (i >= count)
-		    {
-			p1->p1_count = i;
-			p1->p1_header.length = sizeof(*p1) + (i - 1) *
-			    sizeof(LK_BLKB_INFO);
-			lg_object.lgo_size = p1->p1_header.length;
-			lg_object.lgo_data = (PTR) p1;
-
-			status = LGwrite(LG_NOT_RESERVED, lg_id, (i4)1, &lg_object,
-			    &lri, &sys_err);
-			if (status)
-			{
-			    dm0m_deallocate(&mem_ptr);
-			    return(log_error(E_DM9015_BAD_LOG_WRITE, &sys_err,
-				    lg_id, E_DM9370_DM0L_SECURE, dberr,
-				    status));
-			}
-			if (DMZ_SES_MACRO(11))
-			    dmd_logtrace(&p1->p1_header, 0);
-
-			i = 0;
-		    }
-		}
-		lkb++;
-	    }
-	}
-	if (i && i < count)
-	{
-	    p1->p1_count = i;
-	    p1->p1_header.length = sizeof(*p1) + (i - 1) * sizeof(LK_BLKB_INFO);
-	    lg_object.lgo_size = p1->p1_header.length;
-	    lg_object.lgo_data = (PTR) p1;
-
-	    status = LGwrite(LG_NOT_RESERVED, lg_id, (i4)1, &lg_object, &lri, &sys_err);
-	    if (status)
-	    {
-		dm0m_deallocate(&mem_ptr);
-		return(log_error(E_DM9015_BAD_LOG_WRITE, &sys_err, lg_id,
+		    dm0m_deallocate(&mem_ptr);
+		    return(log_error(E_DM901D_BAD_LOCK_SHOW, &sys_err, LK_S_TRAN_LOCKS,
 			    E_DM9370_DM0L_SECURE, dberr, status));
-	    }
+		}
 
-	    if (DMZ_SES_MACRO(11))
-		dmd_logtrace(&p1->p1_header, 0);
-	}
+		if (length < sizeof(LK_BLKB_INFO))
+		    break;
 
-	/* Get the locks held in the related lock list of the transction. */
-
-	length = 0;
-	i = 0;
-
-	for (context = 0;;)
-	{
-	    LK_BLKB_INFO	    *lkb = (LK_BLKB_INFO *)lk_buffer;
-
-	    if (status = LKshow(LK_S_REL_TRAN_LOCKS, lock_id, 0, 0, buf_size,
-			    lk_buffer, (u_i4 *)&length, (u_i4 *)&context,
-			    &sys_err))
-	    {
-		dm0m_deallocate(&mem_ptr);
-		return(log_error(E_DM901D_BAD_LOCK_SHOW, &sys_err, LK_S_TRAN_LOCKS,
-			E_DM9370_DM0L_SECURE, dberr, status));
-	    }
-
-	    if (length < sizeof(LK_BLKB_INFO))
-		break;
-
-	    for (lk_count = (length / sizeof(LK_BLKB_INFO)); lk_count; lk_count--)
-	    {
-		/* Only log write locks. */
-
-		if (lkb->lkb_grant_mode == LK_X || lkb->lkb_grant_mode == LK_SIX ||
-		    lkb->lkb_grant_mode == LK_IX)
+		for (lk_count = (length / sizeof(LK_BLKB_INFO)); lk_count; lk_count--)
 		{
-		    STRUCT_ASSIGN_MACRO(*lkb, p1->p1_type_lk[i]);
-		    i++;
-		    if (i >= count)
+		    /* Only log write locks. */
+
+		    if (lkb->lkb_grant_mode == LK_X || lkb->lkb_grant_mode == LK_SIX ||
+			lkb->lkb_grant_mode == LK_IX)
 		    {
-			p1->p1_count = i;
-			p1->p1_flag = P1_RELATED;
-			p1->p1_header.length = sizeof(*p1) + (i - 1) * sizeof(LK_BLKB_INFO);
-			lg_object.lgo_size = p1->p1_header.length;
-			lg_object.lgo_data = (PTR) p1;
-
-			status = LGwrite(LG_NOT_RESERVED, lg_id, (i4)1, &lg_object, &lri,
-					    &sys_err);
-			if (status)
+			STRUCT_ASSIGN_MACRO(*lkb, p1->p1_type_lk[i]);
+			i++;
+			if (i >= count)
 			{
-			    dm0m_deallocate(&mem_ptr);
-			    return(log_error(E_DM9015_BAD_LOG_WRITE, &sys_err, lg_id,
-				    E_DM9370_DM0L_SECURE, dberr, status));
-			}
-			if (DMZ_SES_MACRO(11))
-			    dmd_logtrace(&p1->p1_header, 0);
+			    p1->p1_count = i;
+			    p1->p1_header.length = sizeof(*p1) + (i - 1) *
+				sizeof(LK_BLKB_INFO);
+			    lg_object.lgo_size = p1->p1_header.length;
+			    lg_object.lgo_data = (PTR) p1;
 
-			i = 0;
-		    }
-		}
-		lkb++;
-	    }
-	}
-	if (i && i < count)
-	{
-	    p1->p1_count = i;
-	    p1->p1_flag = P1_RELATED;
-	    p1->p1_header.length = sizeof(*p1) + (i - 1) * sizeof(LK_BLKB_INFO);
-	    lg_object.lgo_size = p1->p1_header.length;
-	    lg_object.lgo_data = (PTR) p1;
-
-	    status = LGwrite(LG_NOT_RESERVED, lg_id, (i4)1, &lg_object, &lri, &sys_err);
-	    if (status)
-	    {
-		dm0m_deallocate(&mem_ptr);
-		return(log_error(E_DM9015_BAD_LOG_WRITE, &sys_err, lg_id,
-			    E_DM9370_DM0L_SECURE, dberr, status));
-	    }
-
-	    if (DMZ_SES_MACRO(11))
-		dmd_logtrace(&p1->p1_header, 0);
-	}
-
-	/*	Write the end of the SECURE log record marker and force to disk. */
-
-	p1->p1_header.length = sizeof(*p1);
-	p1->p1_count = 0;
-	p1->p1_flag = P1_LAST;
-	STRUCT_ASSIGN_MACRO(*tran_id, p1->p1_tran_id);
-	STRUCT_ASSIGN_MACRO(*dis_tran_id, p1->p1_dis_tran_id);
-	MEcopy((PTR) tr.tr_user_name, sizeof(p1->p1_name), (PTR) &p1->p1_name);
-	p1->p1_first_lga = tr.tr_first;
-	p1->p1_cp_lga = tr.tr_cp;
-	lg_object.lgo_size = p1->p1_header.length;
-	lg_object.lgo_data = (PTR) p1;
-
-	status = LGwrite(LG_FORCE | LG_NOT_RESERVED, lg_id, (i4)1, &lg_object, 
+			    status = LGwrite(LG_NOT_RESERVED, lg_id, (i4)1, &lg_object,
 				&lri, &sys_err);
-	if (status)
-	{
-	    dm0m_deallocate(&mem_ptr);
-	    return(log_error(E_DM9015_BAD_LOG_WRITE, &sys_err, lg_id,
+			    if (status)
+			    {
+				dm0m_deallocate(&mem_ptr);
+				return(log_error(E_DM9015_BAD_LOG_WRITE, &sys_err,
+					lg_id, E_DM9370_DM0L_SECURE, dberr,
+					status));
+			    }
+			    if (DMZ_SES_MACRO(11))
+				dmd_logtrace(&p1->p1_header, 0);
+
+			    i = 0;
+			}
+		    }
+		    lkb++;
+		}
+	    }
+	    if (i && i < count)
+	    {
+		p1->p1_count = i;
+		p1->p1_header.length = sizeof(*p1) + (i - 1) * sizeof(LK_BLKB_INFO);
+		lg_object.lgo_size = p1->p1_header.length;
+		lg_object.lgo_data = (PTR) p1;
+
+		status = LGwrite(LG_NOT_RESERVED, lg_id, (i4)1, &lg_object, &lri, &sys_err);
+		if (status)
+		{
+		    dm0m_deallocate(&mem_ptr);
+		    return(log_error(E_DM9015_BAD_LOG_WRITE, &sys_err, lg_id,
+				E_DM9370_DM0L_SECURE, dberr, status));
+		}
+
+		if (DMZ_SES_MACRO(11))
+		    dmd_logtrace(&p1->p1_header, 0);
+	    }
+
+	    /* Get the locks held in the related lock list of the transction. */
+
+	    length = 0;
+	    i = 0;
+
+	    for (context = 0;;)
+	    {
+		LK_BLKB_INFO	    *lkb = (LK_BLKB_INFO *)lk_buffer;
+
+		if (status = LKshow(LK_S_REL_TRAN_LOCKS, lock_id, 0, 0, buf_size,
+				lk_buffer, (u_i4 *)&length, (u_i4 *)&context,
+				&sys_err))
+		{
+		    dm0m_deallocate(&mem_ptr);
+		    return(log_error(E_DM901D_BAD_LOCK_SHOW, &sys_err, LK_S_TRAN_LOCKS,
 			    E_DM9370_DM0L_SECURE, dberr, status));
+		}
+
+		if (length < sizeof(LK_BLKB_INFO))
+		    break;
+
+		for (lk_count = (length / sizeof(LK_BLKB_INFO)); lk_count; lk_count--)
+		{
+		    /* Only log write locks. */
+
+		    if (lkb->lkb_grant_mode == LK_X || lkb->lkb_grant_mode == LK_SIX ||
+			lkb->lkb_grant_mode == LK_IX)
+		    {
+			STRUCT_ASSIGN_MACRO(*lkb, p1->p1_type_lk[i]);
+			i++;
+			if (i >= count)
+			{
+			    p1->p1_count = i;
+			    p1->p1_flag = P1_RELATED;
+			    p1->p1_header.length = sizeof(*p1) + (i - 1) * sizeof(LK_BLKB_INFO);
+			    lg_object.lgo_size = p1->p1_header.length;
+			    lg_object.lgo_data = (PTR) p1;
+
+			    status = LGwrite(LG_NOT_RESERVED, lg_id, (i4)1, &lg_object, &lri,
+						&sys_err);
+			    if (status)
+			    {
+				dm0m_deallocate(&mem_ptr);
+				return(log_error(E_DM9015_BAD_LOG_WRITE, &sys_err, lg_id,
+					E_DM9370_DM0L_SECURE, dberr, status));
+			    }
+			    if (DMZ_SES_MACRO(11))
+				dmd_logtrace(&p1->p1_header, 0);
+
+			    i = 0;
+			}
+		    }
+		    lkb++;
+		}
+	    }
+	    if (i && i < count)
+	    {
+		p1->p1_count = i;
+		p1->p1_flag = P1_RELATED;
+		p1->p1_header.length = sizeof(*p1) + (i - 1) * sizeof(LK_BLKB_INFO);
+		lg_object.lgo_size = p1->p1_header.length;
+		lg_object.lgo_data = (PTR) p1;
+
+		status = LGwrite(LG_NOT_RESERVED, lg_id, (i4)1, &lg_object, &lri, &sys_err);
+		if (status)
+		{
+		    dm0m_deallocate(&mem_ptr);
+		    return(log_error(E_DM9015_BAD_LOG_WRITE, &sys_err, lg_id,
+				E_DM9370_DM0L_SECURE, dberr, status));
+		}
+
+		if (DMZ_SES_MACRO(11))
+		    dmd_logtrace(&p1->p1_header, 0);
+	    }
+
+	    /*	Write the end of the SECURE log record marker and force to disk. */
+
+	    p1->p1_header.length = sizeof(*p1);
+	    p1->p1_count = 0;
+	    p1->p1_flag = P1_LAST;
+	    STRUCT_ASSIGN_MACRO(*tran_id, p1->p1_tran_id);
+	    STRUCT_ASSIGN_MACRO(*dis_tran_id, p1->p1_dis_tran_id);
+	    MEcopy((PTR) tr.tr_user_name, sizeof(p1->p1_name), (PTR) &p1->p1_name);
+	    p1->p1_first_lga = tr.tr_first;
+	    p1->p1_cp_lga = tr.tr_cp;
+	    lg_object.lgo_size = p1->p1_header.length;
+	    lg_object.lgo_data = (PTR) p1;
+
+	    status = LGwrite(LG_FORCE | LG_NOT_RESERVED, lg_id, (i4)1, &lg_object, 
+				    &lri, &sys_err);
+	    if (status)
+	    {
+		dm0m_deallocate(&mem_ptr);
+		return(log_error(E_DM9015_BAD_LOG_WRITE, &sys_err, lg_id,
+				E_DM9370_DM0L_SECURE, dberr, status));
+	    }
+
+	    if (DMZ_SES_MACRO(11))
+		dmd_logtrace(&p1->p1_header, 0);
+
+	    dm0m_deallocate(&mem_ptr);
 	}
-
-	if (DMZ_SES_MACRO(11))
-	    dmd_logtrace(&p1->p1_header, 0);
-
-	dm0m_deallocate(&mem_ptr);
 
 	/*	Alter the state of the (shared) transaction to WILLING COMMIT. */
 

@@ -774,6 +774,12 @@
 **	    Added R_GEODEPS for Linux 32/64 bit if not LSB build
 **	30-Sep-2010 (troal01)
 **	    Only define R_GEODEPS if conf_WITH_GEO is defined
+**  08-Nov-2010 (clach04)
+**      Enterprise Access gateways moving to Ingres style version numbers.
+**      I.e. instead of 2 part number with genlevel, X.Y/GENLEVEL now have
+**      3 part number: X.Y.Z
+**	22-Nov-2010 (kschendel) SIR 124685
+**	    Drop a few more ancient / obsolete ports
 */
 
 /*
@@ -782,7 +788,7 @@
 # define FULL_RELEASE
 # define ING_VER	 II 10.1.0
 # define ING_W4GL_VER	 II 10.1.0
-# define EA_VER		EA 3.0/1002
+# define EA_VER		EA 3.0.0
 
 # define R_CODE		/* give me the code */
 # define R_TST		/* give me the tests */
@@ -850,30 +856,6 @@
 #endif
 # endif /* hp-ux */
 
-# ifdef hp8_bls         /* HP 9000/800 BLS Series */
-# define GV_ENV " HP-UX/BLS"
-/* uncomment next line if DBL port */
-/*# define DOUBLEBYTE              */
-# define R_CONVERT
-# define R_CHECK
-# define R_IPM
-# define R_STAR
-# define R_INGRES_XLIB
-# define R_HAS_DL
-# define RLS_TAPE CART=/dev/rmt/0m CARTN=/dev/rmt/0mn CARTL=/dev/rmt/0m \
-                  CCMD=tcio CBLOCK=20 \
-                  CUNLOAD=true \
-                  CSKIP= CREWIND= CRETENSION= \
-                  TAPE1=/dev/rmt/0m TAPE1N=/dev/rmt/0mn \
-                  TAPE1L=/dev/rmt/0m \
-                  TCMD=tar TBLOCK=20 \
-                  DAT1=/dev/rmt/0m \
-                  DAT1N=/dev/rmt/0mn DREWIND="mt -t /dev/rmt/0m rew" \
-                  DCMD=tar DBLOCK=20 \
-                  TSKIP= TREWIND="mt -t /dev/rmt/0m rew"
-# define RLS_MULTI      tape cart
-# endif
-
 # ifdef i64_vms
 # define GV_ENV " Itanium OpenVMS"
 # define R_IPM
@@ -936,123 +918,6 @@
 # define R_RAAT
 # endif /* axp_osf */
 
-# ifdef su4_u42		/* SUN 4 (BSD) */
-# define GV_ENV " SunOS"
-# define R_FORTRAN
-# define R_ADA
-# define R_COBOL
-# define R_MFCOBOL
-# define R_CHECK
-# define R_STAR
-# define R_INGRES_XLIB
-# define R_HAS_DL
-# define R_REPLIC
-# define RLS_TAPE TAPE1=/dev/rmt0 TAPE1N=/dev/nrmt0 TAPEL=/dev/rmt0 \
-		CART=/dev/rst0 CARTN=/dev/nrst0 CARTL=/dev/rst0 \
-		TCMD=tar TBLOCK=20 TSKIP="mt -f /dev/nrmt0 fsf 1" TREWIND= \
-		CCMD=tar CBLOCK=120 CSKIP="mt -f /dev/nrst0 fsf 1" CREWIND= \
-		CRETENSION="mt -f /dev/rst0 retension" \
-		CWEOF="mt -f /dev/rst0 weof 1"
-# endif /* su4_u42 */
-
-# ifdef su4_cmw		/* SUN 4 CMW (BSD) */
-# define GV_ENV " Trusted Solaris 1.2"
-# define R_CHECK
-# define R_STAR
-# define R_INGRES_XLIB
-# define R_HAS_DL
-# define R_COBOL
-# define R_MFCOBOL
-# define RLS_TAPE TAPE1=/dev/rmt0 TAPE1N=/dev/nrmt0 TAPEL=/dev/rmt0 \
-		CART=/dev/rst0 CARTN=/dev/nrst0 CARTL=/dev/rst0 \
-		TCMD=tar TBLOCK=20 TSKIP="mt -f /dev/nrmt0 fsf 1" TREWIND= \
-		CCMD=tar CBLOCK=120 CSKIP="mt -f /dev/nrst0 fsf 1" CREWIND= \
-		CRETENSION="mt -f /dev/rst0 retension" \
-		CWEOF="mt -f /dev/rst0 weof 1"
-# endif /* su4_cmw */
-
-# ifdef sos_us5 /* New SCO OpenServer 5.0 */
-# define GV_ENV " SCO OpenServer 5.0 SysV"
-# define R_CHECK
-# define R_COBOL
-# define R_CONVACCT
-# define R_FORTRAN
-# define R_IIMERGEX
-# define R_IPM
-# define R_MFCOBOL
-# define R_SHADOW
-# define R_SHADOWX
-# define R_STAR
-# define R_REPLIC
-# define R_SHLIBS
-# define R_TUXEDO
-# define RLS_COMP false
-# define RLS_TAPE CART=/dev/rct0 CCMD=cpio
-# endif /* sos_us5 */
-
-# ifdef pym_us5		/* Pyramid 90, 9000, and MIServer series (ATT) */
-# define GV_ENV " OSx"
-# define R_COBOL
-# define R_MFCOBOL
-# define R_IPM
-# define R_SHADOW
-# define R_SHLIBS
-# define R_TUXEDO
-# define R_REPLIC
-# define R_STAR
-# define R_CONVACCT
-# undef R_TST
-# endif /* pym_us5 */
-
-
-# if defined(rmx_us5) || defined(rux_us5) /* SNI RMx00 */
-# define GV_ENV " Reliant Unix"
-# define R_COBOL
-# define R_MFCOBOL
-# define R_IPM
-# define R_SHADOW
-# define R_SHLIBS
-# define R_STAR
-# define R_CONVACCT
-# define R_REPLIC
-# define RLS_COMP true
-# define RLS_TAPE CART=/dev/ios0/rstape004
-# define R_MIT_KERBEROS
-# endif
-
-# ifdef sqs_ptx		/* Sequent Symmetry S27, S81 (PTX) */
-# define GV_ENV " PTX"
-# define R_FORTRAN
-# define R_COBOL
-# define R_MFCOBOL
-# define R_STAR
-# define R_REPLIC
-# define R_CONVACCT
-# define R_SHADOW
-# define R_SHLIBS
-# define RLS_TAPE CART=/dev/rmt/tm0 CARTN=dev/rts8 CARTL=/dev/rmt/tm0n \
-                  TAPE1=/dev/rmt/xt0 TAPE1N=/dev/rmt/xt0n \
-                  TAPE2=/dev/rmt/xt1 TAPE2N=/dev/rmt/xt1n \
-                  TMCD=tar CCMD=tar TBLOCK=20 CBLOCK=20
-# endif /* sqs_ptx */
-
-# ifdef ris_us5         /* IBM RS/6000 */
-# define GV_ENV " AIX"
-# define R_ADA
-# define R_FORTRAN
-# define R_COBOL
-# define R_MFCOBOL
-# define R_STAR
-# define R_CONVACCT
-# define R_SHADOW
-# define R_SHLIBS
-# define R_TUXEDO
-# define R_REPLIC
-# define R_RAAT
-# define RLS_TAPE CART=/dev/rmt0.4 CARTN=/dev/rmt0.5 CARTL=/dev/rmt0 \
-		  CCMD=cpio CBLOCK=20 CSKIP="tctl -f /dev/rmt0.5 fsf 1" \
-		  CREWIND="tctl -f /dev/rmt0.5 rewind"
-# endif /* ris_us5 */
 
 /* IBM RS/6000 AIX 4.1.x (identical to ris_us5) */
 # if defined(rs4_us5) || defined(r64_us5)
@@ -1079,21 +944,6 @@
 # define R_MAINWIN_VDBA
 #endif
 # endif /* rs4_us5 */
-
-# ifdef ris_u64         /* IBM RS/6000 AIX 64-bit platform  */
-# define GV_ENV " AIX"
-# define R_STAR
-# define R_CONVACCT
-# define R_SHADOW
-# define R_SHLIBS
-# define R_TUXEDO
-# define R_REPLIC
-# define R_OS_THREADS
-# define R_MIT_KERBEROS
-# define RLS_TAPE CART=/dev/rmt0.4 CARTN=/dev/rmt0.5 CARTL=/dev/rmt0 \
-		  CCMD=cpio CBLOCK=20 CSKIP="tctl -f /dev/rmt0.5 fsf 1" \
-		  CREWIND="tctl -f /dev/rmt0.5 rewind"
-# endif /* ris_u64 */
 
 
 #if defined(su4_us5) || defined(su9_us5)	/* Generic SPARC Solaris */
@@ -1152,80 +1002,6 @@
 # endif /* a64_sol */
 
 
-# ifdef dr6_us5         /* ICL UNICORN DRS/NX 6000 (SYS V REL 4) */
-# define GV_ENV " DRS6000 DRS/NX"
-# define R_INGENABLE
-# define R_HAS_DL
-# define R_IPM
-# define R_STAR
-# define R_REPLIC
-# define R_TUXEDO
-# define R_SHLIBS
-# define R_AUTHOR
-# define R_SHADOW
-# define R_COBOL
-# define R_MFCOBOL
-# define RLS_TAPE CART=/dev/rmt16120 CARTN=/dev/rmt16120n \
-                CARTL=/dev/rmt16120 \
-                CCMD=tar CBLOCK=20 CSKIP="mt -f /dev/rmt16120n fsf 1" \
-                CREWIND="mt -f /dev/rmt16120 rewind" \
-                CRETENSION="mt -f /dev/rmt16120 retension"
-# endif /* dr6_us5 */
-
-# ifdef dr4_us5	/* ICL DRS 400 E */
-# define GV_ENV "ICL"
-# define R_NETWORK
-# define RLS_TAPE TAPE=/dev/rmt0 TAPEN=/dev/rmt/nstr120 TAPEL=/dev/rmt0 \
-	 CMD=tar BLOCK=20 SKIP= REWIND=
-# endif /* dr4_us5 */
-
-# ifdef dg8_us5 /* Data General Port kit (DG/UX looks like System V) */
-# define GV_ENV " DG/UX"
-# define R_DGUX
-# define R_IPM
-# define R_CONVACCT
-# define R_FORTRAN
-# define R_ADA
-# define R_COBOL
-# define R_MFCOBOL
-# define R_CHECK
-# define R_STAR
-# define R_INGRES_XLIB
-# define R_HAS_DL
-# define R_TUXEDO
-# define R_REPLIC
-# define R_SHADOW
-# define R_SHLIBS
-# define RLS_COMP false
-# define RLS_DISTSIZE 80000
-# define RLS_TAPE CART=/dev/rmt/0 CARTN=/dev/rmt/0n \
-        CREWIND="mt -f /dev/rmt/0 rewind" \
-        CARTL=/dev/rmt/0 CCMD=tar CBLOCK=20
-# define R_OS_THREADS
-# endif /* dg8_us5 */
-
-# ifdef dgi_us5 /* Data General Port kit (DG/UX looks like System V) */
-# define GV_ENV " DG/UX"
-# define R_DGUX
-# define R_IPM
-# define R_CONVACCT
-# define R_MFCOBOL
-# define R_CHECK
-# define R_STAR
-# define R_INGRES_XLIB
-# define R_HAS_DL
-# define R_TUXEDO
-# define R_REPLIC
-# define R_SHADOW
-# define R_SHLIBS
-# undef  R_XERCES
-# define RLS_COMP false
-# define RLS_DISTSIZE 80000
-# define RLS_TAPE CART=/dev/rmt/0 CARTN=/dev/rmt/0n \
-        CREWIND="mt -f /dev/rmt/0 rewind" \
-        CARTL=/dev/rmt/0 CCMD=tar CBLOCK=20
-# define R_OS_THREADS
-# endif /* dgi_us5 */
 
 #ifdef sgi_us5 /* Silicon Graphics IRIX */
 # define GV_ENV " IRIX/System V "
@@ -1243,43 +1019,6 @@
 #endif /* conf_BUILD_ICE */
 # endif /* sgi_us5 */
 
-# ifdef nc4_us5 /* NCR Unix System V Port Kit */
-# define GV_ENV " NCR Unix System V"
-# define R_SHADOW
-# define R_HAS_DL
-# define R_COBOL
-# define R_MFCOBOL
-# define R_STAR
-# define R_TUXEDO
-# define R_REPLIC
-# define R_SHLIBS
-# endif /* nc4_us5 */
-
-# ifdef ts2_us5               /* Tandem NonStop UX */
-# define GV_ENV " NonStop UX"
-
-# define R_ABF
-# define R_BASE
-# define R_CODE
-# define R_EQUEL
-# define R_IIMERGE
-# define R_INGRES
-# define R_ITB
-# define R_TECHPUB
-# define R_TST
-# undef  R_SM 	/* Leave the piccolo-related tools off port kit tapes */
-
-# define R_COBOL
-# define R_MFCOBOL
-# define R_CONVERT
-# define R_SHADOW
-# define R_IPM
-# define R_STAR
-# define R_TUXEDO
-# define R_SHLIBS
-# define R_REPLIC
-# define R_OS_THREADS
-# endif /* ts2_us5 */
 
 # ifdef usl_us5         /* SCO Unixware 7  */
 # define GV_ENV " SCO UnixWare 7"
@@ -1301,22 +1040,6 @@
 # undef R_ODBC	/* not supported yet */
 # endif /* usl_us5 */
 
-# ifdef sui_us5         /* Sun Solaris 2.4 x86 */
-# define GV_ENV " x86 SOLARIS"
-# define R_COBOL
-# define R_MFCOBOL
-# define R_FORTRAN
-# define R_IPM
-# define R_STAR
-# define R_AUTHOR
-# define R_SHADOW
-# define R_SHLIBS
-# define R_ADA
-# define R_TUXEDO
-# define R_REPLIC
-# define R_OS_THREADS 
-# define R_MIT_KERBEROS
-# endif /* sui_us5 */
 
 # if defined(int_lnx) || defined(ibm_lnx) || defined(axp_lnx) || \
      defined(i64_lnx) || defined(a64_lnx) || defined(int_rpl) || \

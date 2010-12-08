@@ -16,7 +16,6 @@
 #           Fixed a typo in set option WITH_GEO
 
 
-
 #set: config32 int_lnx
 #set: config64 a64_lnx
 #set: option libc6

@@ -194,6 +194,8 @@
 **	    replace nat and longnat with i4
 **	29-Sep-2004 (drivi01)
 **	    Removed MALLOCLIB from NEEDLIBS
+**      15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 /*
@@ -208,8 +210,6 @@ PROGRAM= (PROG1PRFX)gcb
 */
 static		VOID		gcb_init_mib( VOID );
 FUNC_EXTERN	i4		GCX_exit_handler();
-FUNC_EXTERN	STATUS		gcc_pbinit();
-FUNC_EXTERN	STATUS		gcc_pbterm();
 GLOBALREF	N_ADDR		gcb_from_addr;
 GLOBALREF	N_ADDR		gcb_to_addr;
 GLOBALREF	GCC_BPMR	gcb_pm_reso;

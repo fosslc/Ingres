@@ -7,12 +7,12 @@
 #	Windows and Linux
 #     20-Oct-2009 (hweho01)
 #       Remove the IINOOPTIM entries that were generated incorrectly.
+#	23-Nov-2010 (kschendel)
+#	    Drop obsolete dg8 nooptim.
 
 SubDir ING_SRC front embed csq ;
 
 IISUBSYS front embed csq ;
-
-IINOOPTIM csqscan.c : dg8_us5 ;
 
 IIBINEXE esqlc : csqmain.c ;
 IILIBRARY CSQLIB : csq.sy csqtoks.st csqscan.c csqgen.c ;

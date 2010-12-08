@@ -205,10 +205,10 @@
 **	10-Jun-2008 (lunbr01)  bug 120432
 **	    Added II_G_NO_COMP value for ii_gl_flags in II_GLB_CB to
 **	    suppress varchar compression if variable II_VCH_COMPRESS_ON=N.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **	20-Aug-2009 (drivi01)
 **	    Add a prototype for IIputdomio in iisetdom.c.
 **	21-Aug-2009 (kschendel) 121804

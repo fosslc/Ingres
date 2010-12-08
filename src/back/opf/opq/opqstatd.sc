@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 # include    <compat.h>
@@ -175,7 +175,28 @@ exec sql include sqlda;
 **          process().
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+static void stat_opq_exit(void);
+void opx_error(
+	i4 errcode);
+void stat_usage(void);
+static bool att_list(
+	OPQ_GLOBAL *g,
+	OPQ_ALIST *attlst[],
+	OPQ_RLIST *relp,
+	char **argv);
+static void process(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp,
+	OPQ_ALIST *attrp,
+	FILE *outf);
+int main(
+	int argc,
+	char *argv[]);
 
 /*
 **    UNIX mkming hints.
@@ -190,24 +211,6 @@ OWNER =		INGUSER
 **
 */
 
-
-/*
-**  Static function prototypes.
-*/
-static bool	att_list(
-		    OPQ_GLOBAL	    	*g,
-		    OPQ_ALIST	    	*attlst[],
-		    OPQ_RLIST	    	*relp,
-		    char		**argv);
-static VOID	process(
-		    OPQ_GLOBAL		*g,
-		    OPQ_RLIST		*relp,
-		    OPQ_ALIST       	*attrp,
-		    FILE		*outf);
-static VOID	stat_opq_exit(VOID);
-static VOID	stat_usage(VOID);
-
-
 /*
 ** Definition of all global variables owned by this file.
 */
@@ -310,6 +313,7 @@ stat_opq_exit(VOID)
 
     (VOID) EXdelete();
     PCexit((i4)FAIL);
+    /*NOTREACHED*/
 }
 
 /*{
@@ -1544,6 +1548,7 @@ FILE		*outf)
 **	    Add &junk for the nosetstatistics argument in the call to
 **	    badarglist(). This change implements SIR 117405.
 */
+int
 main(
 int    argc,
 char   *argv[])

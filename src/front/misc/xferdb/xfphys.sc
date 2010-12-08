@@ -424,9 +424,9 @@ i4	output_flags2;
 **
 **	Returns:
 ** History:
-**  15-Mar-2010 (troal01)
-**      Check t->becat and t->fecat instead of the first two letters.
-**      Change necessary for spatial_ref_sys.
+**	15-Mar-2010 (troal01)
+**	    Check t->becat and t->fecat instead of the first two letters.
+**	    Change necessary for spatial_ref_sys.
 */
 
 void

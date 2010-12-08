@@ -143,6 +143,8 @@
 **          Replace READONLY/WSCREADONLY by const.
 **	18-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	1-Dec-2010 (kschendel)
+**	    Fix some very suspicious buffer-swapping code generating warnings.
 */
 
 GLOBALREF bool	osUser;
@@ -1303,13 +1305,12 @@ replacecom ()
 **
 **  returns zero (?) on EOF.
 */
-typedef char	LINE_BUF[OSBUFSIZE];
-static LINE_BUF	buf1 = {EOS};
-static LINE_BUF	buf2 = {EOS};
-static LINE_BUF	*last_line = (LINE_BUF *)buf2;
-static LINE_BUF	*current_line = (LINE_BUF *)buf1;
+static char	buf1[OSBUFSIZE] = {EOS};
+static char	buf2[OSBUFSIZE] = {EOS};
+static char	*last_line = &buf2[0];
+static char	*current_line = &buf1[0];
 static i4	scanpos = 0;
-static char	*scanbuf = (char *)buf1;
+static char	*scanbuf = &buf1[0];
 static bool	printed = FALSE;
 
 /*
@@ -1323,19 +1324,20 @@ input_line ()
 {
     register char	*cp;
 
+    /* probably doesn't loop, but make sure we have a nonempty line */
     do
     {
-	cp = *last_line;
+	cp = last_line;
 	last_line = current_line;
-	current_line = (LINE_BUF *)cp;
+	current_line = cp;
 	if ( !printed && osLisfile != NULL )
 	{
 		/* Note:  Use 'SIfprintf(fp, "%s", ...)' since the line
 		** as input by the user may contain '%' characters.
 		*/
-		SIfprintf(osLisfile, ERx("%s"), *last_line);
+		SIfprintf(osLisfile, ERx("%s"), last_line);
 	}
-	if (SIgetrec(current_line, sizeof(*current_line), osIfile) != OK)
+	if (SIgetrec(current_line, OSBUFSIZE, osIfile) != OK)
 	    return ERx("");
 	printed = FALSE;
 	++line;
@@ -1360,8 +1362,8 @@ static VOID
 markpos (pos)
 char	*pos;
 {
-    scanpos = pos - *current_line;
-    scanbuf = *current_line;
+    scanpos = pos - current_line;
+    scanbuf = current_line;
 }
 
 /*{
@@ -1402,7 +1404,7 @@ ER_MSGID	severity;
 	char	*osrepfindline();
 
 	print_listing = (osLisfile != NULL && osLisfile != fp);
-	if ( (outline = osrepfindline(scanbuf == *current_line ? line : line-1))
+	if ( (outline = osrepfindline(scanbuf == current_line ? line : line-1))
 			!= NULL )
 	{
 		SIfprintf(fp, outline);
@@ -1413,31 +1415,31 @@ ER_MSGID	severity;
 		/* Note:  Use 'SIfprintf(fp, "%s", ...)' since the line
 		** as input by the user may contain '%' characters.
 		*/
-		if (scanbuf != *current_line)
+		if (scanbuf != current_line)
 		{
-			outline = *last_line;
+			outline = last_line;
 			if (osLisfile == NULL || print_listing)
-				SIfprintf(fp, ERx("%s"), *last_line);
+				SIfprintf(fp, ERx("%s"), last_line);
 		}
 		else
 		{
-			outline = *current_line;
+			outline = current_line;
 			if (osLisfile == NULL || !printed)
 			{
 				if (print_listing)
 				{
 					SIfprintf( osLisfile, ERx("%s"),
-							*current_line
+							current_line
 					);
 				}
-				SIfprintf(fp, ERx("%s"), *current_line);
+				SIfprintf(fp, ERx("%s"), current_line);
 				printed = TRUE;
 			}
 		}
 		count = scanpos;
 	}
 	{	/* Print pointer ('^') to current position */
-		LINE_BUF	buf;
+		char	buf[OSBUFSIZE];
 		register char	*bufp = buf;
 		register char	*cp;
 

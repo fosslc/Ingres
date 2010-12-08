@@ -19,11 +19,13 @@
 #include    <dmf.h>
 #include    <ercl.h>
 #include    <pm.h>
+#include    <dm.h>
 #include    <dmccb.h>
 #include    <dmrcb.h>
-#include    <dmxcb.h>
+#include    <dmscb.h>
 #include    <dmtcb.h>
-#include    <dm.h>
+#include    <dmxcb.h>
+#include    <dml.h>
 #include    <dmp.h>
 #include    <dmpp.h>
 #include    <dm0m.h>
@@ -149,6 +151,8 @@
 **	    SIR 120874: dm0l_? functions converted to DB_ERROR *
 **	05-Dec-2008 (jonj)
 **	    SIR 120874: dm0p_? functions converted to DB_ERROR *
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include dml.h to get prototype for dmc_stop_server().
 **/
 
 /*

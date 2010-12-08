@@ -407,6 +407,8 @@
 **	    Added E_CL2557_CS_INTRN_THRDS_NOT_SUP
 **	10-May-2004 (jenjo02)
 **	    Added CS_KILL_EVENT to kill a query (SIR 110141).
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 # ifndef CS_H_INCLUDED
@@ -420,12 +422,43 @@ typedef struct _CS_SCB CS_SCB;
 typedef struct _CS_SEMAPHORE	CS_SEMAPHORE;
 typedef struct _CS_CONDITION	CS_CONDITION;
 typedef struct _CS_SEM_STATS	CS_SEM_STATS;
+struct _LK_LOCK_KEY;
+
+/*}
+** Name: CS_SCB_Q - Que entry for the session control block
+**
+** Description:
+**      This is simply a structure containing the standard queue
+**      header element for session control blocks.  Building a
+**      standard structure for this reduces name space problems
+**      as well as guaranteeing correct usage.
+**
+** History:
+**      27-Oct-1986 (fred)
+**          Created.
+[@history_template@]...
+*/
+typedef struct _CS_SCB_Q
+{
+    CS_SCB          *cs_q_next;         /* moving forward . . . */
+    CS_SCB          *cs_q_prev;         /* as well as backwards */
+}   CS_SCB_Q;
 
 /*
 **  Defines of other constants.
 */
-#define			CS_MAXNAME      32
-						/* should match DB_MAXNAME */
+#define			CS_MAXNAME      32	/* DB_SCHEMA_MAXNAME */
+
+/* length of a semaphore name - spec-ed to be 32 at present */
+
+# define CS_SEM_NAME_LEN	CS_MAXNAME
+
+
+/* Common Unix and VMS definitions.  (Windows isn't playing at present) */
+
+# include <csnormal.h>
+
+
 #if defined(PERF_TEST) || defined(xDEV_TRACE)
 /*
 ** defines for performance profiling (facility ID's are the same as in
@@ -450,10 +483,6 @@ typedef struct _CS_SEM_STATS	CS_SEM_STATS;
 
 #define                 CS_MAX_FACILITY     16
 #endif /* PERF_TEST or xDEV_TRACE */
-
-/* length of a semaphore name - spec-ed to be 24 at present */
-
-# define CS_SEM_NAME_LEN	CS_MAXNAME
 
 /*
 **      The following constants are used to allow the called
@@ -658,58 +687,41 @@ typedef struct _CS_SEM_STATS	CS_SEM_STATS;
 **	    Added cs_get_rcp_pid.
 **	05-sep-2002 (devjo01)
 **	    Added cs_format_lkkey to CS_CB.
-[@history_template@]...
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Refine CS prototypes.
 */
 typedef struct _CS_CB
 {
-    i4              cs_scnt;            /* Number of sessions */
-    i4              cs_ascnt;           /* nbr of active sessions */
-    i4         cs_stksize;         /* size of stack in bytes */
-    bool            cs_stkcache;        /* enable stack caching w/threads */
-    STATUS          (*cs_scballoc)();   /* Routine to allocate SCB's */
-    STATUS          (*cs_scbdealloc)(); /* Routine to dealloc  SCB's */
-    STATUS	    (*cs_saddr)();	/* Routine to await session requests */
-    STATUS	    (*cs_reject)();	/* how to reject connections */
-    VOID	    (*cs_disconnect)();	/* how to dis- connections */
-    STATUS	    (*cs_read)();	/* Routine to do reads */
-    STATUS	    (*cs_write)();	/* Routine to do writes */
-    STATUS          (*cs_process)();    /* Routine to do major processing */
-    STATUS	    (*cs_attn)();	/* Routine to process attn calls */
-    VOID	    (*cs_elog)();       /* Routine to log errors */
-    STATUS	    (*cs_startup)();	/* startup the server */
-    STATUS	    (*cs_shutdown)();	/* shutdown the server */
-    STATUS	    (*cs_format)();	/* format scb's */
-    STATUS          (*cs_diag)();       /* Diagnostics for server */
-    STATUS	    (*cs_facility)();	/* return current facility */
-    i4    	    (*cs_get_rcp_pid)();/* return RCP's pid */
-    VOID            (*cs_scbattach)();  /* Attach thread control block to MO */
-    VOID            (*cs_scbdetach)();  /* Detach thread control block */
-    char	   *(*cs_format_lkkey)();/*Format an LK_LOCK_KEY for display */
-#define                 CS_NOCHANGE     -1	/* no change to this parm */
+    i4		cs_scnt;		/* Number of sessions */
+    i4		cs_ascnt;		/* nbr of active sessions */
+    i4		cs_stksize;		/* size of stack in bytes */
+    bool	cs_stkcache;		/* enable stack caching w/threads */
+    STATUS	(*cs_scballoc)(CS_SCB **, void *, i4);	/* Routine to allocate SCB's */
+    STATUS	(*cs_scbdealloc)(CS_SCB *); /* Routine to dealloc  SCB's */
+    STATUS	(*cs_saddr)(void *, i4); /* Routine to await session requests */
+    STATUS	(*cs_reject)(void *, STATUS); /* how to reject connections */
+    VOID	(*cs_disconnect)(CS_SCB *); /* how to dis- connections */
+    STATUS	(*cs_read)(CS_SCB *, i4);	/* Routine to do reads */
+    STATUS	(*cs_write)(CS_SCB *, i4);	/* Routine to do writes */
+    STATUS	(*cs_process)(i4, CS_SCB *, i4 *); /* Routine to do major processing */
+    STATUS	(*cs_attn)(i4, CS_SCB *); /* Routine to process attn calls */
+    VOID	(*cs_elog)(i4, CL_ERR_DESC *, i4, ...);	/* Routine to log errors */
+    STATUS	(*cs_startup)(CS_INFO_CB *);	/* startup the server */
+    STATUS	(*cs_shutdown)(void);	/* shutdown the server */
+    STATUS	(*cs_format)(CS_SCB *,char *,i4,i4);	/* format scb's */
+    STATUS	(*cs_diag)(void *);	/* Diagnostics for server */
+    STATUS	(*cs_facility)(CS_SCB *); /* return current facility */
+    i4		(*cs_get_rcp_pid)(void); /* return RCP's pid */
+    VOID	(*cs_scbattach)(CS_SCB *); /* Attach thread control block to MO */
+    VOID	(*cs_scbdetach)(CS_SCB *); /* Detach thread control block */
+    char	*(*cs_format_lkkey)(struct _LK_LOCK_KEY *,char *); /*Format an LK_LOCK_KEY for display */
+#define		CS_NOCHANGE     -1	/* no change to this parm */
 }   CS_CB;
 
 
-/*}
-** Name: CS_SCB_Q - Que entry for the session control block
-**
-** Description:
-**      This is simply a structure containing the standard queue
-**      header element for session control blocks.  Building a
-**      standard structure for this reduces name space problems
-**      as well as guaranteeing correct usage.
-**
-** History:
-**      27-Oct-1986 (fred)
-**          Created.
-[@history_template@]...
-*/
-typedef struct _CS_SCB_Q
-{
-    CS_SCB          *cs_q_next;         /* moving forward . . . */
-    CS_SCB          *cs_q_prev;         /* as well as backwards */
-}   CS_SCB_Q;
-
-
-# include <csnormal.h>
+/* Export function prototypes that are platform dependent */
+FUNC_EXTERN void CS_get_critical_sems(void);
+FUNC_EXTERN void CS_rel_critical_sems(void);
+FUNC_EXTERN void CS_check_dead(void);
 
 # endif /* CS_H_INCLUDED */

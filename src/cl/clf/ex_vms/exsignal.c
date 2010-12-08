@@ -15,7 +15,7 @@
 #include <pc.h>
 #include <si.h>
 #include <evset.h>
-#include "exi.h"
+#include <exinternal.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <unistd.h>

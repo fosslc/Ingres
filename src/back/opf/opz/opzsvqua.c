@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -73,8 +73,25 @@
 **          replace nat and longnat with i4
 **	10-Mar-1999 (shero03)
 **	    support SQL functions with 4 operands
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static OPZ_FACLASS opz_fclass(
+	i4 nodetype,
+	OPV_GBMVARS *varmap,
+	bool conversion,
+	bool iftrue);
+void opz_savequal(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *andnode,
+	OPV_GBMVARS *lvarmap,
+	OPV_GBMVARS *rvarmap,
+	PST_QNODE *oldnodep,
+	PST_QNODE *inodep,
+	bool left_iftrue,
+	bool right_iftrue);
 
 /*{
 ** Name: opz_fclass	- predict type of function attribute class
@@ -185,6 +202,9 @@ opz_fclass(
 **	    Allow combinations of TSxx and TMxx to be directly compared, since
 **	    adf allows this without explicit coercion, and uses the same data
 **	    structure within these sets of data types.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add propagation of collID for UCS_BASIC support.
+**
 */
 VOID
 opz_savequal(
@@ -244,7 +264,7 @@ opz_savequal(
 					** description of conversion
 					*/
 	DB_DT_ID               result;  /* target type for function attr */
-
+	DB_COLL_ID		collID;
         eqnode = andnode->pst_left;
 	ltype = abs(eqnode->pst_left->pst_sym.pst_dataval.db_datatype);
 	rtype = abs(eqnode->pst_right->pst_sym.pst_dataval.db_datatype); /* the
@@ -424,6 +444,9 @@ opz_savequal(
                                             ** until it can be determined that
                                             ** this function attribute is
                                             ** useful (see opz_rdatetype) */
+	/* Any L and/or R collIDs will have been combined and set in place
+	** on the eqnode. It just needs propagating. */
+	funcattr->opz_dataval.db_collID = eqnode->pst_sym.pst_dataval.db_collID;
 	/* classify the function attribute operands */
 	funcattr->opz_left.opz_class = opz_fclass( 
 	    eqnode->pst_left->pst_sym.pst_type, 

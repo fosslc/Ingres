@@ -174,21 +174,15 @@
 **	    Handle DB_ALL_TYPE for outer-join project.
 **	10-may-2001 (gupsh01)
 **	    Added support for ADE_5CXI_CLR_SKIP. (Bug #104697)
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adf_agnext(
 ADF_CB             *adf_scb,
 DB_DATA_VALUE      *adf_dvnext,
 ADF_AG_STRUCT      *adf_agstruct)
-# else
-DB_STATUS
-adf_agnext( adf_scb, adf_dvnext, adf_agstruct)
-ADF_CB             *adf_scb;
-DB_DATA_VALUE      *adf_dvnext;
-ADF_AG_STRUCT      *adf_agstruct;
-# endif
 {
     ADI_FI_ID		fid = adf_agstruct->adf_agfi;
     ADI_FI_DESC		*fidesc;

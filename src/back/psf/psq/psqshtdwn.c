@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -52,9 +52,13 @@
 **	    Remove semaphore before freeing memory.
 **	09-Oct-1998 (jenjo02)
 **	    Removed SCF semaphore functions, inlining the CS calls instead.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 psq_shutdown(
+	PSQ_CB *psq_cb);
 
 /*{
 ** Name: psq_shutdown	- Shut down the parser for a server.

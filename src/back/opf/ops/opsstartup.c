@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 **
 */
 
@@ -92,8 +92,18 @@
 **	    Pick up cardinality_check setting.
 **	03-Dec-2009 (kiria01) b122952
 **	    Add .opf_inlist_thresh for control of eq keys on large inlists.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static i4 opg_getfunc(
+	OPF_CB *opf_cb,
+	char *func_name,
+	DB_LANG language,
+	ADI_OP_ID *op_ptr);
+i4 ops_startup(
+	OPF_CB *opf_cb);
 
 /*{
 ** Name: opg_getfunc	- init function OP id
@@ -271,6 +281,10 @@ opg_getfunc(
 **	    opn_corput() for greedy enum only. This change fixes bug 121159.
 **      11-jan-2010 (hanal04) bug 120482
 **          Set ops_parallel based on opf_pq_dop which now defaults to 0 (OFF).
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Remove default storage structure passing, goes to PSF now.
+**	09-Nov-2010 (wanfr01) SIR 124714
+**	    add ops_holdfactor
 */
 DB_STATUS
 ops_startup(
@@ -550,9 +564,6 @@ ops_startup(
                                         */
     opg_cbp->opg_alter.ops_noproject = OPG_NOPROJECT; /* default is to project
                                         ** aggregates */
-    /* The result_structure comes from the config now */
-    opg_cbp->opg_alter.ops_storage = opf_cb->opf_value;
-    opg_cbp->opg_alter.ops_compressed = opf_cb->opf_compressed;
     opg_cbp->opg_alter.ops_autostruct = opf_cb->opf_autostruct;
     if (1.0 / (float)opf_cb->opf_mxsess < opf_cb->opf_maxmemf)
 	opg_cbp->opg_alter.ops_maxmemory = opf_memory * opf_cb->opf_maxmemf;
@@ -590,6 +601,7 @@ ops_startup(
 	opg_cbp->opg_alter.ops_nocardchk = TRUE;
 
     opg_cbp->opg_alter.ops_greedy_factor = opf_cb->opf_greedy_factor;
+    opg_cbp->opg_alter.ops_holdfactor = opf_cb->opf_holdfactor;
     opg_cbp->opg_check = FALSE;           /* TRUE if any of the global trace
                                         ** or timing flags are set
                                         */

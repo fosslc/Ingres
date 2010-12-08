@@ -51,7 +51,20 @@
 **	    Add declare for TRwrite.
 **	25-May-2007 (jonj)
 **	    Add prototype for TRformat_to_buffer().
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    In cleaning up prototypes, renamed TRformat_to_buffer to
+**	    TRvformat to clarify what it is and realigned its parameters
+**	    with TRformat
+**	12-Nov-2010 (kschendel)
+**	    Typedef the TRformat output function to make it easier for
+**	    other facilities to conform.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
+
+/* Standard TRformat-and-friends output function so others can use it too */
+typedef STATUS TR_OUTPUT_FCN(PTR, i4, char *);
+
 #ifndef TRdisplay
 #if defined(__STDARG_H__)
 FUNC_EXTERN i4  TRdisplay( char *, ... );
@@ -62,82 +75,61 @@ FUNC_EXTERN i4  TRdisplay( );
 
 #ifndef TRformat
 #if defined( __STDARG_H__)
-FUNC_EXTERN void TRformat( i4(*)(PTR, i4, char *), ...);
+FUNC_EXTERN void TRformat(TR_OUTPUT_FCN *, ...);
 #else
 FUNC_EXTERN void TRformat();
 #endif
 #endif
 
-FUNC_EXTERN VOID TRformat_to_buffer(
-VOID	(*fcn)(),
-i4	*arg,
-char	*buffer,
-i4	l_buffer,
-char	*fmt,
-va_list	ap);
+FUNC_EXTERN VOID TRvformat(
+	TR_OUTPUT_FCN *fcn,
+	PTR	arg,
+	char	*buffer,
+	i4	l_buffer,
+	char	*fmt,
+	va_list	ap);
 
 FUNC_EXTERN VOID TRflush(
-#ifdef CL_PROTOTYPED
 	    void
-#endif
 );
 
-/*
-FUNC_EXTERN 
-bool TRgettrace(
-#ifdef CL_PROTOTYPED
-	    i4		word,
-	    i4		bit
-#endif
-);
-*/
-bool
+FUNC_EXTERN bool
 TRgettrace(i4 word,i4 bit);
 
 
 FUNC_EXTERN STATUS TRmaketrace(
-#ifdef CL_PROTOTYPED
 	    char	**argv,
 	    char	tflag,
 	    i4	tsize,
 	    i4		*tvect,
 	    bool	tonoff
-#endif
 );
 
 FUNC_EXTERN STATUS TRrequest(
-#ifdef CL_PROTOTYPED
 	    char	*record,
 	    i4		record_size,
 	    i4		*read_count,
 	    CL_ERR_DESC *err_code,
 	    char	*prompt
-#endif
 );
 
 FUNC_EXTERN STATUS TRset_file(
-#ifdef CL_PROTOTYPED
 	    i4		flag,
 	    char	*filename,
 	    i4		name_length,
 	    CL_ERR_DESC *err_code
-#endif
 );
 
 FUNC_EXTERN STATUS TRsettrace(
-#ifdef CL_PROTOTYPED
 	    i4		word,
 	    i4		bit,
 	    bool	set
-#endif
 );
 
 FUNC_EXTERN STATUS TRwrite(
-#ifdef CL_PROTOTYPED
 	    PTR		arg,
 	    i4		buflen,
 	    char       *buffer
-#endif
 );
 
 # endif /* ! TR_HDR_INCLUDED */

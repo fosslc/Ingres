@@ -26,8 +26,6 @@
 
 GLOBALREF CS_SCB           Cs_main_scb;
 
-VOID CS_breakpoint();
-
 /**
 ** Name:	csmomon.c	- active monitor methods.
 **
@@ -75,6 +73,8 @@ VOID CS_breakpoint();
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 static void     CS_str_to_uns(char *a, u_i4 * u);
@@ -123,7 +123,7 @@ MO_SET_METHOD   CS_debug_set;
 **          MO_NO_INSTANCE.
 */
 
-STATUS
+static STATUS
 CS_mod_session(char *uns_decimal_session, CS_SCB ** scbp)
 {
 	u_i4            scb_as_ulong;
@@ -147,7 +147,7 @@ CS_mod_session(char *uns_decimal_session, CS_SCB ** scbp)
                 }
 	}
 
-	if ((!blFound) && ((an_scb = CS_find_scb(an_scb)) == 0)) {
+	if ((!blFound) && ((an_scb = CS_find_scb(an_scb->cs_self)) == 0)) {
 		/* FIXME -- real error status */
 		/* "Invalid session id" */
 
@@ -190,7 +190,7 @@ CS_mod_session(char *uns_decimal_session, CS_SCB ** scbp)
 **	28-Oct-1992 (daveb)
 **	    documented
 */
-STATUS
+static STATUS
 CS_is_internal(CS_SCB * an_scb)
 {
 	STATUS          stat = OK;

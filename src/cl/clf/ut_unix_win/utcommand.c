@@ -13,6 +13,8 @@
 		** (peterk)
 **	26-apr-1999 (hanch04)
 **	    Added casts to quite compiler warnings
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added return type STATUS.
 		*/
 
 /*
@@ -22,9 +24,10 @@
 ** it would be a good idea to copy it upon completion.
 */
 
+STATUS
 UTcommand(dict, dsTab, program, arglist, comline, N, arg1)
 	ModDictDesc		*dict;
-	ArrayOf(DsTemplate *)	*dsTab;
+	ArrayDsTemplate		*dsTab;
 	char			*program,
 				*arglist;
 	char			**comline;

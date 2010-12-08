@@ -390,6 +390,8 @@ NO_OPTIM=dgi_us5 int_lnx int_rpl ris_u64 i64_aix
 **	    SIR 121619 MVCC: LG_LSN output param replaced with pointer
 **	    to new LG_LRI structure, which is populated with the log
 **	    record's LSN, LGA, journal sequence, and journal offset.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype unused static LG_check_logwriters()
 */
 
 
@@ -419,6 +421,7 @@ static	STATUS		write_complete(
 
 static	VOID		dump_wait_queue(LBB *lbb, char *comment);
 static	LXB		*choose_logwriter( VOID );
+static  VOID	 LG_check_logwriters(LGD *lgd);
 
 
 /*{
@@ -4063,6 +4066,8 @@ CL_ERR_DESC	    *sys_err)
 **	    instead of gprev_lbb->lbb_last_lsn. This caused LGforce on a
 **	    transaction's last LSN (dmxe_abort) to not wait when it should
 **	    and produced read-eof errors during rollback.
+**      16-Nov-2010 (coomi01) b124493
+**          Empty write queue whenever count reaches zero.
 */
 static STATUS
 write_complete(
@@ -4318,6 +4323,15 @@ STATUS	*async_status)
 	    next_lbb->lbb_prev = lbb->lbb_prev;
 	    prev_lbb->lbb_next = lbb->lbb_next;
 	    lfb->lfb_wq_count--;
+
+	    /*
+	    ** When queue reaches zero length, make sure prev/next links are emptied.
+	    */
+	    if ( 0 == lfb->lfb_wq_count )
+	    {
+		lfb->lfb_wq_prev = LGK_OFFSET_FROM_PTR(&lfb->lfb_wq_next);
+		lfb->lfb_wq_next = LGK_OFFSET_FROM_PTR(&lfb->lfb_wq_next);
+	    }
 
 	    /*
 	    ** If gprev_lbb is not 0, then it is set to the "greatest previous"

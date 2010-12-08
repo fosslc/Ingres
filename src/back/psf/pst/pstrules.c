@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -56,9 +56,19 @@
 **	    psf_malloc(), psf_mclose(), psf_mroot(), psf_mchtyp(),
 **	    psl_rptqry_tblids(), psl_cons_text(), psl_gen_alter_text(),
 **	    psq_tmulti_out(), psq_1rptqry_out(), psq_tout().
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
+
+/* TABLE OF CONTENTS */
+i4 pst_ruledup(
+	PSS_SESBLK *sess_cb,
+	PSF_MSTREAM *mstream,
+	i4 filter,
+	char *col_mask,
+	PST_STATEMENT *stmt_tree,
+	PST_STATEMENT **stmt_dup,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: pst_ruledup - Duplicate a rule tree

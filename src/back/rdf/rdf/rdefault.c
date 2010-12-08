@@ -277,6 +277,10 @@ rdd_gdefault(	RDF_GLOBAL   *global,
 **	21-Mar-2003 (jenjo02)
 **	    rdu_ferror() pointing to wrong error code, rdf_dist_ulhcb,
 **	    instead of rdf_def_ulhcb.
+**      26-Nov-2010 (hanal04) Bug 124759
+**          The RDF_DEF_DESC mutex is flagged by RDF_DSEMAPHORE not
+**          RDF_RSEMAPHORE. We were checking the wrong flagged and failing
+**          to release the RDF_DEF_DESC mutex.
 */
 
 DB_STATUS
@@ -540,7 +544,7 @@ rdd_defsearch(	RDF_GLOBAL         *global,
 	    } while (0);	/* end control loop */
 
 	    /* release semaphore if held */
-	    if (global->rdf_resources & RDF_RSEMAPHORE)
+	    if (global->rdf_resources & RDF_DSEMAPHORE)
 	    {
 		t_status = rdd_resetsem(global,RDF_DEF_DESC);
 		/* keep the most severe error status */

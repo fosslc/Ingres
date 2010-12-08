@@ -2,7 +2,6 @@
 # include <gl.h>
 # include <cs.h>
 # include <pc.h>
-# include <csinternal.h>
 # include <qu.h>
 # include <ex.h>
 # include <me.h>
@@ -10,6 +9,7 @@
 # include <gc.h>
 
 # include <bsi.h>
+# include <clpoll.h>
 # include "gcarw.h"
 # include "gcacli.h"
 
@@ -282,16 +282,20 @@
 **       2-Feb-2010 (hanal04) Bug 123208
 **          In GC_recv_sm() close a security vulnerability by checking
 **          the supplied length is greater than zero.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Delete CS_SYSTEM ref, not used or needed.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of clpoll.h neccessary for iiCLfdreg.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Stricter callback prototyping, fix # parameters for send callback!
 */
 
-static void	GC_recv_sm( GCA_GCB *gcb, STATUS timeout_status );
-static void	GC_send_sm( GCA_GCB *gcb );
-static void	GC_disc_sm( GCA_GCB *gcb );
+static void	GC_recv_sm( void *gcb, STATUS timeout_status );
+static void	GC_send_sm( void *gcb, i4 notused );
+static void	GC_disc_sm( void *gcb, i4 notused );
 static void	GC_drive_complete( GCA_GCB *gcb );
 static VOID	GC_abort_recvs( GCA_GCB *gcb, STATUS status );
 static VOID	GC_abort_sends( GCA_GCB *gcb, STATUS status );
-
-GLOBALREF	CS_SYSTEM	Cs_srv_block;
 
 GLOBALREF	bool		iisynclisten;
 
@@ -427,8 +431,9 @@ GCreceive( SVC_PARMS *svc_parms )
 static char *gc_trr[] = { "IDLE", "FILL", "CHECK", "LOOK" };
 
 static void
-GC_recv_sm( GCA_GCB *gcb, STATUS timeout_status )
+GC_recv_sm( void *parm, STATUS timeout_status )
 {
+	GCA_GCB *gcb = (GCA_GCB *) parm;
 	i4		len;
 	int		n;
 	struct subchan *subchan;
@@ -436,7 +441,7 @@ GC_recv_sm( GCA_GCB *gcb, STATUS timeout_status )
 	/* Copy some parameters */
 
 	gcb->recv.bsp.func = GC_recv_sm;
-	gcb->recv.bsp.closure = (PTR)gcb;
+	gcb->recv.bsp.closure = gcb;
 	gcb->recv.bsp.syserr = &gcb->recv.syserr;
 	gcb->recv.bsp.bcb = gcb->bcb;
 	gcb->recv.bsp.lbcb = listenbcb;
@@ -791,11 +796,11 @@ GCsend( SVC_PARMS *svc_parms )
 	if( !gcb->send.running )
 	{
 		gcb->send.running = TRUE;
-		GC_send_sm( gcb );
+		GC_send_sm( gcb, 0 );
 	}
 # ifdef OS_THREADS_USED
 	if ( iisynclisten && svc_parms->flags.flow_indicator == 0 )
-		GC_send_sm( gcb );
+		GC_send_sm( gcb, 0 );
 # endif /* OS_THREADS_USED */
 }
 
@@ -825,14 +830,15 @@ GCsend( SVC_PARMS *svc_parms )
 static char *gc_trs[] = { "LOOK", "CHOP", "DATA" };
 
 static void
-GC_send_sm( GCA_GCB *gcb )
+GC_send_sm( void *parm, i4 notused )
 {
+	GCA_GCB *gcb = (GCA_GCB *) parm;
 	register int 	n;
 
 	/* Copy some parameters */
 
 	gcb->send.bsp.func = GC_send_sm;
-	gcb->send.bsp.closure = (PTR)gcb;
+	gcb->send.bsp.closure = gcb;
 	gcb->send.bsp.syserr = &gcb->send.syserr;
 	gcb->send.bsp.bcb = gcb->bcb;
 	gcb->send.bsp.lbcb = listenbcb;
@@ -986,11 +992,11 @@ GCpurge( SVC_PARMS *svc_parms )
 	if( !gcb->send.running )
 	{
 		gcb->send.running = TRUE;
-		GC_send_sm( gcb );
+		GC_send_sm( gcb, 0 );
 	}
 # ifdef OS_THREADS_USED
 	if ( iisynclisten && svc_parms->flags.flow_indicator == 0 )
-		GC_send_sm( gcb );
+		GC_send_sm( gcb, 0 );
 # endif /* OS_THREADS_USED */
 }
 
@@ -1041,7 +1047,7 @@ GCdisconn( SVC_PARMS *svc_parms )
     */
     gcb->sendclose.svc_parms = svc_parms;
     gcb->sendclose.state = GC_CHAN_ACTIVE;
-    GC_disc_sm( gcb );
+    GC_disc_sm( gcb, 0 );
 
     return;
 }
@@ -1066,12 +1072,13 @@ GCdisconn( SVC_PARMS *svc_parms )
 static char *gc_trd[] = { "REL_WAIT", "RELEASE", "CLOSE_WAIT", "CLOSE" };
 
 static void
-GC_disc_sm( GCA_GCB *gcb )
+GC_disc_sm( void *parm, i4 notused )
 {
+	GCA_GCB		*gcb = (GCA_GCB *) parm;
 	BS_PARMS	*bsp = &gcb->close.bsp;
 
 	bsp->func = GC_disc_sm;
-	bsp->closure = (PTR)gcb;
+	bsp->closure = gcb;
 	bsp->syserr = &gcb->close.syserr;
 	bsp->bcb = gcb->bcb;
 	bsp->lbcb = listenbcb;

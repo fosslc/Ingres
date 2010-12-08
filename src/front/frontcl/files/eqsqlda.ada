@@ -24,7 +24,8 @@
 --				  258, to match with the IISQD_NAMELEN in  
 --				  IISQLDA. (hweho01) S121123
 --              17-aug-2010     - Add IISQ spatial types skipped 60 for SECL
---                                consistency. (thic01)-
+--                                consistency. (thic01)
+--
 -- Copyright (c) 2004, 2010 Ingres Corporation
 --
 

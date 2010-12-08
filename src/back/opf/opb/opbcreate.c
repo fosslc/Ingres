@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -98,8 +98,98 @@
 **		Repaired tests for ifnull, tests are now 
 **		nodep->pst_sym.pst_value.pst_s_op.pst_fdesc->adi_fiflags & 
 **		nodep->ADI_F32768_IFNULL
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opb_cbf(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	bool *value);
+static OPE_IEQCLS opb_eqcls(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	PST_QNODE *var);
+static void opl_bfnull(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *root,
+	OPB_BOOLFACT *bfp);
+static void opb_isconst(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	PST_QNODE **rootpp,
+	bool *novars,
+	bool not_first);
+static void opb_ikey(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	PTR keyvalue,
+	OPB_BFKEYINFO *keyhdr,
+	PST_QNODE *constant,
+	OPB_SARG operator,
+	ADI_OP_ID opid,
+	bool null_flag);
+static void opb_keybuild(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	OPB_BFKEYINFO *keyhdr,
+	PST_QNODE *opqnodep,
+	PST_QNODE *constant);
+static void opb_ckilist(
+	OPS_SUBQUERY *subquery,
+	OPE_IEQCLS eqcls,
+	OPB_BOOLFACT *bfp);
+static void opb_bfkey(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	PST_QNODE *var,
+	PST_QNODE *opqnodep,
+	PST_QNODE *constant);
+OPB_BOOLFACT *opb_bfget(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp);
+static bool opb_isnullck(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *nodep);
+static void opb_nulljoin(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bp,
+	bool first_time);
+bool opb_bfinit(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	PST_QNODE *root,
+	bool *complex);
+static void opb_rtminmax(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp,
+	OPE_EQCLIST *eqclsp,
+	OPB_IBF bfi);
+static void opb_cojoin(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS virtual);
+static void opb_relabel(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *qnode,
+	OPE_BMEQCLS *eqcmap,
+	OPE_BMEQCLS *eqcbfmap);
+static void opb_correlated(
+	OPS_SUBQUERY *subquery,
+	OPV_IVARS virtual,
+	OPV_SUBSELECT *subp);
+static bool opl_bfeqc(
+	OPS_SUBQUERY *subquery,
+	OPB_BOOLFACT *bfp);
+static void opb_bfsinit(
+	OPS_SUBQUERY *subquery);
+void opb_create(
+	OPS_SUBQUERY *subquery);
+void opb_mboolfact(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE *expr1,
+	PST_QNODE *expr2,
+	PST_J_ID joinid);
 
 /* Some useful constants */
 static i4 intc0 = 0;
@@ -1056,7 +1146,8 @@ opb_ikey(
 **	    Adjust LIKE data based on summary info.
 **	02-Dec-2009 (kiria01) b122952
 **	    Look for sorted PST_INLISTSORT and use its tail end as high range.
-[@history_line@]...
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Support propagation of collID to keys
 */
 static VOID
 opb_keybuild(
@@ -1081,12 +1172,8 @@ opb_keybuild(
 
     adc_kblk.adc_opkey = opno;  /* save ADF comparison operator id */
 
-    adc_kblk.adc_lokey.db_datatype = adc_kblk.adc_hikey.db_datatype = 
-	keyhdr->opb_bfdt->db_datatype; /* initialize the key datatypes */
-    adc_kblk.adc_lokey.db_prec = adc_kblk.adc_hikey.db_prec =
-	keyhdr->opb_bfdt->db_prec; /* initialize the key precs */
-    adc_kblk.adc_lokey.db_length = adc_kblk.adc_hikey.db_length = 
-	keyhdr->opb_bfdt->db_length; /* initialize the key lengths */
+    adc_kblk.adc_lokey = *keyhdr->opb_bfdt; /* initialize the low */
+    adc_kblk.adc_hikey = *keyhdr->opb_bfdt; /* initialize the high */
     if (opqnodep->pst_sym.pst_value.pst_s_op.pst_pat_flags & AD_PAT_HAS_ESCAPE)
 	adc_kblk.adc_escape = opqnodep->pst_sym.pst_value.pst_s_op.pst_escape;
     adc_kblk.adc_pat_flags = opqnodep->pst_sym.pst_value.pst_s_op.pst_pat_flags;
@@ -1568,8 +1655,9 @@ opb_ckilist(
 **      var                             ptr to PST_VAR node of boolean factor
 **      op                              ptr to PST_OP operator node for
 **                                      boolean factor
-**      const                           ptr to tree containing constant nodes
-**                                      which will be used to create key
+**      constant                        ptr to tree containing constant nodes
+**                                      which will be used to create key.
+**					NOTE: this may be NULL
 **
 ** Outputs:
 **	Returns:
@@ -1585,7 +1673,8 @@ opb_ckilist(
 **          initial creation
 **	5-dec-02 (inkdo01)
 **	    Changes for range table expansion.
-[@history_line@]...
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Support propagation of collID to constants from column
 */
 static VOID
 opb_bfkey(
@@ -1608,6 +1697,12 @@ opb_bfkey(
                                         ** and find the equivalence class
                                         ** associated with the var node
                                         */
+    if (var->pst_sym.pst_dataval.db_collID > DB_NOCOLLATION &&
+		constant &&
+		constant->pst_sym.pst_dataval.db_collID <= DB_NOCOLLATION)
+	constant->pst_sym.pst_dataval.db_collID =
+		var->pst_sym.pst_dataval.db_collID;
+
     for( keyhdr = bfp->opb_keys; keyhdr; keyhdr = keyhdr->opb_next)
     {	/* Traverse the list of keyinfo ptrs and check whether this particular
 	** equivalence class has been processed with respect to this boolean
@@ -2670,8 +2765,10 @@ notsorted:	/* Reset constant in case list rearranged */
                 {
                     i4          dtmask = 0;
  
-                    /* Check that VAR's are NOT long types. 
-                       Unless the long type is a member of the GEOM family.*/
+                    /*
+                     *  Check that VAR's are NOT long types. 
+                     *  Unless the long type is a member of the GEOM family.
+                     */
                     status = adi_dtinfo(subquery->ops_global->ops_adfcb,
                         lvar->pst_sym.pst_dataval.db_datatype, &dtmask);
                     if (status != E_DB_OK) break;
@@ -3941,7 +4038,7 @@ opl_bfeqc(
 **	    restrictions) are outer joined with constant ON clauses.
 [@history_line@]...
 */
-static
+static void
 opb_bfsinit(
 	OPS_SUBQUERY       *subquery)
 {

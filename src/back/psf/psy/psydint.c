@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -112,17 +112,21 @@
 **	06-Jul-06 (kiria01) b116230
 **	    psl_print becomes PSL_RS_PRINT bit in new field psl_rsflags
 **	    to allow for extra flags in PST_RSDM_NODE
-[@history_template@]...
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Definition of static variables and forward static functions.
-*/
-static VOID
-makeidset(
-	register i4        varno,
+
+/* TABLE OF CONTENTS */
+i4 psy_dinteg(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb,
+	QEU_CB *qeu_cb);
+static void makeidset(
+	register i4 varno,
 	register PST_QNODE *tree,
-	u_i4		   dset[]);
+	u_i4 dset[]);
 
 /*{
 ** Name: psy_dinteg	- Define an integrity.
@@ -298,7 +302,7 @@ psy_dinteg(
     DB_STATUS           status;
     DB_STATUS		stat;
     DB_INTEGRITY	inttuple;
-    register DB_INTEGRITY *inttup;
+    register DB_INTEGRITY *inttup = NULL;
     RDF_CB		rdf_cb;
     register RDR_RB	*rdf_rb = &rdf_cb.rdf_rb;
     QSF_RCB		qsf_rb;
@@ -634,13 +638,15 @@ psy_dinteg(
     /*
     ** Print the final query tree.
     */
-    if (ult_check_macro(&sess_cb->pss_trace, 16, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_LONG_QRY_TREE_TRACE, &val1, &val2))
     {   
 	TRdisplay("Final query tree:\n\n\n");
 	status = pst_prmdump(qtree->pst_qtree, qtree,
 	    &psy_cb->psy_error, DB_PSF_ID);
     }
-    if (ult_check_macro(&sess_cb->pss_trace, 17, &val1, &val2))
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_SHORT_QRY_TREE_TRACE, &val1, &val2))
     {   
 	TRdisplay("Final query tree:\n\n\n");
 	status = pst_1prmdump(qtree->pst_qtree, qtree, &psy_cb->psy_error);
@@ -672,7 +678,8 @@ psy_dinteg(
     /* this call will destroy query tree */
     tree_exists = 0;
 #ifdef xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 72, &val1, &val2) == 0)
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_NO_INTEG_VALIDATION_TRACE, &val1, &val2) == 0)
     {
 #endif
 	status = opf_call(OPF_CREATE_QEP, &opf_cb);
@@ -703,7 +710,8 @@ psy_dinteg(
     qresult.dt_size = sizeof(qdata);	    /* It contains an i4 */
     qresult.dt_data = (PTR) &qdata;
 #ifdef xDEBUG
-    if (ult_check_macro(&sess_cb->pss_trace, 72, &val1, &val2) == 0)
+    if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_NO_INTEG_VALIDATION_TRACE, &val1, &val2) == 0)
     {
 #endif
 	/*
@@ -848,7 +856,8 @@ psy_dinteg(
 	/* Commented out, because we want to return good status to commit rather
 	** than abort in this case. Abort is done `manually' by calling RDF to
 	** remove integrity at the end of this proc.
-	/*	status = E_DB_ERROR;	*/
+	**	status = E_DB_ERROR;
+	*/
 	goto exit;
     }
 exit:

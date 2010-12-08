@@ -105,6 +105,9 @@
 #	    Renamed PROJ64_LOC and GEOS64_LOC to PROJHB_LOC and GEOSHB_LOC
 #	30-Sep-2010 (troal01)
 #	    Removed Geospatial linker flags. These are now handled in IINEEDLIBS
+#	01-Nov-2010 (bonro01)
+#	    Add compile flags to "back,common,cl,gl" directory trees to show
+#	     warnings for missing prototypes.
 #
 
 # Tell Jamdefs that this include worked:
@@ -215,3 +218,9 @@ if $(OSVER) != DEBIAN
 }
 BUILD_GTK_GUI ?= TRUE ;
 PAMLIB ?= TRUE ;
+
+# Set Directory Tree compile flags
+DIRCCFLAGS_back += -Wmissing-prototypes ;
+DIRCCFLAGS_common += -Wmissing-prototypes ;
+DIRCCFLAGS_cl += -Wmissing-prototypes ;
+DIRCCFLAGS_gl += -Wmissing-prototypes ;

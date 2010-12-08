@@ -33,8 +33,12 @@
 **	    varchar input to be placed in a long varchar coupon.  Again,
 **	    this allows testing of most of the functionality for I/O of blobs
 **	    before FE support is available.
+**      23-Nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
 
+#ifndef ADF_TRACE_HDR_INCLUDED
+#define ADF_TRACE_HDR_INCLUDED
 
 /*
 **  Defines of other constants.
@@ -89,3 +93,4 @@
 
 #define                 ADF_MAXTRACE	       12
 /*  [@defined_constants@]...	*/
+#endif /* define ADF_TRACE_HDR_INCLUDED */

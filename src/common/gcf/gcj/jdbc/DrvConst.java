@@ -192,6 +192,17 @@ package com.ingres.gcf.jdbc;
 **	    Bumped version to 4.0.5 for the following fixes and enhancements:
 **	    SIR 124165 - Boolean to tinyint connection property.
 **	    BUG 124214 - Fix isBeforeFirst() and isLast().
+**	16-Nov-10 (gordy)
+**	    Added configuration property for LOB locator streaming access.
+**	18-Nov-10 (rajus01)
+**	    Bumped patch version to 6 for the following fixes and enhancements:
+**	    SIR 124588 -  Add ability to store blank date in the DBMS.
+**	    Bug 124712 -  Fix BigDecimal query param values specified in 
+**			  scientific notation.
+**	    Bug 124716 -  Fix UTF8 Clob data mishandling when accessed via 
+**			  a locator.
+**	    SIR 124722 -  Change JDBC DATE_ALIAS default to ANSIDATE.
+**	    SIR 124734 -  Provide streaming LOB data access via locators.
 */
 
 import	com.ingres.gcf.dam.MsgConst;
@@ -223,6 +234,7 @@ import	com.ingres.gcf.dam.MsgConst;
 **	DRV_CNF_LOB_LOCATORS	LOB Locator configuration property.
 **	DRV_CNF_LOB_LOC_AUTO	LOB Locator/autocommit config property.
 **	DRV_CNF_LOB_LOC_LOOP	LOB Locator/select loop config property.
+**	DRV_CNF_LOB_LOC_STREAM	LOB Locator/stream config property.
 **	DRV_CNF_EMPTY_DATE	Empty date replacement config property.
 **	DRV_CNF_CURS_SCROLL	Scrollable cursor config property.
 **	DRV_CNF_BATCH		Batch processing config property.
@@ -352,6 +364,10 @@ import	com.ingres.gcf.dam.MsgConst;
 **	    DRV_PROP_SND_INT_BOOL.
 **	13-Aug-10 (gordy)
 **	    Bumped version to 4.0.5
+**	10-Nov-10 (gordy)
+**	    Added valid values for date alias parameter.
+**	16-Nov-10 (gordy)
+**	    Added DRV_CNF_LOB_LOC_STREAM.
 */
 
 interface
@@ -364,7 +380,7 @@ DrvConst
     String	DRV_VENDOR_NAME		= "Ingres Corporation";
     int		DRV_MAJOR_VERSION	= 4;
     int		DRV_MINOR_VERSION	= 0;
-    int		DRV_PATCH_VERSION	= 5;
+    int		DRV_PATCH_VERSION	= 6;
     String	DRV_JDBC_VERSION	= "JDBC 4.0";
     int		DRV_JDBC_MAJ_VERS	= 4;
     int		DRV_JDBC_MIN_VERS	= 0;
@@ -382,6 +398,7 @@ DrvConst
     String	DRV_CNF_LOB_LOCATORS	= "lob.locators.enabled";
     String	DRV_CNF_LOB_LOC_AUTO	= "lob.locators.autocommit.enabled";
     String	DRV_CNF_LOB_LOC_LOOP	= "lob.locators.select_loop.enabled";
+    String	DRV_CNF_LOB_LOC_STREAM	= "lob.locators.stream.enabled";
     String	DRV_CNF_EMPTY_DATE	= "date.empty";
     String	DRV_CNF_CURS_SCROLL	= "scroll.enabled";
     String	DRV_CNF_BATCH		= "batch.enabled";
@@ -441,10 +458,11 @@ DrvConst
     String	DRV_PROP_SND_INT_BOOL	= "send_integer_booleans";
 
     String	prop_valid_off_on[]	= { "off", "on" };
+    String	prop_valid_false_true[]	= { "false", "true" };
     String	prop_xacm_valid[]	= { "dbms", "single", "multi" };
     String	prop_vnode_valid[]	= { "connect", "login" };
     String	prop_crsr_valid[]	= { "dbms", "readonly", "update" };
-    String	prop_valid_false_true[]	= { "false", "true" };
+    String	prop_date_alias_valid[] = { "ansidate", "ingresdate" };
     
     PropInfo	propInfo[] =		    // Connection properties
     {
@@ -507,7 +525,8 @@ DrvConst
 	new PropInfo( DRV_PROP_MNY_PREC, false, "Money Precision", null, null,
 			DrvRsrc.RSRC_CP_MNY_PRC, MsgConst.MSG_CP_MNY_PREC ),
 
-	new PropInfo( DRV_PROP_DATE_ALIAS, false, "Date Alias", null, null,
+	new PropInfo( DRV_PROP_DATE_ALIAS, false, "Date Alias", 
+			prop_date_alias_valid[0], prop_date_alias_valid,
 			DrvRsrc.RSRC_CP_DTE_TYP, MsgConst.MSG_CP_DATE_ALIAS ),
 
 	new PropInfo( DRV_PROP_SND_ING_DTE, false, "Send Ingres Dates",

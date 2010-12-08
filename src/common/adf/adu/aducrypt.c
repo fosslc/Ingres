@@ -10,6 +10,7 @@
 #include    <adf.h>
 #include    <adfint.h>
 #include    <adurijndael.h>
+#include    <aduint.h>
 
 /**
 **  ADUCRYPT.C -- encryption functions

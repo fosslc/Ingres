@@ -239,6 +239,10 @@
 **	    Compiler warning fixes.
 **	30-May-2009 (kiria01) SIR 121665
 **	    Update GCA API to LEVEL 5
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Fix prototypes, CS expects CS_SCB *, xlate to SCD_SCB * here.
+**      16-Nov-2010 (horda03) b124691
+**          Correct AST handling on VMS (use SS$_WASSET to detect if ASTs were enabled)
 **/
 
 /*
@@ -937,8 +941,9 @@ scc_trace( SCF_CB *scf_cb, SCD_SCB *scb )
 [@history_template@]...
 */
 STATUS
-scc_send( SCD_SCB *scb, i4  sync )
+scc_send( CS_SCB *csscb, i4  sync )
 {
+    SCD_SCB		*scb = (SCD_SCB *) csscb;
     SCC_GCMSG           *cmsg = scb->scb_cscb.cscb_mnext.scg_next;
     SCC_GCMSG           *cmsg_next;
     DB_STATUS           status;
@@ -1482,8 +1487,9 @@ scc_send( SCD_SCB *scb, i4  sync )
 **          Disable ASTs (on VMS) while accessing the GCA_STATUS variable.
 */
 STATUS
-scc_recv( SCD_SCB *scb, i4  sync )
+scc_recv( CS_SCB *csscb, i4  sync )
 {
+    SCD_SCB		    *scb = (SCD_SCB *) csscb;
     DB_STATUS		    status;
     DB_STATUS		    error;
     GCA_RV_PARMS	    *rparms = &scb->scb_cscb.cscb_gci;
@@ -1506,7 +1512,7 @@ scc_recv( SCD_SCB *scb, i4  sync )
 	return(E_CS001E_SYNC_COMPLETION);
     }
 #ifdef VMS
-    ast_enabled = sys$setast(0);
+    ast_enabled = (sys$setast(0) == SS$_WASSET);
 #endif
 
     if (   rparms->gca_status != E_GCFFFF_IN_PROCESS
@@ -1557,7 +1563,7 @@ scc_recv( SCD_SCB *scb, i4  sync )
     }
 
 #ifdef VMS
-    ast_enabled = sys$setast(0);
+    ast_enabled = (sys$setast(0) == SS$_WASSET);
 #endif
 
     /* If we are in the middle of a read then continue with it now */
@@ -1600,7 +1606,7 @@ scc_recv( SCD_SCB *scb, i4  sync )
 	    CScancelled(0); /* mark as nothing complete */
     }
 #ifdef VMS
-    ast_enabled = sys$setast(0);
+    ast_enabled = (sys$setast(0) == SS$_WASSET);
 #endif
     if ((rparms->gca_status != E_GCFFFF_IN_PROCESS) &&
 	(rparms->gca_status != E_GC0000_OK) &&

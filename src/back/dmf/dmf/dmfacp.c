@@ -489,12 +489,14 @@ static VOID acp_exit_handler(
 **	    Replaced log_acp_stats() with call to dmd_log_info().
 **	15-May-2007 (toumi01)
 **	    For supportability add process info to shared memory.
+**	02-Nov-2010 (jonj) SIR 124685
+**	    Return int instead of VOID to agree with function prototype.
 **
 */
 # ifdef	II_DMF_MERGE
-VOID MAIN(argc, argv)
+int MAIN(argc, argv)
 # else
-VOID 
+int 
 main(argc, argv)
 # endif
 i4                  argc;
@@ -509,6 +511,9 @@ char		    *argv[];
     ** insuring PCatexit() handlers will get run.
     */
     PCexit(dmfacp());
+
+    /* NOTREACHED */
+    return(FAIL);
 }
 
 static STATUS

@@ -733,6 +733,10 @@
 **         LOG and read-only under FILES location.
 **	23-Sep-2010 (bonro01)
 **	    Remove -icesvr from ingstart
+**	18-Nov-2010 (kschendel) SIR 124685
+**	    Fix compiler warning on CS call.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */ 
 
 # include <compat.h>
@@ -1966,10 +1970,6 @@ def_ii_gc_port();
 
 	if( execute( cmd ) != OK )
 		return( FAIL );
-
-#if defined(dg8_us5)
-         PCsleep(500);
-#endif /* dg8_us5  */
 
 	return( OK );
 }
@@ -4718,7 +4718,7 @@ checkcsclean( void )
 	
 	if ( CS_map_sys_segment(&err_code) )
 		return(FALSE);
-	CS_get_cb_dbg(&sysseg);
+	CS_get_cb_dbg((PTR *) &sysseg);
 	svinfo = sysseg->css_servinfo;
 	for ( i = 0; i < sysseg->css_numservers; i++ )
 	{

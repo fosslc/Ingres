@@ -14,7 +14,6 @@
 #include    <erglf.h>
 #include    <sp.h>
 #include    <mo.h>
-#include    <sl.h>
 #include    <iicommon.h>
 #include    <dbdbms.h>
 #include    <ulf.h>
@@ -25,10 +24,13 @@
 #include    <scf.h>
 #include    <ulm.h>
 
+#include    <dmf.h>
+#include    <sxf.h>
 #include    <qefmain.h>
 #include    <qefscb.h>
 #include    <qefrcb.h>
 #include    <qefcb.h>
+#include    <qefprotos.h>
 
 /*
 **
@@ -66,6 +68,8 @@
 **	    replace nat and longnat with i4
 **	10-Jan-2001 (jenjo02)
 **	    Replaced qef_session() function with GET_QEF_CB macro.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes: include qefprotos (leading to header hell, ugh).
 */
 
 GLOBALREF	QEF_S_CB	*Qef_s_cb;

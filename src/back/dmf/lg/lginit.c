@@ -1018,6 +1018,11 @@ i4             pid;
 **	    process may already be gone.
 **	26-Jun-2006 (jonj)
 **	    Tweaks to HANDLE transactions for XA support.
+**      20-Oct-2010 (thaju02) B124452
+**	    In cleaning up a shared lxb on the lpb lxb queue, handle lxbs 
+**	    are deallocated but may be referenced as the next lxb (lxbq).
+**	    Cleanup attempt to dealloc handle lxb twice resulting in an 
+**	    erroneous ldb tx count.
 */
 static void
 cleanup_process( register LGD *lgd, register LPB *lpb, i4  abort_all )
@@ -1049,6 +1054,8 @@ cleanup_process( register LGD *lgd, register LPB *lpb, i4  abort_all )
     CL_ERR_DESC	sys_err;
     STATUS	status;
     i4	err_code;
+    bool	handle_dealloc = FALSE;
+
 
     if (abort_all == 0)
     {
@@ -1350,7 +1357,10 @@ cleanup_process( register LGD *lgd, register LPB *lpb, i4  abort_all )
 
 			/* If not the entry LXB, deallocate it */
 			if ( handle_lxb != lxb )
+		        {
 			    cleanup_lxb(lgd, ldb, &handle_lxb, abort_all, &db_undo_recover);
+			    handle_dealloc = TRUE;
+			}
 			    /* now handle_lxb == NULL */
 
 			/* If no handles remain, unSHARE the sLXB to make available for recovery */
@@ -1390,6 +1400,20 @@ cleanup_process( register LGD *lgd, register LPB *lpb, i4  abort_all )
 		/* Unmutex the sLXB */
 		if ( slxb && slxb != lxb )
 		    (VOID)CSv_semaphore(&slxb->lxb_mutex);
+
+		if (handle_dealloc)
+		{
+		    /*
+		    ** handles have been deallocated. The next lxb on 
+		    ** the lpb lxb queue (lxbq) may be stale. Refresh lxbq
+		    ** to avoid possibly deallocating handle twice 
+		    ** (decrementing the ldb_lxb_count twice) such that 
+		    ** ldb_lxb_count goes negative and logging system 
+		    ** does not shutdown.
+		    */
+		    handle_dealloc = FALSE;
+		    lxbq = (LXBQ *)LGK_PTR_FROM_OFFSET(lxb->lxb_owner.lxbq_next);
+		}
 	    }
 
 	    /* Skip SHARED LXBs which still have handles attached */

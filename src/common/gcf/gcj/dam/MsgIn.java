@@ -2301,6 +2301,11 @@ readSqlData( SqlTimestamp value )
 ** History:
 **	22-Sep-03 (gordy)
 **	    Created.
+**	03-Nov-10 (rajus01) SIR 124588, SD issue 147074
+**	    IngresDate has special handling for empty dates and the parameter 
+**	    oriented setNull() function may do something different than 
+**	    desired at this point.  Use the column oriented set(null) method 
+**	    instead.
 */
 
 public void
@@ -2310,7 +2315,7 @@ readSqlData( IngresDate value )
     if ( readSqlDataIndicator() )	// Read data indicator byte.
 	value.set( readString() );	// Read data value.
     else
-        value.setNull();		// NULL data value.
+        value.set( (IngresDate) null );		// NULL data value.
     return;
 } // readSqlData
 

@@ -55,6 +55,8 @@
 **	    replace nat and longnat with i4
 **	07-aug-2001 (somsa01)
 **	    Cleaned up compiler warnings.
+**      03-nov-2010 (joea)
+**          Declare MO_showstrings and MO_string as static.
 **/
 
 /* # define xDEBUG */
@@ -100,7 +102,7 @@ GLOBALREF MO_CLASS_DEF MO_str_classes[];
 **	    Bug #56449
 **	    Changed %x's to %p's.
 */
-VOID
+static void
 MO_showstrings(void)
 {
 # ifdef xDEBUG
@@ -148,7 +150,7 @@ MO_showstrings(void)
 **	    documented
 */
 
-MO_STRING *
+static MO_STRING *
 MO_string( char *s )
 {
     SPBLK sb;

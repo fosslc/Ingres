@@ -11,6 +11,8 @@
 #include    <fdset.h>
 #include    <csev.h>
 #include    <cssminfo.h>
+#include    <csinternal.h>
+#include    <cslocal.h>
 #include    <sys/signal.h>
 #include    <errno.h>
 
@@ -105,6 +107,8 @@ NO_OPTIM = hp3_us5
 **	28-oct-93 (seiwald)
 **	    Don't include erclf.h - it's a circular dependency.  Use 
 **	    corresponding defines now in csnormal.h.
+**	15-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 /*
@@ -151,6 +155,7 @@ GLOBALREF	CS_SMCNTRL	*Cs_sm_cb;
 
 # ifdef xCL_075_SYS_V_IPC_EXISTS
 # define gotsleep
+STATUS
 CS_sleep(semid, semnum)
 int	semid, semnum;
 {
@@ -168,6 +173,7 @@ int	semid, semnum;
 
 # ifdef xCL_078_CVX_SEM
 # define gotsleep
+STATUS
 CS_sleep (sem)
 struct semaphore *sem;
 {
@@ -179,6 +185,7 @@ struct semaphore *sem;
 # endif	/* xCL_078_CVX_SEM */
 
 # ifndef gotsleep
+STATUS
 CS_sleep(semid, semnum)
 int     semid, semnum;
 {
@@ -221,12 +228,13 @@ int     semid, semnum;
 **	22-jan-90 (fls-sequent)
 **	    Fixed MCT re-entrancy problems by making sembuf sops variable
 **	    local instead of static.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Rename rcvd-danger (probably obsolete anyway?)
 */
 
 CS_slave_sleep(semid, semnum)
 int     semid, semnum;
 {
-    GLOBALREF   bool    rcvd_danger;
     STATUS      status;
 
     struct sembuf sops[1];
@@ -235,12 +243,12 @@ int     semid, semnum;
     sops[0].sem_op = -1;
     sops[0].sem_flg = 0;
 
-    rcvd_danger = FALSE;
+    iiCSrcvd_danger = FALSE;
     while ((status = semop(semid, sops, 1)) < 0)
     {
-        if ((status == -1) && (errno == EINTR) && (rcvd_danger))
+        if ((status == -1) && (errno == EINTR) && (iiCSrcvd_danger))
         {
-           rcvd_danger = FALSE;
+           iiCSrcvd_danger = FALSE;
            continue;
         }
         return( E_CS0050_CS_SEMOP_GET );
@@ -283,6 +291,7 @@ int     semid, semnum;
 
 # ifdef xCL_075_SYS_V_IPC_EXISTS
 # define gotwakeup
+STATUS
 CS_wakeup(semid, semnum)
 int	semid, semnum;
 {
@@ -301,6 +310,7 @@ int	semid, semnum;
 
 # ifdef xCL_078_CVX_SEM
 # define gotwakeup
+STATUS
 CS_wakeup (sem)
 struct semaphore *sem;
 {
@@ -311,6 +321,7 @@ struct semaphore *sem;
 # endif	/* xCL_078_CVX_SEM */
 
 # ifndef gotwakeup
+STATUS
 CS_wakeup(semid, semnum)
 int     semid, semnum;
 {

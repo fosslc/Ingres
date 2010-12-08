@@ -124,6 +124,7 @@ FUNC_EXTERN char * uld_qef_actstr(i4 ahd_type);
 FUNC_EXTERN char * uld_mathex_xlate(i4 exnum);
 FUNC_EXTERN char * uld_psq_modestr(i4 qmode);
 FUNC_EXTERN int uld_struct_xlate(char *strname);
+FUNC_EXTERN char * uld_struct_name(i4 strnum);
 FUNC_EXTERN char * uld_syscat_namestr(i4 table_id);
 
 FUNC_EXTERN DB_STATUS uld_tree_to_text( PTR handle, i4  qmode,

@@ -114,20 +114,14 @@
 ** History:
 **	09-mar-92 (jrb, merged by stevet)
 **	    Created.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
-#ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adg_add_fexi(
 ADF_CB		*adf_scb,
 ADI_OP_ID	adg_index_fexi,
 DB_STATUS	(*adg_func_addr)())
-#else
-DB_STATUS
-adg_add_fexi( adf_scb, adg_index_fexi, adg_func_addr)
-ADF_CB		*adf_scb;
-ADI_OP_ID	adg_index_fexi;
-DB_STATUS	(*adg_func_addr)();
-#endif
 {
     if (    Adf_globs == NULL
 	||  Adf_globs->adf_type != ADSRV_TYPE

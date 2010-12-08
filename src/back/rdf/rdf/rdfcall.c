@@ -245,6 +245,20 @@ rdf_handler(EX_ARGS *args)
 **	    Need to pass infoblk to the deulh routines
 **	    Need to mutex protect rdf_shared_sessions as the object may be 
 **	    about to be destroyed.  Added sanity check on rdf_shared_sessions
+**	27-may-2010 (wanfr01) Bug 123824
+**	    Enable sanity check/diag message for rdf_shared_sessions.
+**      11-Nov-2010 (hanal04) Bug 124718
+**          Mimic the RDF_RSEMAPHORE test when trying to acquire
+**          RDF_BLD_LDBDESC (RDD_SEMAPHORE) and RDF_DEF_DESC (RDF_DSEMAPHORE)
+**          to avoid requesting a semaphore we already own.
+**      26-Nov-2010 (hanal04) Bug 124759 and 124718
+**          Remove previous fix for Bug 124718. This was not a root cause
+**          solution. Further investigation showed that rdd_defsearch()
+**          was not a legitimate double acquisition in the way that
+**          the GSEMAPHORE is treated. rdd_defsearch() was failing to
+**          release the RDF_DEF_DESC mutex because it was checking the wrong
+**          flag.
+**          to avoid requesting a semaphore we already own. 
 [@history_template@]...
 */
 VOID
@@ -734,13 +748,11 @@ rdf_release(	RDF_GLOBAL         *global,
 		
 	        CSadjust_counter(&ulhobj->rdf_shared_sessions, -1);
 
-/*
 		if (ulhobj->rdf_shared_sessions < 0)
 		{
 		    TRdisplay ("%@   Error:  rdf_shared_sessions = %d.  Resetting to 0\n",ulhobj->rdf_shared_sessions); 
 		    ulhobj->rdf_shared_sessions = 0;
 		}
-*/
 		op_status = rdu_rsemaphore(global);
 		if (DB_FAILURE_MACRO(op_status))
 		{

@@ -22,6 +22,10 @@
 **          Changes for Long IDs
 **     22-apr-2010 (stial01)
 **          Use DB_EXTFMT_SIZE for register table newcolname IS 'ext_format'
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype gwsxa_error as macro calling gwsxaErrorFcn,
+**	    passing __FILE__, __LINE__.
+**	    Fix up prototype declarations.
 */
 
 # define	SXA_CURRENT_SAL  "current"
@@ -165,35 +169,61 @@ typedef struct _SXA_MSG_DESC {
 /*
 **	Function prototypes
 */
-DB_STATUS gwsxa_term	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_tabf	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_idxf	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_open	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_close	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_position(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_get	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_put	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_replace	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_delete	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_begin	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_commit	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_abort	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_info	(GWX_RCB *gwx_rcb);
-DB_STATUS gwsxa_init	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_term	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_sterm	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_tabf	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_idxf	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_open	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_close	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_position(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_get	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_put	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_replace	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_delete	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_begin	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_commit	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_abort	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_info	(GWX_RCB *gwx_rcb);
+FUNC_EXTERN DB_STATUS gwsxa_init	(GWX_RCB *gwx_rcb);
 
-VOID 	  gwsxa_incr(CS_SEMAPHORE *sem, i4 *counterp );
-VOID      gwsxa_error ();
+FUNC_EXTERN VOID      gwsxa_incr(CS_SEMAPHORE *sem, i4 *counterp );
 
-DB_STATUS	gwsxa_priv_user(i4);
-DB_STATUS 	gwsxachkrcb( GWX_RCB *gwx_rcb, char *routine);
-SXA_ATT_ID  	gwsxa_find_attbyname(char *attname);
-char*		gwsxa_find_attbyid(SXA_ATT_ID attid);
-DB_STATUS	gwsxa_scf_session(CS_SID *where);
-VOID		gwsxa_zapblank(char *str,i4 maxlen);
-VOID		gwsxa_rightTrimBlank(char *str,i4 maxlen);
-DB_STATUS	gwsxa_sxf_to_ingres(GWX_RCB *gwx_rcb,SXF_AUDIT_REC*sxf_record);
-DB_STATUS 	gwsxa_msgid_to_desc(i4 msgid, DB_DATA_VALUE *desc);
-DB_STATUS	gwsxa_find_msgid(i4 msgid,DB_DATA_VALUE *desc) ;
+FUNC_EXTERN DB_STATUS	gwsxa_priv_user(i4);
+FUNC_EXTERN DB_STATUS 	gwsxachkrcb( GWX_RCB *gwx_rcb, char *routine);
+FUNC_EXTERN SXA_ATT_ID  gwsxa_find_attbyname(char *attname);
+FUNC_EXTERN char*	gwsxa_find_attbyid(SXA_ATT_ID attid);
+FUNC_EXTERN DB_STATUS	gwsxa_scf_session(CS_SID *where);
+FUNC_EXTERN VOID	gwsxa_zapblank(char *str,i4 maxlen);
+FUNC_EXTERN VOID	gwsxa_rightTrimBlank(char *str,i4 maxlen);
+FUNC_EXTERN DB_STATUS	gwsxa_sxf_to_ingres(GWX_RCB *gwx_rcb,SXF_AUDIT_REC*sxf_record);
+FUNC_EXTERN DB_STATUS 	gwsxa_msgid_to_desc(i4 msgid, DB_DATA_VALUE *desc);
+FUNC_EXTERN DB_STATUS	gwsxa_find_msgid(i4 msgid,DB_DATA_VALUE *desc) ;
+
+FUNC_EXTERN DB_STATUS GWSXAmo_attach(void);
+
+/* VARARGS */
+
+FUNC_EXTERN VOID gwsxaErrorFcn(
+			     GWX_RCB	*gwx_rcb,
+			     i4		err_code,
+			     i4 	err_type,
+			     PTR	FileName,
+			     i4		LineNumber,
+			     i4 	num_parms,
+			     ...);
+
+FUNC_EXTERN VOID gwsxaErrorNV(
+			     GWX_RCB	*gwx_rcb,
+			     i4		err_code,
+			     i4 	err_type,
+			     i4 	num_parms,
+			     ...);
+#ifdef HAS_VARIADIC_MACROS
+#define gwsxa_error(gwx_rcb,err_code,err_type,...) \
+	gwsxaErrorFcn(gwx_rcb,err_code,err_type,__FILE__,__LINE__,__VA_ARGS__)
+#else
+#define gwsxa_error gwsxaErrorNV
+#endif /* HAS_VARIADIC_MACROS */
 
 /*
 **	Structure to hold SXA gateway statistics 

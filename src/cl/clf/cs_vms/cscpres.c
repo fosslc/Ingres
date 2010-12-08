@@ -32,6 +32,9 @@
 #include    <csinternal.h>
 #include    <astjacket.h>
 
+#include    <clconfig.h>
+#include    <csev.h>
+
 /*
 ** Name: CSCPRES.C	- Cross-process resume support
 **
@@ -134,9 +137,13 @@
 **         store ICB on stack for Itanium 
 **      07-sep-2010 (joea)
 **         Remove cpres_catch exception handler on i64_vms.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Delete CS_SYSTEM ref, get from csinternal.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems
+**          Added required .h files.
 */
 
-GLOBALREF CS_SYSTEM           Cs_srv_block;
 
 typedef struct
 {
@@ -960,7 +967,7 @@ clean_channels(void)
 **          created.
 */
 STATUS
-CS_cpres_event_handler(void)
+CS_cpres_event_handler(CSEV_CB *notused)
 {
 #ifdef OS_THREADS_USED
     CS_handle_wakeup_events(Cs_srv_block.cs_pid);

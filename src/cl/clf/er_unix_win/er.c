@@ -165,6 +165,8 @@
 **         LOG and read-only under FILES location.
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Include cv.h for CVal definition.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.  Delete obsolete/ifdef'ed out ERreceive.
 **/
 
 /*
@@ -262,11 +264,7 @@ static wchar_t whostname[GL_MAXNAME*sizeof(wchar_t)] ZERO_FILL; /* must be Unico
 */
 
 STATUS
-ERsend(flag, message, msg_length, err_code)
-i4                 flag;
-char               *message;
-i4		   msg_length;
-CL_ERR_DESC	   *err_code;
+ERsend(i4 flag, char *message, i4 msg_length, CL_ERR_DESC *err_code)
 {
 # ifdef NT_GENERIC
     static bool		er_init = FALSE;
@@ -477,108 +475,6 @@ CL_ERR_DESC	   *err_code;
     return( status );
 }
 
-# ifdef INGRES65  
-/*{
-** Name: ERrecieve - Receive message from  ERsend.
-**
-** Description:
-**      This procedure receives a message that was sent by ERsend.
-**      Normally there are multiple sender processes and a single receiving
-**      process.  The sending processes would use ERsend and the receiving
-**      process would use ERreceive.  It is ok for the receiving process to
-**      also send messages.  The first time through ERreceive the mailbox
-**      or other IPC mechanism is created.  The name is a INGRES environment
-**      variable (logical) called II_AUDIT_IPC.  The mailbox is left open from
-**      then on.  This mechanism is currently used only for security
-**      auditing.  If no mailbox (or other IPC channel) currently exists,
-**      then security logging cannot be performed.  This is considered
-**      fatal.
-**
-**      If the recieve buffer is too small to hold the message, then
-**      the message is truncated and ER_TRUNCATED is returned.
-** Inputs:
-**      flag                            Indicate what type of message
-**                                      and must be set to
-**                                      ER_AUDIT_MSG.
-**      buffer                          Address of buffer to contain the
-**                                      message.
-**      buf_length                      Length of the buffer.
-**
-** Outputs:
-**      msg_length                      Pointer to area for length of the
-**                                      message.
-**      err_code                        Operating system error code.
-**      Returns:
-**          OK
-**          ER_BADOPEN
-**          ER_NO_AUDIT
-**          ER_BADRCV
-**          ER_BADPARAM
-**          ER_TRUNCATED
-**      Exceptions:
-**          none
-**
-** Side Effects:
-**          none
-**
-** History:
-**      17-apr-89 (Jennifer)
-**          Coded for Orange.
-**      30-oct-1989 (Derek)
-**          Added the real code.
-**      28-sep-1992 (pholman)
-**          Security Audit Records will no longer be sent to an external
-**          process via ER, instead this functionality will be performed
-**          via calls to the SXF.
-*/
-STATUS
-ERreceive(flag, buffer, buf_length, msg_length, err_code)
-i4                 flag;
-char               *buffer;
-i4                 buf_length;
-i4                 *msg_length;
-CL_SYS_ERR         *err_code;
-{
-    static int      ar_ifi = -2;
-    char            *ipc_number;
-    int             length;
-    key_t           msg_key;
-    STATUS          status;
-    struct
-    {
-        long    mtype;
-        char    mtext[ER_MAX_LEN];
-    }                   msg;
-
-    if (ar_ifi == -2)
-    {
-        NMgtAt("II_AUDIT_IPC", &ipc_number);
-        if (ipc_number && ipc_number[0])
-        {
-            CVal(ipc_number, &msg_key);
-            ar_ifi = msgget(msg_key, IPC_CREAT | 0600);
-            if (ar_ifi == -1)
-            {
-                SETCLERR(err_code, 0, ER_open);
-                return(ER_NO_AUDIT);
-            }
-        }
-    }
-    if ((length = msgrcv(ar_ifi, &msg, ER_MAX_LEN, 0, 0)) < 0)
-    {
-        *msg_length = 0;
-        SETCLERR(err_code, 0, ER_open);
-        return(ER_BADRCV);
-    }
-    status = OK;
-    if (length > buf_length)
-        length = buf_length, status = ER_TRUNCATED;
-    MEcopy(msg.mtext, length, buffer);
-    *msg_length = length;
-    return (status);
-}
-# endif
-
 
 /*{
 ** Name: ERlog  - Send message to the error logger.
@@ -610,10 +506,7 @@ CL_SYS_ERR         *err_code;
 **	    CL Committee approved, 18-Sep-1992
 */
 STATUS
-ERlog(message, msg_length, err_code)
-char               *message;
-i4		   msg_length;
-CL_ERR_DESC	   *err_code;
+ERlog(char *message, i4 msg_length, CL_ERR_DESC *err_code)
 {
     static int		er_ifi = -2;
     auto LOCATION	loc;
@@ -667,7 +560,7 @@ CL_ERR_DESC	   *err_code;
 }
 
 static void
-ERinitsyslog()
+ERinitsyslog(void)
 {
 # ifdef NT_GENERIC
     ERsysinit = TRUE;

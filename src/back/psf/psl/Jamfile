@@ -7,6 +7,10 @@
 #       Compiler version: Sun C 5.7 patch 117837-01.
 #    20-Aug-2010 (horda03)
 #       Automate pslscantoks.h and pslsscantoks.h creation.
+#    8-Oct-2010 (kschendel)
+#	Add pslwithopts.c
+#	23-Nov-2010 (kschendel)
+#	    Drop obsolete nooptim's.
 #
 
 SubDir ING_SRC back psf psl ;
@@ -18,11 +22,14 @@ IILIBRARY PSFLIB : pslsgram.yi pslgram.yi pslytab.roc
 	psltrace.c pslstran.c pslsscan.c pslseq.c pslschma.c pslscan.c
 	pslrngfcn.c pslpart.c pslmdfy.c psllkmd.c pslindx.c psldistr.c
 	psldefau.c psldbprv.c pslcview.c pslctbl.c pslcopy.c pslcons.c
-	pslcdbp.c pslatbl.c pslasec.c pslalarm.c pslssflat.c ;
+	pslcdbp.c pslatbl.c pslasec.c pslalarm.c pslssflat.c pslwithopts.c ;
 
-IINOOPTIM pslctbl.c : dgi_us5 int_lnx int_rpl i64_aix ;
-IINOOPTIM pslgram.c : dgi_us5 int_lnx int_rpl ibm_lnx i64_aix ;
-IINOOPTIM pslsgram.c : rs4_us5 dgi_us5 int_lnx int_rpl ibm_lnx usl_us5 i64_aix ;
+# One wonders whether the int_lnx nooptim's are still relevant, given
+# that a64_lnx is apparently OK ... (maybe an old gcc?) (kschendel)
+
+IINOOPTIM pslctbl.c : int_lnx int_rpl ;
+IINOOPTIM pslgram.c : int_lnx int_rpl ibm_lnx ;
+IINOOPTIM pslsgram.c : rs4_us5 int_lnx int_rpl ibm_lnx usl_us5 ;
 IINOOPTIM pslsscan.c : a64_sol ;
 
 

@@ -104,12 +104,12 @@ extern "C"
 **	    Removed licensing references.
 **	 10-jul-2007 (thoda04) Bug 118707
 **	     Avoid waiting hang on delistment when running under .NET TransactionScope.
+**     18-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Fix windows build for prototye cleanup changes.
 */
 
 extern "C"
 {
-II_BOOL odbc_getResult( IIAPI_GENPARM  *genParm, LPSQLCA psqlca, II_LONG cQueryTimeout);
-
 extern HINSTANCE   hXolehlpModule;  /* module instance handle of MS DTC helper */
 extern char        szModuleFileName[MAX_PATH];
                      /* driver file name, usually c:/winnt/system32/caiiod35.dll */

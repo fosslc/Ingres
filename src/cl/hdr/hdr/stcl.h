@@ -98,6 +98,8 @@
 **      Compiler redefinition warnings.  Adjust the conditional for STnmbcpy.
 **	11-Feb-2009 (drivi01)
 **	   Redefine strtok as STtok.
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 */
 
 #include <systypes.h>
@@ -106,6 +108,23 @@
 #include <strings.h>
 #endif
 #include <memory.h>
+
+
+/*
+** prototype the libingres versions of these functions before we redefine them
+*/
+FUNC_EXTERN VOID STcopy(
+	const char	*string,
+	char		*buffer
+);
+FUNC_EXTERN i4 STcompare(
+	char	*a,
+	char	*b
+);
+FUNC_EXTERN char * IISTcat(
+	char	*pre,
+	char	*post
+);
 
 # define	STcompare	strcmp
 # define	STcmp		strcmp

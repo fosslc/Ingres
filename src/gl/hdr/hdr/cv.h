@@ -63,6 +63,11 @@
 **          Correcting a typo in the previous change .
 **	21-Feb-2005 (thaju02)
 **	    Added CVula8().
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Removed CL_PROTOTYPED from some declarations.
+**	    Add prototype for CVl8pk, CVinit and CVlx8.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill remaining CL_PROTOTYPED (always on now).
 */
 
 
@@ -99,78 +104,59 @@ GLOBALREF       CV_FUNCTIONS    CV_fvp;
 #define CVupper	CV_fvp.IICVupper
 
 FUNC_EXTERN STATUS  CVaf(
-#ifdef CL_PROTOTYPED
 	    char    *str, 
 	    char    decimal, 
 	    f8	    *val
-#endif
 );
 
 FUNC_EXTERN STATUS  CVahxl(
-#ifdef CL_PROTOTYPED
 	    char    *str,
 	    u_i4 *result
-#endif
 );
 FUNC_EXTERN STATUS  CVuahxl(
-#ifdef CL_PROTOTYPED
 	    char    *str,
 	    u_i4    *result
-#endif
 );
 
 
 FUNC_EXTERN STATUS  CVal_DB(
-#ifdef CL_PROTOTYPED
 	    char    *a, 
 	    i4 *i
-#endif
 );
 
 
 FUNC_EXTERN STATUS  CVal_SB(
-#ifdef CL_PROTOTYPED
 	    char    *a, 
 	    i4 *i
-#endif
 );
 
 
 FUNC_EXTERN STATUS  CVal8_DB(
-#ifdef CL_PROTOTYPED
 	    char    *a, 
 	    i8 *i
-#endif
 );
 
 
 FUNC_EXTERN STATUS  CVal8_SB(
-#ifdef CL_PROTOTYPED
 	    char    *a, 
 	    i8 *i
-#endif
 );
 
 
 FUNC_EXTERN STATUS  CVan(
-#ifdef CL_PROTOTYPED
 	    char    *string, 
 	    i4	    *num
-#endif
 );
 
 FUNC_EXTERN STATUS  CVapk(
-#ifdef CL_PROTOTYPED
 	    char    *string,
 	    char    decpt, 
 	    i4	    prec, 
 	    i4	    scale, 
 	    PTR	    pk
-#endif
 );
 
 FUNC_EXTERN STATUS  CVfa(
-#ifdef CL_PROTOTYPED
 	    f8	    value, 
 	    i4	    width,
 	    i4	    prec,
@@ -178,18 +164,15 @@ FUNC_EXTERN STATUS  CVfa(
 	    char    decchar,
 	    char    *ascii,
 	    i2	    *res_width
-#endif
 );
 
 FUNC_EXTERN VOID    CVla(
-#ifdef CL_PROTOTYPED
 	    i4	i,
 	    char	*a
-#endif
 );
 
 FUNC_EXTERN void    CVla8(
-	    longlong	i,
+	    i8		i,
 	    char	*a);
 
 #if !defined(WIN32) && !defined(vms)
@@ -200,10 +183,8 @@ FUNC_EXTERN void    CVui8a(
 #endif
 
 FUNC_EXTERN VOID    CVula(
-#ifdef CL_PROTOTYPED
 	    u_i4	i,
 	    char	*a
-#endif
 );
 
 FUNC_EXTERN void    CVula8(
@@ -212,41 +193,30 @@ FUNC_EXTERN void    CVula8(
 
 
 FUNC_EXTERN VOID    CVlower_DB(
-#ifdef CL_PROTOTYPED
 	    char	*string
-#endif
 );
 
 FUNC_EXTERN VOID    CVlower_SB(
-#ifdef CL_PROTOTYPED
 	    char	*string
-#endif
 );
 
 
 FUNC_EXTERN VOID    CVlx(
-#ifdef CL_PROTOTYPED
 	    u_i4	num, 
 	    char	*string
-#endif
 );
 
 FUNC_EXTERN VOID    CVna(
-#ifdef CL_PROTOTYPED
 	    i4		num,
 	    char	*string
-#endif
 );
 
 FUNC_EXTERN STATUS  CVol(
-#ifdef CL_PROTOTYPED
 	    char	octal[], 
 	    i4	*result
-#endif
 );
 
 FUNC_EXTERN STATUS  CVpka(
-#ifdef CL_PROTOTYPED
 	    PTR		pk,
 	    i4		prec,
 	    i4		scale,
@@ -256,89 +226,70 @@ FUNC_EXTERN STATUS  CVpka(
 	    i4		options,
 	    char	*str,
 	    i4		*res_wid
-#endif
 );
 
 
 FUNC_EXTERN VOID    CVupper_DB(
-#ifdef CL_PROTOTYPED
 	    char	*string
-#endif
 );
 
 FUNC_EXTERN VOID    CVupper_SB(
-#ifdef CL_PROTOTYPED
 	    char	*string
-#endif
 );
 
 
 /* Convert decimal to decimal */
 FUNC_EXTERN STATUS  CVpkpk(
-#ifdef CL_PROTOTYPED
 	    PTR         pk_in,
 	    i4          prec_in,
 	    i4          scale_in,
 	    i4          prec_out,
 	    i4          scale_out,
 	    PTR         pk_out
-#endif
 );
 
 FUNC_EXTERN STATUS  CVpkl(
-#ifdef CL_PROTOTYPED
 	    PTR		pk,
 	    i4		prec,
 	    i4		scale,
 	    i4		*num
-#endif
 );
 
 
 FUNC_EXTERN STATUS  CVpkl8(
-#ifdef CL_PROTOTYPED
 	    PTR		pk,
 	    i4		prec,
 	    i4		scale,
 	    i8		*num
-#endif
 );
 
 FUNC_EXTERN STATUS  CVlpk(
-#ifdef CL_PROTOTYPED
 	    i4		num,
 	    i4		prec,
 	    i4		scale,
 	    PTR		pk
-#endif
 );
 
 FUNC_EXTERN STATUS  CVfpk(
-#ifdef CL_PROTOTYPED
 	    f8		num,
 	    i4		prec,
 	    i4		scale,
 	    PTR		pk
-#endif
 );
 
 FUNC_EXTERN STATUS  CVapk(
-#ifdef CL_PROTOTYPED
 	    char *	string, 
 	    char	decpt, 
 	    i4		prec, 
 	    i4		scale, 
 	    PTR		pk
-#endif
 );
 
 FUNC_EXTERN STATUS  CVpkf(
-#ifdef CL_PROTOTYPED
 	    PTR		pk,
 	    i4		prec,
 	    i4		scale,
 	    f8		* fnum
-#endif
 );
 
 /*}
@@ -377,13 +328,19 @@ FUNC_EXTERN void CVptrax( PTR ptr, char *string );
 
 FUNC_EXTERN STATUS CVrxl( char *str, i4 *num ); 
 
-#if defined(axp_osf) || defined(ris_u64) || defined(LP64) || defined(axp_lnx)
+FUNC_EXTERN STATUS CVl8pk(i8 num, i4 prec, i4 scale, PTR pk); 
+
+FUNC_EXTERN VOID CVlx8(long num, char *string);
+
+FUNC_EXTERN VOID CVinit(void);
+
+#if defined(axp_osf) || defined(LP64) || defined(axp_lnx)
 
 FUNC_EXTERN STATUS CVahxl8(register char *str, OFFSET_TYPE *result);
 
 FUNC_EXTERN STATUS CVuahxl8(register char *str, SIZE_TYPE *result);
 
-#endif  /* axp_osf || ris_u64 || LP64 || axp_lnx */
+#endif  /* axp_osf || LP64 || axp_lnx */
 
 #if defined(LP64)
 

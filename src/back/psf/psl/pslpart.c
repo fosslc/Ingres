@@ -1,12 +1,12 @@
 /*
-** Copyright 2004, Ingres Corporation
+** Copyright 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
 #include    <gl.h>
 #include    <me.h>
 #include    <bt.h>
-#include    <ci.h>
+#include    <cv.h>
 #include    <er.h>
 #include    <qu.h>
 #include    <st.h>
@@ -118,38 +118,81 @@
 **          Changes for Long IDs
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
 
-/* Local routine prototypes */
-
-/* Lookup a column name, return column info */
+/* TABLE OF CONTENTS */
+i4 psl_partdef_end(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+i4 psl_partdef_new_dim(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	i4 distrule);
+i4 psl_partdef_nonval(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	i4 nparts);
+i4 psl_partdef_oncol(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	char *colname);
+i4 psl_partdef_partlist(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+i4 psl_partdef_pname(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	char *pname,
+	bool allow_ii);
+i4 psl_partdef_start(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+i4 psl_partdef_value(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp,
+	i4 sign_flag,
+	DB_DATA_VALUE *value);
+i4 psl_partdef_value_check(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
+i4 psl_partdef_with(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb,
+	PSS_YYVARS *yyvarsp);
 static i2 ppd_lookup_column(
 	PSS_SESBLK *sess_cb,
 	i4 qmode,
-	PST_QNODE *qry_tree,
 	char *colname,
 	i2 *col_typep);
-
-/* Allocate memory from the partition def temporary stream */
-static DB_STATUS ppd_malloc(
+static i4 ppd_malloc(
 	i4 psize,
 	void *pptr,
 	PSS_SESBLK *sess_cb,
 	PSQ_CB *psq_cb);
-
-/* Start a new breaks table entry */
-static DB_STATUS ppd_new_break(
+static i4 ppd_new_break(
 	PSS_SESBLK *sess_cb,
 	PSQ_CB *psq_cb,
 	PSS_YYVARS *yyvarsp,
 	DB_PART_DIM *dim_ptr);
-
-/* Issue memory allocation message, returns E_DB_ERROR */
-static DB_STATUS ppd_ulm_errmsg(
+i4 ppd_qsfmalloc(
+	PSQ_CB *psq_cb,
+	i4 psize,
+	void *pptr);
+static i4 ppd_ulm_errmsg(
 	PSS_SESBLK *sess_cb,
 	PSQ_CB *psq_cb);
-
-
+
 /* Local definitions */
 /* Various temporary memory areas are sized with a guess.  Define the
 ** initial size guesses here.
@@ -573,16 +616,8 @@ psl_partdef_nonval(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 **		use ordinary column-lookup (pst_coldesc) which will run
 **		against the base table.
 **
-**	CREATE TABLE:  (the ordinary kind)  look in the DMU_CB being built
+**	CREATE TABLE:  (or CTAS)  look in the DMU_CB being built
 **		for the query, the column definitions are in dmu_attr_array.
-**
-**	CREATE TABLE AS SELECT: (i.e. PSQ_RETINTO) This one is fun.
-**		You have to look into the select query-expr to get the
-**		names.  The "finish" actions for the CREATE haven't run
-**		yet, so the select query-expr isn't attached to anything!
-**		Fortunately, the grammar actions are kind enough to jam
-**		the query-expr pointer into the parser state (yyvarsp),
-**		into part-crtas-qtree.
 **
 **	MODIFY: perhaps the easiest, as the table already exists.  By
 **		the time we get to the partition definition, the
@@ -612,6 +647,8 @@ psl_partdef_nonval(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 ** History:
 **	29-Jan-2004 (schka24)
 **	    Written for partitioned tables.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    CTAS (retinto) finally is generating the dmu attr array.
 */
 
 DB_STATUS
@@ -634,8 +671,7 @@ psl_partdef_oncol(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 
     /* Find the column based on the name */
     att_number = ppd_lookup_column(sess_cb, psq_cb->psq_mode,
-		yyvarsp->part_crtas_qtree, colname,
-		&col_type);
+		colname, &col_type);
     if (att_number == 0)
     {
 	/* Didn't work, column must not be in the table */
@@ -747,6 +783,8 @@ psl_partdef_oncol(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 ** History:
 **	30-Jan-2004 (schka24)
 **	    Written for partitioned tables.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    CTAS now (finally) generates the dmu-attr-array.
 */
 
 DB_STATUS
@@ -766,7 +804,6 @@ psl_partdef_partlist(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
     i2 val_offset;			/* Internal form value offset */
     i4 ncols;				/* Number of ON columns */
     i2 *colarray_ptr;			/* Pointer to column number list */
-    PST_QNODE *qry_node;		/* Scan select query tree */
     QEU_CB *qeucb;			/* QEF qeu instructions */
 
     qeucb = (QEU_CB *) sess_cb->pss_object;
@@ -794,7 +831,8 @@ psl_partdef_partlist(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
 	switch (psq_cb->psq_mode)
 	{
 	case PSQ_CREATE:
-	    /* CREATE TABLE (normal, not as-select) */
+	case PSQ_RETINTO:
+	    /* CREATE TABLE and CTAS */
 	    /* Find the column in the DMU CB - note that it doesn't have
 	    ** the zero throw-away slot that pss-attdesc does.
 	    */
@@ -820,29 +858,8 @@ psl_partdef_partlist(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
 	    part_list_ptr->row_offset = dmt_att->att_offset;
 	    break;
 
-	case PSQ_RETINTO:
-	    /* Create table as select */
-	    /* This one is completely different.  Walk the left-links in the
-	    ** SELECT query tree;  as long as RESDOMs are seen, those are the
-	    ** result columns.  We could count off columns, backwards, but
-	    ** the column number is in the resdom entry, use that.
-	    ** The data type is in the node's dataval.
-	    */
-	    qry_node = yyvarsp->part_crtas_qtree->pst_left;
-	    while (qry_node != NULL && qry_node->pst_sym.pst_type == PST_RESDOM)
-	    {
-		/* Looking at a resdom, see if it's the one we want */
-		if (qry_node->pst_sym.pst_value.pst_s_rsdm.pst_rsno == att_number)
-		{
-		    /* Found it */
-		    col_prec = qry_node->pst_sym.pst_dataval.db_prec;
-		    col_type = qry_node->pst_sym.pst_dataval.db_datatype;
-		    col_width = qry_node->pst_sym.pst_dataval.db_length;
-		    break;
-		}
-		/* Not yet, try the one to the left */
-		qry_node = qry_node->pst_left;
-	    }
+	default:
+	    /* Won't get here */
 	    break;
 	} /* switch */
 
@@ -1154,7 +1171,7 @@ psl_partdef_start(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
     yyvarsp->part_locs.data_in_size = 0;
 
     /* Lots of errmsgs want the query name for context, get it once: */
-    psl_command_string(psq_cb->psq_mode, sess_cb->pss_lang,
+    psl_command_string(psq_cb->psq_mode, sess_cb,
 			&yyvarsp->qry_name[0], &yyvarsp->qry_len);
 
     /* In case we need to generate names, start up a counter */
@@ -1933,6 +1950,8 @@ psl_partdef_value_check(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb,
 ** History:
 **	2-Feb-2004 (schka24)
 **	    Written.  (Almost done with partition definition parsing...)
+**	13-Oct-2010 (kschendel)
+**	    Renamed LOCATION indicator.
 */
 
 DB_STATUS
@@ -1948,8 +1967,14 @@ psl_partdef_with(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
     dim_ptr = &yyvarsp->part_def->dimension[yyvarsp->part_def->ndims - 1];
 
     /* If no options, return, but the grammar should not allow this */
-    if (! PSS_WC_ANY_MACRO(&yyvarsp->with_clauses))
+    if (! BTcount(yyvarsp->cur_chars->dmu_indicators, PSS_WC_LAST))
+    {
+	/* Reset the WITH parsing state to the outer WITH's state */
+	yyvarsp->list_clause = yyvarsp->save_list_clause;
+	MEcopy(yyvarsp->save_indicators, sizeof(yyvarsp->cur_chars->dmu_indicators),
+		yyvarsp->cur_chars->dmu_indicators);
 	return (E_DB_OK);
+    }
 
     /* Allocate an info block to tell QEF what to do */
     status = ppd_qsfmalloc(psq_cb, sizeof(QEU_LOGPART_CHAR), &qeu_char);
@@ -1965,7 +1990,7 @@ psl_partdef_with(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
 
     /* See if LOCATION= given */
 
-    if (PSS_WC_TST_MACRO(PSS_WC_LOCATION, &yyvarsp->with_clauses))
+    if (BTtest(PSS_WC_LOCATION, yyvarsp->cur_chars->dmu_indicators))
     {
 	/* take care of LOCATION= specification; copy the location name
 	** array into QSF.
@@ -1992,8 +2017,8 @@ psl_partdef_with(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
 
     /* Reset the WITH parsing state to the outer WITH's state */
     yyvarsp->list_clause = yyvarsp->save_list_clause;
-    MEcopy(&yyvarsp->save_with_clauses, sizeof(PSS_WITH_CLAUSE),
-		&yyvarsp->with_clauses);
+    MEcopy(yyvarsp->save_indicators, sizeof(yyvarsp->cur_chars->dmu_indicators),
+		yyvarsp->cur_chars->dmu_indicators);
 
     return (E_DB_OK);
 } /* psl_partdef_with */
@@ -2014,16 +2039,8 @@ psl_partdef_with(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
 **		use ordinary column-lookup (pst_coldesc) which will run
 **		against the base table.
 **
-**	CREATE TABLE:  (the ordinary kind)  look in the DMU_CB being built
+**	CREATE TABLE:  (either kind)  look in the DMU_CB being built
 **		for the query, the column definitions are in dmu_attr_array.
-**
-**	CREATE TABLE AS SELECT: (i.e. PSQ_RETINTO) This one is fun.
-**		You have to look into the select query-expr to get the
-**		names.  The "finish" actions for the CREATE haven't run
-**		yet, so the select query-expr isn't attached to anything!
-**		Fortunately, the grammar actions are kind enough to jam
-**		the query-expr pointer into the parser state (yyvarsp),
-**		into part-crtas-qtree.
 **
 **	MODIFY: perhaps the easiest, as the table already exists.  By
 **		the time we get to the partition definition, the
@@ -2034,7 +2051,6 @@ psl_partdef_with(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
 ** Inputs:
 **	sess_cb		Parser session control block
 **	qmode		PSQ_xxx query mode
-**	qry_tree	SELECT query tree (only relevant for CREATE AS)
 **	colname		The column name string
 **	col_typep	An output
 **
@@ -2045,10 +2061,12 @@ psl_partdef_with(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb, PSS_YYVARS *yyvarsp)
 ** History:
 **	29-Jan-2004 (schka24)
 **	    Written.
+**	13-Oct-2010 (kschendel) SIR 124544
+**	    CTAS makes the dmu-attr-array now, ditch resdom chasing.
 */
 
 static i2
-ppd_lookup_column(PSS_SESBLK *sess_cb, i4 qmode, PST_QNODE *qry_tree,
+ppd_lookup_column(PSS_SESBLK *sess_cb, i4 qmode,
 	char *colname, i2 *col_typep)
 {
 
@@ -2058,7 +2076,6 @@ ppd_lookup_column(PSS_SESBLK *sess_cb, i4 qmode, PST_QNODE *qry_tree,
     DMU_CB *dmucb;			/* DMF dmu instructions */
     i4 i;
     i4 ncols;
-    PST_QNODE *qry_node;		/* Scan select query tree */
     QEU_CB *qeucb;			/* QEF qeu instructions */
     i4		col_nmlen;
     i4		tmp_nmlen;
@@ -2074,6 +2091,7 @@ ppd_lookup_column(PSS_SESBLK *sess_cb, i4 qmode, PST_QNODE *qry_tree,
     switch (qmode)
     {
     case PSQ_CREATE:
+    case PSQ_RETINTO:
 	/* CREATE TABLE (normal, not as-select) */
 	/* Find the column in the DMU CB */
 	attrs = (DMF_ATTR_ENTRY **) dmucb->dmu_attr_array.ptr_address;
@@ -2118,32 +2136,6 @@ ppd_lookup_column(PSS_SESBLK *sess_cb, i4 qmode, PST_QNODE *qry_tree,
 	/* Huh?? */
 	return (0);
 
-    case PSQ_RETINTO:
-	/* Create table as select */
-	/* This one is completely different.  Walk the left-links in the
-	** SELECT query tree;  as long as RESDOMs are seen, those are the
-	** result columns.  The walk is actually from right to left in the
-	** select result list, but the column number is in the resdom
-	** entry, so we don't have to do the counting.
-	** The data type is in the node's dataval.
-	*/
-	qry_node = qry_tree->pst_left;	/* Move off the root */
-	while (qry_node != NULL && qry_node->pst_sym.pst_type == PST_RESDOM)
-	{
-	    /* Looking at a resdom, see if it's the one we want */
-	    tmp_nmlen = cui_trmwhite(DB_ATT_MAXNAME, 
-			qry_node->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
-	    if (cui_compare(col_nmlen, colname, tmp_nmlen, 
-		qry_node->pst_sym.pst_value.pst_s_rsdm.pst_rsname) == 0)
-	    {
-		/* Found it */
-		*col_typep = qry_node->pst_sym.pst_dataval.db_datatype;
-		return (qry_node->pst_sym.pst_value.pst_s_rsdm.pst_rsno);
-	    }
-	    /* Not yet, try the one to the left */
-	    qry_node = qry_node->pst_left;
-	}
-	return (0);
     }
 
     /* Shouldn't get here... */
@@ -2390,7 +2382,7 @@ ppd_ulm_errmsg(PSS_SESBLK *sess_cb, PSQ_CB *psq_cb)
     else
     {
 	/* Try to give some input as to what's going on */
-	psl_command_string(psq_cb->psq_mode, sess_cb->pss_lang, qry, &qry_len);
+	psl_command_string(psq_cb->psq_mode, sess_cb, qry, &qry_len);
 	STcat(qry,":partition definition");
 	/* Use interr so that the message is logged */
 	(void) psf_error(E_PS0A0D_ULM_ERROR, 0, PSF_INTERR,

@@ -110,6 +110,8 @@
 **          mutex, thus bring the Ingres installation to a halt. If the
 **          application was then terminated, the css_spinlock would never
 **          be released, and so the Installation hangs.
+**	17-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 /*
@@ -119,7 +121,11 @@ MODE = SETUID
 
 NEEDLIBS = COMPATLIB MALLOCLIB
 */
+
+static void reportServs(CS_SERV_INFO *svinfo, i4 nservs);
+static void reportSM(CS_SM_DESC *shm);
 static VOID report_wakeups(CS_SMCNTRL	*sysseg);
+
 /*{
 ** Name: main() - report on an installation
 **
@@ -206,7 +212,7 @@ char	*argv[];
 	TRdisplay("Can't map system segment\n");
 	PCexit(1);
     }
-    CS_get_cb_dbg(&sysseg);
+    CS_get_cb_dbg((PTR *) &sysseg);
     TRdisplay("Installation version %d\n", sysseg->css_version);
     TRdisplay("Max number of servers %d\n", sysseg->css_numservers);
     TRdisplay("Max number of threads %d\n", sysseg->css_wakeup.css_numwakeups);
@@ -223,8 +229,8 @@ char	*argv[];
 }
 
 # ifdef xCL_075_SYS_V_IPC_EXISTS
-reportSM(shm)
-CS_SM_DESC	*shm;
+static void
+reportSM(CS_SM_DESC *shm)
 {
     char len[32];
     char id[16];
@@ -236,24 +242,19 @@ CS_SM_DESC	*shm;
     STcat( statement, len );
     STcat( statement, "s: size %d attach %p\n" );
 
-# if defined(ds3_ulx)
-    TRdisplay("key %d: size %d attach %p\n", shm->cssm_id, shm->cssm_size,
-# else
     TRdisplay(statement, id, shm->cssm_size,
-# endif
 	      shm->cssm_addr);
 }
 # else
-reportSM(shm)
-CS_SM_DESC      *shm;
+static void
+reportSM(CS_SM_DESC *shm)
 {
     TRdisplay("size %d attach %p\n", shm->cssm_size, shm->cssm_addr);
 }
 # endif	/* xCL_075_SYS_V_IPC_EXISTS */
 
-reportServs(svinfo, nservs)
-CS_SERV_INFO	*svinfo;
-i4		nservs;
+static void
+reportServs(CS_SERV_INFO *svinfo, i4 nservs)
 {
     i4	i;
 

@@ -50,6 +50,10 @@
 **	29-Sep-2004 (drivi01)
 **	    Updated NEEDLIBS to link dynamic library SHQLIB and SHFRAMELIB
 **	    to replace its static libraries.
+**      30-Nov-2010 (horda03) b 124757
+**          If "set session with on_error=rollback transaction" is set
+**          trying to delete a DBEVENT which doesn't exist will "silently"
+**          rollback the transaction. So set the required ON_ERROR handling.
 **/
 
 /*
@@ -147,6 +151,7 @@ char	*argv[])
 	}
 	EXEC SQL SET AUTOCOMMIT OFF;
 	EXEC SQL SET_SQL (ERRORTYPE = 'genericerror');
+        EXEC SQL SET SESSION WITH ON_ERROR = ROLLBACK STATEMENT;
 
 	if (!IIuiIsDBA)
 	{

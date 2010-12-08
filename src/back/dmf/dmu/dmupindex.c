@@ -159,12 +159,7 @@
 **					    of the keys listed in the key array.
 **          .dmu_attr_array.ptr_size        Size of an entry.
 **          .dmu_attr_array.ptr_in_count    Count of entries.
-**          .dmu_char_array.data_address    Pointer to an area used to input
-**                                          an array of entries of type
-**                                          DMU_CHAR_ENTRY.
-**                                          See below for description of 
-**                                          <dmu_char_array> entries.
-**          .dmu_char_array.data_in_size    Length of char_array in bytes.
+**	    .dmu_chars			    Table characteristics
 **	    .dmu_gwchar_array.data_address  Pointer to an array of gateway table
 **					    characteristics.  These are used
 **					    if the table is a DMU_GATEWAY type
@@ -187,25 +182,6 @@
 **          key_attr_name                   Name of attribute.
 **          key_order                       Must be DMU_ASCENDING.
 **
-**          <dmu_char_array> entries are of type DMU_CHAR_ENTRY and
-**          must have following format:
-**          char_id                         Must be one of the dmu 
-**                                          characteristics like 
-**                                          DMU_STRUCTURE,
-**                                          DMU_IFILL,
-**					    DMU_DATAFILL,
-**					    DMU_LEAFILL,
-**                                          DMU_MINPAGES,
-**                                          DMU_MAXPAGES,
-**                                          DMU_UNIQUE,
-**					    DMU_COMPRESSED,
-**					    DMU_GATEWAY,
-**					    DMU_INDEX_COMP.
-**					    DMU_CONCURRENT_ACCESS
-**					    DMU_DIMENSION
-**					    DMU_TABLE_PRIORITY
-**          char_value                      The value to associate with above
-**                                          characteristic.
 **
 ** Output:
 **      dmu_cb 
@@ -310,6 +286,8 @@
 **	    Cleaned up readability, fix potential memory leak.
 **	22-Jul-2009 (thaju02)
 **	    For E_DM007D, dmu_tup_cnt was not getting set. 
+**	12-Oct-2010 (kschendel) SIR 124544
+**	    Comment update.
 */
 DB_STATUS
 dmu_pindex(DMU_CB    *dmu_cbs)
@@ -320,7 +298,7 @@ dmu_pindex(DMU_CB    *dmu_cbs)
     DB_OWN_NAME		table_owner;
     DB_TAB_NAME		table_name;
     DML_XCB		*xcb;
-    i4			error,local_error;
+    i4			local_error;
     i4			NiX, k, tot_size;
     DB_STATUS		status;
 

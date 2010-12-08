@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2005 Ingres Corporation
+**Copyright (c) 2005, 2010 Ingres Corporation
 **
 **
 NO_OPTIM=dr6_us5
@@ -59,7 +59,6 @@ NO_OPTIM=dr6_us5
 #include <qefcopy.h>
 
 #include    <sc.h>
-#include    <sca.h>
 #include    <scc.h>
 #include    <scs.h>
 #include    <scd.h>
@@ -374,6 +373,16 @@ NO_OPTIM=dr6_us5
 **      11-Aug-2010 (hanal04) Bug 124180
 **          Added money_compat for backwards compatibility of money
 **          string constants.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Result-structure is handled by PSF now, not OPF.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Delete sca.h include. Function prototypes moved to
+**	    scf.h for exposure to DMF.
+**	09-Nov-2010 (wanfr01) SIR 124714
+**	    Added block_holdfactor
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for setting installation wide collation defaults
+**	    .default_collation & .default_unicode_collation.
 */
 
 /*
@@ -649,6 +658,9 @@ struct _SCD_OPT {
 #define		SCO_CRYPT_MAXKEYS	    218 /* max crypt shmem keys */
 #define		SCO_BATCH_COPY_OPTIM	    219
 #define		SCO_MONEY_COMPAT            220
+#define		SCO_DEFAULT_COLL	    221 /* Default collation */
+#define		SCO_DEFAULT_UNI_COLL        222 /* Default Unicode collation */
+#define         SCO_BLOCK_HOLDFACTOR        223 
 static SCD_OPT scd_opttab[] =
 {
     /* echoing first so the rest get echoed */
@@ -738,6 +750,7 @@ static SCD_OPT scd_opttab[] =
     /* remaining random parameters */
     SCO_SECURE_LEVEL,		'g',	' ',	"ii.$.secure.level",
     SCO_ASSOC_TIMEOUT,          'o',    ' ',    "!.association_timeout",
+    SCO_BLOCK_HOLDFACTOR,	'F',	' ',	"!.block_holdfactor",
     SCO_LOCK_CACHE,		't',	'3',	"!.cache_lock",
     SCO_CHECK_DEAD,		'o',	'3',	"!.check_dead",
     SCO_CORE_ENABLED,		't',	' ',	"!.core_enabled",
@@ -890,8 +903,10 @@ static SCD_OPT scd_opttab[] =
     SCO_QEF_NO_DEPENDENCY_CHK,  't',    ' ',    "!.qef_no_dependency_chk",
     SCO_PAGETYPE_V6,		'z',	'3',	"!.pagetype_v6", /*default on*/
     SCO_PAGETYPE_V7,		'z',	'3',	"!.pagetype_v7", /*default on*/
-    SCO_BATCH_COPY_OPTIM,		'z',	' ',	"!.batch_copy_optim",
+    SCO_BATCH_COPY_OPTIM,	'z',	' ',	"!.batch_copy_optim",
     SCO_MONEY_COMPAT,   	't',	' ',	"!.money_compat",
+    SCO_DEFAULT_COLL,		'g',	' ',	"!.default_collation",
+    SCO_DEFAULT_UNI_COLL,	'g',	' ',	"!.default_unicode_collation",
     0, 0, 0, 0
 } ;
 
@@ -1418,8 +1433,44 @@ scd_options(
 			value = DB_HEAP_STORE;
 			compressed = TRUE;
 		    }
-		    opf_cb->opf_value = value;
-		    opf_cb->opf_compressed = compressed;
+		    psq_cb->psq_result_struct = value;
+		    psq_cb->psq_result_compression = compressed;
+		    break;
+		}
+
+	    case SCO_DEFAULT_COLL:
+	    case SCO_DEFAULT_UNI_COLL:
+		{
+		    static const char *collname_array[] = {
+#			define _DEFINE(n,v,Ch,Un,t) t,
+#			define _DEFINEEND
+			DB_COLL_MACRO
+#			undef _DEFINEEND
+#			undef _DEFINE
+		    };
+		    DB_COLL_ID i = DB_NOCOLLATION+1;
+		    while (i < DB_COLL_LIMIT &&
+			    STbcompare(scd_svalue, 0, collname_array[i+1], 0, TRUE) != 0)
+			i++;
+		    if (i == DB_COLL_LIMIT)
+		    {
+			if (*scd_svalue && *scd_svalue != ' ')
+			    TRdisplay("scd_options: invalid default collation %s\n",
+					scd_svalue);
+			i = DB_UNSET_COLL;
+		    }
+		    if (scdopt->sco_index == SCO_DEFAULT_UNI_COLL)
+		    {
+			dca->char_id = DMC_C_DEF_UNI_COLL;
+			dca++->char_value = i;
+			psq_cb->psq_def_unicode_coll = i;
+		    }
+		    else
+		    {
+			dca->char_id = DMC_C_DEF_COLL;
+			dca++->char_value = i;
+			psq_cb->psq_def_coll = i;
+		    }
 		    break;
 		}
 
@@ -1769,11 +1820,11 @@ scd_options(
 	    case SCO_CREATE_COMPRESSION:
 		/* Values should be validated by cbf */
 		if (STcasecmp(scd_svalue, "none") == 0)
-		    psq_cb->psq_create_compression = DMU_C_OFF;
+		    psq_cb->psq_create_compression = DMU_COMP_OFF;
 		else if (STcasecmp(scd_svalue, "data") == 0)
-		    psq_cb->psq_create_compression = DMU_C_ON;
+		    psq_cb->psq_create_compression = DMU_COMP_ON;
 		else if (STcasecmp(scd_svalue, "hidata") == 0)
-		    psq_cb->psq_create_compression = DMU_C_HIGH;
+		    psq_cb->psq_create_compression = DMU_COMP_HI;
 		else
 		    TRdisplay("%@ Invalid create_compression value %s ignored\n",
 			scd_svalue);
@@ -2427,12 +2478,16 @@ scd_options(
             case SCO_QEF_NO_DEPENDENCY_CHK:
                 qef_cb->qef_nodep_chk = TRUE;
                 break; 
-                
+
+            case SCO_BLOCK_HOLDFACTOR:
+                opf_cb->opf_holdfactor = scd_dvalue;
+                break;
+            
 	    case SCO_BATCH_COPY_OPTIM:
 		/* batch copy optimization off */
 		Sc_main_cb->sc_batch_copy_optim = FALSE;
 		break;
- 
+
 	    default:
 		sc0e_put( E_SC0232_INVALID_STARTUP_CODE, (CL_ERR_DESC *)0, 2,
 		    sizeof( scdopt->sco_index ), (PTR)&scdopt->sco_index,

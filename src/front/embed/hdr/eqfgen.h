@@ -103,6 +103,8 @@
 **			(e.g. the glf00 and glf01 sep tests).
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 **			
 */
 
@@ -110,37 +112,20 @@
 ** Determine string to use for an include statement.
 */
 
-# ifdef apo_u42
-#     define	INCLUDE_STRING	"%INCLUDE '"
-# else
 	/* VMS and all other UNIX F77 compilers */
 #     define	INCLUDE_STRING	"\tinclude '"
-# endif
 
 # if defined(LNX) || defined(sparc_sol)
 # define STRICT_F77_STD
 # endif
-# if defined(hp3_us5) || defined(any_hpux)
+# if defined(any_hpux)
 # define STRICT_F77_STD
 # endif
-# if defined(hp9_mpe) || defined(ds3_ulx) 
-# define STRICT_F77_STD
-# endif
-# if defined(m88_us5) || defined(axp_osf) 
-# define STRICT_F77_STD
-# endif
-# if defined (rmx_us5) || defined(rux_us5)
+# if defined(axp_osf) 
 # define STRICT_F77_STD
 # endif
 # if defined (any_aix)
 # define STRICT_F77_STD
-# endif
-# if defined (dg8_us5)
-# define STRICT_F77_STD
-# endif
-
-# if defined(rmx_us5) || defined(rux_us5)
-# define MIXEDCASE_FORTRAN
 # endif
 
 /*
@@ -162,10 +147,6 @@
 ** for regular statements.
 */
 
-# ifdef hp9_mpe
-#	 define CONT_STR        ERx("\n     1")
-#	 define CONT_STATE      ERx("\n     1")
-# else
 #   ifdef UNIX
 #     ifdef STRICT_F77_STD
 	 /* ANSI style continuations */
@@ -177,23 +158,17 @@
 #	      define CONT_STATE	ERx("\n&\t")
 #     endif /* STRICT_F77_STD */
 #   else
-#     ifdef DGC_AOS
-#        define CONT_STR	ERx("\n     1")
-#        define CONT_STATE	ERx("\n     1\t") 
-#     else
          /* VMS style continuations */
 #        define CONT_STR	ERx("\n\t1")
 #        define CONT_STATE	ERx("\n\t1") 
-#     endif /* DGC_AOS */
 #   endif /* UNIX */
-# endif  /* hp9_mpe */
 
 /*
 ** Control breaking of string constants.
 ** Allow STR_FUDGE extra spaces for possible or '); as the call may require 
 */
 
-# if defined(UNIX) || defined(hp9_mpe)
+# if defined(UNIX)
 #     define STR_FUDGE	0
 # else
 #     define STR_FUDGE	5
@@ -202,13 +177,9 @@
 /* Max line length for FORTRAN code, with space for closing calls, etc */
 
 
-# ifdef hp9_mpe       /* hp3000 mpe/xl */
-#     define  G_LINELEN       72
-# else
 #     ifdef UNIX
-#         if defined(hp3_us5) || defined(any_hpux) || defined(any_aix) || \
-	     defined(rmx_us5) || defined(dg8_us5) || \
-	     defined(rux_us5) || defined(LNX)     || defined(sparc_sol)
+#         if defined(any_hpux) || defined(any_aix) || \
+	     defined(LNX)     || defined(sparc_sol)
 #           define   G_LINELEN       72
 #         else
 #           define   G_LINELEN       71      /* no tabs allowed */
@@ -216,7 +187,6 @@
 #     else
 #       define    G_LINELEN       65      /* tab at start only counted as one */
 #     endif  /* UNIX */
-# endif  /* hp9_mpe */
 
 /*
 ** Some F77 compilers treat backslash as an escape character, like
@@ -227,13 +197,9 @@
 */
 
 # ifdef UNIX
-#     ifndef hp3_us5
-#         ifndef SEQUENT
 
 #             define F77ESCAPE
 
-#         endif /* SEQUENT */
-#     endif /* hp3 */
 # endif /* UNIX */
 
 /* Since user's string vars are not null terminated in Fortran, the compiler
@@ -245,8 +211,4 @@
 */
 # if defined(any_hpux)
 #     define LEN_AFTER_VAR
-# endif
-
-# ifdef m88_us5
-# define MIXEDCASE_FORTRAN
 # endif

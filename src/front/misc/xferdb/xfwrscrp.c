@@ -840,10 +840,10 @@ xf_found_msg(char *otype, i4  count)
 bool
 xf_is_cat(char *name)
 {
-	if (!STncasecmp(name, "spatial_ref_sys", 15))
-		return (TRUE);
-	if (!STncasecmp(name, "geometry_columns", 16))
-		return (TRUE);
+    if (!STncasecmp(name, "spatial_ref_sys", 15))
+	return (TRUE);
+    if (!STncasecmp(name, "geometry_columns", 16))
+	return (TRUE);
     if (name != NULL && ((*name == 'i' && name[1] == 'i')
 		      || (*name == 'I' && name[1] == 'I')))
 	return (TRUE);
@@ -871,10 +871,10 @@ xf_is_cat(char *name)
 bool
 xf_is_fecat(char *name)
 {
-	if (!STncasecmp(name, "spatial_ref_sys", 15))
-		return (TRUE);
-	if (!STncasecmp(name, "geometry_columns", 16))
-		return (TRUE);
+    if (!STncasecmp(name, "spatial_ref_sys", 15))
+	return (TRUE);
+    if (!STncasecmp(name, "geometry_columns", 16))
+	return (TRUE);
     if (name != NULL && ((*name == 'i' && name[1] == 'i' && name[2] == '_')
 		      || (*name == 'I' && name[1] == 'I' && name[2] == '_')))
 	return (TRUE);

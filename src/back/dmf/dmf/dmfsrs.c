@@ -69,7 +69,8 @@
  * 	    Created.
 */
 
-STATUS dmf_get_srs(
+STATUS
+dmf_get_srs(
     DB_SPATIAL_REF_SYS *db_srs,
     i4 *errcode)
 {
@@ -202,7 +203,7 @@ STATUS dmf_get_srs(
 	status = dmt_close(&dmt_cb);
 	if(status != E_DB_OK)
 	{
-		//close failed??
+		/* close failed?? */
 		*errcode = E_AD5601_GEOSPATIAL_INTERNAL;
 		return status;
 	}

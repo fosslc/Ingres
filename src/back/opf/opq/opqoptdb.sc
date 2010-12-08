@@ -1,7 +1,5 @@
 /*
-** Copyright (c) 1986, 2005 Computer Associates International, Inc.
-**
-**
+**Copyright (c) 1986, 2005, 2010 Ingres Corporation
 */
 # include    <compat.h>
 # include    <gl.h>
@@ -461,7 +459,208 @@ exec sql declare c1 cursor for s;
 **	    (not monotonically increasing) histograms.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+void opx_error(
+	i4 errcode);
+static bool doatt(
+	OPQ_ALIST *attlst[],
+	register i4 attno,
+	i4 indx,
+	i4 attkdom);
+static bool att_list(
+	OPQ_GLOBAL *g,
+	OPQ_ALIST *attlst[],
+	OPQ_RLIST *relp,
+	char **argv);
+static bool hist_convert(
+	char *tbuf,
+	OPQ_ALIST *attrp,
+	ADF_CB *adfcb);
+static bool opq_scaleunique(
+	OPO_TUPLES samplesize,
+	OPH_DOMAIN sampleunique,
+	OPO_TUPLES totalsize,
+	OPH_DOMAIN *totalunique);
+static OPO_TUPLES opq_jackknife_est(
+	OPO_TUPLES samptups,
+	OPO_TUPLES sampunique,
+	OPO_TUPLES actualtups);
+static void opq_setstats(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp);
+static void write_histo_tuple(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp,
+	OPQ_ALIST *attrp,
+	i4 sequence,
+	PTR histdata);
+static void insert_iihistogram(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp,
+	OPQ_ALIST *attrp,
+	OPH_CELLS intervalp,
+	OPN_PERCENT cell_count[],
+	i4 max_cell,
+	char *version);
+static void insert_histo(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp,
+	OPQ_ALIST *attrp,
+	OPO_TUPLES nunique,
+	OPH_CELLS intervalp,
+	OPN_PERCENT cell_count[],
+	i4 max_cell,
+	i4 numtups,
+	i4 pages,
+	i4 overflow,
+	OPO_TUPLES null_count,
+	bool normalize,
+	bool exact_histo,
+	char unique_flag,
+	bool complete,
+	f8 irptfactor,
+	char *version,
+	bool fromfile);
+static void add_default_char_stats(
+	OPS_DTLENGTH histlength,
+	i4 max_cell,
+	OPH_CELLS intervalp);
+static void minmax(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp,
+	OPQ_ALIST *attlst[]);
+static i4 compare_values(
+	ADF_CB *adfcb,
+	DB_DATA_VALUE *datavalue1,
+	DB_DATA_VALUE *datavalue2,
+	DB_ATT_STR *columnname);
+static bool new_unique(
+	i4 cellinexact,
+	OPQ_ALIST *attrp,
+	DB_DATA_VALUE *prev_dt,
+	ADF_CB *adfcb);
+static void decrement_value(
+	ADF_CB *adfcb,
+	OPQ_ALIST *attrp,
+	OPQ_RLIST *relp,
+	OPH_CELLS result);
+static i4 add_exact_cell(
+	OPQ_ALIST *attrp,
+	OPQ_RLIST *relp,
+	DB_DATA_VALUE *prev_hdt,
+	i4 cellexact,
+	i4 totalcells,
+	ADF_CB *adfcb);
+static i4 update_hcarray(
+	DB_DATA_VALUE *newval,
+	OPQ_MAXELEMENT *prevval,
+	i4 valcount,
+	i4 prevcount,
+	i4 nunique,
+	i4 *hccount);
+static OPS_DTLENGTH exact_histo_length(
+	i4 max_cell,
+	OPN_PERCENT cell_count[],
+	OPH_CELLS intervalp,
+	OPS_DTLENGTH oldhistlength);
+static OPS_DTLENGTH inexact_histo_length(
+	ADF_CB *adfcb,
+	OPQ_RLIST *relp,
+	OPQ_ALIST *attrp,
+	i4 max_cell,
+	OPN_PERCENT cell_count[],
+	OPH_CELLS intervalp,
+	OPS_DTLENGTH oldhistlength);
+static void truncate_histo(
+	OPQ_ALIST *attrp,
+	OPQ_RLIST *relp,
+	i4 *max_cellp,
+	OPN_PERCENT cell_count[],
+	OPH_CELLS intervalp,
+	bool exact_histo,
+	ADF_CB *adfcb);
+static void add_char_stats(
+	OPS_DTLENGTH histlength,
+	i4 max_cell,
+	OPH_CELLS intervalp,
+	OPQ_BMCHARSET charsets);
+static void read_char_stats(
+	OPQ_GLOBAL *g,
+	FILE *inf,
+	OPH_CELLS statbuf,
+	OPS_DTLENGTH histlength);
+static void record_chars(
+	OPQ_ALIST *attrp,
+	OPQ_BMCHARSET charsets);
+static bool comp_selbuild(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp,
+	OPQ_ALIST **attrpp,
+	char **selexpr,
+	bool *use_hex);
+static void exinex_insert(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp,
+	OPQ_ALIST *attrp,
+	OPQ_MAXELEMENT *prev_val,
+	OPQ_MAXELEMENT *prev1_val,
+	OPO_TUPLES *rowest,
+	i4 *cellinexact,
+	i4 *cellinexact1,
+	OPO_TUPLES currval_count);
+static void exinex_insert_rest(
+	ADF_CB *adfcb,
+	OPQ_RLIST *relp,
+	OPQ_ALIST *attrp,
+	i4 hccount,
+	i4 *cellcount);
+static i4 process_oldq(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp,
+	OPQ_ALIST **attrpp,
+	bool sample);
+static i4 process_newq(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp,
+	OPQ_ALIST **attrpp,
+	bool sample,
+	bool tempt);
+static i4 read_process(
+	OPQ_GLOBAL *g,
+	FILE *inf,
+	char **argv);
+static void opq_sample(
+	OPQ_GLOBAL *g,
+	char *utilid,
+	OPQ_RLIST *relp,
+	OPQ_ALIST *attlst[],
+	f8 samplepct);
+static bool opq_singres(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp);
+static i4 opq_initcollate(
+	ADULTABLE *tbl);
+int main(
+	i4 argc,
+	char *argv[]);
+static void opt_opq_exit(void);
+static void opq_bufalloc(
+	PTR utilid,
+	PTR *mptr,
+	i4 len,
+	OPQ_DBUF *buf);
+static i4 update_row_and_page_stats(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp,
+	i4 rows,
+	i4 pages,
+	i4 overflow);
+static bool collatable_type(
+	i4 datatype);
 
 /*
 **    UNIX mkming hints.
@@ -477,201 +676,6 @@ OWNER =		INGUSER
 NO_OPTIM =	dgi_us5
 **
 */
-
-/*
-**  Static function prototypes.
-*/
-VOID 		opq_bufalloc(
-			    PTR			utilid,
-			    PTR	    		*mptr,
-			    i4	    		len,
-			    OPQ_DBUF    	*buf);
-static VOID	opt_opq_exit(VOID);
-static bool		doatt(
-			    OPQ_ALIST          	*attlst[],
-			    register i4        	attno,
-			    i4                 	indx,
-			    i4                 	attkdom);
-static bool		att_list(
-			    OPQ_GLOBAL		*g,
-			    OPQ_ALIST	    	*attlst[],
-			    OPQ_RLIST	    	*relp,
-			    char		**argv);
-static bool		hist_convert(
-			    char		*tbuf,
-			    OPQ_ALIST       	*attrp,
-			    ADF_CB		*adfcb);
-static bool		opq_scaleunique(
-			    OPO_TUPLES		samplesize,
-			    OPH_DOMAIN      	sampleunique,
-			    OPO_TUPLES		totalsize,
-			    OPH_DOMAIN		*totalunique);
-static VOID		opq_setstats(
-			    OPQ_GLOBAL		*g,
-			    OPQ_RLIST       	*relp);
-static VOID		write_histo_tuple(
-			    OPQ_GLOBAL		*g,
-			    OPQ_RLIST		*relp,
-			    OPQ_ALIST       	*attrp,
-			    i4	      		sequence,
-			    PTR			histdata);
-static VOID		insert_iihistogram(
-			    OPQ_GLOBAL		*g,
-			    OPQ_RLIST          	*relp,
-			    OPQ_ALIST          	*attrp,
-			    OPH_CELLS	   	intervalp,
-			    OPN_PERCENT	   	cell_count[],
-			    i4                 	max_cell,
-			    char		*version);
-static VOID		insert_histo(
-			    OPQ_GLOBAL		*g,
-			    OPQ_RLIST		*relp,
-			    OPQ_ALIST		*attrp,
-			    OPO_TUPLES		nunique,
-			    OPH_CELLS		intervalp,
-			    OPN_PERCENT		cell_count[],
-			    i4                  max_cell,
-			    i4             numtups,
-			    i4             pages,
-			    i4             overflow,
-			    OPO_TUPLES		null_count,
-			    bool		normalize,
-			    bool		exact_histo,
-			    char		unique_flag,
-			    bool		complete,
-			    f8			irptfactor,
-			    char		*version,
-			    bool		fromfile);
-static VOID		add_default_char_stats(
-			    OPS_DTLENGTH	histlength,
-			    i4			max_cell,
-			    OPH_CELLS		intervalp);
-static VOID		minmax(
-			    OPQ_GLOBAL		*g,
-			    OPQ_RLIST		*relp,
-			    OPQ_ALIST		*attlst[]);
-static i4		compare_values(
-			    ADF_CB		*adfcb,
-			    DB_DATA_VALUE	*datavalue1,
-			    DB_DATA_VALUE	*datavalue2,
-			    DB_ATT_STR		*columnname);
-static bool		new_unique(
-			    i4			cellinexact,
-			    OPQ_ALIST		*attrp,
-			    DB_DATA_VALUE	*prev_dt,
-			    ADF_CB		*adfcb);
-static VOID		decrement_value(
-			    ADF_CB		*adfcb,
-			    OPQ_ALIST		*attrp,
-			    OPQ_RLIST		*relp,
-			    OPH_CELLS		result);
-static i4		add_exact_cell(		
-			    OPQ_ALIST		*attrp,
-			    OPQ_RLIST		*relp,
-			    DB_DATA_VALUE	*prev_hdt,
-			    i4			cellexact,
-			    i4		totalcells,
-			    ADF_CB		*adfcb);
-static i4		update_hcarray(
-			    DB_DATA_VALUE	*newval,
-			    OPQ_MAXELEMENT	*prevval,
-			    i4			valcount,
-			    i4			prevcount,
-			    i4			nunique,
-			    i4			*hccount);
-static OPS_DTLENGTH	exact_histo_length(
-			    i4			max_cell,
-			    OPN_PERCENT		cell_count[],
-			    OPH_CELLS		intervalp,
-			    OPS_DTLENGTH	oldhistlength);
-static OPS_DTLENGTH	inexact_histo_length(
-			    ADF_CB		*adfcb,
-			    OPQ_RLIST		*relp,
-			    OPQ_ALIST		*attrp,
-			    i4			max_cell,
-			    OPN_PERCENT		cell_count[],
-			    OPH_CELLS		intervalp,
-			    OPS_DTLENGTH	oldhistlength);
-static VOID		truncate_histo(
-			    OPQ_ALIST		*attrp,
-			    OPQ_RLIST		*relp,
-			    i4			*max_cellp,
-			    OPN_PERCENT		cell_count[],
-			    OPH_CELLS		intervalp,
-			    bool		exact_histo,
-			    ADF_CB		*adfcb);
-static VOID		add_char_stats(
-			    OPS_DTLENGTH	histlength,
-			    i4			max_cell,
-			    OPH_CELLS		intervalp,
-			    OPQ_BMCHARSET	charsets);
-static VOID		read_char_stats(
-			    OPQ_GLOBAL		*g,
-			    FILE	    	*inf,
-			    OPH_CELLS		statbuf,
-			    OPS_DTLENGTH	histlength);
-static VOID		record_chars(
-			    OPQ_ALIST		*attrp,
-			    OPQ_BMCHARSET	charsets);
-static bool		comp_selbuild(
-			    OPQ_GLOBAL		*g,
-			    OPQ_RLIST       	*relp,
-			    OPQ_ALIST       	**attrpp,
-			    char		**selexpr,
-			    bool		*use_hex);
-static VOID		exinex_insert(
-			    OPQ_GLOBAL		*g,
-			    OPQ_RLIST       	*relp,
-			    OPQ_ALIST       	*attrp,
-			    OPQ_MAXELEMENT	*prev_val,
-			    OPQ_MAXELEMENT	*prev1_val,
-			    OPO_TUPLES		*rowest,
-			    i4			*cellinexact,
-			    i4			*cellinexact1,
-			    OPO_TUPLES		currval_count);
-
-static VOID		exinex_insert_rest(
-			    ADF_CB		*adfcb,
-			    OPQ_RLIST		*relp,
-			    OPQ_ALIST		*attrp,
-			    i4			hccount,
-			    i4			*cellcount);
-
-static DB_STATUS	process_newq(
-			    OPQ_GLOBAL		*g,
-			    OPQ_RLIST       	*relp,
-			    OPQ_ALIST       	**attrp,
-			    bool		sample,
-			    bool		tempt);
-static DB_STATUS	process_oldq(
-			    OPQ_GLOBAL		*g,
-			    OPQ_RLIST       	*relp,
-			    OPQ_ALIST       	**attrp,
-			    bool		sample);
-static DB_STATUS	read_process(
-			    OPQ_GLOBAL		*g,
-			    FILE		*inf,
-			    char		**argv);
-static VOID		opq_sample(
-			    OPQ_GLOBAL		*g,
-			    char		*utilid,
-			    OPQ_RLIST		*relp,
-			    OPQ_ALIST       	*attlst[],
-			    f8			samplepct);
-static bool		opq_singres(
-			    OPQ_GLOBAL		*g,
-			    OPQ_RLIST		*relp);
-static i4		opq_initcollate(
-			    ADULTABLE		*tbl);
-static DB_STATUS	update_row_and_page_stats(
-			    OPQ_GLOBAL         *g,
-			    OPQ_RLIST          *relp,
-			    i4            rows,
-			    i4            pages,
-			    i4            overflow);
-static bool		collatable_type(
-			    i4	datatype);
-
 
 /*
 ** Definition of all global variables owned by this file.
@@ -761,16 +765,16 @@ FUNC_EXTERN VOID	opt_usage(VOID);
 /* define following variables statically so that 
 ** large stack areas are not used. 
 */
-static OPN_PERCENT      exactcount[MAXCELLS+1]	    ZERO_FILL;
+static OPN_PERCENT      exactcount[MAXCELLS+1];
 					      /* used to store tuple counts
 					      ** for the "exact histogram" i.e.
                                               ** if number of cells greater than
                                               ** number of values in domain */
-static OPN_PERCENT      inexactcount[MAXCELLS+MAXCELLS+1]    ZERO_FILL;
+static OPN_PERCENT      inexactcount[MAXCELLS+MAXCELLS+1];
 					      /* used to store tuple counts
                                               ** counts for the inexact 
 					      ** histogram */
-static OPN_PERCENT      uniquepercell[MAXCELLS+MAXCELLS+1]   ZERO_FILL;
+static OPN_PERCENT      uniquepercell[MAXCELLS+MAXCELLS+1];
 					      /* used to store unique value per
                                               ** cell counts for the inexact 
 					      ** histogram */
@@ -784,14 +788,10 @@ static OPH_CELLS	inexacthist;	      /* store histogram values
                                               ** corresponds to the 
 					      ** inexactcount array
 					      */
-# if defined(hp3_us5) || defined(mac_us5)
 static OPQ_BUFTYPE      prev_full_val;
-# else
-static OPQ_BUFTYPE      prev_full_val		    ZERO_FILL;
 					      /* buffer used to store previous
                                               ** element so that duplicates can
                                               ** be checked for */
-# endif
 
 GLOBALREF OPQ_DBUF	opq_sbuf;             /* buffer for dynamic SQL queries
 					      ** (statements)
@@ -4816,7 +4816,7 @@ update_hcarray(
 			(PTR)hcarray[i].pvalp);
 	return(i);
     }
-
+    return -1;
 }
 
 /*{
@@ -5910,7 +5910,6 @@ bool		*use_hex)
     char		*wrktxt1, *wrktxt2;
     char		*coltxt1, *coltxt2;
     i4			datlen, i;
-    bool		wrk1 = TRUE;
     bool		firstcol = TRUE;
     char		nullstr[2*MAXCOMPOSITE+5]; /* '01[00*MAXCOMPOSITE]'\0 */
 
@@ -9173,7 +9172,6 @@ char	    **argv)
 	    for (i = cells - 2; i >= 0; i--)
 	    {
 		i4	    res;
-		DB_STATUS   stat;
 
 		dv1.db_data = (PTR)(exacthist + i * histlength);
 		dv2.db_data = (PTR)((OPH_CELLS)dv1.db_data + histlength);
@@ -9376,9 +9374,6 @@ OPQ_ALIST       *attlst[],
 f8		samplepct)
 {
     char	*stmt;
-    IISQLDA	*sqlda = &_sqlda;
-    i4		maxrownum;
-    i4	samplerows;
     i4		secs;
     i4		retry;
     f4		random_comp = samplepct / 100.;
@@ -9928,6 +9923,7 @@ opq_initcollate(ADULTABLE   *tbl)
 **	    exclusive locks on every table in the database in a single
 **	    transaction.
 */
+i4
 main(
 i4	argc,
 char	*argv[])
@@ -9955,9 +9951,6 @@ char	*argv[])
     FILE	*outf;
     OPQ_RLIST	**ex_rellist = NULL;
     f8		samplepct;
-    bool	sortsample;	    /* TRUE if sort of sample TIDs
-				    ** requested.
-				    */
     bool	default_sample;     /* default value for sampling - 
 				    ** will change if table too small 
 				    */
@@ -10271,7 +10264,7 @@ char	*argv[])
 
 	if (retval)	/* relations read and initialized successfully */
 	{
-	    register OPQ_RLIST	**relp;
+	    OPQ_RLIST	**relp;
 
 	    inf = (FILE *) NULL;
 	    outf = (FILE *) NULL;
@@ -10734,6 +10727,8 @@ char	*argv[])
 
     (VOID) EXdelete();
     PCexit((i4)OK);
+    /*NOTREACHED*/
+    return 0;
 }
 
 /*{
@@ -10848,7 +10843,7 @@ opt_opq_exit(VOID)
 **	21-jun-93 (rganski)
 **	    Check status returned by MEfree.
 */
-VOID
+static VOID
 opq_bufalloc(
 PTR	    utilid,
 PTR	    *mptr,

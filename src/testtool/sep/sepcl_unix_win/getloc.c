@@ -89,6 +89,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	1-Dec-2010 (kschendel)
+**	    Compiler warning fix.
 */
 
 /*
@@ -158,7 +160,7 @@ getLocation(char *string,char *newstr,LOCTYPE *typeOfLoc)
     next = start;
     CMnext(next);
     if (typeOfLoc)
-	*typeOfLoc = NULL;
+	*typeOfLoc = 0;
 
     if (CMcmpcase(next, ERx(",")))
     {

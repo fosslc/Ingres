@@ -47,19 +47,18 @@
 **	    replace nat and longnat with i4
 **      19-apr-2004 (loera01)
 **          Added new DLload() routine.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 FUNC_EXTERN STATUS DLbind(
-#ifdef CL_PROTOTYPED
 	    PTR		handle, 
 	    char	*sym, 
 	    PTR		*addr, 
 	    CL_ERR_DESC *errp
-#endif
 );
 
 FUNC_EXTERN STATUS DLcreate(
-#ifdef CL_PROTOTYPED
 	    char	*exename,
 	    char	*vers,
 	    char	*dlmodname,
@@ -67,11 +66,9 @@ FUNC_EXTERN STATUS DLcreate(
 	    char	*in_libs[],
 	    char	*exp_fcns[],
 	    CL_ERR_DESC	*err
-#endif
 );
 
 FUNC_EXTERN STATUS DLcreate_loc(
-#ifdef CL_PROTOTYPED
             char        *exename,
             char        *vers,
             char        *dlmodname,
@@ -84,53 +81,41 @@ FUNC_EXTERN STATUS DLcreate_loc(
 	    bool	append,
 	    char	*miscparms,
             CL_ERR_DESC *err
-#endif
 );
 
 FUNC_EXTERN STATUS DLdelete(
-#ifdef CL_PROTOTYPED
 	    char	*dlmodname, 
 	    CL_ERR_DESC *err
-#endif
 );
 
 FUNC_EXTERN STATUS DLdelete_loc(
-#ifdef CL_PROTOTYPED
 	    char	*dlmodname, 
 	    LOCATION    *dlloc,
 	    CL_ERR_DESC *err
-#endif
 );
 
 FUNC_EXTERN STATUS DLnameavail(
-#ifdef CL_PROTOTYPED
 	    char	    *dlmodname, 
 	    CL_ERR_DESC	    *err
-#endif
 );
 
 FUNC_EXTERN STATUS DLload(
-#ifdef CL_PROTOTYPED
             LOCATION *ploc, 
             char *dlmodname, 
             char *syms[], 
             PTR *handle,
             CL_ERR_DESC *errp
-#endif
 );
 
 FUNC_EXTERN STATUS DLprepare(
-#ifdef CL_PROTOTYPED
 	    char	    *vers, 
 	    char	    *dlmodname, 
 	    char	    *syms[], 
 	    PTR		    *handle,
 	    CL_ERR_DESC	    *errp
-#endif
 );
 
 FUNC_EXTERN STATUS DLprepare_loc(
-#ifdef CL_PROTOTYPED
             char            *vers,
             char            *dlmodname,
             char            *syms[],
@@ -138,21 +123,16 @@ FUNC_EXTERN STATUS DLprepare_loc(
 	    i4		    flags,
             PTR             *handle,
             CL_ERR_DESC     *errp
-#endif
 );
 
 FUNC_EXTERN STATUS DLunload(
-#ifdef CL_PROTOTYPED
 	    PTR		    handle, 
 	    CL_ERR_DESC	    *errp
-#endif
 );
 
 FUNC_EXTERN STATUS DLconstructloc(
-#ifdef CL_PROTOTYPED
 	    LOCATION	    *inloc,
 	    char	    *buffer,
 	    LOCATION	    *outloc,
 	    CL_ERR_DESC	    *errp
-#endif
 );

@@ -38,11 +38,11 @@
 **		Added cs.h for reentrancy support
 **	    27-may-97 (mcgem01)
 **		Clean up compiler warnings.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 */
 VOID
-cer_excep(status,msgpp)
-STATUS	status;
-char **msgpp;
+cer_excep(STATUS status, char **msgpp)
 {
 	switch (status)
 	{

@@ -186,6 +186,8 @@ qee_p0_prt_dsh(
 **          written
 **	21-dec-92 (anitap)
 **	    Prototyped.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 */
 
 
@@ -194,9 +196,6 @@ qee_p1_dsh_gen(
 	QEF_RCB		*v_qer_p,
 	QEE_DSH		*i_dsh_p)
 {
-    DB_STATUS	    status = E_DB_OK;
-    QEF_QP_CB	    *qp_p = i_dsh_p->dsh_qp_ptr;    /* debugging aid */
-    QEE_DDB_CB	    *dde_p = i_dsh_p->dsh_ddb_cb;
     char	    cur_name[DB_CURSOR_MAXNAME + 1];
     char	    *cbuf = v_qer_p->qef_cb->qef_trfmt;
     i4		    cbufsize = v_qer_p->qef_cb->qef_trsize;

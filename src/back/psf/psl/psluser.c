@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -75,7 +75,78 @@
 **	    psl_us12_set_nonkw_roll_nonkw  - SET SESSION O_E ROLLBACK nonkeyword
 **	    psl_us14_set_nonkw_eq_int      - SET SESSION WITH PRIORITY=nnn
 **	    psl_us15_set_nonkw             - SET SESSION WITH non_keyword
+**
+** History:
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+i4 psl_us1_with_nonkeyword(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word);
+i4 psl_us2_with_nonkw_eq_nmsconst(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	char *word2);
+i4 psl_us2_with_nonkw_eq_hexconst(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	u_i2 length,
+	char *word2);
+i4 psl_us3_usrpriv(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	char *word,
+	i4 *privptr);
+i4 psl_us4_usr_priv_or_nonkw(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word,
+	i4 privs);
+i4 psl_us5_usr_priv_def(
+	PSY_CB *psy_cb,
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	i4 mode,
+	i4 privs);
+i4 psl_us9_set_nonkw_eq_nonkw(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	char *word2,
+	bool isnkw);
+i4 psl_us10_set_priv(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	i4 mode,
+	i4 privs);
+i4 psl_us11_set_nonkw_roll_svpt(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	char *svpt);
+i4 psl_us12_set_nonkw_roll_nonkw(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	char *word2);
+i4 psl_us14_set_nonkw_eq_int(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word1,
+	i4 word2);
+i4 psl_us15_set_nonkw(
+	PSQ_CB *psq_cb,
+	PSS_SESBLK *cb,
+	char *word);
 
 /*
 ** Forward/external declarations
@@ -116,30 +187,30 @@ static struct {
 # define	PSL_PRV_OBS	0x04	/* Obsolete */
 # define	PSL_PRV_AUDIT   0x010   /* Audit privilege */
 } privlist[] = {
-	DU_UCREATEDB,	 PSL_UCREATEDB,	"CREATEDB",	PSL_PRV_OK,
-	DU_UTRACE,	 PSL_UTRACE, 	"TRACE",	PSL_PRV_OK,
-	DU_USECURITY,	 PSL_USECURITY,	"SECURITY",	PSL_PRV_OK,
-	DU_UOPERATOR,	 PSL_UOPERATOR,	"OPERATOR",	PSL_PRV_OK,
-	DU_USYSADMIN,	 PSL_USYSADMIN,	"MAINTAIN_LOCATIONS",	PSL_PRV_OK,
-	DU_UAUDIT,	 PSL_UAUDIT,	"AUDIT_ALL",	PSL_PRV_OBS,
-	DU_UWRITEUP,	 PSL_UWRITEUP,	"WRITE_UP",	PSL_PRV_B1,
-	DU_UWRITEDOWN,	 PSL_UWRITEDOWN,"WRITE_DOWN",	PSL_PRV_B1,
-	DU_UWRITEFIXED,	 PSL_UWRITEFIXED,"WRITE_FIXED",	PSL_PRV_B1,
-	DU_UINSERTUP,	 PSL_UINSERTUP,	"INSERT_UP",	PSL_PRV_B1,
-	DU_UINSERTDOWN,	 PSL_UINSERTDOWN,"INSERT_DOWN",	PSL_PRV_B1,
-	DU_UMONITOR,	 PSL_UMONITOR,	"MONITOR",	PSL_PRV_OK,
-	DU_UAUDITOR,	 PSL_UAUDITOR,		"AUDITOR",	PSL_PRV_OK,
-	DU_UALTER_AUDIT, PSL_UALTER_AUDIT,	"MAINTAIN_AUDIT",PSL_PRV_OK,
-	DU_UMAINTAIN_USER, PSL_UMAINTAIN_USER,	"MAINTAIN_USERS",PSL_PRV_OK,
-	DU_UDOWNGRADE,	 PSL_UDOWNGRADE,	"DOWNGRADE",	PSL_PRV_OBS,
-	DU_UALL_PRIVS,	 PSL_UALL_PRIVS,	"ALL",	PSL_PRV_OBS,
+	{DU_UCREATEDB,	 PSL_UCREATEDB,	"CREATEDB",	PSL_PRV_OK},
+	{DU_UTRACE,	 PSL_UTRACE, 	"TRACE",	PSL_PRV_OK},
+	{DU_USECURITY,	 PSL_USECURITY,	"SECURITY",	PSL_PRV_OK},
+	{DU_UOPERATOR,	 PSL_UOPERATOR,	"OPERATOR",	PSL_PRV_OK},
+	{DU_USYSADMIN,	 PSL_USYSADMIN,	"MAINTAIN_LOCATIONS",	PSL_PRV_OK},
+	{DU_UAUDIT,	 PSL_UAUDIT,	"AUDIT_ALL",	PSL_PRV_OBS},
+	{DU_UWRITEUP,	 PSL_UWRITEUP,	"WRITE_UP",	PSL_PRV_B1},
+	{DU_UWRITEDOWN,	 PSL_UWRITEDOWN,"WRITE_DOWN",	PSL_PRV_B1},
+	{DU_UWRITEFIXED,	 PSL_UWRITEFIXED,"WRITE_FIXED",	PSL_PRV_B1},
+	{DU_UINSERTUP,	 PSL_UINSERTUP,	"INSERT_UP",	PSL_PRV_B1},
+	{DU_UINSERTDOWN,	 PSL_UINSERTDOWN,"INSERT_DOWN",	PSL_PRV_B1},
+	{DU_UMONITOR,	 PSL_UMONITOR,	"MONITOR",	PSL_PRV_OK},
+	{DU_UAUDITOR,	 PSL_UAUDITOR,		"AUDITOR",	PSL_PRV_OK},
+	{DU_UALTER_AUDIT, PSL_UALTER_AUDIT,	"MAINTAIN_AUDIT",PSL_PRV_OK},
+	{DU_UMAINTAIN_USER, PSL_UMAINTAIN_USER,	"MAINTAIN_USERS",PSL_PRV_OK},
+	{DU_UDOWNGRADE,	 PSL_UDOWNGRADE,	"DOWNGRADE",	PSL_PRV_OBS},
+	{DU_UALL_PRIVS,	 PSL_UALL_PRIVS,	"ALL",	PSL_PRV_OBS},
 	/*
 	** Security audit types
 	*/
-	PSY_USAU_QRYTEXT,    PSL_UQRYTEXT,	"QUERY_TEXT", 	PSL_PRV_AUDIT,
-	PSY_USAU_ALL_EVENTS, PSL_UALL_EVENTS,	"ALL_EVENTS",   PSL_PRV_AUDIT,
-	PSY_USAU_DEF_EVENTS, PSL_UDEF_EVENTS,	"DEFAULT_EVENTS",PSL_PRV_AUDIT,
-	0, 0,		NULL
+	{PSY_USAU_QRYTEXT,    PSL_UQRYTEXT,	"QUERY_TEXT", 	PSL_PRV_AUDIT},
+	{PSY_USAU_ALL_EVENTS, PSL_UALL_EVENTS,	"ALL_EVENTS",   PSL_PRV_AUDIT},
+	{PSY_USAU_DEF_EVENTS, PSL_UDEF_EVENTS,	"DEFAULT_EVENTS",PSL_PRV_AUDIT},
+	{0, 0, NULL, 0}
 };
 
 /*
@@ -864,7 +935,6 @@ psl_us2_with_nonkw_eq_hexconst(
 )
 {
 	i4	    err_code;
-	DB_STATUS   status;
 
 	if (STcasecmp(word1, "PASSWORD") == 0)
 	{
@@ -1894,9 +1964,7 @@ psl_us14_set_nonkw_eq_int(
 	i4	    word2
 )
 {
-	QEF_RCB			*qef_rcb;
 	i4			err_code;
-	DB_STATUS		status;
 
 	/*
 	** Only valid with SET SESSION WITH PRIORITY =

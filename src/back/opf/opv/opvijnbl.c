@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -69,8 +69,33 @@
 **          Moved <cs.h> for CS_SID.
 **	7-apr-04 (inkdo01)
 **	    Added opv_pcjnbl for partitioned table/parallel query processing.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static void opv_connected(
+	OPS_SUBQUERY *subquery,
+	OPV_MVARS *connect,
+	OPV_IVARS var,
+	OPV_BMVARS *ignore);
+static void opv_jtables(
+	OPS_SUBQUERY *subquery);
+static void opv_ntconnected(
+	OPS_SUBQUERY *subquery,
+	OPV_MVARS *connect,
+	i4 *part_count,
+	OPV_BMVARS *ignore);
+static bool opl_ojcartprod(
+	OPS_SUBQUERY *subquery,
+	OPL_OUTER *outerp,
+	OPV_BMVARS *tvmap);
+static void opv_spjoin(
+	OPS_SUBQUERY *subquery);
+void opv_pcjnbl(
+	OPS_SUBQUERY *subquery);
+void opv_ijnbl(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opv_connected	- add new variables to the connected map
@@ -545,8 +570,6 @@ VOID
 opv_pcjnbl(
 	OPS_SUBQUERY       *subquery)
 {
-    OPB_IBF		bfi;
-    OPB_BOOLFACT	*bfp;
     OPV_VARS		*var1p, *var2p;
     i4			i, j, k, l, m, n, o;
     i4			len1, len2;

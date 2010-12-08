@@ -15,6 +15,7 @@ NO_OPTIM = su4_u42 su4_cmw
 #include    <adf.h>
 #include    <ulf.h>
 #include    <adfint.h>
+#include    <aduint.h>
 
 /**
 ** Name:  ADUPERM.C -    Routines for managing permissions
@@ -46,6 +47,8 @@ NO_OPTIM = su4_u42 su4_cmw
 **	    SIR 120874: Add adfint.h include to pick up adu_error() prototype.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	02-dec-2010 (gupsh01) SIR 124785
+**	    Prototype cleanup.
 **/
 
 /* Forward/static declarations */

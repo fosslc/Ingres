@@ -212,6 +212,8 @@ static void qen_exch_pqual_init(
 **          Exception occurs if the cut_read_buf returns a WARNING and
 **          there are no (<0) cells to process. In this circumstance, 
 **          terminate the child.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 */
 
 DB_STATUS
@@ -1255,6 +1257,9 @@ i4		    function )
 **      21-jul-2010 (huazh01)
 **          don't log E_DM0065_USER_INTR error for parallel query child 
 **          thread. (b124094)
+**      03-Nov-2010 (smeke01) b124383
+**          Find the correct local base for the materializer CX when we
+**          are not using the global base array.
 **/
 DB_STATUS
 qen_exchange_child(SCF_FTX *ftxcb)
@@ -1273,7 +1278,6 @@ qen_exchange_child(SCF_FTX *ftxcb)
     ADE_EXCB	*ade_excb;
     QEN_NODE	*out_node = exch->exch_out;
     ULM_RCB	ulm;
-    TIMERSTAT	timerstat;
     DB_STATUS	status;
     DB_STATUS	call_status;
     DB_ERROR	error;
@@ -1281,8 +1285,6 @@ qen_exchange_child(SCF_FTX *ftxcb)
     i4		num_io_cells;
     i4		exch_command;		/* Next command from Parent */
     PTR		ExchCommand = (PTR)&exch_command;
-    i4		val1;
-    i4		val2;
     CUT_RCB	cut_rcb[2];
     CUT_RCB	*CommRcb = &cut_rcb[0];
     CUT_RCB	*DataRcb = &cut_rcb[1];
@@ -1399,7 +1401,15 @@ qen_exchange_child(SCF_FTX *ftxcb)
 	else
 	{
 	    ade_excb->excb_bases[ADE_GLOBALBASE] = NULL;
-	    MatRow = &ade_excb->excb_bases[node->qen_row];
+
+	    /* find the local base array offset */
+	    for (i = 0; i < exch->exch_mat->qen_sz_base; i++)
+	    {
+		if (node->qen_row == exch->exch_mat->qen_base[i].qen_index)
+		    break;
+	    }
+
+	    MatRow = &ade_excb->excb_bases[ADE_ZBASE + i];
 	}
 
 	/*
@@ -1731,7 +1741,7 @@ qen_exchange_child(SCF_FTX *ftxcb)
 	** Close all tables opened by this thread, destroy
 	** all temp tables created by this thread.
 	*/
-	while ( dmt_cb = dsh->dsh_open_dmtcbs )
+	while ( (dmt_cb = dsh->dsh_open_dmtcbs) != NULL )
 	{
 	    dsh->dsh_open_dmtcbs = (DMT_CB*)(dmt_cb->q_next);
 
@@ -2064,7 +2074,6 @@ DB_ERROR	*error)
 {
     QEF_QP_CB	*qp;
     QEE_DSH	*ParentDSH, *ChildDSH;
-    QEF_RCB	*rcb = exch_cb->rcb;
     QEN_NODE	*node = exch_cb->node;
     ULM_RCB	ulm;
     ADE_EXCB	*excbp, *Dexcbp;
@@ -2961,7 +2970,6 @@ i4		    function )
     TIMERSTAT	timerstat;
     EXCH_CB	*exch_cb = (EXCH_CB *) cbs[exch->exch_exchcb];
     DB_STATUS	status = E_DB_OK;
-    i4		i;
     i4		NodeNum = node->qen_num;
     char	*OutNode = NodeType[out_node->qen_type];
     QEN_ADF 	*qen_adf;

@@ -68,7 +68,7 @@ $sub %product_version% 10
 $sub %product_release% 1.0
 $sub %rpm_product% (PROD1NAME) Business Open Source Database
 $sub %rpm_basename% (PROD_PKGNAME)
-$sub %rpm_version% 10.1.0-01
+$sub %rpm_version% 10.1.0
 $sub %rpm_release% BUILD_NO 
 $sub %rpm_doc_prefix% /usr/share/doc
 $sub %rpm_vendor% Ingres Corporation <support@ingres.com>

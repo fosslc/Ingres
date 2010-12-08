@@ -50,15 +50,16 @@
 **	    Jasmine & Ingres.
 **	21-May-2009 (kiria01) b122051
 **	    Reduce uninit'ed collID
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
 **	03-Sep-2010 (kiria01) b124352
 **	    Correct typo in previous change.
-[@history_template@]...
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Ensure whole DBV copied.
 **/
 
 /*{
@@ -177,23 +178,21 @@ DB_DATA_VALUE	   *ev_value)
 		}
 		else
 		{
-		    DB_DATA_VALUE	    tmp_db;
-		    DB_DATA_VALUE	    tmp_ev;
+		    DB_DATA_VALUE tmp_db = *db_value;
+		    DB_DATA_VALUE tmp_ev;
 		    
 		    /* Datatype is nullable -- adjust length & datatype for */
 		    /* underlying code	                                    */
 
-		    tmp_db.db_length = db_value->db_length - 1;
-		    tmp_db.db_prec = db_value->db_prec;
-		    tmp_db.db_collID = db_value->db_collID;
 		    tmp_db.db_datatype = bdt;
+		    tmp_db.db_length--;
+
 		    status = (*Adf_globs->Adi_dtptrs[bdtv]->
 			      adi_dt_com_vect.adp_dbtoev_addr)
 			       (adf_scb, &tmp_db, &tmp_ev);
+		    *ev_value = tmp_ev;
 		    ev_value->db_datatype = -(abs(tmp_ev.db_datatype));
-		    ev_value->db_length = tmp_ev.db_length + 1;
-		    ev_value->db_prec = tmp_ev.db_prec;
-		    ev_value->db_collID = tmp_ev.db_collID;
+		    ev_value->db_length++;
 		}
 	    }
 	    else
@@ -379,6 +378,7 @@ DB_DATA_VALUE	   *ev_value)
 	    local_dv.db_datatype = DB_INT_TYPE;
 	    local_dv.db_length = sizeof(ev_value->db_length);
 	    local_dv.db_prec = 0;
+	    local_dv.db_collID = DB_NOCOLLATION;
 	    local_dv.db_data = (char *) &ev_value->db_length;
 	    status = adu_bitsize(adf_scb, db_value, &local_dv);
 	    ev_value->db_length += DB_CNTSIZE;

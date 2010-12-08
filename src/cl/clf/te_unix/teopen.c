@@ -106,14 +106,15 @@
 **	14-Feb-2008 (hanje04)
 **	    SIR S119978
 **	    Update includes for renamed header
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 */
 
 
-static bool	TExtabs();
-static bool	TEupcase();
-extern bool	TEisa();
-static STATUS	TEdelay();
-VOID	TEwinsize();
+static bool	TExtabs(VOID);
+static bool	TEupcase(VOID);
+static STATUS	TEdelay(i4 *delay);
+static VOID	TEwinsize(TEENV_INFO *envinfo);
 GLOBALDEF FILE	*IIte_fpin = NULL;
 
 

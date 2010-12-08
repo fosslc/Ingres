@@ -178,6 +178,8 @@ GLOBALREF   char     IIQE_63_qperror[];     /* string "QP ERROR detected!"
 **	    Changed dsh_ddb_cb from QEE_DDB_CB instance to ptr.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning / prototype fixes.
 **/
 
 
@@ -612,13 +614,7 @@ QEF_AHD	    **v_act_pp )
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     QES_QRY_SES	    *qss_p = & dds_p->qes_d8_union.u2_qry_ses;
     QEE_DSH	    *dsh_p = (QEE_DSH *)(v_qer_p->qef_cb->qef_dsh);
-    QEE_DDB_CB	    *qee_p = dsh_p->dsh_ddb_cb;
     QEF_AHD	    *act_p = *v_act_pp;
-/*
-    QEF_QP_CB	    *qp_p = dsh_p->dsh_qp_ptr;
-    QEQ_D1_QRY	    *sub_p = & qp_p->qp_ahd->qhd_obj.qhd_d1_qry;
-*/
-    QED_DDL_INFO    sav_ddl;			/* for saving & restoring */
 
 
     dsh_p->dsh_act_ptr = *v_act_pp;		/* mark current dsh */
@@ -726,16 +722,10 @@ QEF_RCB	    *v_qer_p,
 QEF_AHD	    *i_act_p )
 {
     DB_STATUS	    status = E_DB_OK;
-    QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
-    DD_LDB_DESC	    *cdb_p = 
-			 & dds_p->qes_d4_ddb_p->dd_d3_cdb_info.dd_i1_ldb_desc;
     QES_QRY_SES	    *qss_p = & dds_p->qes_d8_union.u2_qry_ses;
     QEE_DSH	    *dsh_p = (QEE_DSH *)(v_qer_p->qef_cb->qef_dsh);
     QEE_DDB_CB	    *qee_p = dsh_p->dsh_ddb_cb;
-/*
-    QEF_QP_CB	    *qph_p = dsh_p->dsh_qp_ptr;
-*/
     RQR_CB	    rqr,
 		    *rqr_p = & rqr;
     bool	    eod = FALSE;	    /* assume there's data */
@@ -999,7 +989,6 @@ QEF_AHD		*i_act_p )
     QEE_DSH	    *dsh_p = (QEE_DSH *)(v_qer_p->qef_cb->qef_dsh);
     QEE_DDB_CB	    *qee_p = dsh_p->dsh_ddb_cb;
     QEQ_DDQ_CB	    *ddq_p = & dsh_p->dsh_qp_ptr->qp_ddq_cb;
-    QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     QES_QRY_SES	    *qss_p = & dds_p->qes_d8_union.u2_qry_ses;
     QEQ_D1_QRY	    *sub_p = & i_act_p->qhd_obj.qhd_d1_qry;
@@ -1185,9 +1174,8 @@ QEF_AHD		*i_act_p )
     QEE_DDB_CB	    *qee_p = dsh_p->dsh_ddb_cb;
     QEQ_DDQ_CB	    *ddq_p = & dsh_p->dsh_qp_ptr->qp_ddq_cb;
     QEQ_D3_XFR	    *xfr_p = & i_act_p->qhd_obj.qhd_d3_xfr;
-    QEQ_D1_QRY	    *src_p = & xfr_p->qeq_x1_srce, 
-		    *tmp_p = & xfr_p->qeq_x2_temp,  
-		    *des_p = & xfr_p->qeq_x3_sink;  /* for debugging */
+    QEQ_D1_QRY	    *src_p = & xfr_p->qeq_x1_srce,
+		    *tmp_p = & xfr_p->qeq_x2_temp;
     TPR_CB	    tpr,
 		    *tpr_p = & tpr;
     RQR_CB	    rqr,
@@ -1347,10 +1335,6 @@ QEF_RCB		*v_qer_p,
 QEE_DSH		*i_dsh_p )
 {
     DB_STATUS	     status = E_DB_OK;
-    QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
-/*
-    QES_QRY_SES	    *qss_p = & dds_p->qes_d8_union.u2_qry_ses;
-*/
     QEE_DDB_CB	    *qee_p = i_dsh_p->dsh_ddb_cb;
     QEQ_DDQ_CB	    *ddq_p = & i_dsh_p->dsh_qp_ptr->qp_ddq_cb;
     QEF_AHD	    *ahd_p = ddq_p->qeq_d1_end_p,
@@ -1710,14 +1694,10 @@ QEF_RCB	    *v_qer_p,
 QEF_AHD	    *i_act_p )
 {
     DB_STATUS	    status = E_DB_OK;
-    QEF_DDB_REQ	    *ddr_p = & v_qer_p->qef_r3_ddb_req;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     QES_QRY_SES	    *qss_p = & dds_p->qes_d8_union.u2_qry_ses;
     QEE_DSH	    *dsh_p = (QEE_DSH *)(v_qer_p->qef_cb->qef_dsh);
     QEE_DDB_CB	    *qee_p = dsh_p->dsh_ddb_cb;
-/*
-    QEF_QP_CB	    *qp_p = dsh_p->dsh_qp_ptr;
-*/
     QEQ_D1_QRY	    *sub_p = & i_act_p->qhd_obj.qhd_d1_qry;
     RQR_CB	    rqr,
 		    *rqr_p = & rqr;
@@ -1985,17 +1965,8 @@ QEF_RCB	    *v_qer_p,
 QEF_AHD	    *i_act_p )
 {
     DB_STATUS	    status = E_DB_OK;
-/*
-    QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
-    QEE_DSH	    *dsh_p = (QEE_DSH *)(v_qer_p->qef_cb->qef_dsh);
-    QEE_DDB_CB	    *qee_p = dsh_p->dsh_ddb_cb;
-    QEF_QP_CB	    *qp_p = dsh_p->dsh_qp_ptr;
-    QEQ_DDQ_CB	    *ddq_p = & qp_p->qp_ddq_cb;
-    QES_QRY_SES	    *qss_p = & dds_p->qes_d8_union.u2_qry_ses;
-*/
     QEQ_D1_QRY	    *sub_p = & i_act_p->qhd_obj.qhd_d1_qry;
-    i4		    tpr_mode,
-		    tupcnt = 0;
+    i4		    tupcnt = 0;
     bool	    eod_b,
 		    tupread_b;
 
@@ -2084,11 +2055,7 @@ QEE_DSH		*i_dsh_p )
     QEF_QP_CB	    *qp_p = i_dsh_p->dsh_qp_ptr;
     QEF_AHD	    *act_p = qp_p->qp_ahd,
 		    *nxt_p;
-    QEQ_D1_QRY	    *cur_p,
-		    *src_p,
-		    *tmp_p,
-		    *des_p;
-    QEQ_D3_XFR      *xfr_p = (QEQ_D3_XFR *) NULL;
+    QEQ_D1_QRY	    *cur_p;
     QEQ_TXT_SEG     *seg_p;
     i4		    sel_ldb,
 		    act_cnt,
@@ -2336,7 +2303,6 @@ QEF_RCB		*v_qer_p,
 QEE_DSH		*i_dsh_p )
 {
     QES_DDB_SES     *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
-    QEF_QP_CB       *qp_p = i_dsh_p->dsh_qp_ptr;
 
 
     if (dds_p->qes_d9_ctl_info & QES_04CTL_OK_TO_OUTPUT_QP)
@@ -2348,6 +2314,7 @@ QEE_DSH		*i_dsh_p )
 
     qed_w0_prt_gmtnow(v_qer_p);
     qeq_p10_prt_qp(v_qer_p, i_dsh_p);
+    return (E_DB_OK);
 }
 
 /*{
@@ -2458,8 +2425,6 @@ DB_STATUS qeq_d11_regproc(QEF_RCB	    *v_qer_p,
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
     QES_QRY_SES	    *qss_p = & dds_p->qes_d8_union.u2_qry_ses;
     QEE_DSH	    *dsh_p = (QEE_DSH *)(v_qer_p->qef_cb->qef_dsh);
-    QEE_DDB_CB	    *qee_p = dsh_p->dsh_ddb_cb;
-    QEQ_DDQ_CB	    *ddq_p = & dsh_p->dsh_qp_ptr->qp_ddq_cb;
     QEQ_D10_REGPROC *sub_p = & act_p->qhd_obj.qed_regproc;
     TPR_CB	    tpr,
 		    *tpr_p = & tpr;
@@ -2467,9 +2432,6 @@ DB_STATUS qeq_d11_regproc(QEF_RCB	    *v_qer_p,
 		    *rqr_p = & rqr;
     i4		    tpr_op,
     		    rqr_op;
-    DD_PACKET	    *pkt_p;
-    i4		    temp_id;
-    i4	    *long_p;
 
 
     /*
@@ -2673,20 +2635,11 @@ DB_STATUS qeq_d12_regproc(QEF_RCB	    *v_qer_p,
 {
     DB_STATUS	    status = E_DB_OK;
     QES_DDB_SES	    *dds_p = & v_qer_p->qef_cb->qef_c2_ddb_ses;
-    QES_QRY_SES	    *qss_p = & dds_p->qes_d8_union.u2_qry_ses;
     QEE_DSH	    *dsh_p = (QEE_DSH *)(v_qer_p->qef_cb->qef_dsh);
-    QEE_DDB_CB	    *qee_p = dsh_p->dsh_ddb_cb;
-    QEQ_DDQ_CB	    *ddq_p = & dsh_p->dsh_qp_ptr->qp_ddq_cb;
     QEQ_D10_REGPROC *sub_p = & act_p->qhd_obj.qed_regproc;
-    TPR_CB	    tpr,
-		    *tpr_p = & tpr;
     RQR_CB	    rqr,
 		    *rqr_p = & rqr;
-    i4		    tpr_op,
-    		    rqr_op;
-    DD_PACKET	    *pkt_p;
-    i4		    temp_id;
-    i4	    *long_p;
+    i4		    rqr_op;
 
 
     /*

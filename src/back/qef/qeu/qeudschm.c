@@ -188,6 +188,8 @@ qeu_idx_qual_func(
 **	    qeu_d_cascade() expects one more parameter - an address of a 
 **	    DMT_TBL_ENTRY describing table/view/index being dropped; for all 
 **	    other types of objects, NULL must be passed
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Solaris warning fix (prototypes).
 */
 DB_STATUS
 qeu_dschema(
@@ -455,7 +457,8 @@ QEUQ_CB		*qeuq_cb)
 	STRUCT_ASSIGN_MACRO(schemaqeu, dbpqeu);
 	dbpqeu.qeu_lk_mode = DMT_S;
 	dbpqeu.qeu_access_mode = DMT_A_READ;
-	dbpqeu.qeu_f_qual = dbpqeu.qeu_f_qarg = 0;
+	dbpqeu.qeu_f_qual = NULL;
+	dbpqeu.qeu_f_qarg = NULL;
 	qparams.qeu_qparms[0] = (PTR) &schema_to_drop->db_schname;
 	dbpqeu.qeu_qual = qeu_dbp_qual_func;
 	dbpqeu.qeu_qarg = &qparams;

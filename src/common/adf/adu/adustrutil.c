@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -131,6 +131,9 @@
 **          Treat all spatial types the same as LBYTE.
 **      12-Oct-2010 (horda03) b124550
 **          Improve performance of string padding.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. No need for the reduced length
+**	    as it doesn't use UCS2 for CEs.
 **/
 
 
@@ -252,6 +255,7 @@ register    char	    **addr)
         case DB_TXT_TYPE:
             I2ASSIGN_MACRO(((DB_TEXT_STRING *) dv->db_data)->db_t_count, si);
 	    if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) && 
+		 dv->db_collID != DB_UCS_BASIC_COLL &&
 		 (si > adf_scb->adf_maxstring/2)) ||
 		(si > adf_scb->adf_maxstring))
 		return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));
@@ -1392,6 +1396,7 @@ i4		    *str_len)
         case DB_TXT_TYPE:
             I2ASSIGN_MACRO(((DB_TEXT_STRING *) dv->db_data)->db_t_count, si);
 	    if (((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) && 
+		 dv->db_collID != DB_UCS_BASIC_COLL &&
 		 (si > adf_scb->adf_maxstring/2)) ||
 		(si > adf_scb->adf_maxstring))
 		return (adu_error(adf_scb, E_AD1014_BAD_VALUE_FOR_DT, 0));

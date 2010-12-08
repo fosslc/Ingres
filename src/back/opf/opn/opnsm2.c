@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -64,20 +64,61 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static bool opb_vars_in_bm(
+	PST_QNODE *node,
+	OPV_BMVARS *bmvars);
+void opb_gbfbm(
+	OPS_SUBQUERY *subquery,
+	OPE_BMEQCLS *avail,
+	OPE_BMEQCLS *lavail,
+	OPE_BMEQCLS *ravail,
+	OPL_BMOJ *lojevalmap,
+	OPL_BMOJ *rojevalmap,
+	OPL_BMOJ *ojevalmap,
+	OPE_IEQCLS maxeqcls,
+	OPV_VARS *lvarp,
+	OPV_VARS *rvarp,
+	OPB_BMBF *jxbfm,
+	OPE_BMEQCLS *jeqh,
+	OPE_BMEQCLS *jxeqh,
+	OPE_BMEQCLS *leqr,
+	OPE_BMEQCLS *reqr,
+	OPV_BMVARS *lvmap,
+	OPV_BMVARS *rvmap,
+	OPV_BMVARS *bvmap,
+	OPL_IOUTER ojid,
+	OPL_BMOJ *ojinnermap,
+	OPO_CO *cop);
+static bool opb_spattr_check(
+	OPS_SUBQUERY *subquery,
+	OPV_VARS *varp,
+	OPE_IEQCLS speqc);
+static void opn_bylist_map(
+	OPS_SUBQUERY *subquery,
+	OPE_BMEQCLS *byeqcmap,
+	OPE_BMEQCLS *lavail,
+	OPE_BMEQCLS *ravail);
+void opn_sm2(
+	OPS_SUBQUERY *subquery,
+	OPN_JTREE *np,
+	OPE_BMEQCLS *jxeqh,
+	OPB_BMBF *jxbfm,
+	OPE_BMEQCLS *jeqh,
+	OPE_BMEQCLS *byeqcmap,
+	OPE_BMEQCLS *leqr,
+	OPE_BMEQCLS *reqr,
+	OPE_BMEQCLS *eqr,
+	OPN_JEQCOUNT *jxcnt,
+	OPO_ISORT *jordering,
+	OPO_ISORT *jxordering,
+	OPO_ISORT *lkeyjoin,
+	OPO_ISORT *rkeyjoin);
 
-/*
-**  Forward and/or External function references.
-*/
-
-static bool
-opb_spattr_check(
-	OPS_SUBQUERY	*subquery,
-	OPV_VARS	*varp,
-	OPE_IEQCLS	speqc
-);
-
 /*{
 ** Name: opb_vars_in_bm	- chk qtree vars in boolean factor bitmap
 **
@@ -376,10 +417,6 @@ opb_gbfbm(
 					** subtree */
 	OPB_BOOLFACT       *bp;         /* ptr to current boolean factor
 					** element being analyzed */
-	OPV_BMVARS	    tempmap;	/* at least one variable from the inner
-					** must exist in the subtree for the
-					** outer join qualification to be executed
-					** at this point */
 	bool		    left_bool;
 	bool		    right_bool;
 	bool		    outer_join;	/* TRUE if this boolean factor was 

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE html 
+     PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+     "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+<head>
+  <title>getRoutes (DatabaseConnection)</title>
+  <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1" />
+  <link rel="stylesheet" href="../.././rdoc-style.css" type="text/css" media="screen" />
+</head>
+<body class="standalone-code">
+  <pre><span class="ruby-comment cmt"># File src/database_connection.rb, line 141</span>
+  <span class="ruby-keyword kw">def</span> <span class="ruby-identifier">getRoutes</span>(<span class="ruby-identifier">departFrom</span>, <span class="ruby-identifier">arriveTo</span>, <span class="ruby-identifier">days</span>, <span class="ruby-identifier">includeReturn</span>)
+    <span class="ruby-identifier">flightDay</span> = <span class="ruby-identifier">getFlightDays</span>(<span class="ruby-identifier">days</span>)
+    <span class="ruby-identifier">query</span> = <span class="ruby-value str">&quot;SELECT rt_airline, al_iatacode, al_name, rt_flight_num, rt_depart_from, rt_arrive_to, rt_depart_at, rt_arrive_at, rt_arrive_offset, rt_flight_day &quot;</span> <span class="ruby-operator">+</span> 
+            <span class="ruby-value str">&quot;FROM route r, airline a &quot;</span> <span class="ruby-operator">+</span>
+            <span class="ruby-node">&quot;WHERE ((rt_depart_from = '#{departFrom}' and rt_arrive_to = '#{arriveTo}') &quot;</span>
+    <span class="ruby-identifier">query</span> <span class="ruby-operator">+=</span>       <span class="ruby-node">&quot; OR   (rt_depart_from = '#{arriveTo}' and rt_arrive_to = '#{departFrom}')&quot;</span> <span class="ruby-keyword kw">if</span> (<span class="ruby-identifier">includeReturn</span>)
+    <span class="ruby-identifier">query</span> <span class="ruby-operator">+=</span> <span class="ruby-node">&quot;) and rt_flight_day LIKE '#{flightDay}' and rt_airline = al_icaocode ORDER BY rt_airline, rt_flight_num&quot;</span>
+    <span class="ruby-identifier">resultset</span> = <span class="ruby-identifier">execute</span>(<span class="ruby-identifier">query</span>)
+    <span class="ruby-identifier">routes</span> = <span class="ruby-constant">Array</span>.<span class="ruby-identifier">new</span>
+    <span class="ruby-identifier">resultset</span>.<span class="ruby-identifier">each</span> { <span class="ruby-operator">|</span> <span class="ruby-identifier">route</span> <span class="ruby-operator">|</span> <span class="ruby-identifier">routes</span> <span class="ruby-operator">&lt;&lt;</span> <span class="ruby-constant">Route</span>.<span class="ruby-identifier">new</span>(<span class="ruby-identifier">route</span>) }
+    <span class="ruby-identifier">routes</span>
+  <span class="ruby-keyword kw">end</span></pre>
+</body>
+</html>

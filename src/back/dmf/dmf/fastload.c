@@ -192,7 +192,10 @@
 **          fixed format string for i8
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	30-Nov-2010 (kschendel) SIR 124685
+**	    dmf-get-srs proto now in dml.h.
 */
+
 /* forward and/or static references */
 static DB_STATUS
 handle_peripheral(
@@ -315,6 +318,8 @@ handle_peripheral(
 **	19-Apr-2010 (kschendel) SIR 123485
 **	    Various changes for new blob handling, which among other things
 **	    requires the use of DML level table open here.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    dmf_tbl_info(), dmf_last_id() prototyped in dml.h
 */
 DB_STATUS
 dmffload( DMF_JSX	*jsx,
@@ -505,9 +510,6 @@ dmffload( DMF_JSX	*jsx,
     ** Setup the FEXI functions
     */
     {
-        FUNC_EXTERN DB_STATUS   dmf_tbl_info();
-        FUNC_EXTERN DB_STATUS	dmf_last_id();
-        FUNC_EXTERN DB_STATUS	dmf_get_srs();
  
         status = adg_add_fexi(&adf_scb, ADI_01PERIPH_FEXI, dmpe_call);
         if (status != E_DB_OK)

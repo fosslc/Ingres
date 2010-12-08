@@ -178,6 +178,8 @@
 **	    you are running a platform that has no doublebyte characters
 **	13-Jan-2010 (wanfr01) Bug 123139
 **	    Create single byte versions of the CM macros
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 */
 
 /*
@@ -354,86 +356,62 @@ GLOBALREF	CM_UTF8CASE	*CM_UTF8CaseTab;
 # endif
 
 FUNC_EXTERN u_i2        cmkcheck(
-#ifdef  CL_PROTOTYPED
         u_char          *point,
         u_char          *strstart
-#endif
 );
 FUNC_EXTERN u_i4       cmicopy(
-#ifdef  CL_PROTOTYPED
         u_char          *source,
         u_i4            len,
         u_char          *dest
-#endif
 );
 
 FUNC_EXTERN i4		cmupct(
-#ifdef CL_PROTOTYPED
 	u_char		*str, 
 	u_char		*startpos
-#endif
 );
 
 FUNC_EXTERN u_i2 	cmu_getutf8property(
-#ifdef CL_PROTOTYPED
 	u_char 	*key, 
 	i4 	keycnt
-#endif
 );
 
 FUNC_EXTERN u_i2 	cmu_getutf8_toupper(
-#ifdef CL_PROTOTYPED
 	u_char	*src, 
 	i4	srclen, 
 	u_char	*dst, 
 	i4	dstlen
-#endif
 );
 
 FUNC_EXTERN u_i2 	cmu_getutf8_tolower(
-#ifdef CL_PROTOTYPED
 	u_char	*src, 
 	i4	srclen, 
 	u_char	*dst, 
 	i4	dstlen
-#endif
 );
 
 # if defined(NT_GENERIC)
 FUNC_EXTERN u_i2* CMgetAttrTab(
-#ifdef  CL_PROTOTYPED
     void
-#endif
 );
 
 FUNC_EXTERN u_char* CMgetCaseTab(
-#ifdef  CL_PROTOTYPED
     void
-#endif
 );
 
 FUNC_EXTERN CM_UTF8ATTR* CMgetUTF8AttrTab(
-#ifdef  CL_PROTOTYPED
     void
-#endif
 );
 
 FUNC_EXTERN CM_UTF8CASE* CMgetUTF8CaseTab(
-#ifdef  CL_PROTOTYPED
     void
-#endif
 );
 
 FUNC_EXTERN char CMgetUTF8(
-#ifdef  CL_PROTOTYPED
     void
-#endif
 );
 
 FUNC_EXTERN i4 *CMgetUTF8Bytes(
-#ifdef  CL_PROTOTYPED
     void
-#endif
 );
 # endif
 

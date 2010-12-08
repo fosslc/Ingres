@@ -109,6 +109,10 @@
 **      17-jun-2010 (shust01)
 **          Include cv.h header file to resolve CVupper() being undefined.
 **          Bug 123139.
+**      29-Nov-2010 (frima01) SIR 124685
+**          Added static declaration to xCL_041_DECNET_DOES_NOT_EVEN_EXIST.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Fix well-meaning but incorrect NULL casts.
 */
 
 #ifdef	xCL_041_DECNET_EXISTS
@@ -682,8 +686,8 @@ BS_PARMS	*bsp;
 
 	/* unregister file descriptors */
 
-	(void)iiCLfdreg( bcb->fd, FD_READ, (VOID (*))0, (PTR)0, -1 );
-	(void)iiCLfdreg( bcb->fd, FD_WRITE, (VOID (*))0, (PTR)0, -1 );
+	(void)iiCLfdreg( bcb->fd, FD_READ, NULL, NULL, -1 );
+	(void)iiCLfdreg( bcb->fd, FD_WRITE, NULL, NULL, -1 );
 
 	(VOID)shutdown(bcb->fd, 2);
 	(VOID)close(bcb->fd);
@@ -891,5 +895,5 @@ BS_DRIVER BS_sockdnet = {
 	0,		/* no extended info currently */
 } ;
 # else
-VOID xCL_041_DECNET_DOES_NOT_EVEN_EXIST(){};
+static VOID xCL_041_DECNET_DOES_NOT_EVEN_EXIST(void){}
 # endif

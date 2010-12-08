@@ -19533,6 +19533,8 @@ DB_ERROR	*dberr)
 **	    once per CP, not once for each CP thread, plus
 **	    we only force the log if there are buffers to 
 **	    flush.
+**	18-Apr-2010 (wanfr01) b123594
+**	    Flag buffers that will be flushed by this CP
 */
 static DB_STATUS
 cp_prep(
@@ -19647,6 +19649,7 @@ DB_ERROR	*dberr)
 	    {
 		/* Add buffer to cache's CP array */
 		cp_array[cpbufs++] = i;
+		b->buf_cpprep = bm_common->bmcb_cpcount;
 	    }
 	}
 
@@ -25514,6 +25517,9 @@ dm0p_recover_state(i4	    lg_id)
 **	05-Jun-2009 (thaju02)
 **	    During cp if buffer is modified, wait until cp has flushed
 **	    buffer before setting valid stamp. (B118454)
+**	18-Apr-2010 (wanfr01) b123594
+**	    Modify b118454 fix - do not wait unless buffer is actually part of
+**	    the active CP
 */
 VOID
 dm0p_set_valid_stamp(
@@ -25575,8 +25581,10 @@ i4	    lock_list)
 	    page_pool = lbm->lbm_pages[b->buf_id.bid_cache];
 	    page = (DMPP_PAGE *)((char *)page_pool + b->buf_page_offset);
 
+	    dm0p_mlock(SEM_EXCL, &bm_common->bmcb_cp_mutex);
             /* if in a CP, wait until done */
             if ( (bm_common->bmcb_status & BMCB_FCFLUSH) &&
+		 (b->buf_cpprep == bm_common->bmcb_cpcount) &&
 		 (b->buf_cpcount < bm_common->bmcb_cpcount) && 
                  ( (b->buf_sts & BUF_MODIFIED) ||
                    ( ((b->buf_sts & (BUF_FIXED | BUF_WRITE)) ==
@@ -25587,6 +25595,9 @@ i4	    lock_list)
 		DM0P_BSTAT      *lbm_stats;
 		DM0P_BMCB       *bm;
 
+		dm0p_eset(lock_list, DM0P_BIO_EVENT,
+		    b->buf_id.bid_cache, b->buf_id.bid_index, 0);
+		dm0p_munlock(&bm_common->bmcb_cp_mutex);
 		bm = lbm->lbm_bmcb[b->buf_id.bid_cache];
 		lbm_stats = &lbm->lbm_stats[b->buf_id.bid_cache];
 
@@ -25595,8 +25606,6 @@ i4	    lock_list)
                 lbm_stats->bs_iowait[b->buf_type]++;
                 bm->bm_stats.bs_iowait[b->buf_type]++;
                 b->buf_sts |= BUF_IOWAIT;
-                dm0p_eset(lock_list, DM0P_BIO_EVENT,
-                    b->buf_id.bid_cache, b->buf_id.bid_index, 0);
                 dm0p_munlock(&b->buf_mutex);
 
                 /* Wait for buffer. */
@@ -25608,7 +25617,10 @@ i4	    lock_list)
                 continue;
             }
 	    else
+	    {
+		dm0p_munlock(&bm_common->bmcb_cp_mutex);
 		b->buf_tcb_stamp = validation_stamp;
+	    }
 	}
 	else
 	{

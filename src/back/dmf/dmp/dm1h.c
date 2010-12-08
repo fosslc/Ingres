@@ -604,6 +604,8 @@
 **	16-Aug-2010 (jonj) SD 146221
 **	    dm1r_crow_lock(flags) now DM1R_LK_? instead of LK_? to avoid
 **	    collisions with lk.h defines.
+**	11-Nov-2010 (miket) SIR 122403 BUG 124742 SD 147780
+**	    Fix duplicate row checking for unique indexes for encryption.
 */
 DB_STATUS
 dm1h_allocate(
@@ -908,7 +910,20 @@ DB_ERROR       *dberr)
 		}
 		else
 		{
-		    s = adt_ktktcmp(adf_cb, (i4)t->tcb_keys,
+		    /*
+		    ** If this is an encrypted index there is just one index
+		    ** column to compare, and we must compare the encrypted
+		    ** index value to the encrypted candidate insertion value.
+		    */
+		    if (t->tcb_parent_tcb_ptr->tcb_rel.relencflags &
+				TCB_ENCRYPTED)
+		    {
+			s = E_DB_OK;
+			compare = MEcmp(rcb->rcb_erecord_ptr, rec_ptr,
+				t->tcb_data_rac.att_ptrs[0]->encwid);
+		    }
+		    else
+			s = adt_ktktcmp(adf_cb, (i4)t->tcb_keys,
 				t->tcb_key_atts, record, rec_ptr, &compare);
 		    if (s == E_DB_OK)
 		    {

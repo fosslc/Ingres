@@ -26,6 +26,9 @@
 #ifdef UNIX
 #include <sys/wait.h>
 #endif
+#ifdef NT_GENERIC
+#include <Tlhelp32.h>
+#endif
 
 #include <ex.h>
 
@@ -392,6 +395,16 @@
 **	08-May-2009 (drivi01)
 **	    Add space after "connect with " string for better output 
 **	    message.
+**	15-Oct-2010 (drivi01)
+**	    Add some additional wait times for the commands that are 
+**	    still alive when sep_cmd sleep time has expired.
+**	    It is possible the command is just taking longer to run.
+**	    If all fails and we have to terminate the command, make
+**	    sure all its children are terminated too and are not 
+**	    lingering around and causing hangs or preventing
+**	    sep from cleaning up after itself or destroying databases.
+**	1-Dec-2010 (kschendel)
+**	    Compiler warning fixes.
 */
 
 /*
@@ -938,7 +951,7 @@ STATUS
 PTM_read_fm_TM( i4  *thechar )
 {
     STATUS                 ioerr = OK ;
-    i4                     lastchar = NULL ;
+    i4                     lastchar = 0 ;
 
     /*
     ** read results from TM
@@ -1200,7 +1213,7 @@ process_if(FILE *testFile,char *commands[],i4 cmmdID)
 	    else
 	    {
 		if (if_level[if_ptr++] = Eval_If(commands))
-		    cmd = NULL;		/* Evaluate expression. if true, */
+		    cmd = 0;		/* Evaluate expression. if true, */
 		else			/* get out. else, skip to next   */
 		{			/* control command and continue. */
 		    ioerr = get_command(testFile,CONTROL_PROMPT,FALSE);
@@ -1222,7 +1235,7 @@ process_if(FILE *testFile,char *commands[],i4 cmmdID)
 		    else
 		    {
 			if (if_level[if_ptr] = Eval_If(commands))
-			    cmd = NULL;
+			    cmd = 0;
 			else
 			{
 			    ioerr = get_command(testFile,CONTROL_PROMPT,FALSE);
@@ -1239,7 +1252,7 @@ process_if(FILE *testFile,char *commands[],i4 cmmdID)
 		    {
 			case FALSE:
 				if_level[if_ptr-1] = TRUE;
-				cmd = NULL;
+				cmd = 0;
 			    break;
 			case TRUE:
 				if_level[if_ptr-1] = FALSE;
@@ -1254,14 +1267,14 @@ process_if(FILE *testFile,char *commands[],i4 cmmdID)
 	    case ENDIF_CMMD:
 
 		    if (if_level[--if_ptr] != -1)
-			cmd = NULL;
+			cmd = 0;
 		    else
 		    {
 			ioerr = get_command(testFile,CONTROL_PROMPT,FALSE);
 			cmd = classify_cmmd(sepcmmds,lineTokens[1]);
 		    }
 
-		    if_level[if_ptr] = NULL;
+		    if_level[if_ptr] = 0;
 
 		break;
 
@@ -1852,7 +1865,7 @@ PFE_put_keystrokes( i4  recording, i4  *in_keys, bool fromBOS, i4  *sendEOQ )
 
 	if (buffer_1[*in_keys-1] == '\n')
 	{
-	    buffer_1[*in_keys-1] = NULL;    /* get rid of EOL */
+	    buffer_1[*in_keys-1] = EOS;    /* get rid of EOL */
 	}
 
 	/* decode input keys coming from test script */
@@ -2326,6 +2339,18 @@ disconnectTClink(char *pidstring)
     int		wait_status;
 #ifdef NT_GENERIC
     HANDLE	SEPsonhandle;
+	HANDLE procs;
+	PROCESSENTRY32 pe;
+	int bRet;
+	typedef struct procid_list {
+		PID	pid;
+		struct procid_list *prev;
+		struct procid_list *next;
+	}PROCID_LIST;
+	PROCID_LIST		root_pid;
+	PROCID_LIST		*plist_head;
+	PROCID_LIST		*plist_ptr;
+	PROCID_LIST		*plist_tail;	
 #endif
 
     EXinterrupt(EX_OFF);
@@ -2335,6 +2360,9 @@ disconnectTClink(char *pidstring)
 
     if (SEPsonpid != 0)
     {
+		int		count = 2;
+		bool	bAlive = FALSE;
+
         PCsleep(cmd_sleep);
 #ifdef NT_GENERIC
         SEPsonhandle = OpenProcess (PROCESS_ALL_ACCESS,FALSE,SEPsonpid);
@@ -2342,13 +2370,73 @@ disconnectTClink(char *pidstring)
 #else
         waitpid(SEPsonpid, &wait_status, WNOHANG);
 #endif
-        if (PCis_alive(SEPsonpid) == TRUE)
+	/* If command is still alive, it may be that it's just taking a 
+	** little longer to complete.  Instead of increasing SEP_CMD_SLEEP
+	** add some intelligence to give the command an extra few minutes.
+	*/
+	while (count--)
+	    if (( bAlive = PCis_alive( SEPsonpid )) == TRUE )
+		PCsleep(cmd_sleep);
+		
+	bAlive = PCis_alive(SEPsonpid);
+	if (bAlive == TRUE)
         {
 	    STcopy(ERx("ERROR: Child did not exit, had to terminate."),buffer);
 	    append_line(buffer,1);
 #ifdef NT_GENERIC
-            SEPsonhandle = OpenProcess (PROCESS_TERMINATE,FALSE,SEPsonpid);
-            TerminateProcess(SEPsonhandle, 15);
+	    /* Terminating just one process is not enough because that leaves
+	    ** commands executed by sepchild lingering around.
+	    ** If we're terminating a proces, terminate its children too.
+	    */
+	    root_pid.pid = SEPsonpid;
+	    root_pid.next = NULL;
+	    plist_head = plist_tail = plist_ptr = &root_pid;
+	    plist_head->prev = plist_head;
+
+	    memset(&pe, 0, sizeof(PROCESSENTRY32));
+	    pe.dwSize = sizeof(PROCESSENTRY32);
+	    procs = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS/*TH32CS_SNAPALL*/, SEPsonpid);
+	    /* Scan all processes and create a linked list of 
+	    ** process ids of the children under root process.
+	    ** All processes in the tree should be killed.
+	    */
+	    if (procs)
+	    {
+		while (plist_ptr != NULL)
+		{
+		     bRet = Process32First(procs, &pe);
+		     while (bRet)
+		     {
+			if(pe.th32ParentProcessID == plist_ptr->pid)
+			{
+			     char *tmp = plist_tail;
+			     plist_tail = plist_tail->next = SEP_MEalloc(SEP_ME_TAG_PIDS, sizeof(PROCID_LIST), TRUE, NULL);
+			     plist_tail->pid = pe.th32ProcessID;
+			     plist_tail->next = NULL;
+			     plist_tail->prev = tmp;
+			     SEPsonhandle = OpenProcess (PROCESS_TERMINATE,FALSE, pe.th32ProcessID); 
+			     TerminateProcess(SEPsonhandle, 15);
+			     CloseHandle(SEPsonhandle);
+			}
+			bRet = Process32Next(procs, &pe);
+		     }
+		     plist_ptr = plist_ptr->next;
+		}
+	    }
+	    /* free all the pids  */
+	    plist_ptr = plist_tail;
+	    while (plist_ptr != plist_head && plist_ptr != NULL)
+	    {
+		MEfree(plist_ptr);
+		plist_ptr = plist_ptr->prev;
+		plist_ptr->next = NULL;
+	    }
+            SEPsonhandle = OpenProcess (PROCESS_TERMINATE,FALSE,SEPsonpid); 
+            if (SEPsonhandle) 
+	    {
+		TerminateProcess(SEPsonhandle, 15);
+		CloseHandle(SEPsonhandle);
+	    }
 #else
 	    kill(SEPsonpid, 9);
 #endif /*NT_GENERIC*/
@@ -2368,7 +2456,11 @@ disconnectTClink(char *pidstring)
 	    append_line(buffer,1);
 #ifdef NT_GENERIC
             SEPsonhandle = OpenProcess (PROCESS_TERMINATE,FALSE,SEPsonpid);
-            TerminateProcess(SEPsonhandle, 9);
+			if (SEPsonhandle)
+			{
+				TerminateProcess(SEPsonhandle, 9);
+				CloseHandle(SEPsonhandle);
+			}
 #else
 	    kill(SEPsonpid, 9);
 #endif
@@ -2454,7 +2546,6 @@ disconnectTClink(char *pidstring)
 
 
     /* delete temporary files */
-
     STprintf(buffer,ERx("tm%s.stf"),pidstring);
     del_file(buffer);
     STprintf(buffer,ERx("to%s.stf"),pidstring);

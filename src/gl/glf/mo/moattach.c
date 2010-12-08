@@ -72,6 +72,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**      03-nov-2010 (joea)
+**          Declare MO_ipindex as static.
 */
 
 
@@ -518,7 +520,7 @@ MOon_off( i4  operation, i4  *old_state )
 **	    cast PTRs before use.
 */
 
-STATUS
+static STATUS
 MO_ipindex(i4 msg,
 	   PTR cdata,
 	   i4  linstance,

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -60,8 +60,17 @@
 **          can automate this next time.
 **	22-oct-93  (robf)
 **          Add connect_limit/idle_limit/priority_limit handling
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+i4 psy_dbpriv(
+	PSY_CB *psy_cb,
+	PSS_SESBLK *sess_cb);
+i4 psy_ckdbpr(
+	PSQ_CB *psq_cb,
+	u_i4 dbprmask);
 
 /*{
 ** Name: psy_dbpriv - GRANT/REVOKE database privileges

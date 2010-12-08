@@ -16,6 +16,7 @@
 # include	<er.h>
 # include	<lo.h>
 # include	<pm.h>
+# include	"handylocal.h"
 
 #ifndef MAXHOSTNAME
 #define MAXHOSTNAME     64
@@ -24,24 +25,6 @@
 /*
 NO_OPTIM = i64_aix
 */
-
-# ifdef xCL_SUNOS_CMW
-# define SunOS_CMW
-# undef ulong
-# include <cmw/tnet_attrs.h>
-# include <cmw/sctnattrs.h>
-# include <sys/label.h>
-# include <pwd.h>
-# endif
-
-# if defined(hp8_bls)
-# include <sys/security.h>
-# include <mandatory.h>
-# include <m6attrs.h>
-# include <sys/sctnmasks.h>
-# include <sys/sctnerrno.h>
-# include <pwd.h>
-# endif /* hp8_bls */
 
 # ifdef xCL_066_UNIX_DOMAIN_SOCKETS
 # define x_SOCKETS_EXIST
@@ -83,14 +66,53 @@ NO_OPTIM = i64_aix
 # include	<bsi.h>
 # include	"bssockio.h"
 
-#if defined(m88_us5) || defined(pym_us5) || defined(rmx_us5) || defined(rux_us5)
-# include       <signal.h>
-# endif
 
-static VOID iisock_set_trace();
+/* TABLE OF CONTENTS */
+VOID iisock_error(
+	BS_PARMS *bsp,
+	STATUS status);
+VOID iisock_nonblock(
+	int fd);
+VOID iisock_listen(
+	BS_PARMS *bsp,
+	struct sockaddr *s,
+	i4 size);
+VOID iisock_listen_compl(
+	void *fd_posted,
+	STATUS status);
+VOID iisock_unlisten(
+	BS_PARMS *bsp);
+VOID iisock_accept(
+	BS_PARMS *bsp,
+	struct sockaddr *s,
+	i4 size);
+VOID iisock_request(
+	BS_PARMS *bsp,
+	struct sockaddr *s,
+	i4 size);
+VOID iisock_connect(
+	BS_PARMS *bsp,
+	struct sockaddr *s,
+	i4 size);
+VOID iisock_send(
+	BS_PARMS *bsp);
+VOID iisock_receive(
+	BS_PARMS *bsp);
+VOID iisock_close(
+	BS_PARMS *bsp);
+bool iisock_regfd(
+	BS_PARMS *bsp);
+VOID iisock_ok(
+	BS_PARMS *bsp);
+i4 iisock_ext_attr(
+	BS_PARMS *bsp,
+	i4 fd);
+STATUS iisock_ext_info(
+	BS_PARMS *bsp,
+	BS_EXT_INFO *info);
+static VOID iisock_set_trace(void);
 
 static i4 iisock_trace=0;
-i2 ewbcnt=0;
 static i4  sock_trace=0;
 
 /*
@@ -376,6 +398,11 @@ static i4  sock_trace=0;
 **	    disconnect time (iisock_close() call).
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added include of handylocal.h and prototypes.
+**	30-Nov-2010 (kschendel)
+**	    Drop obsolete ports, and B1 remnants.  Tighten up completion
+**	    function pointer prototype, eliminate misguided/wrong null casts.
 */
 
 
@@ -481,18 +508,6 @@ i4		size;
 		iisock_error(bsp, BS_LISTEN_ERR);
 		return;
 	}
-
-	/*
-	** For HP-BLS we need to start as an MLS server
-	*/
-# if defined(hp8_bls)
-        if ( m6mlserver(fd, 1) < 0 )
-        {
-                iisock_error( bsp, BS_LISTEN_ERR );
-                return;
-        }
-
-# endif /* hp8_bls */
 
 	/* Make address reusable */
 
@@ -619,12 +634,11 @@ i4		size;
 */
 
 VOID
-iisock_listen_compl( fd_posted, status )
-struct fdinfo	*fd_posted;
-STATUS       	status;
+iisock_listen_compl( void *parm, i4 status )
 {
+	struct fdinfo	*fd_posted = (struct fdinfo *) parm;
 	LBCB	*lbcb = (LBCB *)fd_posted->lbcb_self;
-	PTR	closure = lbcb->closure;
+	void	*closure = lbcb->closure;
 
 	SOCK_TRACE(2)("iisock_listen_compl: my closure=%p, listen func=%p closure=%p fd=%d status=%d\n",
 		      fd_posted, lbcb->func, closure, fd_posted->fd_ai, status);
@@ -687,8 +701,8 @@ BS_PARMS	*bsp;
 		    {
 		        fd = lbcb->fdList[i].fd_ai;
 		        /* unregister file descriptors */
-		        (void)iiCLfdreg( fd, FD_READ, (VOID (*))0, (PTR)0, -1 );
-		        (void)iiCLfdreg( fd, FD_WRITE, (VOID (*))0, (PTR)0, -1 );
+		        (void)iiCLfdreg( fd, FD_READ, NULL, NULL, -1 );
+		        (void)iiCLfdreg( fd, FD_WRITE, NULL, NULL, -1 );
 		        if( close( fd ) < 0 )
 			    iisock_error( bsp, BS_CLOSE_ERR );
 		    }
@@ -703,8 +717,8 @@ BS_PARMS	*bsp;
 	{
 		/* unregister file descriptors */
 
-		(void)iiCLfdreg( lbcb->fd, FD_READ, (VOID (*))0, (PTR)0, -1 );
-		(void)iiCLfdreg( lbcb->fd, FD_WRITE, (VOID (*))0, (PTR)0, -1 );
+		(void)iiCLfdreg( lbcb->fd, FD_READ, NULL, NULL, -1 );
+		(void)iiCLfdreg( lbcb->fd, FD_WRITE, NULL, NULL, -1 );
 		if( close( lbcb->fd ) < 0 )
 			iisock_error( bsp, BS_CLOSE_ERR );
 		lbcb->fd = -1;
@@ -736,35 +750,12 @@ i4		size;
 	BCB	*bcb = (BCB *)bsp->bcb;
 	int	fd;
 	int	local_errno;
-# ifdef xCL_SUNOS_CMW
-        int       status;
-        tnet_attr_t attrp;
-        caddr_t   bufp;
-        int     attr_mask;
-        int     defaults_mask;
-# endif
-# if defined(hp8_bls)
-        int             status;
-        m6attr_t        attrp;
-        int             attr_mask, def_attr_mask;
-        extern int 	errno;
-# endif /* hp8_bls */
-# if defined(pym_us5) || defined(rmx_us5) || defined(rux_us5) 
-	sigset_t set, oset;
-# endif
 
 	SOCK_TRACE(2)("iisock_accept: listen fd=%d\n", lbcb->fd );
 
-# if defined(pym_us5) || defined(rmx_us5) || defined(rux_us5)
-	(void) sigfillset(&set);
-	(void) sigprocmask(SIG_BLOCK, &set, &oset);
-# endif
 	/* try to do an accept */
 
 	fd = accept( lbcb->fd, s, &size );
-# if defined(pym_us5) || defined(rmx_us5) || defined(rux_us5)
-	(void) sigprocmask(SIG_SETMASK, &oset, (sigset_t *)NULL);
-# endif
 
 	SOCK_TRACE(2)("iisock_accept: client fd=%d\n", fd );
 
@@ -777,91 +768,6 @@ i4		size;
 		iisock_error( bsp, BS_ACCEPT_ERR );
 		return;
 	}
-
-# ifdef xCL_SUNOS_CMW
-        /*
-        ** Allocate attributes array and initialize two elements to hold
-        ** the SL/IL pair of the client.
-        */
-        attr_mask = TNET_SW_SEN_LABEL | TNET_SW_INFO_LABEL;
-        status = tnet_create_attr_buf(&attrp,
-                                      attr_mask,
-                                  (caddr_t *) NULL);
-        if (status != 0) 
-        {
-            iisock_error( bsp, BS_ACCEPT_ERR );
-	    return;
-        }
-
-        /*
-        ** Find out the SL/IL pair of the client.
-        */
-        if (tnet_last_attrs(fd, attrp, &attr_mask) != 0 ) 
-        {
-            free(attrp);
-            iisock_error( bsp, BS_ACCEPT_ERR );
-	    return;
-        }
-
-        /*
-        ** Set the default sensitivity label for data written to this socket to
-        ** the label of the connecting client so the client can read without
-        ** requiring privilege.
-        */
-        defaults_mask = 0;
-        status = tnet_def_attrs(fd, attr_mask, defaults_mask, attrp);
-        if (status != 0) 
-        {
-            iisock_error( bsp, BS_ACCEPT_ERR );
-	    return;
-        }
-
-        free(attrp);
-# endif
-# if defined(hp8_bls)
-            
-        /*
-        ** Allocate attributes array and initialize two elements to hold
-        ** the SL of the client.
-        */
-
-	attr_mask = M6M_SEN_LABEL;
-        status = m6create_attr_buf(&attrp, attr_mask, 0);
-
-        if (status != 0)
-        {
-		free((char *) attrp);
-		iisock_error( bsp, BS_ACCEPT_ERR );
-		return;
-        }
-
-        /*
-        ** Find out the SL of the client.
-        */
-
-        if (m6last_attr(fd, attrp, &attr_mask) != 0 )
-        {
-		free((char *) attrp);
-		iisock_error( bsp, BS_ACCEPT_ERR );
-		return;
-        }
-
-        /*
-        ** Set the security label of socket to that of the incoming
-        ** connection so that we can talk down to it.
-        */
-
-        def_attr_mask = 0;
-        status = m6def_attr(fd, attr_mask, def_attr_mask, attrp);
-        if (status != 0) 
-        {
-		free((char *) attrp);
-		iisock_error( bsp, BS_ACCEPT_ERR );
-		return;
-        }
-
-	free((char *) attrp);
-# endif /* hp8_bls */
 
         /*
         ** Bsp->buf corresponds to the listen.node_id field in the GCC
@@ -1045,30 +951,8 @@ BS_PARMS	*bsp;
                 	bcb->optim |= BS_SOCKET_DEAD;
 			return;
 		}
-		else
-		{
-		   /* Under extreme socket contention in dgux, a write
-		      may return EWOULDBLOCK.  If you get 500 consecutive
-		      EWOULDBLOCKs, sleep for a second so the socket has
- 		      a chance to catch up */    
-# if defined(dgi_us5)
-		   ewbcnt++;
-		   if (ewbcnt>=500) 
-		   {
-			sleep(1);
-			ewbcnt = 0;
-		   }
-# endif
-		} 
 		n = 0;
 	}
- 	else
-	{
-# if defined(dgi_us5)
-	   if (ewbcnt)
-		ewbcnt = 0;
-# endif
-	}	
 	if( n == bsp->len )
 	    bcb->optim |= BS_SKIP_W_SELECT;
 
@@ -1152,8 +1036,8 @@ BS_PARMS	*bsp;
 
 	/* unregister file descriptors */
 
-	(void)iiCLfdreg( bcb->fd, FD_READ, (VOID (*))0, (PTR)0, -1 );
-	(void)iiCLfdreg( bcb->fd, FD_WRITE, (VOID (*))0, (PTR)0, -1 );
+	(void)iiCLfdreg( bcb->fd, FD_READ, NULL, NULL, -1 );
+	(void)iiCLfdreg( bcb->fd, FD_WRITE, NULL, NULL, -1 );
 
 	if( close( bcb->fd ) < 0 )
 	{
@@ -1304,54 +1188,12 @@ BS_PARMS	*bsp;
 
 /*
 ** Name: iisock_ext_attr - enable extended attributes on a socket
+** Used for security labels, no longer implemented.
 */
 
 i4
 iisock_ext_attr( BS_PARMS *bsp, i4  fd)
 {
-
-# if defined(hp8_bls)
-	static bool mand_call=FALSE;
-# endif
-
-# if defined(hp8_bls)
-        /* m6ext_err() produces undefined symbols
-        m6errno = m6ext_err();
-        */
-
-        /* 
-        ** Intialise system wide security variables with one
-        ** call to mand_init(), this will set up the globals
-        ** mand_syshi, mand_syslo, mand_max_class and mand_max_cat
-        ** such that calls to mand_bytes(), m6peek() will return correct 
-        ** values.
-        */
-        if(mand_call == FALSE) 
-        {
-            if(mand_init() != 0)
-            {
-                return !OK;
-            } 
-            else 
-            {
-                mand_call = TRUE;
-            }
-        }
-        if ( m6ext_attr(fd, M6_EXT_ATTRS_ON) < 0 )
-        {
-            return !OK;
-        }
-# endif
-
-# ifdef xCL_SUNOS_CMW
-        /*
-        ** Enable the extended network interface on this socket.
-        */
-        if ( tnet_ext_attrs(fd, 1) < 0 ) 
-        {
-	    return !OK;
-        }
-# endif
 	return OK;
 }
 
@@ -1422,141 +1264,6 @@ iisock_ext_info(BS_PARMS *bsp, BS_EXT_INFO *info)
 	        ret_status=BS_INTERNAL_ERR;
 	        break;
 	    }
-# ifdef xCL_B1_SECURE
-	    info->info_value|=BS_EI_USER_ID;
-# ifdef xCL_SUNOS_CMW
-            {
-                int       status;
-                u_long    attr_mask;
-                tnet_attr_t attrp;
-                uid_t uid;
-                struct passwd *pwentry, *getpwuid();
-                i4  uid_len;
-
-                attr_mask = TNET_SW_UID;
-
-                status = tnet_create_attr_buf(&attrp, attr_mask, (caddr_t*)0);
-                if (status != 0) 
-                {
-                    SOCK_TRACE(1)("sock_ext_info: tnet_create_attr_buf() failed, status %d errno %d\n",
-                                          status, errno);
-                    ret_status = BS_INTERNAL_ERR;
-                    break;
-                }
-
-                /*
-                ** Get the UID of the client.
-                */
-                status = tnet_last_attrs(bcb->fd, attrp, &attr_mask);
-                if(status != 0)
-                {
-                    SOCK_TRACE(2)("sock_ext_info: tnet_last_attrs() failed, status %d errno %d\n",
-                                  status, errno);
-                    ret_status = BS_INTERNAL_ERR;
-                    break;
-                }
-
-                uid = tn_uid(attrp);
-                if ((pwentry = getpwuid (uid)) == (struct passwd *)NULL)
-                {
-                    SOCK_TRACE(2)("sock_ext_info:getpwuid(%d) failed (errno %d)\n",
-                              uid, errno);
-                    ret_status = BS_INTERNAL_ERR;
-                    free(attrp);
-                    break;
-                }
-                if ((uid_len = STlength(pwentry->pw_name)) > info->len_user_id)
-                {
-                    SOCK_TRACE(2)("sock_ext_info:user buffer too small (%d) user id = %d chars\n",
-                              info->len_user_id, uid_len);
-                    ret_status = BS_INTERNAL_ERR;
-                    free(attrp);
-                    break;
-                }
-
-                /*
-                ** Return the user name and length (without null terminator)
-                */
-                STncpy( info->user_id, pwentry->pw_name, uid_len);
-                info->user_id[ uid_len ] = EOS;
-                info->len_user_id = uid_len;
-
-                free(attrp);
-            }
-# endif
-
-#if defined(hp8_bls)
-            {
-                int             status;
-                m6attr_t        attrp;
-                int		attr_mask;
-                uid_t uid;
-                struct passwd	*pwentry, *getpwuid();
-		struct passwd	pwd;
-		char            pwuid_buf[512];
-                i4  uid_len;
-                extern int	errno, m6errno;
-
-
-                /*
-                ** Allocate attributes array and initialize elements to hold
-                ** the uid of the client.
-                */
-
-                attr_mask = M6M_UID;
-                
-                status = m6create_attr_buf(&attrp, attr_mask, 0);
-                if (status != 0)
-                {
-                    SOCK_TRACE(1)("sock_ext_info: m6create_attr_buf() for \
-                        uid failed: %d\n", errno);
-                    free(attrp);
-                    ret_status=BS_INTERNAL_ERR;
-                    break;
-                }
-
-                /*
-                ** Find out the uid of the client from the socket.
-                */
-                m6errno = 0;
-                if (m6last_attr( bcb->fd, attrp,&attr_mask) != 0 )
-                {
-                    SOCK_TRACE(2)("sock_ext_info: m6last_attr() failed:%d\n", 
-                        errno);
-                    free(attrp);
-                    ret_status=BS_INTERNAL_ERR;
-                    break;
-                }
-                
-                uid = m6_uid(attrp);
-                if ((pwentry = iiCLgetpwuid (uid, &pwd, pwuid_buf, sizeof(pwuid_buf))) == (struct passwd *)NULL)
-                {
-                    SOCK_TRACE(2)("sock_ext_info:getpwuid(%d) \
-                        failed (errno %d)\n", uid, errno);
-                    ret_status = BS_INTERNAL_ERR;
-                    free(attrp);
-                    break;
-                }
-                if ((uid_len = STlength(pwentry->pw_name)) > info->len_user_id)
-                {
-                    SOCK_TRACE(2)("sock_ext_info:user buffer too small (%d) \
-                        user id = %d chars\n", info->len_user_id, uid_len);
-                    ret_status = BS_INTERNAL_ERR;
-                    free(attrp);
-                    break;
-                }
-
-                /*
-                ** Return the user name and length (without null terminator)
-                */
-                STncpy( info->user_id, pwentry->pw_name, uid_len);
-		info->user_id[ uid_len ] = EOS;
-                info->len_user_id = uid_len;               
-
-                free((char *) attrp);
-            }
-# endif /* hp8_bls */
-# endif
 	} /* End user id */
 
 	/* Stop on error */

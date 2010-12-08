@@ -812,6 +812,12 @@ NO_OPTIM = dr6_us5
 **          Remove table name,owner from log records.
 **      09-aug-2010 (maspa05) b123189, b123960
 **          Added parameter to dm0l_opendb
+**      28-oct-2010 (joea)
+**          In rfp_error, check whether the DMVE_CB pointer is not null before
+**          formatting the entry.  In rfp_tbl_restore_ckp, trim the table
+**          names using cui_trmwhite.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Added missing static function prototypes.
 */
 
 /*
@@ -1288,6 +1294,28 @@ static DB_STATUS rfp_jnlswitch(
 static DB_STATUS dmf_jnlswitch(
     DMF_JSX		*jsx,
     DMP_DCB		*dcb);
+
+static DB_STATUS rfp_wait_free(
+    DMF_JSX     	*jsx,
+    DMCKP_CB    	*d);
+
+static DB_STATUS rfp_wait_all(
+    DMF_JSX     	*jsx);
+
+static DB_STATUS rfp_prescan_btime_qual(
+	DMF_JSX		*jsx,
+	DMF_RFP		*rfp,
+	DMVE_CB		*dmve);
+
+static DB_STATUS prescan_records(
+	DMF_RFP		*rfp,
+	DMVE_CB         *dmve,
+	PTR		log_rec);
+
+static DB_STATUS create_om_context(
+	DMF_RFP		*rfp,
+	DMVE_CB         *dmve,
+	DM0L_BSF	*log_rec);
 
 #define RFP_ROLLBACK			1
 #define RFP_CONTINUE_IGNORE_TBL		2
@@ -10836,7 +10864,7 @@ DB_STATUS	    err_status)
     */
     dmfWriteMsg(&jsx->jsx_dberr, 0, 0);
 
-    if (dmve->dmve_log_rec)
+    if (dmve && dmve->dmve_log_rec)
     {
 	dmd_format_dm_hdr(dmf_diag_put_line, (DM0L_HEADER *)dmve->dmve_log_rec, 
 	    line_buffer, sizeof(line_buffer));
@@ -12872,7 +12900,8 @@ DMP_DCB             *dcb)
 		    ** Delete the file
 		    */
 		    d->dmckp_tab_name = tblcb->tblcb_table_name.db_tab_name;
-		    d->dmckp_l_tab_name = DB_TAB_MAXNAME;
+		    d->dmckp_l_tab_name = cui_trmwhite(DB_TAB_MAXNAME,
+                                                       d->dmckp_tab_name);
 
 		    status = dmckp_delete_file( d, &error );
 		    if ( status != E_DB_OK )
@@ -12930,7 +12959,8 @@ DMP_DCB             *dcb)
 		    ** Restore the file
 		    */
 		    d->dmckp_tab_name = tblcb->tblcb_table_name.db_tab_name;
-		    d->dmckp_l_tab_name = DB_TAB_MAXNAME;
+		    d->dmckp_l_tab_name = cui_trmwhite(DB_TAB_MAXNAME,
+                                                       d->dmckp_tab_name);
 		    d->dmckp_raw_start = ext->ext_entry[i].raw_start;
 		    d->dmckp_raw_blocks = ext->ext_entry[i].raw_blocks;
 		    d->dmckp_raw_total_blocks = ext->ext_entry[i].raw_total_blocks;
@@ -14901,7 +14931,7 @@ DMP_DCB             *dcb)
 **	    dev_pid to an i4 before testing it. Also, print out the
 **	    child's error condition, if necessary.
 */
-DB_STATUS
+static DB_STATUS
 rfp_wait_free(
     DMF_JSX     *jsx,
     DMCKP_CB    *d)
@@ -15036,7 +15066,7 @@ rfp_wait_free(
 **	    dev_pid to an i4 before testing it. Also, print out the
 **	    child's error condition, if necessary.
 */
-DB_STATUS
+static DB_STATUS
 rfp_wait_all(
     DMF_JSX     *jsx)
 {
@@ -15259,7 +15289,7 @@ EX_ARGS	    *ex_args)
 **	    Must pass pointer-to-pointer to close routine.
 **	
 */
-DB_STATUS
+static DB_STATUS
 rfp_prescan_btime_qual(
 DMF_JSX		*jsx,
 DMF_RFP		*rfp,
@@ -15554,7 +15584,7 @@ RFP_BQTX	*tx)
 }
 
 
-DB_STATUS
+static DB_STATUS
 prescan_records(
 DMF_RFP		*rfp,
 DMVE_CB         *dmve,
@@ -15577,7 +15607,7 @@ PTR		log_rec)
 	if (header->type == DM0LBSF)
 	{
 	    /* if DM0LBSF, create rfp_octx block */
-	    status = create_om_context(rfp, dmve, log_rec);
+	    status = create_om_context(rfp, dmve, (DM0L_BSF*)log_rec);
 	    break;
 	}
 
@@ -15683,7 +15713,7 @@ PTR		log_rec)
 } 
  
 
-DB_STATUS
+static DB_STATUS
 create_om_context(
 DMF_RFP		*rfp,
 DMVE_CB         *dmve,

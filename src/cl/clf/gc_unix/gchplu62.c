@@ -35,7 +35,7 @@
 static VOID GClu62sm();
 static VOID GClu62er();
 static STATUS GClu62name();
-static VOID GClu62read();
+static VOID GClu62read(void *, i4);
 static VOID GClu62timer();
 static VOID GClu62timeout();
 static VOID GClu62posted();
@@ -385,6 +385,8 @@ i4 st[TSIZE];
 **	    replace nat and longnat with i4
 **      11-dec-2002 (loera01)  SIR 109237
 **          Set option flag in GCC_P_LIST to 0 (remote).
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Stricter callback prototyping.
 */
 
 
@@ -2949,7 +2951,7 @@ GC_PCB	    *pcb;
     /* If new timeout period is required, reregister for read completion */
     if (i == 0)
     	(VOID)iiCLfdreg(dcb->pipe_fd[0], FD_READ, GClu62read, 
-    	    	    	(PTR) dcb, dcb->tim_expiration[0]);
+    	    	    	dcb, dcb->tim_expiration[0]);
 
     /* Exiting critical region */
     (VOID) sigrelse((int) SIGPOLL);
@@ -2975,10 +2977,9 @@ GC_PCB	    *pcb;
 **	    Created from gcsunlu62.c.
 */
 static VOID
-GClu62read(dcb, error)
-GC_DCB 	*dcb;
-int error;
+GClu62read(void *parm, i4 error)
 {
+    GC_DCB 	*dcb = (GC_DCB *) parm;
     struct timeval	newtod;	    /* time of day */
     struct timezone 	newzone;    /* timezone */
     GC_PCB  	    *pcb;
@@ -3066,7 +3067,7 @@ int error;
 
 	/* Register for read completion */
     	(VOID)iiCLfdreg(dcb->pipe_fd[0], FD_READ, GClu62read, 
-    	                (PTR) dcb, dcb->tim_expiration[0]);
+    	                dcb, dcb->tim_expiration[0]);
     }
 }
 

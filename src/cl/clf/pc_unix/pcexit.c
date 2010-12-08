@@ -51,6 +51,7 @@
 # include	<gl.h>
 # include	<cs.h>
 # include	<ex.h>
+# include	<pc.h>
 
 # define	MAXFUNCS	32
 
@@ -88,7 +89,7 @@ i4	status;
 	(void)exit( (int)status );
 	/*NOTREACHED*/
 }
-
+#ifdef xPURIFY
 /*{
 ** Name:        purify_override_PCexit
 **
@@ -103,6 +104,8 @@ i4	status;
 **
 ** History:
 **      8/93 (bobm)     First Written
+**      15-nov-2010 (stephenb)
+**          Include pc.h for prototyping.
 */
 
 VOID
@@ -118,7 +121,7 @@ purify_override_PCexit(status)
         (void)exit( (int)status );
         /*NOTREACHED*/
 }
-
+#endif /* xPURIFY */
 VOID
 PCatexit( func )
 VOID (*func)();

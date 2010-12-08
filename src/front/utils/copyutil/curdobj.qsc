@@ -173,6 +173,8 @@ i4		(*IIseterr())();
 **          object_id. Set cuupdabfsrc to TRUE for these fields to ensure
 **          The written record has an updated abf_source to match it's new
 **          object_id.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 */
 
 static STATUS	handstatus	= OK;
@@ -439,15 +441,6 @@ STATUS		(*addfunc)();
 					2, (PTR) &errparam, (PTR)ERx("cu_rdobj")
 			);
 
-# if defined(dg8_us5) || defined(dgi_us5)
-
-			SIclose(fp);
-			iiuicw0_CatWriteOff();	/* In case it is turned on. */
-			EXdelete();				 
-			FEexits((char *)NULL);
-			PCexit(FAIL);
-# else
-
 # ifndef DOUBLEBYTE
 			goodcopy = FALSE;
 			break;
@@ -471,8 +464,6 @@ STATUS		(*addfunc)();
 			FEexits((char *)NULL);
 			PCexit(FAIL);
 # endif /* #ifndef DOUBLEBYTE */
-
-# endif  /* defined(dg8_us5) || defined(dgi_us5)  */
 		    }
 
 		    cu_gettok(inbuf);

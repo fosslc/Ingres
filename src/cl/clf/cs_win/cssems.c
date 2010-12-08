@@ -1801,15 +1801,16 @@ CSremove_all_sems( i4  type )
 ** History:
 **  23-Feb-1998 (bonro01)
 **      Created.
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Change dummy to be void.
 */
-STATUS
+void
 CS_cp_sem_cleanup(
     char            *key,
     CL_ERR_DESC     *err_code)
 {
-# if defined(OS_THREADS_USED) && defined(xCL_NEED_SEM_CLEANUP)
-    /* Not used on NT */
-# endif /* OS_THREADS_USED && xCL_NEED_SEM_CLEANUP*/
 
-    return(OK);
+    CL_CLEAR_ERR(err_code);
+
+    /* Not used on NT */
 }

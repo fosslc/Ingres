@@ -61,9 +61,9 @@
 **	    Cloned from qenkjoin.
 **	23-feb-04 (inkdo01)
 **	    Changed qef_rcb->error to dsh->dsh_error for || thread safety.
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Warning, prototype fixes.
 **/
-
-GLOBALREF QEF_S_CB  *Qef_s_cb;
 
 /* Static variables, functions, etc. */
 
@@ -346,7 +346,6 @@ i4		    function )
     PTR		    *browpp, *prowpp;
     DB_STATUS	    status = E_DB_OK;
     DB_STATUS	    locstat;
-    i4	    	    offset;
     i4	    	    val1;
     i4	    	    val2;
     i4		    browsz = hashptr->hsh_browsz;
@@ -1368,7 +1367,6 @@ qen_hjoin_reset(QEF_RCB	*rcb,
 	bool		clearbufptrs)
 
 {
-    QEF_CB	    *qef_cb = dsh->dsh_qefcb;
     DMH_CB	    *dmhcb;
     QEN_HASH_LINK   *hlnk;
     QEN_HASH_PART   *hpart;
@@ -1506,7 +1504,6 @@ qen_hjoin_cleanup(QEF_RCB *qef_rcb,
 
 {
     DB_STATUS	status;
-    i4		err;
     QEF_CB	*qefcb;
     ULM_RCB	ulm;
 
@@ -1902,7 +1899,6 @@ qen_hash_unrll(i4 skip, QEF_HASH_DUP *rowptr, PTR where)
 {
     i4 i;
     i4 rowsz;
-    u_char ch;
     u_char control;
     u_char *input_end;
     u_char *putter;

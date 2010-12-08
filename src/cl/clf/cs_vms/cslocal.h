@@ -36,6 +36,10 @@
 **      04-Nov-2009 (horda03) Bug 122849
 **              Corrected CS_lastquant name, added reference for CS_sched_quantum
 **              array. Added CS_NO_SCHED.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems,
 **/
 
 /*
@@ -44,16 +48,12 @@
 
 /* csinterface.c */
 
-GLOBALREF CS_SYSTEM	      Cs_srv_block;
 GLOBALREF CS_SCB	      Cs_queue_hdrs[CS_LIM_PRIORITY];
-GLOBALREF CS_SCB	      Cs_known_list_hdr;
 GLOBALREF CS_SCB	      Cs_to_list_hdr;
 GLOBALREF CS_SCB	      Cs_wt_list_hdr;
 GLOBALREF CS_SCB	      Cs_as_list_hdr;
-GLOBALREF CS_STK_CB	      Cs_stk_list_hdr;
 GLOBALREF CS_SCB	      Cs_idle_scb;
 GLOBALREF CS_SCB	      Cs_repent_scb;
-GLOBALREF CS_ADMIN_SCB	      Cs_admin_scb;
 
 /* cshl.c */
 
@@ -63,28 +63,12 @@ GLOBALREF i4          CS_sched_quantum [];
 
 /* func externs -- should be prototyped later */
 
-FUNC_EXTERN CS_SCB *CS_xchng_thread();
-FUNC_EXTERN STATUS CS_admin_task();
-FUNC_EXTERN STATUS CS_event_shutdown();
-FUNC_EXTERN STATUS CS_find_events();
-FUNC_EXTERN STATUS CS_parse_option();
-FUNC_EXTERN STATUS CS_set_server_connect();
-FUNC_EXTERN STATUS CS_setup();
+FUNC_EXTERN CS_SCB *CS_xchng_thread(CS_SCB *, i4 priority);
+FUNC_EXTERN STATUS CS_event_shutdown(void);
+FUNC_EXTERN STATUS CS_rcv_request(void);
+FUNC_EXTERN STATUS CS_setup(void);
 FUNC_EXTERN STATUS CS_tas();
-FUNC_EXTERN STATUS cs_handler();
-FUNC_EXTERN VOID CSdiag_server_link(i4 type, VOID (*output)(),
-				    VOID (*error)(), PTR filename);
-FUNC_EXTERN VOID CS_dump_stack();
-FUNC_EXTERN VOID CS_eradicate();
-FUNC_EXTERN VOID CS_fmt_scb();
-FUNC_EXTERN VOID CS_mkframe();
-FUNC_EXTERN VOID CS_mo_init(void);
-FUNC_EXTERN VOID CS_move_async();
-FUNC_EXTERN VOID CS_swuser();
-FUNC_EXTERN VOID CS_toq_scan();
-FUNC_EXTERN VOID CSsigchld();
-FUNC_EXTERN VOID iiCLintrp();
-FUNC_EXTERN i4 CS_quantum();
-FUNC_EXTERN i4 CSsigterm();
-FUNC_EXTERN i4 CSslave_handler();
-
+FUNC_EXTERN VOID CS_eradicate(void);
+FUNC_EXTERN VOID CSsigchld(i4);
+FUNC_EXTERN i4 CS_quantum(i4);
+FUNC_EXTERN void CS_change_priority(CS_SCB *, i4);

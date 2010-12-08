@@ -107,6 +107,15 @@ import	java.sql.SQLException;
 **	    Max precision may vary.  Default max precision provided
 **	    as public constant.  Added construct which allows max 
 **	    precision to be specified.
+**	 9-Nov-10 (gordy & rajus01) Bug 124712
+**	    Re-worked conversion of BigDecimal precision and scale into
+**	    the appropriate Ingres precision and scale. The cases when
+**	    a precision being smaller than scale or scale could be 
+**	    negative are handled correcty when converting to Ingres decimal
+**	    format. Some examples of BigDecimal precision and scale values:
+**	    "20000000"  => precision:8 scale: 0
+**	    "2E7"	=> precision:1 scale: -7
+**	    "2.0E7"	=> precision:2 scale: -6
 */
 
 public class
@@ -1067,20 +1076,43 @@ checkPrecision( BigDecimal value )
     throws SQLException
 {
     /*
-    ** Precision determined by number of digits in the 
-    ** unscaled decimal value (watch out for sign).
+    ** In BigDecimal, precision is the number of digits in
+    ** the numeric portion of the value, excluding leading
+    ** 0's (even following the decimal point).  Scale is a
+    ** combination of the position of the decimal point and
+    ** any exponent.
     */
-    int precision = value.unscaledValue().toString().length() -
-		    ((value.signum() < 0) ? 1 : 0);
+    int precision = value.precision();
     int	scale = value.scale();
 
     /*
-    ** Scale can exceed precision determined above due
-    ** to zero's  immediately following decimal point.
+    ** In Ingres decimals, precision is the total number of
+    ** possible digits or size of the value and only
+    ** excludes leading 0's preceding the decimal point.
+    ** Scale is simply the position of the decimal point.
+    **
+    ** If the BigDecimal scale is negative, then the decimal
+    ** point must be moved to the right with a corresponding
+    ** increase in precision.
     */
-    int digits = Math.max( precision, scale ) - maxPrecision;
+    if ( scale < 0 )
+    {
+ 	precision += -scale;
+	scale = 0;
+    } 
 
-    if ( digits > 0 )
+    /*
+    ** Precision must be large enough to hold scale portion.
+    */
+    if ( precision < scale )  precision = scale;
+ 
+    /*
+    ** BigDecimal can represent values larger than can be held
+    ** in an Ingres decimal.  It may be possible to truncate
+    ** the value to fit within the maximum precision.
+    */
+
+    if ( precision > maxPrecision )
     {
 	/*
 	** Precision can be adjusted by truncating decimal
@@ -1088,6 +1120,8 @@ checkPrecision( BigDecimal value )
 	** exception is thrown if insufficient scale is
 	** available (can't change number of integer digits).
 	*/
+	int digits = precision - maxPrecision;
+
 	if ( scale >= digits )
 	    // TODO: set truncation indication
 	    value = value.setScale( scale - digits, BigDecimal.ROUND_HALF_UP );

@@ -6,6 +6,8 @@
 #include <gl.h>
 #include <st.h>
 #include <iicommon.h>
+#include <ulf.h>
+#include <uld.h>
 
 
 
@@ -26,6 +28,8 @@
 **	    Invent as someplace to put query-mode text lookups.
 **      17-dec-2008 (joea)
 **          Replace READONLY/WSCREADONLY by const.
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include ulf.h, uld.h to get prototypes
 */
 
 /* Lookup tables defined in ulddata.roc: */
@@ -149,6 +153,41 @@ uld_struct_xlate(char *strname)
     }
     return (0);
 } /* uld_struct_xlate */
+
+/*
+** Name: uld_struct_name - Translate a structure number
+**
+** Description:
+**	This routine takes a storage structure number DB_xxx_STORE
+*	and returns the corresponding structure name.  It's the opposite
+**	of uld_struct_xlate.
+**
+** Inputs:
+**	The DB_xxx_STORE code
+**
+** Outputs:
+**	A pointer to the storage structure name
+**	A pointer to "" is returned if there's no match.
+**
+** History:
+**	11-Oct-2010 (kschendel) SIR 124544
+**	    Invent for WITH-parsing.
+*/
+
+char *
+uld_struct_name(i4 strnum)
+{
+    const INTXLATE *xlatePtr;	/* Translation table pointer */
+
+    xlatePtr = &Uld_struct_xlatetab[0];
+    while (xlatePtr->string != NULL)
+    {
+	if (xlatePtr->code == strnum)
+	    return (xlatePtr->string);
+	++ xlatePtr;
+    }
+    return ("");
+} /* uld_struct_name */
 
 /*
 ** Name: uld_syscat_namestr - System catalog name lookup

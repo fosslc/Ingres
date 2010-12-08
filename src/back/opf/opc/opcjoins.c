@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -67,7 +67,6 @@
 **
 **  Description:
 **      This file  
-[@comment_line@]...
 **
 **          opc_tjoin_build() - Compile a QEN_TJOIN node.
 **          opc_kjoin_build() - Compile a QEN_KJOIN node.
@@ -75,8 +74,6 @@
 **	    opc_fsmjoin_build() - Compile a QEN_FSMJOIN node.
 **          opc_cpjoin_build() - Compile a QEN_CPJOIN node.
 **          opc_isjoin_build() - Compile a QEN_ISJOIN node.
-[@func_list@]...
-**
 **
 **  History:    
 **      17-oct-86 (eric)
@@ -137,24 +134,37 @@
 **	    Added parm to opc_jinouter() calls for table procedures.
 **	3-Jun-2009 (kschendel) b122118
 **	    Minor cleanups, delete unused params from jinouter calls.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Forward and/or External function references.
-*/
 
-/* Build partition qual for outer side eqc's against inner partitioned
-** tables -- join time partition qualification.
-*/
-static QEN_PART_QUAL * opc_join_pqual(
-	OPS_STATE	*global,
-	OPC_NODE	*cnode,
-	OPC_EQ		*oceq,
-	i4		node_type);
-
-static QEN_PART_QUAL * opc_source_pqual(
-	OPS_STATE	*global,
-	OPV_VARS	*varp);
+/* TABLE OF CONTENTS */
+void opc_tjoin_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+void opc_kjoin_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+void opc_hjoin_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+void opc_fsmjoin_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+void opc_cpjoin_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+void opc_isjoin_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+static QEN_PART_QUAL *opc_join_pqual(
+	OPS_STATE *global,
+	OPC_NODE *cnode,
+	OPC_EQ *oceq,
+	i4 node_type);
+static QEN_PART_QUAL *opc_source_pqual(
+	OPS_STATE *global,
+	OPV_VARS *varp);
 
 /*{
 ** Name: OPC_TJOIN_BUILD	- Compile a CO node into a QEN_TJOIN node.
@@ -876,6 +886,8 @@ opc_hjoin_build(
 	    (char *)&co->opo_inner->opo_maps->opo_eqcmap,
 	    (char *)&co->opo_maps->opo_eqcmap);
 	break;
+      default:
+	break;
     }
 
     opc_jkinit(global, &co->opo_sjeqc, njeqcs, oceq, 
@@ -897,6 +909,8 @@ opc_hjoin_build(
 	break;
       case OPL_FULLJOIN:
 	ljoin = rjoin = TRUE;
+	break;
+      default:
 	break;
     }
     /* Fill in the CO flag */
@@ -1133,6 +1147,8 @@ opc_fsmjoin_build(
 	BTor( (i4) BITS_IN( OPE_BMEQCLS ),
 	    (char *)&co->opo_inner->opo_maps->opo_eqcmap,
 	    (char *)&co->opo_maps->opo_eqcmap);
+	break;
+      default:
 	break;
     }
 
@@ -1461,6 +1477,8 @@ opc_isjoin_build(
             (char *)&co->opo_inner->opo_maps->opo_eqcmap,
             (char *)&co->opo_maps->opo_eqcmap);
         break;
+      default:
+	break;
     } 
 
     opc_jkinit(global, &co->opo_sjeqc, njeqcs, oceq,

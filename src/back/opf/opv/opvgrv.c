@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -65,8 +65,20 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **      16-sep-93 (smc)
 **          Moved <cs.h> for CS_SID.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+OPV_IGVARS opv_agrv(
+	OPS_STATE *global,
+	DB_TAB_NAME *name,
+	DB_OWN_NAME *owner,
+	DB_TAB_ID *table_id,
+	OPS_SQTYPE sqtype,
+	bool abort,
+	OPV_GBMVARS *gbmap,
+	OPV_IGVARS gvarno);
 
 /*{
 ** Name: opv_agrv	- allocate new global range variable
@@ -123,7 +135,7 @@ opv_agrv(
 	DB_TAB_ID          *table_id,
 	OPS_SQTYPE         sqtype,
 	bool               abort,
-	OPV_GBMVARS        (*gbmap),
+	OPV_GBMVARS        *gbmap,
 	OPV_IGVARS	   gvarno)
 {
     OPV_IGVARS		grv_index; /* index into global range table */

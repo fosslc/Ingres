@@ -107,6 +107,11 @@
 **	    Define dm2d-row-lock for gcc 4.3.
 **      09-aug-2010 (maspa05) b123189, b123960
 **          Added DM2D_READONLYDB as flag for a readonly database
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype dm2d_unextend_db(), dm2d_check_dir()
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Add DM2D_NODBMO to prevent making MO objects for added
+**	    database, typically when fetching iidbdb information.
 **/
 
 /*
@@ -174,6 +179,9 @@
                                                 ** for this DB in this DBMS
                                                 */
 #define         DM2D_READONLYDB     0x02000000L /* readonly database */
+#define         DM2D_NODBMO	    0x04000000L /* Make no MO objects
+						** (dm2d_add_db)
+						*/
 
 /*
 **  The following constants depend on values in the logical interface and
@@ -363,3 +371,23 @@ FUNC_EXTERN DB_STATUS 	dm2d_get_dcb(
 
 FUNC_EXTERN bool	dm2d_row_lock(
 				DMP_DCB		*dcb);
+
+FUNC_EXTERN DB_STATUS dm2d_unextend_db(
+				i4		lock_list,
+				DB_DB_NAME	*name,
+				char		*db_loc,
+				i4		l_db_loc,
+				DB_LOC_NAME	*location_name,
+				char		*area,
+				i4		l_area,
+				char		*path,
+				i4		l_path,
+				i4		loc_type,
+				i4		raw_pct,
+				i4		*raw_start,
+				i4		*raw_blocks,
+				DB_ERROR	*dberr );
+
+FUNC_EXTERN DB_STATUS dm2d_check_dir(
+				DMP_DCB		*dcb,
+				DB_ERROR	*dberr);

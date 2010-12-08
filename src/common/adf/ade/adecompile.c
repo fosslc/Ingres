@@ -281,10 +281,10 @@ NO_OPTIM = nc4_us5
 **	    I like ifdef better than ifndef, flip 'em around.
 **	29-Aug-2005 (schka24)
 **	    More minor post-generation optimizations.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 */
 
 /*
@@ -384,9 +384,10 @@ static void ad0_post_optim(
 **	06-nov-88 (thurston)
 **	    Placed temp estimation max of 16000 until CX estimation algorithm
 **	    gets examined in more detail.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 ade_cx_space(
 ADF_CB             *adf_scb,
@@ -395,16 +396,6 @@ i4                 ade_nop_tot,
 i4                 ade_nk,
 i4		   ade_ksz_tot,
 i4            *ade_est_cxsize)
-# else
-DB_STATUS
-ade_cx_space( adf_scb, ade_ni, ade_nop_tot, ade_nk, ade_ksz_tot, ade_est_cxsize)
-ADF_CB             *adf_scb;
-i4                 ade_ni;
-i4                 ade_nop_tot;
-i4                 ade_nk;
-i4		   ade_ksz_tot;
-i4            *ade_est_cxsize;
-# endif
 {
     i4			isize_mecopy;
     i4			isize_avg_npi;
@@ -513,21 +504,15 @@ i4            *ade_est_cxsize;
 **	    Changed all end of offset list terminaters to be ADE_END_OFFSET_LIST
 **	    instead of zero, since zero is a legal instruction offset for the
 **	    FE's.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 ade_bgn_comp(
 ADF_CB             *adf_scb,
 PTR                ade_cx,
 i4            ade_cxsize)
-# else
-DB_STATUS
-ade_bgn_comp( adf_scb, ade_cx, ade_cxsize)
-ADF_CB             *adf_scb;
-PTR                ade_cx;
-i4            ade_cxsize;
-# endif
 {
     ADE_CXHEAD		*cxhead = (ADE_CXHEAD *)ade_cx;
 
@@ -620,21 +605,15 @@ i4            ade_cxsize;
 **	    New logic to remove trailing ADE_AND's from expressions.
 **	19-feb-96 (inkdo01)
 **	    Fix to bonehead coding error in ADE_AND changes.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 ade_end_comp(
 ADF_CB             *adf_scb,
 PTR                ade_cx,
 i4            *ade_cxrsize)
-# else
-DB_STATUS
-ade_end_comp( adf_scb, ade_cx, ade_cxrsize)
-ADF_CB             *adf_scb;
-PTR                ade_cx;
-i4            *ade_cxrsize;
-# endif
 {
     ADE_CXHEAD		*cxhead = (ADE_CXHEAD *)ade_cx;
 
@@ -827,23 +806,16 @@ i4		   *basemap)
 **	    Coded.
 **	18-jul-89 (jrb)
 **	    Added support for precision field in ade_constant structure.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 ade_const_gen(
 ADF_CB             *adf_scb,
 PTR                ade_cx,
 DB_DATA_VALUE      *ade_dv,
 ADE_OPERAND        *ade_op)
-# else
-DB_STATUS
-ade_const_gen( adf_scb, ade_cx, ade_dv, ade_op)
-ADF_CB             *adf_scb;
-PTR                ade_cx;
-DB_DATA_VALUE      *ade_dv;
-ADE_OPERAND        *ade_op;
-# endif
 {
     ADE_CXHEAD		*cxhead = (ADE_CXHEAD *)ade_cx;
     i4             needed;
@@ -1019,19 +991,14 @@ ADE_OPERAND	   *ade_labop)
 ** History:
 **	13-sep-99 (inkdo01)
 **	    Written as part of case function implementation
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 VOID
 ade_verify_labs(
 ADF_CB             *adf_scb,
 PTR                ade_cx)
-# else
-VOID
-ade_verify_labs( adf_scb, ade_cx)
-ADF_CB             *adf_scb;
-PTR                ade_cx;
-# endif
 {
     ADE_CXHEAD		*cxhead = (ADE_CXHEAD *)ade_cx;
     ADE_CXSEG		*seg;
@@ -2829,23 +2796,16 @@ i4                 *ade_unaligned)
 **	13-may-87 (thurston)
 **	    Added request codes ADE_14REQ_LAST_INSTR_OFFSETS and
 **	    ADE_15REQ_LAST_INSTR_ADDRS.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 ade_cxinfo(
 ADF_CB              *adf_scb,
 PTR                 ade_cx,
 i4		    ade_request,
 PTR                 ade_result)
-# else
-DB_STATUS
-ade_cxinfo( adf_scb, ade_cx, ade_request, ade_result)
-ADF_CB              *adf_scb;
-PTR                 ade_cx;
-i4		    ade_request;
-PTR                 ade_result;
-# endif
 {
     ADE_CXHEAD	        *cxhead = (ADE_CXHEAD *)ade_cx;
     DB_STATUS		db_stat = E_DB_OK;
@@ -3059,21 +3019,15 @@ PTR                 ade_result;
 **          Initial creation and coding.
 **	7-nov-95 (inkdo01)
 **	    Loosen error test to allow OPC to reset shorter cx_allocated size.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 ade_inform_space(
 ADF_CB             *adf_scb,
 PTR                ade_cx,
 i4            ade_new_cxsize)
-# else
-DB_STATUS
-ade_inform_space( adf_scb, ade_cx, ade_new_cxsize)
-ADF_CB             *adf_scb;
-PTR                ade_cx;
-i4            ade_new_cxsize;
-# endif
 {
     ADE_CXHEAD	       *cxhead = (ADE_CXHEAD *)ade_cx;
 

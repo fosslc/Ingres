@@ -672,6 +672,8 @@ struct _DM0P_BLQ
 **	    buf_create, buf_pincount, buf_mpend.
 **	29-Jun-2010 (jonj)
 **	    Added buf_cr_undo, buf_cr_where to aid debugging.
+**	18-Apr-2010 (wanfr01) b123594
+**	    Added buf_cpprep
 */
 struct _DM0P_BUFFER
 {
@@ -753,6 +755,7 @@ INTENT_LK,NULL_TUNFIX,DMCM,GW_QUEUED,MLOCK"
     i4		    buf_fp_llid;	/* Write completion "owner" */
     i4		    buf_partno;		/* Table's partition number */
     PID		    buf_pid;		/* Who allocated cache lock. */
+    u_i4	    buf_cpprep;		/* What CP last flushed this buffer */
     i4		    buf_cr_root;	/* Root buffer of CR page,
     					   BUF_ENDLIST if not CR page */
     i4		    buf_cr_next;	/* Next CR version of root page */

@@ -109,6 +109,8 @@
 **	12-Feb-2008 (hanje04)
 **	    SIR S119978
 **	    Replace mg5_osx with generic OSX
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.  Remove windows stuff, this is unix-only.
 */
 
 
@@ -141,10 +143,6 @@
 #endif
 
 #define     TC_ESCAPE	    '\\'	    /* TC escape character */
-
-#ifdef NT_GENERIC
-#define	    II_nap(A)	    Sleep(A)
-#endif
 
 /*
 **
@@ -231,11 +229,7 @@ TCFILE		**desc;
 		(*desc)->_flag |= _TCCREAT;
 
 	/* Open the file. */
-# if defined(NT_GENERIC)
-	fileflags = (*mode == 'r' ? O_RDONLY : O_WRONLY) | O_CREAT | O_BINARY;
-# else
 	fileflags = (*mode == 'r' ? O_RDONLY : O_WRONLY) | O_CREAT;
-# endif  /* NT_GENERIC */
 	(*desc)->_id = open(filename, fileflags, 0666);
 	if ((*desc)->_id < 0)
 	{
@@ -258,13 +252,8 @@ TCFILE		**desc;
 			STcopy(".syn", dot);
 		else
 			STcat( (*desc)->_sync_fname, ".syn");
-# if defined(NT_GENERIC)
-		(*desc)->_sync_id = open((*desc)->_sync_fname, O_RDWR|O_CREAT|O_BINARY,
-		  0666);
-# else
 		(*desc)->_sync_id = open((*desc)->_sync_fname, O_RDWR|O_CREAT,
 		  0666);
-# endif /* NT_GENERIC */
 		if ((*desc)->_sync_id < 0)
 		{
 			MEfree( (PTR) *desc);
@@ -275,9 +264,6 @@ TCFILE		**desc;
 		if (st.st_size == 0)
 		{
 			write( (*desc)->_sync_id, &ZERO, sizeof(ZERO) );
-# ifdef DESKTOP
-			_commit ((*desc)->_sync_id);
-# endif
 		}
 
 		(*desc)->_flag |= _TCREAD;
@@ -430,9 +416,6 @@ TCFILE	*desc;
 			return(FAIL);
 	}
 
-# ifdef DESKTOP
-	_commit (desc->_id);
-# endif
 	desc->_pos = desc->_buf;
 	return(OK);
 }  /* TCflush */
@@ -513,7 +496,7 @@ i4	seconds;
 		   tells the file address of the last byte read from the
 		   TCFILE.
 		*/
-#if defined(sgi_us5) || defined(dgi_us5) || defined(LNX) || \
+#if defined(sgi_us5) || defined(LNX) || \
     defined(a64_sol) || defined(OSX)
 {
 		off_t  real_offset;
@@ -558,9 +541,6 @@ i4	seconds;
 		desc->_size += ret_val;
 		/* Update the synch file. */
 		write(desc->_sync_id, &desc->_size, sizeof(i4) );
-# ifdef DESKTOP
-		_commit(desc->_sync_id);
-# endif
 		toreturn = *desc->_buf;
 	}
 	if (doescape && toreturn == TC_ESCAPE)
@@ -735,7 +715,7 @@ TCFILE	*desc;
 		*/
 		if (statbuf.st_size > desc->_size)
 		{
-#if defined(sgi_us5) || defined(dgi_us5) || defined(a64_sol) || \
+#if defined(sgi_us5) || defined(a64_sol) || \
     defined(LNX) || defined(OSX)
 {
 			off_t  real_offset;

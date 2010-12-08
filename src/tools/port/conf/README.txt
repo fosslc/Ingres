@@ -128,6 +128,8 @@ DBL	- enables double-byte builds.  A double-byte build has the
 
 DELIM_TEST - doesn't seem to be used by anything??
 
+IVW	- Indicates an Ingres Vectorwise build.
+
 MAINWIN_VDBA - causes MAINWIN and Visual DBA to be included in the release
 	packaging.  Since these are not part of the community distribution,
 	this option is not set for community builds.

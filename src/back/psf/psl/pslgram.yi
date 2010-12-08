@@ -1,4 +1,4 @@
-/* Copyright (c) 1986, 2005 Ingres Corporation
+/* Copyright (c) 1986, 2005, 2010 Ingres Corporation
 **
 **
 */
@@ -772,25 +772,140 @@
 **	    the relevant flag happens to be 1, just like TRUE.
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
+**	5-Oct-2010 (kschendel) SIR 124544
+**	    Various changes for centralizing all (DDL) WITH-option handling.
+**	    Drag retrieve-into kicking and screaming into the amazing
+**	    modern world of DMU_CB's and suchlike data structures.
+**	    It now works pretty much the same as SQL create table as select.
+**	21-Oct-2010 (kiria01) b124629
+**	    Use the macro symbol with ult_check_macro instead of literal.
+**	29-Oct-2010 (kschendel) SIR 124544
+**	    Make set result_structure legal in QUEL, no reason for it to
+**	    be different from sql!
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Map collID through from VAR nodes if appropriate. This mainly
+**	    affects system views that retain quel construction but play
+**	    with sql tables and views.
 */
 
 %{
-/*[@forward_type_references@]*/
-
-/*
-**  Forward and/or External function references.
-*/
 
-/*[@function_reference@]...*/
-
+/* TABLE OF CONTENTS */
+i4 getfacil(
+	char *code,
+	PSQ_MODE *facility,
+	i4 *flagno);
+char *sconvert(
+	DB_TEXT_STRING *string);
+i4 qdata_cvt(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb,
+	DB_DATA_VALUE *fval,
+	DB_DT_ID totype,
+	PTR *value);
+void psl_quel_shareable(
+	PSS_SESBLK *sess_cb,
+	i4 qry_mask,
+	bool *shareable);
+i4 psl_rptqry_tblids(
+	PSS_SESBLK *sess_cb,
+	PSS_USRRANGE *rngtab,
+	PSF_MSTREAM *mstream,
+	i4 qry_mode,
+	i4 *num_ids,
+	DB_TAB_ID **id_list,
+	DB_ERROR *err_blk);
+static i4 psl_2handle(
+	EX_ARGS *exargs);
+static i4 psl_1handle(
+	EX_ARGS *exargs);
+i4 pslparse(
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl1iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl2iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl3iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl4iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl5iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl6iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl7iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl8iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl9iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl10iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl11iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl12iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
+i4 psl13iftn(
+	YACC_CB *yacc_cb,
+	i4 yyrule,
+	i4 *yystatusp,
+	PSS_SESBLK *cb,
+	PSQ_CB *psq_cb);
 /*
 **  Defines of other constants.
 */
 
-/*[@group_of_defined_constants@]...*/
-/*[@type_definitions@]*/
-/*[@global_variable_definitions@]*/
-/*[@static_variable_or_function_definitions@]*/
 %}
 
 /*
@@ -820,7 +935,6 @@
     DB_CURSOR_ID    *psl_cursid;	/* A cursor id */
     PSC_CURBLK	    *psl_crblk;		/* A cursor control block */
     DB_DATA_VALUE   *psl_dbval;		/* A db data value */
-    PST_RESKEY	    *psl_reskey;	/* key struct ptr */
 }
 
 /*
@@ -1369,7 +1483,6 @@
 %type	<psl_inttype> timeofday month
 %type	<psl_inttype> aggfcnwhere uniqueclause
 %type	<psl_textype> sconst
-%type	<psl_reskey>  rt_lst rt_lst_elem
 %type	<psl_inttype> isolation_level access_mode
 
 
@@ -1625,7 +1738,7 @@ append:            apstmt apto apprname tlclause qualclause
 				    &psq_cb->psq_error);
 	if DB_FAILURE_MACRO(status)
 	    return(status);
-    
+
 	mask = cb->pss_resrng->pss_tabdesc->tbl_status_mask;
 	mask2 = cb->pss_resrng->pss_tabdesc->tbl_2_status_mask;
 
@@ -1890,7 +2003,7 @@ copy:              copstmnt copytable LPAREN coparam RPAREN keywd
 	DB_STATUS		status;
 
 	status = psl_cp1_copy(cb, psq_cb, &$Yxlated_qry,
-		(PTR) NULL, &$Ywith_clauses, &psq_cb->psq_error);
+		(PTR) NULL, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
@@ -1900,8 +2013,7 @@ copstmnt:          COPY
     {
 	DB_STATUS		status;
 
-	status = psl_cp2_copstmnt( cb, &psq_cb->psq_mode, &$Ywith_clauses,
-				   &psq_cb->psq_error);
+	status = psl_cp2_copstmnt( cb, &psq_cb->psq_mode, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
     }
@@ -2316,7 +2428,20 @@ copyfile:	    strconst
     }
 ;
 
-copywith:	    WITH copyclause
+copywith:
+    {
+	psl_withopt_init(cb, psq_cb);
+    }
+	copywith_clause
+    {
+	DB_STATUS status;
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return (status);
+    }
+;
+
+copywith_clause:    WITH copyclause
 	  |
 ;
 
@@ -2347,8 +2472,7 @@ copyoption:	    nonkeyword is nonkeyword
     {
 	DB_STATUS		status;
 
-	status = psl_cp11_nm_eq_no( cb, $1, $3, &$Ywith_clauses,
-				    &psq_cb->psq_error);
+	status = psl_cp11_nm_eq_no( cb, psq_cb, $1, $3);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -2378,7 +2502,7 @@ create:      crestmnt crlocationname LPAREN specs RPAREN crwith
     {
 	DB_STATUS		    status;
 
-	status = psl_ct1_create_table(cb, psq_cb, &$Ywith_clauses, (PSS_CONS *) NULL);
+	status = psl_ct1_create_table(cb, psq_cb, (PSS_CONS *) NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -2389,7 +2513,7 @@ crestmnt:          CREATE
 	DB_STATUS 		    status;
 
 	psq_cb->psq_mode = PSQ_CREATE;
-	status = psl_ct10_crt_tbl_kwd(cb, psq_cb, &$Ywith_clauses, FALSE);
+	status = psl_ct10_crt_tbl_kwd(cb, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -2399,8 +2523,7 @@ crlocationname:      NAME COLON crname
     {
 	DB_STATUS		status;
 
-	status = psl_ct9_new_loc_name(cb, psq_cb, $1, $3, &$Ywith_clauses,
-				      (PSS_Q_XLATE *) NULL);
+	status = psl_ct9_new_loc_name(cb, psq_cb, $1, $3);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -2409,8 +2532,7 @@ crlocationname:      NAME COLON crname
     {
 	DB_STATUS		status;
 
-	status = psl_ct9_new_loc_name(cb, psq_cb, (char *) NULL, $1,
-				      &$Ywith_clauses, (PSS_Q_XLATE *) NULL);
+	status = psl_ct9_new_loc_name(cb, psq_cb, (char *) NULL, $1);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -2610,28 +2732,27 @@ null_default:
     }
 ;
 
-crwith:	    WITH crwithlist
+crwith:
     {
-	DB_STATUS		status;
-
-	status = psl_ct3_crwith(cb, psq_cb->psq_mode, &$Ywith_clauses,
-	    &psq_cb->psq_error);
-	if (DB_FAILURE_MACRO(status))
-	    return(status);
+	psl_withopt_init(cb, psq_cb);
     }
-	  |	crwithnull
+	crwith_syntax
     {
 	DB_STATUS		status;
 
-	status = psl_ct3_crwith(cb, psq_cb->psq_mode, &$Ywith_clauses,
-	    &psq_cb->psq_error);
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return (status);
+	/* Now special post-processing for create table */
+	status = psl_ct3_crwith(cb, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
 ;
 
-crwithnull:	    WITHNULL
-		|
+crwith_syntax:	WITH crwithlist
+	|	WITHNULL
+	|
 ;
 
 crwithlist:	    crwithelem
@@ -2647,8 +2768,7 @@ cr_single_kwd:	    nonkeyword
     {
 	DB_STATUS		status;
 
-	status = psl_ct6_cr_single_kwd(cb, $1, &$Ywith_clauses,
-	    psq_cb->psq_mode, &psq_cb->psq_error, (PSS_Q_XLATE *) NULL);
+	status = psl_with_kwd(cb, psq_cb, $1, NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -2658,8 +2778,7 @@ cr_nm_eq_no:      nonkeyword ISOP intconst
     {
         DB_STATUS               status;
 
-        status = psl_nm_eq_no(cb, $1, $3, &$Ywith_clauses, psq_cb->psq_mode,
-            &psq_cb->psq_error, (PSS_Q_XLATE *) NULL);
+        status = psl_nm_eq_no(cb, psq_cb, $1, $3, NULL);
 
         if (DB_FAILURE_MACRO(status))
             return(status);
@@ -2674,7 +2793,7 @@ cr_lst_cl_prefix:	    nonkeyword ISOP
     {
 	DB_STATUS		status;
 
-	status = psl_lst_prefix(cb, psq_cb, $1, yyvarsp);
+	status = psl_withlist_prefix(cb, psq_cb, $1, NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -2699,12 +2818,11 @@ cr_lst_elem:	    NAME
 	}
 
 	$Yid_type = PSS_ID_REG;
-	status = psl_ct8_cr_lst_elem(cb, psq_cb, yyvarsp, $1,
-	    (PST_RESKEY **) NULL, (PSS_Q_XLATE *) NULL);
+	status = psl_withlist_elem(cb, psq_cb, $1, NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return (status);
-		    
-    }	    	    
+
+    }
 ;
 
 defcursor:         defcursorstmnt retrieve updclause readclause
@@ -2824,6 +2942,7 @@ updclause:	updword uplist
 		    (DB_ANYTYPE *) NULL, &newnode, &psq_cb->psq_error, (i4) 0);
 		if (DB_FAILURE_MACRO(status))
 		    return (status);
+		newnode->pst_sym.pst_dataval.db_collID = coldesc->att_collID;
 
 		rsdm->pst_right = newnode;
 	    }
@@ -4044,8 +4163,7 @@ index:             instmnt LPAREN indexcols RPAREN index_with
     {
 	DB_STATUS		status;
 
-	status = psl_ci1_create_index(cb, &$Ywith_clauses, $Yunique,
-					&psq_cb->psq_error);
+	status = psl_ci1_create_index(cb, &psq_cb->psq_error);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -4065,8 +4183,7 @@ instmnt:           indexq ON NAME index_is indexlocname
 	$Yobj_spec.pss_objspec_flags = 0;
 	$Yobj_spec.pss_orig_obj_name = $3;
 
-	status = psl_ci3_indexrel(cb, &$Yobj_spec, &psq_cb->psq_error,
-	    psq_cb->psq_mode);
+	status = psl_ci3_indexrel(cb, psq_cb, &$Yobj_spec);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -4079,12 +4196,12 @@ indexq:            INDEX index_unique
         /*
 	** schang : need to set psq_cb->psq_mode to PSQ_INDEX to share code with
 	** RMSGW
-	*/ 
+	*/
         psq_cb->psq_mode = PSQ_INDEX;
 	cb->pss_object = (PTR) 0;
 	cb->pss_save_qeucb = (PTR) 0;
 
-	status = psl_ci2_index_prefix(cb, psq_cb, &$Ywith_clauses, $2);
+	status = psl_ci2_index_prefix(cb, psq_cb, $2);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -4093,12 +4210,10 @@ indexq:            INDEX index_unique
 index_unique:	    UNIQUE
     {
 	$$ = TRUE;
-	$Yunique = TRUE;
     }
 	    |
     {
 	$$ = FALSE;
-	$Yunique = FALSE;
     }
 ;
 
@@ -4121,8 +4236,7 @@ indexlocname:	    NAME COLON NAME
 	$Yobj_spec.pss_orig_obj_name = $3;
 
         /* schang : last arg is psq_cb so that RMS GW can use the same code */
-	status = psl_ci5_indexlocname(cb, $1, &$Yobj_spec, &$Ywith_clauses,
-	    psq_cb);
+	status = psl_ci5_indexlocname(cb, $1, &$Yobj_spec, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -4141,8 +4255,7 @@ indexlocname:	    NAME COLON NAME
 	$Yobj_spec.pss_orig_obj_name = $1;
 
         /* schang : last arg is psq_cb so that RMS GW can use the same code */
-	status = psl_ci5_indexlocname(cb, (char *) NULL, &$Yobj_spec,
-	    &$Ywith_clauses, psq_cb);
+	status = psl_ci5_indexlocname(cb, (char *) NULL, &$Yobj_spec, psq_cb);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -4162,7 +4275,21 @@ indexcolname:	    NAME
     }
 ;
 
-index_with:	    WITH index_withopts
+index_with:
+    {
+	psl_withopt_init(cb, psq_cb);
+    }
+	index_with_syntax
+    {
+	DB_STATUS	status;
+
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return(status);
+    }
+;
+
+index_with_syntax:  WITH index_withopts
 	    |	    WITHNULL
 	    |
 ;
@@ -4181,8 +4308,7 @@ index_woname:	    nonkeyword ISOP nonkeyword
     {
 	DB_STATUS		status;
 
-	status = psl_nm_eq_nm(cb, $1, $3, &$Ywith_clauses, psq_cb->psq_mode,
-	    &psq_cb->psq_error);
+	status = psl_nm_eq_nm(cb, psq_cb, $1, $3);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -4192,8 +4318,7 @@ index_wonum:	    nonkeyword ISOP intconst
     {
 	DB_STATUS		status;
 
-	status = psl_nm_eq_no(cb, $1, $3, &$Ywith_clauses, psq_cb->psq_mode,
-	    &psq_cb->psq_error, (PSS_Q_XLATE *) NULL);
+	status = psl_nm_eq_no(cb, psq_cb, $1, $3, NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -4209,7 +4334,7 @@ index_lst_prefix:    nonkeyword ISOP
     {
 	DB_STATUS		status;
 
-	status = psl_lst_prefix(cb, psq_cb, $1, yyvarsp);
+	status = psl_withlist_prefix(cb, psq_cb, $1, NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -4224,8 +4349,7 @@ index_lst_elem:	    NAME
 	DB_STATUS		status;
 
 	$Yid_type = PSS_ID_REG;
-	status = psl_lst_elem(cb, yyvarsp, $1, PSQ_INDEX,
-	    &psq_cb->psq_error);
+	status = psl_withlist_elem(cb, psq_cb, $1, NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -4235,8 +4359,7 @@ index_woword:	    nonkeyword
     {
 	DB_STATUS		status;
 
-	status = psl_ci7_index_woword(cb, $1, &$Ywith_clauses,
-	    &psq_cb->psq_error);
+	status = psl_with_kwd(cb, psq_cb, $1, NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -4387,7 +4510,7 @@ integis:           IS
 	cb->pss_qualdepth++;
     }
 ;
-    
+
 intvar:	    var
     {
 	i4     err_code;
@@ -4526,6 +4649,12 @@ modtable:	    NAME
 	{
 	    return(status);
 	}
+
+	/* Do WITH-setup early because we might have MODIFY xx TO PRIORITY=n
+	** which parses as if it were a with-option.  We wait until after
+	** the table-name is parsed in case it's a Vectorwise table.
+	*/
+	psl_withopt_init(cb, psq_cb);
     }
 ;
 
@@ -4538,7 +4667,7 @@ modstorage:	    modstorname
     {
 	DB_STATUS		status;
 
-	status = psl_md3_modstorage(cb, yyvarsp, &psq_cb->psq_error);
+	status = psl_md3_modunique(cb, yyvarsp, &psq_cb->psq_error);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -4546,11 +4675,21 @@ modstorage:	    modstorname
 ;
 
 modstorname:	    modopt_num_cl
+    {
+	DB_STATUS status;
+	/* modify tab to priority=n -- finish up to set the modify action,
+	** then re-init for real with clause
+	*/
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return (status);
+	psl_withopt_init(cb, psq_cb);
+    }
           |         nonkeyword
     {
 	DB_STATUS		status;
 
-	status = psl_md4_modstorname(cb, $1, yyvarsp, &psq_cb->psq_error);
+	status = psl_md4_modstorname(cb, psq_cb, $1);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -4559,7 +4698,7 @@ modstorname:	    modopt_num_cl
     {
 	DB_STATUS		status;
 
-	status = psl_md4_modstorname(cb, "relocate", yyvarsp, &psq_cb->psq_error);
+	status = psl_md4_modstorname(cb, psq_cb, "relocate");
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -4606,8 +4745,8 @@ modbasekey:	    modkeyname
     {
 	DB_STATUS		    status;
 
-	status = psl_md6_modbasekey(cb, (i4) ($2 == PSS_ASCENDING),
-	    $Yis_heapsort, &psq_cb->psq_error);
+	status = psl_md6_modbasekey(cb, ($2 == PSS_ASCENDING),
+	    &psq_cb->psq_error);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -4625,7 +4764,16 @@ modkeyname:	    NAME
     }
 ;
 
-modwith:	    modwith_kwd modopts
+modwith:	modwith_syntax
+    {
+	DB_STATUS	status;
+	status = psl_withopt_post(cb, psq_cb);
+	if (status != E_DB_OK)
+	    return (status);
+    }
+;
+
+modwith_syntax:	    modwith_kwd modopts
 	    |	    WITHNULL
 	    |
 ;
@@ -4638,6 +4786,7 @@ modopts:	    modopt
 	    |	    modopts COMMA modopt
 ;
 
+/* You'll note that there's no nm_eq_nm listed for Quel */
 modopt:		    modopt_num_cl
 	    |	    modopt_lst_cl
 	    |	    modopt_word
@@ -4647,8 +4796,7 @@ modopt_num_cl:	    nonkeyword ISOP intconst
     {
 	DB_STATUS		status;
 
-	status = psl_nm_eq_no(cb, $1, $3, &$Ywith_clauses, PSQ_MODIFY,
-	    &psq_cb->psq_error, (PSS_Q_XLATE *) NULL);
+	status = psl_nm_eq_no(cb, psq_cb, $1, $3, NULL);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -4665,7 +4813,7 @@ modopt_lst_prefix:	nonkeyword ISOP
     {
 	DB_STATUS		status;
 
-	status = psl_lst_prefix(cb, psq_cb, $1, yyvarsp);
+	status = psl_withlist_prefix(cb, psq_cb, $1, NULL);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -4681,8 +4829,7 @@ modopt_lst_elem:    nonkeyword
 	DB_STATUS		status;
 
 	$Yid_type = PSS_ID_REG;
-	status = psl_lst_elem(cb, yyvarsp, $1, PSQ_MODIFY,
-	    &psq_cb->psq_error);
+	status = psl_withlist_elem(cb, psq_cb, $1, NULL);
 
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
@@ -4693,8 +4840,7 @@ modopt_word:    nonkeyword
     {
 	DB_STATUS		status;
 
-	status = psl_md9_modopt_word(cb, $1, &$Ywith_clauses,
-	    &psq_cb->psq_error);
+	status = psl_with_kwd(cb, psq_cb, $1, NULL);
 	if (DB_FAILURE_MACRO(status))
 	    return(status);
     }
@@ -5352,7 +5498,8 @@ query_key:         DEFQRY NAME is
 	psq_cb->psq_cursid.db_cursor_id[1] = 0;
 	STmove($2, ' ', DB_CURSOR_MAXNAME, psq_cb->psq_cursid.db_cur_name);
 
-	if (ult_check_macro(&cb->pss_trace, 4, &val1, &val2))
+	if (ult_check_macro(&cb->pss_trace,
+				PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 	{
 	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 		"\n5.0-style QUEL repeat query cannot be shared.\n");
@@ -6075,26 +6222,57 @@ retcursor:	    RETCURSOR QUERYID
 ;
 
 retrieve:   retstmnt intoclause uniqueclause tlclause
-	    qualclause sortclause retwithcls
+	    qualclause sortclause 
+    {
+	DB_STATUS	status;
+	PST_QNODE	*rootnode;
+	PST_RT_NODE	root;
+
+	/* Make the root node */
+	root.pst_rtuser = TRUE;
+	root.pst_union.pst_next  = 0;
+
+	root.pst_dups = PST_ALLDUPS;	/* Gets fixed after WITH-parsing */
+
+	status = pst_node(cb, &cb->pss_ostream, $4, $5, PST_ROOT, (PTR) &root,
+	    sizeof(PST_RT_NODE), DB_NODT, (i2) 0, (i4) 0, (DB_ANYTYPE *) NULL,
+	    &rootnode, &psq_cb->psq_error, (i4) 0);
+	if (DB_FAILURE_MACRO(status))
+	    return (status);
+
+	/* Fix up the target list for retrieve into, in case we need it
+	** for some of the WITH-clauses
+	*/
+	if (psq_cb->psq_mode == PSQ_RETINTO)
+	{
+	    DB_STATUS	status;
+
+	    status = psl_crtas_fixup_columns(cb, 0, rootnode, psq_cb);
+	    if (status != E_DB_OK)
+		return (status);
+	}
+
+	/* The simplest way to jump the gap... */
+	$Yretinto_root = rootnode;
+    }
+
+	    retwithcls
+
     {
 	DB_STATUS       status, local_status;
 	DB_ERROR	e_error;
 	PST_QNODE	*rootnode;
-	PST_QNODE	*ssnode;
-	PST_RESKEY	*reskey;
-	PST_RT_NODE	root;
 	PST_QTREE	*tree;
 	i2		dup_val;
 	i4		err_code;
-	i4		error = 0;
-	char		*withentry;
 	PST_PROCEDURE   *pnode;
 	PST_QNODE	*resdom;
-	bool		 found;
 	char		obj_name[sizeof(DB_TAB_NAME)];
- 
+
+	rootnode = $Yretinto_root;
+
 	/* Verify CREATE_TABLE privileges for RETRIEVE INTO*/
-	
+
 	if ((psq_cb->psq_mode == PSQ_RETINTO) &&
 	    ((status = psy_ckdbpr(psq_cb, (u_i4)DBPR_TAB_CREATE))
 		    != E_DB_OK)
@@ -6119,233 +6297,11 @@ retrieve:   retstmnt intoclause uniqueclause tlclause
 	    return (status);
 	}
 
-	/* Make sure there is a location in case of a RETRIEVE INTO. */
-	if ((psq_cb->psq_mode == PSQ_RETINTO) &&
-	    !cb->pss_restab.pst_resloc.data_in_size
-	   )
-	{
-	    /* Default location */
-	    STmove("$default", ' ', sizeof(DB_LOC_NAME),
-		(char *) cb->pss_restab.pst_resloc.data_address);
-	    cb->pss_restab.pst_resloc.data_in_size = sizeof(DB_LOC_NAME);
-	}
-
-	/* Make the root node */
-	root.pst_rtuser = TRUE;
-	root.pst_union.pst_next  = 0;
-
-	/* with_dups is set in retwithcls to establish duplicate characteristics
-	** for retrieve into statements (this initial value may be altered
-	** below.
-	*/
-	root.pst_dups   = $Ywith_dups;
-
-	status = pst_node(cb, &cb->pss_ostream, $4, $5, PST_ROOT, (PTR) &root,
-	    sizeof(PST_RT_NODE), DB_NODT, (i2) 0, (i4) 0, (DB_ANYTYPE *) NULL,
-	    &rootnode, &psq_cb->psq_error, (i4) 0);
-	if (DB_FAILURE_MACRO(status))
-	    return (status);
-
-	if (psq_cb->psq_mode == PSQ_RETINTO)
-	{
-	    PST_QNODE	    *res2;
-	    PSS_RNGTAB	    *rngtabp;
-	    DMT_ATT_ENTRY   *attribute;
-	    char	    *name;
-
-	    for (resdom = rootnode->pst_left;
-	     resdom != (PST_QNODE *) NULL && 
-	     resdom->pst_sym.pst_type == PST_RESDOM;
-	     resdom = resdom->pst_left)
-	    {
-		/* Now check the target list to see if there are any
-		** resdoms with pst_ttargtype of PST_USER, if so
-		** convert them to PST_ATTNO.
-		*/
-		if (resdom->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype
-		    == PST_USER)
-		{
-		    resdom->pst_sym.pst_value.pst_s_rsdm.pst_ttargtype
-			= PST_ATTNO;
-		}
-
-		/* check for duplicate names */
-		for (res2 = resdom->pst_left; res2 != (PST_QNODE*) NULL && 
-		    res2->pst_sym.pst_type == PST_RESDOM; res2 = res2->pst_left)
-		{
-		    if (!MEcmp(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname, 
-			res2->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-			DB_ATT_MAXNAME))
-		    {
-			(VOID) psf_error(5105L, 0L, PSF_USERERR, &err_code,
-			    &psq_cb->psq_error, 2, 
-			    sizeof(cb->pss_restab.pst_resname),
-			    (char*)&cb->pss_restab.pst_resname,
-		    sizeof(resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname),
-		    (char*)resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
-			    return (E_DB_ERROR);
-			
-		    }
-		}
-
-		/* To avoid creation of columns of LONG TEXT type in case of
-		** retrieve into tab (col = NULL) following check is performed.
-		*/
-		if ((resdom->pst_right->pst_sym.pst_type == PST_CONST) &&
-		    (abs(resdom->pst_right->pst_sym.pst_dataval.db_datatype)
-							    == DB_LTXT_TYPE))
-		{
-		    (VOID) psf_error(2142L, 0L, PSF_USERERR,
-			&err_code, &psq_cb->psq_error, 0);
-		    return (E_DB_ERROR);
-		}
-
-		/*
-		** Set up defaultability.
-		**
-		** If the resdom is based directly on a column
-		** (i.e. is a PST_VAR), we copy that column's default value;
-		** otherwise the resdom must be based on a calculated column or
-		** expression, so set up the 'default' QUEL default.
-		*/
-		if (resdom->pst_right->pst_sym.pst_type != PST_VAR)
-		{
-		    /* resdom based on expression--use the 'default'
-		    ** QUEL default:
-		    **     unspecified (null)  for nullable columns
-		    **     WITH DEFAULT        for non-nullable columns
-		    */ 
-		    DB_DATA_VALUE  *dbdata;
-		    DMF_ATTR_ENTRY attr;
-
-		    dbdata = &resdom->pst_right->pst_sym.pst_dataval;
-		    
-		    if (dbdata->db_datatype < 0)
-		    {
-			/* datatype is nullable;
-			** use unspecified default (which is null)
-			*/
-			SET_CANON_DEF_ID(
-				resdom->pst_sym.pst_value.pst_s_rsdm.pst_defid, 
-				DB_DEF_NOT_SPECIFIED);
-		    }
-		    else
-		    {
-			/* datatype is non-nullable;
-			** set up attribute descriptor and get ingres default
-			** id for this tuple
-			*/
-			MEfill(sizeof(attr), 0, (PTR) &attr);
-	
-			attr.attr_type      = dbdata->db_datatype;
-			attr.attr_size      = dbdata->db_length;
-			attr.attr_precision = dbdata->db_prec;
-			
-			status = psl_2col_ingres_default(cb, &attr, 
-							 &psq_cb->psq_error);
-			if (DB_FAILURE_MACRO(status))
-			    return(status);
-			
-			COPY_DEFAULT_ID(attr.attr_defaultID,
-			       resdom->pst_sym.pst_value.pst_s_rsdm.pst_defid);
-		    }  /* end else non-nullable datatype */
-		}  
-		else	/* resdom is based on a column of underlying table */
-		{
-		    name = resdom->pst_sym.pst_value.pst_s_rsdm.pst_rsname;
-
-		    /* find range table entry 
-		     */
-		    status = pst_rgfind(
-					&cb->pss_usrrange, &rngtabp,
-					resdom->pst_right->pst_sym
-						.pst_value.pst_s_var.pst_vno,
-					&psq_cb->psq_error);
-		    if (status != E_DB_OK)
-		    {
-			(VOID) psf_error(E_PS0909_NO_RANGE_ENTRY, 
-					 0L, PSF_INTERR,
-					 &err_code, &psq_cb->psq_error, 1,
-					 psf_trmwhite(DB_ATT_MAXNAME, name), name);
-			return (E_DB_ERROR);
-		    }
-
-		    /* Look up the attribute 
-		     */
-		    attribute = pst_coldesc(rngtabp,
-			resdom->pst_right->pst_sym.pst_value.pst_s_var.pst_atname.db_att_name,
-			DB_ATT_MAXNAME);
-
-		    /* Check for attribute not found 
-		     */
-		    if (attribute == (DMT_ATT_ENTRY *) NULL)
-		    {
-			(VOID) psf_error(E_PS090A_NO_ATTR_ENTRY, 0L, PSF_INTERR,
-					 &err_code, &psq_cb->psq_error, 1,
-					 psf_trmwhite(DB_ATT_MAXNAME, name), name);
-			return (E_DB_ERROR);
-		    }
-		    COPY_DEFAULT_ID(attribute->att_defaultID,
-				resdom->pst_sym.pst_value.pst_s_rsdm.pst_defid);
-	    
-		} /* end else resdom is based on a column of underlying table */
-
-	    }  /* end for resdom->pst_sym.pst_type == PST_RESDOM */
-
-	    /* min or max pages requires hashed relation
-	    ** data fillfactor can't use heap.
-	    ** leaffill and index fill require btree.
-	    */
-	    if ((cb->pss_restab.pst_minpgs > 0) &&
-		(cb->pss_restab.pst_struct != DB_HASH_STORE))
-	    {
-		error++;
-		withentry = "MINPAGES";
-	    }
-	    else if ((cb->pss_restab.pst_maxpgs > 0) &&
-		(cb->pss_restab.pst_struct != DB_HASH_STORE))
-	    {
-		error++;
-		withentry = "MAXPAGES";
-	    }
-	    else if ((cb->pss_restab.pst_fillfac > 0) && 
-		 (cb->pss_restab.pst_struct == DB_HEAP_STORE))
-	    {
-		error++;
-		withentry = "FILLFACTOR";
-	    }
-	    else if ((cb->pss_restab.pst_leaff > 0) &&
-		(cb->pss_restab.pst_struct != DB_BTRE_STORE))
-	    {
-		error++;
-		withentry = "LEAFFILL or INDEXFILL";
-	    }
-	    else if ((cb->pss_restab.pst_nonleaff > 0) &&
-		(cb->pss_restab.pst_struct != DB_BTRE_STORE))
-	    {
-		error++;
-		withentry = "NONLEAFFILL";
-	    }
-	    else if ((cb->pss_restab.pst_reskey != NULL) &&
-		(cb->pss_restab.pst_struct == DB_HEAP_STORE))
-	    {
-		error++;
-		withentry = "KEY";
-	    }
-
-	    if (error)
-	    {
-		(VOID) psf_error(2152L, 0L, PSF_USERERR,
-		    &err_code, &psq_cb->psq_error, 1,
-		    (i4) STlength(withentry), withentry);
-		return (E_DB_ERROR);
-	    }
-	}
-	else if ($Ycheck_for_vlups)
+	if ($Ycheck_for_vlups)
 	{
 	    /* we need to check for VLUPs in the target list of RETRIEVE */
 	    for (resdom = rootnode->pst_left;
-	         resdom != (PST_QNODE *) NULL && 
+	         resdom != (PST_QNODE *) NULL &&
 		 resdom->pst_sym.pst_type == PST_RESDOM;
 		 resdom = resdom->pst_left)
 	    {
@@ -6357,81 +6313,6 @@ retrieve:   retstmnt intoclause uniqueclause tlclause
 		    (VOID) psf_error(2218L, 0L, PSF_USERERR,
 			&err_code, &psq_cb->psq_error, 0);
 		    return (E_DB_ERROR);
-		}
-	    }
-	}
-
-	/*
-	** Check whether KEY clause has been specified, if so validate it.
-	*/
-	if (cb->pss_restab.pst_reskey != (PST_RESKEY *) NULL)
-	{
-	    for (reskey = cb->pss_restab.pst_reskey, found = FALSE;
-		 reskey;
-		 reskey = reskey->pst_nxtkey)
-	    {
-                for (ssnode = rootnode->pst_left;
-                     ssnode->pst_sym.pst_type != PST_TREE;
-                     ssnode = ssnode->pst_left
-                    )
-                {
-                    /* compare domain names */
-                    if (MEcmp((PTR) &reskey->pst_attname,
-                        (PTR) ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname,
-                         sizeof (reskey->pst_attname)) == 0)
-                    {
-                        found++;
-                        break;
-                    }
-                }
-                if (found == FALSE)
-                {   /* bogus column name */
-                    (VOID) psf_error(4611L, 0L, PSF_USERERR, &err_code,
-                        &psq_cb->psq_error, 0);
-                    return (E_DB_ERROR);
-                }
-		status = psl_check_key(cb, &psq_cb->psq_error,
-			    (DB_DT_ID) ssnode->pst_sym.pst_dataval.db_datatype);
-		if (status)
-		{
-		    (VOID) psf_error(2179L, 0L, PSF_USERERR, &err_code,
-			&psq_cb->psq_error, 2,
-			sizeof(cb->pss_lineno), &cb->pss_lineno,
-			psf_trmwhite(sizeof(DB_ATT_NAME),
-			    (char*) &reskey->pst_attname),
-			(char *) &reskey->pst_attname);
-			return (E_DB_ERROR);
-		}
-	    }
-	}
-	else if (cb->pss_restab.pst_struct &&
-		    (cb->pss_restab.pst_struct != DB_HEAP_STORE))
-	{
-	    /* Must check that implicit key is keyable */
-
-	    /* First, find it */
-	    
-	    for (ssnode = rootnode->pst_left;
-		 ssnode->pst_sym.pst_type != PST_TREE;
-		 ssnode = ssnode->pst_left
-		)
-	    {
-		if (	(ssnode->pst_sym.pst_type == PST_RESDOM)
-		    &&	(ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsno == 1))
-		{
-		    status = psl_check_key(cb, &psq_cb->psq_error,
-				(DB_DT_ID) ssnode->pst_sym.pst_dataval.db_datatype);
-		    if (status)
-		    {
-			(VOID) psf_error(2179L, 0L, PSF_USERERR, &err_code,
-			    &psq_cb->psq_error, 2,
-			    sizeof(cb->pss_lineno), &cb->pss_lineno,
-			    psf_trmwhite(sizeof(DB_ATT_NAME),
-				(char*) &ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname),
-			    (char *) &ssnode->pst_sym.pst_value.pst_s_rsdm.pst_rsname);
-			    return (E_DB_ERROR);
-		    }
-		    break;
 		}
 	    }
 	}
@@ -6514,6 +6395,8 @@ retrieve:   retstmnt intoclause uniqueclause tlclause
 	/* set pst_numjoins.  $Yjoin_id contains the highest join id */
 	tree->pst_numjoins = $Yjoin_id;
 
+	tree->pst_qeucb = (QEU_CB *) cb->pss_object;
+
 	/* Fix the root in QSF */
 	status = psf_mroot(cb, &cb->pss_ostream, (PTR) pnode, &psq_cb->psq_error);
         if (DB_FAILURE_MACRO(status))
@@ -6575,18 +6458,10 @@ retkwd:		retkwd_1
     {
 	DB_STATUS	       status;
 
-	/*
-	** Allocate the location entries.  Assume DM_LOC_MAX, although it's
-	** probably fewer.  This is because we don't know how many locations
-	** we have at this point, and it would be a big pain to allocate
-	** less and then run into problems.
-	*/
-	status = psf_malloc(cb, &cb->pss_ostream, DM_LOC_MAX * sizeof(DB_LOC_NAME),
-	    (PTR *) &cb->pss_restab.pst_resloc.data_address,
-	    &psq_cb->psq_error);
+	psq_cb->psq_mode = PSQ_CREATE;	/* Will change soon! */
+	status = psl_ct10_crt_tbl_kwd(cb, psq_cb);
 	if (status != E_DB_OK)
 	    return (status);
-	cb->pss_restab.pst_resloc.data_in_size = 0; /* Start with 0 locations */
 
 	/* processing RETRIEVE INTO */
 	psq_cb->psq_mode = PSQ_RETINTO;
@@ -6598,7 +6473,29 @@ retkwd_1:            INTO
           |
 ;
 
-retwithcls:	    WITH
+retwithcls:
+    {
+	if (psq_cb->psq_mode == PSQ_RETINTO)
+	    psl_withopt_init(cb, psq_cb);
+    }
+		retwithsyntax
+    {
+	DB_STATUS	status;
+
+	if (psq_cb->psq_mode == PSQ_RETINTO)
+	{
+	    status = psl_withopt_post(cb, psq_cb);
+	    if (status != E_DB_OK)
+		return (status);
+	    /* Now for common create / retinto post-with processing */
+	    status = psl_ct3_crwith(cb, psq_cb);
+	    if (DB_FAILURE_MACRO(status))
+		return(status);
+	}
+    }
+;
+
+retwithsyntax:	    WITH
     {
 	i4     err_code;
 
@@ -6611,39 +6508,6 @@ retwithcls:	    WITH
 	}
     }
 		    retwiths
-    {
-	i4	    err_code;
-	i4	    minp;
-	i4	    maxp;
-
-	minp = cb->pss_restab.pst_minpgs;
-	maxp = cb->pss_restab.pst_maxpgs;
-
-	if (minp > 0 && maxp > 0 && minp > maxp)
-	{
-	    (VOID) psf_error(2143L, 0L, PSF_USERERR, &err_code,
-		&psq_cb->psq_error, 1, (i4) sizeof(minp), &minp);
-	    return (E_DB_ERROR);	/* non-zero return means error */
-	}
-
-	/* If user has not specified [NO]JOURNALING clause
-	** session default should be used.
-	*/
-	if (!$Ywith_journaling && (cb->pss_ses_flag & PSS_JOURNALING))
-	{
-	    if (cb->pss_ses_flag & PSS_JOURNALED_DB)
-		cb->pss_restab.pst_resjour = PST_RESJOUR_ON;
-	    else
-		cb->pss_restab.pst_resjour = PST_RESJOUR_LATER;
-	}
-
-	/* If user has NOT specified [NO]DUPLICATES clause,
-	** language default should be used.
-	*/
-	if ($Ywith_dups == PST_DNTCAREDUPS)
-	    cb->pss_restab.pst_resdup = FALSE;
-
-    }
 	  |	WITHNULL
     {
 	/* User specified WITH clause only allowed on a RETRIEVE INTO */
@@ -6655,35 +6519,8 @@ retwithcls:	    WITH
 		&psq_cb->psq_error, 0);
 	    return (E_DB_ERROR);    /* non-zero return means error */
 	}
-
-	if (cb->pss_ses_flag & PSS_JOURNALING)
-	{
-	    if (cb->pss_ses_flag & PSS_JOURNALED_DB)
-		cb->pss_restab.pst_resjour = PST_RESJOUR_ON;
-	    else
-		cb->pss_restab.pst_resjour = PST_RESJOUR_LATER;
-	}
-
-	/* If user has NOT specified [NO]DUPLICATES clause
-	** language default should be used.
-	*/
-	cb->pss_restab.pst_resdup = FALSE;
     }
-	  |
-    {
-	if (cb->pss_ses_flag & PSS_JOURNALING)
-	{
-	    if (cb->pss_ses_flag & PSS_JOURNALED_DB)
-		cb->pss_restab.pst_resjour = PST_RESJOUR_ON;
-	    else
-		cb->pss_restab.pst_resjour = PST_RESJOUR_LATER;
-	}
-
-	/* If user has NOT specified [NO]DUPLICATES clause
-	** language default should be used.
-	*/
-	cb->pss_restab.pst_resdup = FALSE;
-    }
+	  | /* empty */
 ;
 
 retwiths:	    retwith
@@ -6698,322 +6535,61 @@ retwith:	    rt_nm_eq_nm
 
 rt_nm_eq_nm:	    nonkeyword ISOP nonkeyword
     {
-	i4	    err_code;
-	i4	    storestruct;
-	i4	    compressed = FALSE;
+	DB_STATUS		status;
 
-	if (STcompare($1, "structure") == 0)
-	{
-	    char    *ssname = $3;
-
-	    /* Decode storage structure */
-	    if (*ssname == 'c')
-	    {
-		compressed = TRUE;
-		ssname++;
-	    }
-
-	    storestruct = uld_struct_xlate(ssname);
-	    if (storestruct == 0 || storestruct == DB_RTRE_STORE
-	      || storestruct == DB_SORT_STORE)
-	    {
-		(VOID) psf_error(2144L, 0L, PSF_USERERR, &err_code,
-			  &psq_cb->psq_error, 1, (i4) STtrmwhite($3), $3);
-		return (E_DB_ERROR);    /* non-zero return means error */
-	    }
-
-	    cb->pss_restab.pst_struct   = storestruct;
-	    cb->pss_restab.pst_compress = compressed ? PST_DATA_COMP : 0;
-	}
-	else
-	{
-	    (VOID) psf_error(2139L, 0L, PSF_USERERR,
-		&err_code, &psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
-		&cb->pss_lineno, STtrmwhite($1), $1);
-	    return (E_DB_ERROR);    /* non-zero return means error */
-	}
+	status = psl_nm_eq_nm(cb, psq_cb, $1, $3);
+	if (DB_FAILURE_MACRO(status))
+	    return(status);
     }
 ;
 
 rt_nm_eq_no:	    nonkeyword ISOP intconst
     {
-	i4		    err_code;
+	DB_STATUS		status;
 
-	if (!STcasecmp($1, "fillfactor"))
-	{
-	    /* Fillfactor must be between 1% and 100% */
-	    if ($3 < 1 || $3 > 100)
-	    {
-		(VOID) psf_error(2145L, 0L, PSF_USERERR, &err_code,
-		    &psq_cb->psq_error, 1, (i4) sizeof($3), &$3);
-		return (E_DB_ERROR);	/* non-zero return means error */
-	    }
-	    cb->pss_restab.pst_fillfac = $3;
-	}
-	else if (!STcasecmp($1, "minpages"))
-	{
-	    /* minpages must be greater than zero */
-            if (($3 <= 0) || ($3 > DB_MAX_PAGENO))
-	    {
-		(VOID) psf_error(2146L, 0L, PSF_USERERR, &err_code,
-		    &psq_cb->psq_error, 1, (i4) sizeof($3), &$3);
-		return (E_DB_ERROR);	/* non-zero return means error */
-	    }
-	    cb->pss_restab.pst_minpgs = $3;
-	}
-	else if (!STcasecmp($1, "maxpages"))
-	{
-	    /* maxpages must be greater than zero */
-            if (($3 <= 0) || ($3 > DB_MAX_PAGENO))
-	    {
-		(VOID) psf_error(2147L, 0L, PSF_USERERR, &err_code,
-		    &psq_cb->psq_error, 1, (i4) sizeof($3), &$3);
-		return (E_DB_ERROR);	/* non-zero return means error */
-	    }
-	    cb->pss_restab.pst_maxpgs = $3;
-	}
-	else if (!STcasecmp($1, "nonleaffill"))
-	{
-	    /* Nonleaffill must be between 1% and 100% */
-	    if ($3 < 1 || $3 > 100)
-	    {
-		(VOID) psf_error(2148L, 0L, PSF_USERERR, &err_code,
-		    &psq_cb->psq_error, 1, (i4) sizeof($3), &$3);
-		return (E_DB_ERROR);	/* non-zero return means error */
-	    }
-	    cb->pss_restab.pst_nonleaff = $3;
-	}
-	else if (!STcasecmp($1, "leaffill") ||
-		 !STcasecmp($1, "indexfill")   )
-	{
-	    /* Leaffill/indexfill must be between 1% and 100% */
-	    if ($3 < 1 || $3 > 100)
-	    {
-		(VOID) psf_error(2149L, 0L, PSF_USERERR, &err_code,
-		    &psq_cb->psq_error, 1, (i4) sizeof($3), &$3);
-		return (E_DB_ERROR);	/* non-zero return means error */
-	    }
-	    cb->pss_restab.pst_leaff = $3;
-	}
-	else if (!STcasecmp($1, "maxindexfill"))
-	{
-	    /* ignore */
-	}
-        else if (!STcasecmp($1, "allocation"))
-        {
-            /* Nonleaffill must be between 4 and 8388607 */
-            if ($3 < 4 || $3 > 8388607)
-            {
-                (VOID) psf_error(5555L, 0L, PSF_USERERR, &err_code,
-                    &psq_cb->psq_error, 1, (i4) sizeof($3), &$3);
-                return (E_DB_ERROR);    /* non-zero return means error */
-            }
-            cb->pss_restab.pst_alloc = $3;
-        }
-        else if (!STcasecmp($1, "extend"))
-        {
-            /* Nonleaffill must be between 1 and 8388607 */
-            if ($3 < 1 || $3 > 8388607)
-            {
-                (VOID) psf_error(5556L, 0L, PSF_USERERR, &err_code,
-                    &psq_cb->psq_error, 1, (i4) sizeof($3), &$3);
-                return (E_DB_ERROR);    /* non-zero return means error */
-            }
-            cb->pss_restab.pst_extend = $3;
-        }
-	else	/* Unknown parameter */
-	{
-	    (VOID) psf_error(2140L, 0L, PSF_USERERR,
-		&err_code, &psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
-		&cb->pss_lineno, STtrmwhite($1), $1);
-	    return (E_DB_ERROR);
-	}
+	status = psl_nm_eq_no(cb, psq_cb, $1, $3, NULL);
+	if (DB_FAILURE_MACRO(status))
+	    return(status);
     }
 ;
 
 rt_single_kwd:	nonkeyword
     {
-	i4			err_code;
+	DB_STATUS		status;
 
-	if (STcompare((char*) $1, "journaling") == 0 ||
-	    STcompare((char*) $1, "logging") == 0)
-    	{
-	    $Ywith_journaling = 1;
-	    if (cb->pss_ses_flag & PSS_JOURNALED_DB)
-		cb->pss_restab.pst_resjour = PST_RESJOUR_ON;
-	    else
-		cb->pss_restab.pst_resjour = PST_RESJOUR_LATER;
-	}
-	else if (STcompare((char*) $1, "nojournaling") == 0 ||
-	    STcompare((char*) $1, "nologging") == 0)
-	{
-	    $Ywith_journaling = 1;
-	    cb->pss_restab.pst_resjour = PST_RESJOUR_OFF;
-	}
-	else if (STcompare((char*) $1, "duplicates") == 0)
-	{
-	    $Ywith_dups = PST_ALLDUPS;
-	    cb->pss_restab.pst_resdup = TRUE;
-	}
-	else if (STcompare((char*) $1, "noduplicates") == 0)
-	{
-	    $Ywith_dups = PST_NODUPS;
-	    cb->pss_restab.pst_resdup = FALSE;
-	}
-	else
-	{
-	    (VOID) psf_error(2154L, 0L, PSF_USERERR,
-		&err_code, &psq_cb->psq_error, 2, (i4) sizeof(cb->pss_lineno),
-		&cb->pss_lineno, STtrmwhite($1), $1);
-	    return (E_DB_ERROR);	/* non-zero return means error */
-	}
+	status = psl_with_kwd(cb, psq_cb, $1, NULL);
+	if (DB_FAILURE_MACRO(status))
+	    return(status);
     }
 ;
 
 rt_lst_cl:	    rt_lst_cl_prefix LPAREN rt_lst RPAREN
     {
-	if ($Ylist_clause == PSS_KEY_CLAUSE)
-	    cb->pss_restab.pst_reskey = $3;
-
 	$Ylist_clause = 0;	/* done with this clause */
     }
 ;
 
 rt_lst_cl_prefix:	    nonkeyword ISOP
     {
-	i4                err_code;
+	DB_STATUS status;
 
-	if (STcompare((char*) $1, "key") == 0)
-	    $Ylist_clause = PSS_KEY_CLAUSE;
-	else if (STcompare($1, "location") == 0)
-	{
-	    $Ylist_clause = PSS_NLOC_CLAUSE;
-	    /* check if user specified a locationname */
-	    if ($Ywith_location)
-	    {
-		(VOID) psf_error(2114L, 0L, PSF_USERERR,
-		    &err_code, &psq_cb->psq_error, 1, sizeof(cb->pss_lineno),
-		    &cb->pss_lineno);
-		return (E_DB_ERROR);
-	    }
-	    $Ywith_location = 1;
-	}
-	else
-	{
-	    (VOID) psf_error(2150L, 0L, PSF_USERERR, &err_code,
-		&psq_cb->psq_error, 1, (i4) STlength($1), $1);
-	    return (E_DB_ERROR);    /* non-zero return means error */
-	}
+	status = psl_withlist_prefix(cb, psq_cb, $1, NULL);
+	if (status != E_DB_OK)
+	    return (status);
     }
 ;
 
 rt_lst:	rt_lst_elem
-    {
-	$$ = $1;
-    }
 	|	rt_lst COMMA rt_lst_elem
-    {
-	if ($Ylist_clause == PSS_KEY_CLAUSE)
-	{
-	    PST_RESKEY	*reskey;
-	    i4		err_code;
-
-	    /*
-	    ** Check for duplicate names.
-	    */
-	    reskey = $1;	
-	    do {
-		if (!MEcmp((char *) &($3)->pst_attname,
-		    (char *) &reskey->pst_attname,
-		    sizeof(reskey->pst_attname))
-		   )
-		{
-		    (VOID) psf_error(2151L, 0L, PSF_USERERR,
-				     &err_code, &psq_cb->psq_error, 1,
-				     STlength($3->pst_attname.db_att_name), 
-				     $3->pst_attname.db_att_name); 
-		    return (E_DB_ERROR);
-		}
-		reskey = reskey->pst_nxtkey;
-	    } while (reskey != (PST_RESKEY *) NULL);
-     
-	    /*
-	    ** Find the last key in the list.
-	    */
-	    for (reskey = $1; reskey->pst_nxtkey; reskey = reskey->pst_nxtkey)
-	    ;
-
-	    reskey->pst_nxtkey = $3;
-
-	    $$ = $1;
-	}
-    }
 ;
 
 rt_lst_elem:		NAME
     {
-	if ($Ylist_clause == PSS_KEY_CLAUSE)
-	{
-	    DB_STATUS	status;
-	    PST_RESKEY	*reskey;
+	DB_STATUS status;
 
-	    /* Allocate memory for a key entry */
-	    status = psf_malloc(cb, &cb->pss_ostream, (i4) sizeof(PST_RESKEY),
-		(PTR *) &reskey, &psq_cb->psq_error);
-	    if (status != E_DB_OK)
-	    {
-		return (status);
-	    }
-
-	    /*
-	    ** Copy column name to column entry.
-	    */
-	    STmove($1, ' ', sizeof(reskey->pst_attname),
-		(char *) &reskey->pst_attname);
-	    reskey->pst_nxtkey = (PST_RESKEY *) NULL;
-
-	    $$ = reskey;
-	}
-	else
-	{
-	    register DB_LOC_NAME *loc, *lim;
-	    i4	err_code;
-
-	    /* See if there is space for 1 more */
-	    if (cb->pss_restab.pst_resloc.data_in_size/sizeof(DB_LOC_NAME) >=
-		DM_LOC_MAX)
-	    {
-		/* Too many locations */
-		(VOID) psf_error(2115L, 0L, PSF_USERERR,
-		    &err_code, &psq_cb->psq_error, 1, sizeof(cb->pss_lineno),
-		    &cb->pss_lineno);
-		return (E_DB_ERROR);
-	    }
-
-	    lim = (DB_LOC_NAME *) (cb->pss_restab.pst_resloc.data_address +
-		    cb->pss_restab.pst_resloc.data_in_size);
-
-	    /* Store normalized location name */
-	    STmove($1, ' ', (u_i4) DB_LOC_MAXNAME, (char *) lim);
-	    cb->pss_restab.pst_resloc.data_in_size += sizeof(DB_LOC_NAME);
-
-	    /* See if not a duplicate */
-	    for (loc = (DB_LOC_NAME *) cb->pss_restab.pst_resloc.data_address;
-		 loc < lim;
-		 loc++
-		)
-	    {
-		if (!MEcmp((char *) loc, (char *) lim, sizeof(DB_LOC_NAME)))
-		{
-		    /* A duplicate was found */
-		    (VOID) psf_error(2116L, 0L, PSF_USERERR,
-			&err_code, &psq_cb->psq_error, 2,
-			sizeof(cb->pss_lineno), &cb->pss_lineno,
-			psf_trmwhite(DB_LOC_MAXNAME, $1), $1);
-		    return (E_DB_ERROR);
-		}
-	    }
-	}
+	status = psl_withlist_elem(cb, psq_cb, $1, NULL);
+	if (status != E_DB_OK)
+	    return (status);
     }
 ;
 
@@ -7304,15 +6880,12 @@ date:              month intconst intconst
 
 	/* Adjust to GMT */
 
-    	if( date > MAXI4)
-    	    value = MAXI4;
-    	else
-    	    value = date;
-    
-    	date -=	TMtz_search(adf_scb->adf_tzcb, TM_TIMETYPE_LOCAL,
-    	    	    	    value);
+	if( date > MAXI4)
+	    value = MAXI4;
+	else
+	    value = date;
 
-
+	date -=	TMtz_search(adf_scb->adf_tzcb, TM_TIMETYPE_LOCAL, value);
 
 	/* Store number of seconds in control block */
 	qeu_cb = (QEU_CB *) cb->pss_object;
@@ -7524,9 +7097,9 @@ setcrecomp:	    SETCREATECOMPRESSION
 	psq_cb->psq_mode = PSQ_CREATECOMP;
 
 	if ($1 == PSL_ONSET)
-	    cb->pss_create_compression = DMU_C_ON;	/* compression = DATA */
+	    cb->pss_create_compression = DMU_COMP_ON;	/* compression = DATA */
 	else
-	    cb->pss_create_compression = DMU_C_OFF;	/* compression NONE */
+	    cb->pss_create_compression = DMU_COMP_OFF;	/* compression NONE */
     }
 ;
 
@@ -8030,10 +7603,10 @@ setlockkey:	    nonkeyword
     {
         i4                      lockkey_type;
         DB_STATUS               status;
- 
+
         status = psl_lm2_setlockkey(cb, "level", &lockkey_type,
                                     &psq_cb->psq_error);
- 
+
         if (DB_FAILURE_MACRO(status))
         {
             return(status);
@@ -8640,47 +8213,27 @@ setrandomseed:	    SETRANDOMSEED intsetparam
 setretinto:	    SETRETINTO strsetparam
     {
 	i4                err_code;
-	DB_STATUS	       status;
-	OPF_CB		       *opf_cb;
 	char		*val = $2;
+	bool		compressed = FALSE;
+	i4		sstruct;
 
 	psq_cb->psq_mode = PSQ_SRINTO;
-
-	/* Allocate OPF control block for set ret_into command */
-	status = psf_mopen(cb, QSO_QP_OBJ, &cb->pss_ostream, &psq_cb->psq_error);
-	if (status != E_DB_OK)
-	    return (status);
-	status = psf_malloc(cb, &cb->pss_ostream, sizeof(OPF_CB), (PTR *) &opf_cb,
-	    &psq_cb->psq_error);
-	if (status != E_DB_OK)
-	    return (status);
-	status = psf_mroot(cb, &cb->pss_ostream, (PTR) opf_cb,
-	    &psq_cb->psq_error);
-	if (status != E_DB_OK)
-	    return (status);
-
-	/* Fill in OPF control block */
-	opf_cb->opf_length = sizeof(opf_cb);
-	opf_cb->opf_type = OPFCB_CB;
-	opf_cb->opf_owner = (PTR)DB_PSF_ID;
-	opf_cb->opf_ascii_id = OPFCB_ASCII_ID;
-	opf_cb->opf_alter = OPF_RET_INTO;
-	opf_cb->opf_level = OPF_SESSION;
-	opf_cb->opf_compressed = FALSE;
 
 	/* Decode storage structure.  Error if unknown. */
 
 	if (CMcmpnocase(val, "c") == 0)
 	{
-	    opf_cb->opf_compressed = TRUE;
+	    compressed = TRUE;
 	    CMnext(val);
 	}
-	opf_cb->opf_value = uld_struct_xlate(val);
-	if (opf_cb->opf_value == 0 || opf_cb->opf_value == DB_RTRE_STORE)
+	sstruct = uld_struct_xlate(val);
+	if (sstruct == 0 || sstruct == DB_RTRE_STORE || sstruct == DB_X100IX_STORE)
 	{
 	    (VOID) psf_error(5915L, 0L, PSF_USERERR, &err_code,
 		&psq_cb->psq_error, 1, (i4) STlength($2), $2);
 	}
+	cb->pss_result_compression = compressed;
+	cb->pss_result_struct = sstruct;
     }
 ;
 
@@ -8774,12 +8327,12 @@ setsesstype:        nonkeyword
                 &psq_cb->psq_error, 2,
                 (i4) sizeof("SET SESSION")-1, "SET SESSION",
                 (i4) sizeof("ON_ERROR")-1, "ON_ERROR");
- 
+
             return E_DB_ERROR;
         }
- 
+
         psq_cb->psq_ret_flag|= PSQ_SET_ON_ERROR;
- 
+
 
         /*
         ** Allocate memory for alter control block.
@@ -8861,16 +8414,27 @@ setsql:	    SETSQL
 setrstruct:	    SETRSTRUCT strsetparam
     {
 	i4                err_code;
+	char		*val = $2;
+	bool		compressed = FALSE;
+	i4		sstruct;
 
-	/* "set result_structure" is not legal in QUEL. Issue warning */
-	psq_cb->psq_mode = PSQ_OBSOLETE;
+	psq_cb->psq_mode = PSQ_SRINTO;
 
-	if (cb->pss_ses_flag & PSS_WARNINGS)
+	/* Decode storage structure.  Error if unknown. */
+
+	if (CMcmpnocase(val, "c") == 0)
 	{
-	    /* "set result_structure" is not supported for quel */
-	    (VOID) psf_error(5977L, 0L, PSF_USERERR,
-		&err_code, &psq_cb->psq_error, 0);
+	    compressed = TRUE;
+	    CMnext(val);
 	}
+	sstruct = uld_struct_xlate(val);
+	if (sstruct == 0 || sstruct == DB_RTRE_STORE || sstruct == DB_X100IX_STORE)
+	{
+	    (VOID) psf_error(5916L, 0L, PSF_USERERR, &err_code,
+		&psq_cb->psq_error, 1, (i4) STlength($2), $2);
+	}
+	cb->pss_result_compression = compressed;
+	cb->pss_result_struct = sstruct;
     }
 ;
 
@@ -9350,7 +8914,7 @@ settracestmnt:	    SETTRACE
 settransaction:     settranstmnt settranmodes
     {
         DB_STATUS               status;
- 
+
         status = psl_st0_settransaction(cb, psq_cb);
         if (DB_FAILURE_MACRO(status))
             return(status);
@@ -9359,7 +8923,7 @@ settransaction:     settranstmnt settranmodes
 settranstmnt:       SETTRANSACTION
     {
         DB_STATUS               status;
- 
+
         status = psl_st1_settranstmnt(cb, psq_cb);
         if (DB_FAILURE_MACRO(status))
             return(status);
@@ -9377,7 +8941,7 @@ settranmode:	    settranisolation_level
 settranisolation_level:     ISOLATION LEVEL isolation_level
     {
         DB_STATUS               status;
- 
+
         status = psl_st2_settranisolation_level(cb, &psq_cb->psq_error, 
 		(i4)$3);
         if (DB_FAILURE_MACRO(status))
@@ -9406,7 +8970,7 @@ isolation_level:    READ COMMITTED
 settranaccess_mode:  access_mode
     {
         DB_STATUS               status;
- 
+
         status = psl_st3_accessmode(cb, &psq_cb->psq_error, $1);
         if (DB_FAILURE_MACRO(status))
             return(status);
@@ -9682,6 +9246,7 @@ tlelm:             NAME is afcn
 	    {
 		return (status);
 	    }
+	    varnode->pst_sym.pst_dataval.db_collID = (*attribute)->att_collID;
 
 	    /* Create the corresponding result domain node */
 	    status = pst_adresdom(var.pst_atname.db_att_name, rsdmnode,
@@ -10649,6 +10214,7 @@ aggtarg:	    afcn
 	{
 	    return (status);
 	}
+	varnode->pst_sym.pst_dataval.db_collID = (*attribute)->att_collID;
 	$$ = varnode;
     }
 ;
@@ -10739,6 +10305,7 @@ targdom:           afcn
 		return (status);
 	    }
 
+	    varnode->pst_sym.pst_dataval.db_collID = (*attribute)->att_collID;
 	    /* Create the corresponding result domain node */
 	    status = pst_node(cb, &cb->pss_ostream, rsdmnode, varnode,
 		PST_RESDOM, (PTR) &rsdom, sizeof(PST_RSDM_NODE),
@@ -10794,6 +10361,7 @@ attrib:            var PERIOD NAME
 	{
 	    return (status);
 	}
+	newnode->pst_sym.pst_dataval.db_collID = attribute->att_collID;
 
 	$$ = newnode;
     }
@@ -10829,6 +10397,7 @@ attrib:            var PERIOD NAME
 	{
 	    return (status);
 	}
+	newnode->pst_sym.pst_dataval.db_collID = attribute->att_collID;
 
 	$$ = newnode;
     }
@@ -11231,6 +10800,7 @@ attribfcn:         I2CONST
 		{
 		    return (status);
 		}
+		newnode->pst_sym.pst_dataval.db_collID = att_entry->att_collID;
 	    }
 	}
 
@@ -11386,24 +10956,19 @@ uop:               UAOP                %prec unaryop
 
 locationname:      NAME COLON crname
     {
-	$Ywith_location = 1;
+	DB_STATUS status;
 
  	/* Remember location and table name */
-
-	STmove($1, ' ', sizeof(DB_LOC_NAME),
-	    (char *) cb->pss_restab.pst_resloc.data_address);
-	cb->pss_restab.pst_resloc.data_in_size = sizeof(DB_LOC_NAME);
-
- 	/* Remember table name */
-	STmove($3, ' ', sizeof(DB_TAB_NAME),
-	    (char *) &cb->pss_restab.pst_resname);
-
+	status = psl_ct9_new_loc_name(cb, psq_cb, $1, $3);
+	if (status != E_DB_OK)
+	    return (status);
     }
           |	    crname
     {
- 	/* Remember table name */
-	STmove($1, ' ', sizeof(DB_TAB_NAME),
-	    (char *) &cb->pss_restab.pst_resname);
+	DB_STATUS status;
+	status = psl_ct9_new_loc_name(cb, psq_cb, NULL, $1);
+	if (status != E_DB_OK)
+	    return (status);
     }
 ;
 
@@ -11743,17 +11308,19 @@ getfacil(
 ** History:
 **	25-feb-86 (jeff)
 **	    adapted from pre-Jupiter version
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Re-written not to use MEcopy as will break on more platforms.
 */
 char *
 sconvert(
 	DB_TEXT_STRING     *string)
 {
-    i4                  count;
-
-    count = string->db_t_count;
-    MEcopy((PTR) string->db_t_text, count, (PTR) string);
-    ((char *) string)[count] = '\0';
-    return ((char *) string);
+    register i4	count = string->db_t_count;
+    register i4	i;
+    for (i = 0; i < count; i++)
+	((char *)string)[i] = string->db_t_text[i];
+    ((char *)string)[count] = '\0';
+    return ((char *)string);
 }
 
 /*{
@@ -11820,7 +11387,9 @@ qdata_cvt(
     ADI_DT_NAME		dt_fname;
     ADI_DT_NAME		dt_tname;
     i4		err_code;
+# ifdef BYTE_ALIGN
     i4			left;
+#endif
 
     if (fval->db_datatype == totype)
 	dv_size = fval->db_length;
@@ -11898,7 +11467,7 @@ qdata_cvt(
     }
     *value = (PTR) cb->pss_symnext;
     cb->pss_symnext = (u_char *)((char*)cb->pss_symnext) + dv_size +  1;
-    
+
     ((char*)*value)[dv_size] = EOS;
     adffn.adf_dv_n		= 1;
     adffn.adf_r_dv.db_datatype	= totype;
@@ -11995,7 +11564,8 @@ psl_quel_shareable(
     {
 	*shareable = FALSE;
 
-	if (ult_check_macro(&sess_cb->pss_trace, 4, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 	{
 	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 		"\nQUEL repeat query is not shareable\n");
@@ -12007,7 +11577,8 @@ psl_quel_shareable(
     {
 	*shareable = FALSE;
 
-	if (ult_check_macro(&sess_cb->pss_trace, 4, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 	{
 	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 		"\nQUEL repeat query is not shareable\n");
@@ -12019,7 +11590,8 @@ psl_quel_shareable(
     {
 	*shareable = FALSE;
 
-	if (ult_check_macro(&sess_cb->pss_trace, 4, &val1, &val2))
+	if (ult_check_macro(&sess_cb->pss_trace,
+				PSS_REPEAT_QRY_SHARE_TRACE, &val1, &val2))
 	{
 	    psf_display(psf_scctrace, 0, trbuf, sizeof(trbuf) - 1,
 		"\nQUEL repeat query is not shareable\n");

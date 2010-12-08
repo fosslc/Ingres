@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -53,15 +53,6 @@
 #include    <tr.h>
 #include    <cv.h>
 #include    <opxlint.h>
-
-#ifdef COUNTS
-FUNC_EXTERN void ade_barf_counts();
-#endif
-
-static VOID 
-ops_statement(
-	OPS_STATE	    *global,
-	PST_STATEMENT	    *sp);
 
 /**
 **
@@ -124,8 +115,32 @@ ops_statement(
 **      18-Jan-1999 (hanal04) Bug 92148 INGSRV494
 **          Enhanced OPC to support compilation of the non-cnf case
 **          in opc_crupcurs().
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+static i4 ops_seqhandler(
+	EX_ARGS *args);
+static void ops_pushnots(
+	OPS_SUBQUERY *subquery,
+	PST_QNODE **qnodepp,
+	bool demorgan);
+static void ops_normalize(
+	OPS_STATE *global,
+	PST_QNODE **qnodepp,
+	bool cnf);
+void ops_decvar(
+	OPS_STATE *global,
+	PST_QNODE *constp);
+static void ops_statement(
+	OPS_STATE *global,
+	PST_STATEMENT *sp);
+static void ops_dbprocedure(
+	OPS_STATE *global,
+	PST_STATEMENT *statementp);
+i4 ops_sequencer(
+	OPF_CB *opf_cb);
 
 /*{
 ** Name: ops_seqhandler	- exception handler for sequencer
@@ -166,7 +181,6 @@ ops_statement(
 **	13-mar-92 (rog)
 **          Remove the EX_DECLARE case and change the EX_UNWIND case to return
 **	    EXRESIGNAL.
-[@history_line@]...
 */
 static STATUS
 ops_seqhandler(
@@ -196,10 +210,8 @@ ops_seqhandler(
 **      for normalization to work.
 **
 ** Inputs:
-[@PARAM_DESCR@]...
 **
 ** Outputs:
-[@PARAM_DESCR@]...
 **	Returns:
 **	    {@return_description@}
 **	Exceptions:
@@ -228,8 +240,6 @@ ops_seqhandler(
 **	    ops_pushnots() which ensures that we skip past ALL PST_NOTs in a
 **	    chain
 **	    
-[@history_line@]...
-[@history_template@]...
 */
 static VOID
 ops_pushnots(
@@ -307,7 +317,6 @@ ops_pushnots(
 **                                      variable
 **
 ** Outputs:
-[@PARAM_DESCR@]...
 **	Returns:
 **	    {@return_description@}
 **	Exceptions:
@@ -328,7 +337,6 @@ ops_pushnots(
 **      18-Jan-1999 (hanal04) Bug 92148 INGSRV494
 **          Added new parameter to allow the caller to specify whether
 **          we call opj_normalize().
-[@history_template@]...
 */
 static VOID
 ops_normalize(
@@ -381,7 +389,6 @@ ops_normalize(
 **      16-oct-92 (ed)
 **          - fix bug 40835 - wrong number of duplicates when union views and
 **          subselects are used
-[@history_template@]...
 */
 VOID
 ops_decvar(
@@ -966,7 +973,6 @@ ops_statement(
 **      global                          ptr to global state variable
 **
 ** Outputs:
-[@PARAM_DESCR@]...
 **	Returns:
 **	    VOID
 **	Exceptions:
@@ -983,7 +989,6 @@ ops_statement(
 **	29-jan-89 (paul)
 **	    Split the function of this routine with ops_statement to support
 **	    the compilation of rule statement lists.
-[@history_template@]...
 */
 static VOID
 ops_dbprocedure(
@@ -1065,6 +1070,10 @@ DB_STATUS
 ops_sequencer(
 	OPF_CB             *opf_cb)
 {
+#ifdef COUNTS
+    FUNC_EXTERN void ade_barf_counts(void);
+#endif
+
     OPS_STATE      global;	    /* this is the session level state
 				    ** control block - it is equivalent to the
                                     ** old Jn, Jnn, and Jne structures

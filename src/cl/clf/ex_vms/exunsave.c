@@ -2,9 +2,10 @@
 ** Copyright (c) 1993, 2009 Ingres Corporation
 */
 # include	<compat.h>
+# include	<clconfig.h>
 # include	<excl.h>
 # include	<builtins.h>
-# include	"exi.h"
+# include	<exinternal.h>
 
 /*
 ** Name: EXunsave_handler - Deletes the current contexts' handler.

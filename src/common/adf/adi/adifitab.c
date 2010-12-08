@@ -142,20 +142,15 @@
 **	    replacing <dbms.h> by <gl.h> <sl.h> <iicommon.h> <dbdbms.h>
 **	25-aug-93 (ed)
 **	    remove dbdbms.h
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_fitab(
 ADF_CB             *adf_scb,
 ADI_OP_ID          adi_oid,
 ADI_FI_TAB         *adi_ftab)
-# else
-DB_STATUS adi_fitab( adf_scb, adi_oid, adi_ftab)
-ADF_CB             *adf_scb;
-ADI_OP_ID          adi_oid;
-ADI_FI_TAB         *adi_ftab;
-# endif
 {
     ADI_OPRATION	*op = Adf_globs->Adi_operations;
 
@@ -241,20 +236,15 @@ ADI_FI_TAB         *adi_ftab;
 ** History:
 **      12-may-95 (shero03)
 **          Initial creation.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_function(
 ADF_CB             *adf_scb,
 ADI_FI_DESC        *adi_fidesc,
 DB_STATUS          (**adi_func)() )
-# else
-DB_STATUS adi_function( adf_scb, adi_fidesc, adi_func)
-ADF_CB             *adf_scb;
-ADI_FI_DESC        *adi_fidesc;
-DB_STATUS          (**adi_func)();
-# endif
 {
 
     ADI_FI_LOOKUP       *func;

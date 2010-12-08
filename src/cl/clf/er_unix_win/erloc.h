@@ -49,6 +49,8 @@
 **	    Added an MU_SEMAPHORE member to ER_SEMFUNCS.
 **      17-jan-2002 (stial01)
 **          Added WARNING to ER_SEMFUNCS, there is a copy in cl/clf/cm/cmfile.c
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 #define		ER_HEADSUFF	ERx("h")
@@ -261,6 +263,17 @@ typedef struct _ER_SEMFUNCS
     MU_SEMAPHORE    er_mu_sem;
 }	ER_SEMFUNCS;
 
+/*
+** Define a structure that describes a variable length item.
+*/
+
+typedef struct _DESCRIPTOR
+{
+    int             desc_length;        /* Length of the item. */
+    char            *desc_value;        /* Pointer to item. */
+}   DESCRIPTOR;
+
+
 /* Max number of languages in one server */
 
 #define ER_MAXLANGUAGE	(i4)5
@@ -288,28 +301,29 @@ GLOBALREF	ER_LANGT_DEF	ER_langt[];
 
 /*  following functions are global func. in only ER library */
 
-FUNC_EXTERN STATUS cer_get();
-FUNC_EXTERN STATUS cer_init();
-FUNC_EXTERN STATUS cer_finit();
-FUNC_EXTERN STATUS cer_sinit();
-FUNC_EXTERN i4  cer_fndindex();
-FUNC_EXTERN STATUS cer_nxtindex();
-FUNC_EXTERN char *cer_fstr();
-FUNC_EXTERN STATUS cer_sstr();
-FUNC_EXTERN STATUS  cer_open();
-FUNC_EXTERN STATUS  cer_close();
-FUNC_EXTERN STATUS  cer_get();
-FUNC_EXTERN bool    cer_isopen();
-FUNC_EXTERN STATUS  cer_read();
-FUNC_EXTERN STATUS  cer_dataset();
-FUNC_EXTERN STATUS  cer_sysgetmsg();
-FUNC_EXTERN bool    cer_isasync();
-FUNC_EXTERN bool    cer_isspecial();
-FUNC_EXTERN bool    cer_issem();
-FUNC_EXTERN VOID    cer_tclose();
-FUNC_EXTERN VOID    cer_excep();
-FUNC_EXTERN STATUS  cer_fopen();
-FUNC_EXTERN STATUS  cer_getdata();
-FUNC_EXTERN VOID    cer_tfile();
-FUNC_EXTERN char *  cer_getaltname();
-FUNC_EXTERN void    cer_setaltname();
+FUNC_EXTERN STATUS cer_close(ERFILE *);
+FUNC_EXTERN STATUS cer_open(LOCATION *, ERFILE *, CL_ERR_DESC *);
+FUNC_EXTERN STATUS cer_getdata(char *, i4, i4, ERFILE *, CL_ERR_DESC *);
+FUNC_EXTERN STATUS cer_dataset(i4, i4, char *, ERFILE *);
+FUNC_EXTERN STATUS cer_sysgetmsg(CL_ERR_DESC *, i4 *,
+			 DESCRIPTOR *, CL_ERR_DESC *);
+
+FUNC_EXTERN VOID cer_excep(STATUS, char **);
+
+FUNC_EXTERN bool cer_isasync(void);
+FUNC_EXTERN bool cer_istest(void);
+FUNC_EXTERN bool cer_issem(ER_SEMFUNCS **);
+
+FUNC_EXTERN STATUS cer_get(ER_MSGID, char **, i4, i4);
+FUNC_EXTERN i4  cer_fndindex(i4);
+FUNC_EXTERN STATUS cer_nxtindex(i4, i4 *);
+FUNC_EXTERN STATUS cer_finit(i4, ER_MSGID, i4, CL_ERR_DESC *);
+FUNC_EXTERN STATUS cer_sinit(i4, ER_MSGID, i4, CL_ERR_DESC *);
+FUNC_EXTERN STATUS cer_fopen(ER_MSGID, i4, LOCATION *, i4, CL_ERR_DESC *);
+FUNC_EXTERN STATUS cer_init(i4, i4, LOCATION *, char *, i4);
+FUNC_EXTERN char *cer_fstr(ER_CLASS, i4, i4);
+FUNC_EXTERN STATUS cer_read(ER_CLASS, i4);
+FUNC_EXTERN bool cer_isopen(i4, i4);
+FUNC_EXTERN STATUS cer_sstr(ER_MSGID, char *, char *, i4, i4, CL_ERR_DESC *, i4);
+FUNC_EXTERN VOID cer_tclose(ERFILE *);
+FUNC_EXTERN VOID cer_tfile(ER_MSGID, i4, char *, bool);

@@ -21,8 +21,6 @@ GLOBALREF MO_CLASS_DEF CS_int_classes[];
 
 /* utilities */
 
-VOID CS_mo_init(void);
-
 FUNC_EXTERN STATUS CS_sem_attach( CS_SEMAPHORE *sem );
 FUNC_EXTERN STATUS CS_detach_sem( CS_SEMAPHORE *sem );
 

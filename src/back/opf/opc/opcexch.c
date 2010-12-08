@@ -110,12 +110,67 @@
 **	    memory in QEF, at least for 1:N exchanges).
 **	10-Sep-2010 (kschendel) b124341
 **	    SEjoin changed to delete kcompare and add cvmat, fix here.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
-
-/*
-**  Forward and/or External function references.
-*/
 
+/* TABLE OF CONTENTS */
+void opc_exch_build(
+	OPS_STATE *global,
+	OPC_NODE *cnode);
+static void opc_eexatts(
+	OPS_STATE *global,
+	OPE_BMEQCLS *eeqcmp,
+	OPC_EQ *ceq,
+	DMF_ATTR_ENTRY ***patts,
+	i4 *pacount);
+static void opc_pushcount(
+	QEN_NODE *node,
+	i4 tcount);
+static void opc_exunion_arrcnt(
+	OPS_STATE *global,
+	QEN_NODE *node,
+	QEF_AHD **action,
+	i4 *arrcnts,
+	PTR rowmap);
+static void opc_arrcnt_pqe(
+	QEN_PQ_EVAL *pqe,
+	i4 *arrcnts,
+	PTR rowmap);
+static void opc_exnodearrcnt(
+	OPS_STATE *global,
+	QEN_NODE *node,
+	i4 *arrcnts,
+	PTR rowmap);
+static void opc_exnodearrset(
+	OPS_STATE *global,
+	QEN_NODE *node,
+	i2 *array1,
+	i4 *array2,
+	i4 *arrcnts);
+static void opc_exnheadcnt(
+	OPS_STATE *global,
+	QEN_NODE *node,
+	i4 *arrcnts,
+	PTR rowmap);
+static void opc_exnheadset(
+	OPS_STATE *global,
+	QEN_NODE *node,
+	i2 *array1,
+	i4 *array2,
+	i4 *arrcnts);
+static void opc_exactarrcnt(
+	OPS_STATE *global,
+	QEF_AHD *action,
+	i4 *arrcnts,
+	PTR rowmap);
+static void opc_exactarrset(
+	OPS_STATE *global,
+	QEF_AHD *action,
+	i2 *array1,
+	i4 *array2,
+	i4 *arrcnts);
+
 /* Indexes to counter array. */
 #define	IX_ROW	0
 #define	IX_HSH	1
@@ -130,72 +185,6 @@
 #define	IX_DMT	10
 #define	IX_DMH	11
 #define	IX_MAX	12	/* # of indexes, not max index */
-
-static VOID
-opc_eexatts(
-	OPS_STATE	*global,
-	OPE_BMEQCLS	*eeqcmp,
-	OPC_EQ		*ceq,
-	DMF_ATTR_ENTRY	***patts,    /* ptr to a ptr to an array of ptrs to atts */
-	i4		*pacount );
-
-static VOID
-opc_pushcount(
-	QEN_NODE	*node,
-	i4		tcount);
-
-static VOID
-opc_exunion_arrcnt(
-	OPS_STATE	*global,
-	QEN_NODE	*node,
-	QEF_AHD		**action,
-	i4		*arrcnts,
-	PTR		rowmap);
-
-static VOID
-opc_exnodearrcnt(
-	OPS_STATE	*global,
-	QEN_NODE	*node,
-	i4		*arrcnts,
-	PTR		rowmap);
-
-static VOID
-opc_exnodearrset(
-	OPS_STATE	*global,
-	QEN_NODE	*node,
-	i2		*array1,
-	i4		*array2,
-	i4		*arrcnts);
-
-static VOID
-opc_exnheadcnt(
-	OPS_STATE	*global,
-	QEN_NODE	*node,
-	i4		*arrcnts,
-	PTR		rowmap);
-
-static VOID
-opc_exnheadset(
-	OPS_STATE	*global,
-	QEN_NODE	*node,
-	i2		*array1,
-	i4		*array2,
-	i4		*arrcnts);
-
-static VOID
-opc_exactarrcnt(
-	OPS_STATE	*global,
-	QEF_AHD		*action,
-	i4		*arrcnts,
-	PTR		rowmap);
-
-static VOID
-opc_exactarrset(
-	OPS_STATE	*global,
-	QEF_AHD		*action,
-	i2		*array1,
-	i4		*array2,
-	i4		*arrcnts);
 
 
 /*{
@@ -491,7 +480,6 @@ opc_eexatts(
     DMF_ATTR_ENTRY	**atts;
     DMF_ATTR_ENTRY	*att;
     i4			attno;
-    OPZ_AT		*at = global->ops_cstate.opc_subqry->ops_attrs.opz_base;
     OPE_IEQCLS		eqcno;
 
     *pacount = BTcount((char *)eeqcmp, (i4)subqry->ops_eclass.ope_ev);
@@ -777,7 +765,6 @@ opc_exnodearrcnt(
     QEF_VALID	*vlp;
     QEF_AHD	*act;
 
-    i4		i, j, k;
     i4		dmrix;
     bool	endloop;
 
@@ -1137,7 +1124,6 @@ opc_exnodearrset(
     QEF_VALID	*vlp;
     QEF_AHD	*act;
 
-    i4		i, j, k;
     i4		dmrix;
     bool	endloop;
 

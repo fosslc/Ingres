@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -64,8 +64,13 @@
 **          Moved <cs.h> for CS_SID.
 **	24-jan-1994 (gmanning)
 **	    Added #include of me.h in order to compile on NT.
-[@history_line@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
+
+/* TABLE OF CONTENTS */
+OPN_RLS *opn_rmemory(
+	OPS_SUBQUERY *subquery);
 
 /*{
 ** Name: opn_rmemory	- OPN_RLS memory management routines
@@ -111,7 +116,7 @@ opn_rmemory(
     }
     else
     {
-	if (global->ops_mstate.ops_mlimit > global->ops_mstate.ops_memleft)
+	if (global->ops_mstate.ops_mlimit > (i4)global->ops_mstate.ops_memleft)
 	{   /* check if memory limit has been reached prior to allocating
             ** another RLS node from the stream */
 	    opn_fmemory(subquery, (PTR *)&global->ops_estate.opn_rlsfree);

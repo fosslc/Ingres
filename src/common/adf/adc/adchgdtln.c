@@ -1,13 +1,13 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
 #include    <gl.h>
 #include    <sl.h>
 #include    <iicommon.h>
-#include    <ade.h>
 #include    <adf.h>
+#include    <ade.h>
 #include    <ulf.h>
 #include    <adfint.h>
 #include    <adfhist.h>
@@ -83,6 +83,8 @@
 **          Add case for DB_BOO_TYPE in adc_1hg_dtln_rti.
 **      09-mar-2010 (thich01)
 **          Add DB_NBR_TYPE like DB_BYTE_TYPE for rtree indexing.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Ensure whole DBV is copied.
 **/
 
 
@@ -210,21 +212,15 @@
 **	23-jul-93 (rganski)
 **	    Use data type status bits for the data type to determine if
 **	    histograms can be built. Replaces switch statement.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_hg_dtln(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE	    *adc_fromdv,
 DB_DATA_VALUE	    *adc_hgdv)
-# else
-DB_STATUS
-adc_hg_dtln( adf_scb, adc_fromdv, adc_hgdv)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE	    *adc_fromdv;
-DB_DATA_VALUE	    *adc_hgdv;
-# endif
 {
     DB_STATUS		db_stat;
     i4			bdt     = abs((i4) adc_fromdv->db_datatype);
@@ -274,11 +270,10 @@ DB_DATA_VALUE	    *adc_hgdv;
 	}
 	else					/* nullable */
 	{
-	    DB_DATA_VALUE	tmp_dv;
+	    DB_DATA_VALUE tmp_dv = *adc_fromdv;
 
 	    tmp_dv.db_datatype = bdt;
-	    tmp_dv.db_prec     = adc_fromdv->db_prec;
-	    tmp_dv.db_length   = adc_fromdv->db_length - 1;
+	    tmp_dv.db_length--;
 
             db_stat = (*Adf_globs->Adi_dtptrs[ADI_DT_MAP_MACRO(bdt)]->
 			adi_dt_com_vect.adp_hg_dtln_addr)
@@ -426,6 +421,9 @@ DB_DATA_VALUE	    *adc_hgdv;
 **	    to be treated as raw collation data alongside DB_CHA_TYPE.
 **	    If this is not done, CE entries get compated using CHAR semantics
 **	    which is so wrong.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. No need for the increased length
+**	    as it doesn't use UCS2 CEs.
 */
 
 DB_STATUS
@@ -599,8 +597,9 @@ DB_DATA_VALUE	    *adc_hgdv)
 				      adc_hgdv->db_length);
 UTF8merge:
 	adc_hgdv->db_datatype = DB_BYTE_TYPE;
-	/* To make room for collation weight, multiply by 4. */
-	adc_hgdv->db_length *= 4;
+	if (adc_fromdv->db_collID != DB_UCS_BASIC_COLL)
+	    /* To make room for collation weight, multiply by 4. */
+	    adc_hgdv->db_length *= 4;
 	if (adc_hgdv->db_length > DB_MAX_HIST_LENGTH)
 	    adc_hgdv->db_length = DB_MAX_HIST_LENGTH;
 	break;

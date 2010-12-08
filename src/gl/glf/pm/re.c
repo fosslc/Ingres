@@ -63,6 +63,8 @@
 **	    Compiler warning fixes.
 **	    _error is pretty bogus here, as this might be in backend
 **	    context, but at least it compiles clean now...
+**      03-nov-2010 (joea)
+**          Declare _error as static.
 */
 
 # include <compat.h>
@@ -230,7 +232,7 @@ static i4  my_strcspn(char *s1, char *s2);
 /*
  * _error() - error handling function
  */
-void
+static void
 _error(char *s)
 {
 	SIfprintf(stderr, "RE: %s\n", s);

@@ -70,6 +70,8 @@
 #	30-Sep-2010 (troal01)
 #	    If conf_WITH_GEO is defined, we must link libq with the geospatial
 #		dependencies.
+#	23-Nov-2010 (kschendel)
+#	    Delete some more obsolete ports.
 
 if [ -n "$ING_VERS" ] ; then
 
@@ -389,29 +391,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)becompat.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)becompat.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)becompat.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)becompat.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)becompat.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)becompat.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)becompat.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)becompat.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)becompat.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)becompat.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)becompat.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)becompat.1.$SLSFX
-        ;;
     *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)becompat.1.$SLSFX *.o \
 		$shlink_opts -soname=lib(PROG0PRFX)becompat.1.$SLSFX
@@ -456,29 +439,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)scf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)scf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)scf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)scf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)scf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)scf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)scf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)scf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)scf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)scf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)scf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)scf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)scf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)scf.1.$SLSFX
@@ -501,9 +465,6 @@ then
         cd $workdir; rm -rf scf
     fi
 fi  # do_scf
-
-
-
 
 
 
@@ -530,29 +491,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)opf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)opf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)opf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)opf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)opf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)opf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)opf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)opf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)opf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)opf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)opf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)opf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)opf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)opf.1.$SLSFX
@@ -578,9 +520,6 @@ fi  # do_opf
 
 
 
-
-
-
 #
 # 	Making librdf.1
 #
@@ -603,29 +542,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)rdf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rdf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rdf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)rdf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rdf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)rdf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rdf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)rdf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rdf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)rdf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rdf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)rdf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rdf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)rdf.1.$SLSFX
@@ -670,29 +590,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)qef.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qef.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qef.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)qef.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qef.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)qef.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qef.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)qef.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qef.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)qef.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qef.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)qef.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qef.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)qef.1.$SLSFX
@@ -737,29 +638,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)psf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)psf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)psf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)psf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)psf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)psf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)psf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)psf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)psf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)psf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)psf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)psf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)psf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)psf.1.$SLSFX
@@ -814,29 +696,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)dbutil.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dbutil.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dbutil.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)dbutil.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dbutil.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)dbutil.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dbutil.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)dbutil.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dbutil.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)dbutil.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dbutil.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)dbutil.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dbutil.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)dbutil.1.$SLSFX
@@ -881,29 +744,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)qsf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qsf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qsf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)qsf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qsf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)qsf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qsf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)qsf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qsf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)qsf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qsf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)qsf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)qsf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)qsf.1.$SLSFX
@@ -950,29 +794,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)dmf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dmf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dmf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)dmf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dmf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)dmf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dmf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)dmf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dmf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)dmf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dmf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)dmf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)dmf.1.$SLSFX *.o \
 	$INGBIN/lib(PROG0PRFX)becompat.1.$SLSFX \
@@ -1000,8 +825,6 @@ fi  # do_dmf
 
 
 
-
-
 #
 # 	Making libgwf.1
 #
@@ -1023,29 +846,10 @@ then
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gwf.1.$SLSFX \*.o $shlink_opts
     echo "Config = $config"
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gwf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)gwf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gwf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)gwf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gwf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)gwf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gwf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)gwf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gwf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)gwf.1.$SLSFX
-        ;;
     *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gwf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)gwf.1.$SLSFX
@@ -1072,8 +876,6 @@ fi  # do_gwf
 
 
 
-
-
 #
 # 	Making libadf.1
 #
@@ -1094,29 +896,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)adf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)adf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)adf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)adf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)adf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)adf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)adf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)adf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)adf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)adf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)adf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)adf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         if [ "$conf_WITH_GEO" ] ; then
 			geo_libs=" -lgeos -lgeos_c -lproj "
@@ -1154,7 +937,6 @@ fi  # do_adf
 
 
 
-
 #
 # 	Making libulf.1
 #
@@ -1175,29 +957,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)ulf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)ulf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)ulf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)ulf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)ulf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)ulf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)ulf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)ulf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)ulf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)ulf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)ulf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)ulf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)ulf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)ulf.1.$SLSFX
@@ -1224,8 +987,6 @@ fi  # do_ulf
 
 
 
-
-
 #
 # 	Making libtpf.1
 #
@@ -1246,29 +1007,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)tpf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)tpf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)tpf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)tpf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)tpf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)tpf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)tpf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)tpf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)tpf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)tpf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)tpf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)tpf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)tpf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)tpf.1.$SLSFX
@@ -1295,8 +1037,6 @@ fi  # do_tpf
 
 
 
-
-
 #
 # 	Making librqf.1
 #
@@ -1317,29 +1057,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)rqf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rqf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rqf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)rqf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rqf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)rqf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rqf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)rqf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rqf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)rqf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rqf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)rqf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)rqf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)rqf.1.$SLSFX
@@ -1366,8 +1087,6 @@ fi  # do_rqf
 
 
 
-
-
 #
 # 	Making libgcf.1
 #
@@ -1388,29 +1107,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)gcf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gcf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gcf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)gcf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gcf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)gcf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gcf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)gcf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gcf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)gcf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gcf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)gcf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)gcf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)gcf.1.$SLSFX
@@ -1437,8 +1137,6 @@ fi  # do_gcf
 
 
 
-
-
 #
 # 	Making libsxf.1
 #
@@ -1459,29 +1157,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)sxf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)sxf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)sxf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)sxf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)sxf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)sxf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)sxf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)sxf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)sxf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)sxf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)sxf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)sxf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)sxf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)sxf.1.$SLSFX
@@ -1530,29 +1209,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)cuf.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)cuf.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)cuf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)cuf.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)cuf.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)cuf.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)cuf.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)cuf.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)cuf.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)cuf.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)cuf.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)cuf.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)cuf.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)cuf.1.$SLSFX
@@ -1579,8 +1239,6 @@ fi  # do_cuf
 
 
 
-
-
 #
 # 	Making libmalloc.1
 #
@@ -1601,29 +1259,10 @@ then
     rm -f $INGBIN/lib(PROG0PRFX)malloc.1.$SLSFX
     echo $shlink_cmd -o $INGBIN/lib(PROG0PRFX)malloc.1.$SLSFX \*.o $shlink_opts
     case $config in
-    dgi_us5 | dg8_us5 | nc4_us5 | sqs_ptx | sos_us5 | rmx_us5 | \
-    rux_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)malloc.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)malloc.1.so
-           ;;
-    sos_us5)
-           $shlink_cmd -o $INGBIN/lib(PROG0PRFX)malloc.1.$SLSFX *.o $shlink_opts \
-            -hlib(PROG0PRFX)malloc.1.$SLSFX
-           ;;
     usl_us5 )
            $shlink_cmd -o $INGBIN/lib(PROG0PRFX)malloc.1.$SLSFX *.o $shlink_opts \
             -hlib(PROG0PRFX)malloc.1.so
            ;;
-    dr6_us5)
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)malloc.1.$SLSFX *.o \
-        $shlink_opts -hlib(PROG0PRFX)malloc.1.$SLSFX
-        ;;
-    ts2_us5)
-        cp /usr/lib/so_locations .
-        $shlink_cmd -o $INGBIN/lib(PROG0PRFX)malloc.1.$SLSFX *.o $shlink_opts \
-        -no_unresolved -transitive_link -check_registry ./so_locations \
-        -soname lib(PROG0PRFX)malloc.1.$SLSFX
-        ;;
       *_lnx|int_rpl)
         $shlink_cmd -o $INGBIN/lib(PROG0PRFX)malloc.1.$SLSFX *.o \
         $shlink_opts -soname=lib(PROG0PRFX)malloc.1.$SLSFX

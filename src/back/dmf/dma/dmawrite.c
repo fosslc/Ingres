@@ -26,6 +26,7 @@
 #include    <dmtcb.h>
 #include    <dmxcb.h>
 #include    <dml.h>
+#include    <dma.h>
 
 /*{
 ** Name: DMAWRITE.C - Format and write security audit records for DMF
@@ -78,6 +79,8 @@
 **	08-Dec-2008 (jonj)
 **	    SIR 120874: dma_? auditing functions converted to DB_ERROR *,
 **	    use new form uleFormat.
+**	02-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add include of dma.h
 */
 /* Name: dma_write_audit()
 **

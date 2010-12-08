@@ -412,10 +412,10 @@ EXEC SQL include SQLCA;
 **	    Compiler warning fixes.
 **	12-Nov-2009 (kschendel) SIR 122882
 **	    cmptlvl is now integer, fix here.
-**  15-Mar-2010 (troal01)
-**      Added -srid and -nosrid flags, -srid is the default
-**      These flags allow or restrict the pre-loading
-**      of EPSG data into spatial_ref_sys.
+**	15-Mar-2010 (troal01)
+**	    Added -srid and -nosrid flags, -srid is the default
+**	    These flags allow or restrict the pre-loading
+**	    of EPSG data into spatial_ref_sys.
 **	16-Mar-2010 (frima01) SIR 121619
 **	    Changed DU_DBIDDBDB to IIDBDB_ID, located in dmf.h.
 **      14-Apr-2010 (hanal04) SIR 123574
@@ -424,6 +424,8 @@ EXEC SQL include SQLCA;
 **          mask.
 **     22-apr-2010 (stial01)
 **          Fix create/modify statement used for iigw07
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **
 NEEDLIBS =	DBUTILLIB SHEMBEDLIB COMPATLIB 
 
@@ -444,6 +446,11 @@ FUNC_EXTERN 	    DU_STATUS       duu_chkenv();
 FUNC_EXTERN 	    DU_STATUS       duc_grant_select_wgo_on_cats();
 FUNC_EXTERN DU_STATUS duc_modify_pagesize(i4 pagesize, bool star_flag,
 				 DU_ERROR *errcb);
+
+/* This one is in ui.qsh, but the jam rules don't know that dbutil
+** needs front/hdr/hdr.
+*/
+FUNC_EXTERN char *IIUIpassword(char *);
 
 char		    *cmdflagarg();
 STATUS    	    get_pm_params();
@@ -757,6 +764,8 @@ static STATUS duc_goodClientList();
 **         we exit.
 **      31-Aug-2010 (maspa05) bug 124328
 **         Added -P flag to pass DBMS password on the command line
+**	19-Nov-2010 (kiria01) SIR 124690
+**	   Default to UCS_BASIC collation for UTF8 catalogs.
 */
 
 main(argc, argv)
@@ -853,8 +862,8 @@ char	    *argv[];
 	/*
 	 * If dbdb is being created, turn off geo
 	 */
-    if(duc_modes.duc_dbdb_flag)
-        duc_dbenv.du_srid_flag = FALSE;
+	if(duc_modes.duc_dbdb_flag)
+            duc_dbenv.du_srid_flag = FALSE;
 
 	/* Issue an informative message to the user that the database is being
 	** created.  This also marks the point of no return.  At this point
@@ -1162,6 +1171,9 @@ char	    *argv[];
                 EXEC SQL EXECUTE IMMEDIATE :sbuffer; 
               }
 	    }
+	    /* For UTF8 db, make catalog collation default to ucs_basic */
+	    if (CMischarset_utf8())
+		EXEC SQL SET SESSION COLLATION ucs_basic;
 
 	    /* Update iidatabase and config file with new access and service. */
 	    {
@@ -4029,11 +4041,11 @@ in duc_db_evinit()
 		break;
 	
 	      case 'n':
-	      if(STncasecmp(&p[1], "nosrid", 6) == 0)
-	      {
-	          duc_dbenv->du_srid_flag = FALSE;
-	          break;
-	      }
+		if(STncasecmp(&p[1], "nosrid", 6) == 0)
+		{
+		    duc_dbenv->du_srid_flag = FALSE;
+		    break;
+		}
 	      case 'i':
 		duc_modes->duc_national_flag = TRUE;
 
@@ -4097,16 +4109,16 @@ in duc_db_evinit()
             break;
 
 	      case 's':		/* deprecated so warn but accept */
-	      if(STncasecmp(&p[1], "srid", 4) == 0)
-	      {
-	          duc_dbenv->du_srid_flag = TRUE;
-	          break;
-	      }
-	      else
-	      {
-		du_error(duc_errcb, W_DU1085_SORTFLAG_DEPRECATED, 2,
-			 0, &p[2]);
-	      }
+		if(STncasecmp(&p[1], "srid", 4) == 0)
+		{
+		    duc_dbenv->du_srid_flag = TRUE;
+		    break;
+		}
+		else
+		{
+		    du_error(duc_errcb, W_DU1085_SORTFLAG_DEPRECATED, 2,
+			0, &p[2]);
+		}
 	      case 'w':
 		    duc_modes->duc_sortloc_flag	= TRUE;
 		    STcopy(&p[2], duc_dbenv->du_sortloc.du_locname);

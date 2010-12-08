@@ -61,7 +61,6 @@ NO_OPTIM=dr6_us5
 #include <qefcopy.h>
 
 #include    <sc.h>
-#include    <sca.h>
 #include    <scc.h>
 #include    <scs.h>
 #include    <scd.h>
@@ -682,13 +681,17 @@ NO_OPTIM=dr6_us5
 **	    Re-type some ptr's as the proper struct pointer.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Delete sca.h include. Function prototypes moved to
+**	    scf.h for exposure to DMF.
+**	    Deleted scd_mo_init() prototype, now in scd.h
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Refine CS prototypes.
 */
 
 /*
 **  Forward and/or External function references.
 */
-
-FUNC_EXTERN void scd_mo_init(void);
 
 static DB_STATUS start_lglk_special_threads(
 				    i4  recovery_server,
@@ -1705,6 +1708,10 @@ GLOBALREF const char	Version[];
 **          DB_MAXROWSIZE
 **	20-Jul-2010 (kschendel) SIR 124104
 **	    Initialize create-compression to NONE.
+**	14-Oct-2010 (kschendel) SIR 124544
+**	    Result-structure is handled by PSF now, not OPF.
+**	09-Nov-2010 (wanfr01) SIR 124714
+**	    Add opf_holdfactor
 */
 DB_STATUS
 scd_initiate( CS_INFO_CB  *csib )
@@ -1992,11 +1999,10 @@ scd_initiate( CS_INFO_CB  *csib )
 					    ** query compile */
     opf_cb.opf_pq_partthreads = 8;	    /* threads for each partitioned
 					    ** table/join */
-    opf_cb.opf_value = DB_HEAP_STORE;	    /* Tradition: compressed heap */
-    opf_cb.opf_compressed = TRUE;	    /* for the result structure */
     opf_cb.opf_autostruct = FALSE;
     opf_cb.opf_greedy_factor = 1.0;	    /* OPF.GREEDY_FACTOR */
-    opf_cb.opf_inlist_thresh = 18000;	    /* OPF_INLIST_THRESH *
+    opf_cb.opf_inlist_thresh = 18000;	    /* OPF_INLIST_THRESH */
+    opf_cb.opf_holdfactor = 100;	    /* BLOCK_HOLDFACTOR */
 
     /* Initialize QEF's  startup parms now....	*/
 
@@ -2062,7 +2068,11 @@ scd_initiate( CS_INFO_CB  *csib )
 	psq_cb.psq_flag2 = 0L;
     psq_cb.psq_maxmemf = 0.5;	/* default memory proportion */
     psq_cb.psq_cp_qefrcb = NULL;
-    psq_cb.psq_create_compression = DMU_C_OFF;
+    psq_cb.psq_create_compression = DMU_COMP_OFF;
+    psq_cb.psq_result_struct = DB_HEAP_STORE;
+    psq_cb.psq_result_compression = FALSE;
+    psq_cb.psq_def_coll = DB_UNSET_COLL;
+    psq_cb.psq_def_unicode_coll = DB_UNSET_COLL;
 
     /* server_class gets passed to PSF so it can output it in SC930 trace */
     psq_cb.psq_server_class = Sc_main_cb->sc_server_class;

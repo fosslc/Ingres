@@ -2,6 +2,9 @@
 **Copyright (c) 2004 Ingres Corporation
 */
 
+#ifndef QEFCAT_H_INCLUDED
+#define QEFCAT_H_INCLUDED
+
 /**
 ** Name: QEFCAT.H - Standard catalog structures for QEF.
 **
@@ -89,6 +92,8 @@
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
 **          changed l16_22_loc_name from 24C_PLUS1 to 33 sizeof(DB_LOC_NAME)+1
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 
@@ -1039,7 +1044,7 @@ typedef struct _QEC_LINK
     i4			 qec_18_ts2;		/* current time stamp 2 */
     DD_LDB_DESC		*qec_19_ldb_p;		/* LDB hosting the local table 
 						*/
-    RQB_BIND		*qec_20_rqf_bind_p;	/* ptr to array of RQF bind 
+    struct _RQB_BIND	*qec_20_rqf_bind_p;	/* ptr to array of RQF bind 
 						** elements for fetching 
 						** tuple columns */
     QEQ_1CAN_QRY	*qec_21_delete_p;	/* structure ptr union for
@@ -1065,3 +1070,5 @@ typedef struct _QEC_LINK
 						** for current LDB table */
 }   QEC_LINK;
 
+
+#endif /* QEFCAT_H_INCLUDED */

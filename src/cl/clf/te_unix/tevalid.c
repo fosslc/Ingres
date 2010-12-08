@@ -4,6 +4,7 @@
 # include	<compat.h>
 # include	<gl.h>
 # include       <me.h>
+# include       <te.h>
 
 /*
 **  TEvalid
@@ -24,6 +25,8 @@
 **		Include <me.h> before calling MEcmp.
 **	15-jul-93 (ed)
 **	    adding <gl.h> after <compat.h>
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 */
 
 bool

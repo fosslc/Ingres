@@ -88,6 +88,8 @@
 **	    replace nat and longnat with i4
 **	18-nov-2003 (abbjo03)
 **	    Add TMsecs_to_stamp.
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 **/
 
 /* defines */
@@ -451,7 +453,6 @@ TM_STAMP	*time)
     i4	seconds;
     i4	usecs;
     STATUS	ret_val = OK;
-    STATUS	TM_parse_timestamp();
 
     if (TM_parse_timestamp(string, &seconds, &usecs))
     {

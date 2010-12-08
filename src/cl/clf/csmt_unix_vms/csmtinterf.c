@@ -2,7 +2,7 @@
 ** Copyright (c) 1987, 2008 Ingres Corporation
 **
 */
-/* NO_OPTIM = rs4_us5 ris_u64 r64_us5 */
+/* NO_OPTIM = rs4_us5 r64_us5 */
 # include <compat.h>
 # ifdef OS_THREADS_USED
 # include <errno.h>
@@ -35,8 +35,10 @@
 # include <csinternal.h>
 # include <csev.h>
 # include <cssminfo.h>
+# include <exinternal.h>
 # include <rusage.h>
 # include <clpoll.h>
+# include <clnfile.h>
 # include <machconf.h>
 # include <pwd.h>
 # include <diracc.h>
@@ -68,10 +70,6 @@
 # include "csmtmgmt.h"
 # include "csmtlocal.h"
 # include "csmtsampler.h"
-
-/*
-NO_OPTIM = rs4_us5 i64_aix
-*/
 
 GLOBALREF       CS_SERV_INFO    *Cs_svinfo;
 
@@ -963,18 +961,16 @@ GLOBALREF       CS_SERV_INFO    *Cs_svinfo;
 **	    a non-interruptable wait, doing so will surely screw up the caller.
 **	    Stop fooling with EDONE in cs_mask, it's not set there in CSMT.
 **	    (it's set in event_state instead.)
+**      04-nov-2010 (joea)
+**          Complete prototype for CSMTattn_scb.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 /*
 **  Forward and/or External function references.
 */
 
-FUNC_EXTERN VOID    CSMT_swuser();	/* suspend one thread, resume one */ 
-FUNC_EXTERN i4      CSsigterm();        /* terminate due to Unix signal */
-FUNC_EXTERN STATUS  CS_set_server_connect();
-FUNC_EXTERN VOID    CS_move_async();
-FUNC_EXTERN void    CS_cpres_event_handler();
-FUNC_EXTERN STATUS    CSoptions( CS_SYSTEM *cssb );
 typedef void FP_Callback(CS_SCB **scb);
 FUNC_EXTERN void    FP_set_callback( FP_Callback fun);
 
@@ -982,12 +978,10 @@ FUNC_EXTERN void    FP_set_callback( FP_Callback fun);
 FUNC_EXTERN TYPESIG CSsigdanger();       /* handler for sigdanger */
 # endif /* power aix */
 
-FUNC_EXTERN VOID CS_mo_init(void);
 i4 CS_addrcmp( const char *a, const char *b );
 FUNC_EXTERN VOID GC_set_blocking(bool b);
 
-static VOID CSMTattn_scb();
-static i4  CSMT_usercnt(void);
+static void CSMTattn_scb(i4 eid, CS_SCB *scb);
 
 
 /*
@@ -1015,18 +1009,12 @@ GLOBALREF CS_SEMAPHORE        Cs_known_list_sem;
 GLOBALREF CS_SEMAPHORE        CS_acct_sem;
 GLOBALREF CS_SYNCH	      Cs_utility_sem;
 
-GLOBALREF CS_SCB	      Cs_known_list_hdr;
-GLOBALREF CS_SYSTEM	      Cs_srv_block; /* Overall ctl struct */
 GLOBALREF CS_SCB	      Cs_to_list_hdr;
 GLOBALREF CS_SCB	      Cs_wt_list_hdr;
 GLOBALREF CS_SCB	      Cs_as_list_hdr;
-GLOBALREF CS_STK_CB	      Cs_stk_list_hdr;
 GLOBALREF CS_SCB	      Cs_idle_scb;
-GLOBALREF CS_ADMIN_SCB	      Cs_admin_scb;
 
 GLOBALREF CS_SMCNTRL	      *Cs_sm_cb;
-GLOBALREF i4	      Cs_lastquant;
-GLOBALREF i4		      Cs_incomp;
 GLOBALREF CS_SEMAPHORE        *ME_page_sem;
 GLOBALREF VOID                (*Ex_print_stack)();
 GLOBALREF VOID                (*Ex_diag_link)();
@@ -1386,7 +1374,6 @@ CSMTinitiate(i4 *argc, char ***argv, CS_CB *ccb )
     struct passwd       *p_pswd, pswd;
     struct passwd       *getpwnam();
     char		pwnam_buf[512];
-    i4			fd_wanted;
     CS_SCB		*pSCB;
     CS_SCB		**ppSCB = NULL;
 
@@ -1808,7 +1795,7 @@ CSMTinitiate(i4 *argc, char ***argv, CS_CB *ccb )
     idle_scb->cs_owner = (PTR)CS_IDENT;
     idle_scb->cs_tag = CS_TAG;
     idle_scb->cs_length = sizeof(CS_SCB);
-    idle_scb->cs_stk_area = 0;
+    idle_scb->cs_stk_area = NULL;
     idle_scb->cs_stk_size = 0;
     idle_scb->cs_state = CS_COMPUTABLE;
     idle_scb->cs_priority = CS_PADMIN;
@@ -1833,12 +1820,7 @@ CSMTinitiate(i4 *argc, char ***argv, CS_CB *ccb )
     /* Count the IdleThread in cs_num_sessions */
     Cs_srv_block.cs_num_sessions = 1;
 
-#if defined(rux_us5)
-    CS_create_thread( idle_scb->cs_stk_size, 
-                      CSMT_setup,
-                      idle_scb, &idle_scb->cs_thread_id,
-                      CS_DETACHED, &status );
-#elif defined(any_hpux)
+#if defined(any_hpux)
     CS_create_thread( idle_scb->cs_stk_size, NULL, 
 		      CSMT_setup,
                       idle_scb, &idle_scb->cs_thread_id, 
@@ -1880,7 +1862,7 @@ CSMTinitiate(i4 *argc, char ***argv, CS_CB *ccb )
     cs_ticker_scb.cs_owner = (PTR)CS_IDENT;
     cs_ticker_scb.cs_tag = CS_TAG;
     cs_ticker_scb.cs_length = sizeof(CS_SCB);
-    cs_ticker_scb.cs_stk_area = 0;
+    cs_ticker_scb.cs_stk_area = NULL;
     cs_ticker_scb.cs_stk_size = Cs_srv_block.cs_stksize;
     cs_ticker_scb.cs_state = CS_COMPUTABLE;
     cs_ticker_scb.cs_priority = CS_PADMIN;
@@ -1895,12 +1877,7 @@ CSMTinitiate(i4 *argc, char ***argv, CS_CB *ccb )
 	    sizeof(cs_ticker_scb.cs_username),
 	    cs_ticker_scb.cs_username);
 
-#if defined(rux_us5)
-    CS_create_thread( cs_ticker_scb.cs_stk_size, 
-                      CSMT_ticker,
-                      &cs_ticker_scb, &cs_ticker_scb.cs_thread_id,
-                      CS_DETACHED, &status );
-#elif defined(any_hpux)
+#if defined(any_hpux)
     CS_create_thread( cs_ticker_scb.cs_stk_size, NULL, 
 		      CSMT_ticker,
                       &cs_ticker_scb, &cs_ticker_scb.cs_thread_id, 
@@ -2212,7 +2189,7 @@ CSMTterminate(i4 mode, i4  *active_count)
 
 	    if (status)
 	    {
-	        (*Cs_srv_block.cs_elog)(status, 0, 0);
+	        (*Cs_srv_block.cs_elog)(status, NULL, 0);
 	    }
 
 	    /*
@@ -2285,7 +2262,7 @@ CSMTterminate(i4 mode, i4  *active_count)
 			status = CSMTremove(scb->cs_self);
 			(*Cs_srv_block.cs_disconnect)(scb);
 			if (status)
-			    (*Cs_srv_block.cs_elog)(status, 0, 0);
+			    (*Cs_srv_block.cs_elog)(status, NULL, 0);
 		    }
 		}
 		/*
@@ -2311,9 +2288,9 @@ CSMTterminate(i4 mode, i4  *active_count)
 	{
 	    status = (*Cs_srv_block.cs_shutdown)();
 	    if (status)
-		(*Cs_srv_block.cs_elog)(status, 0, 0);
+		(*Cs_srv_block.cs_elog)(status, NULL, 0);
 	    else
-		(*Cs_srv_block.cs_elog)(E_CS0018_NORMAL_SHUTDOWN, 0, 0);
+		(*Cs_srv_block.cs_elog)(E_CS0018_NORMAL_SHUTDOWN, NULL, 0);
 	}
     }
 
@@ -2526,9 +2503,7 @@ CSMTdispatch(void)
     i4			i;
     EX_CONTEXT		excontext;
     CS_INFO_CB		csib;
-    FUNC_EXTERN STATUS	cs_handler(EX_ARGS *);
     CSSL_CB		*slcb;
-    SYSTIME		stime;
     CS_SCB		*AdminSCB = (CS_SCB *)&Cs_admin_scb;
 
 
@@ -2600,7 +2575,7 @@ CSMTdispatch(void)
     {
 	if (!got_ex++)
 	{
-	    (*Cs_srv_block.cs_elog)(E_CS0014_ESCAPED_EXCPTN, 0, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS0014_ESCAPED_EXCPTN, NULL, 0);
 	}
 	EXdelete();
 	return(E_CS0014_ESCAPED_EXCPTN);
@@ -2624,9 +2599,6 @@ CSMTdispatch(void)
     i_EXsetothersig(SIGHUP, CSsigterm);
     i_EXsetothersig(SIGINT, SIG_IGN);
     i_EXsetothersig(SIGPIPE, SIG_IGN);
-#if defined(rmx_us5) || defined(rux_us5)
-    i_EXsetothersig(SIGVTALRM, SIG_IGN);
-#endif
 
     do
     {
@@ -2766,7 +2738,7 @@ CSMTdispatch(void)
 
         if (CSMT_admin_task())
         {
-            (*Cs_srv_block.cs_elog) (E_CS00FE_RET_FROM_IDLE, 0, 0);
+            (*Cs_srv_block.cs_elog) (E_CS00FE_RET_FROM_IDLE, NULL, 0);
             ret_val = E_CS00FF_FATAL_ERROR;
         }
         else
@@ -2783,7 +2755,7 @@ CSMTdispatch(void)
 	    status = 0;
 	}
 	if ( status || ret_val )
-	    (*Cs_srv_block.cs_elog)(ret_val, status, 0);
+	    (*Cs_srv_block.cs_elog)(ret_val, NULL, 0);
     }
 
     if ( Cs_srv_block.cs_state != CS_TERMINATING )
@@ -2796,6 +2768,8 @@ CSMTdispatch(void)
     CSMT_free_wakeup_block(AdminSCB);
 
     PCexit(((status & 1) || (ret_val == 0)) ? 0 : status);
+    /* NOTREACHED */
+    return (0);
 }
 
 /*{
@@ -3025,6 +2999,8 @@ CSMTdispatch(void)
 **	    in non-USER thread contexts.
 **      20-mar-2009 (stegr01)
 **          replace TMet() by TMnow()
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete dg ports.
 */
 STATUS
 CSMTsuspend(i4 mask, i4  to_cnt, PTR ecb)
@@ -3144,7 +3120,7 @@ CSMTsuspend(i4 mask, i4  to_cnt, PTR ecb)
 	    i4			nevents;
 
 	    /* Just check for events, don't reset csi_wakeme if none */
-	    CS_find_events(&reset_wakeme, &nevents);
+	    (void) CS_find_events(&reset_wakeme, &nevents);
 	}
 #endif /* USE_IDLE_THREAD */
 
@@ -3399,10 +3375,6 @@ CSMTsuspend(i4 mask, i4  to_cnt, PTR ecb)
                         }
                     }
 #endif
-#if defined (dg8_us5) || defined (dgi_us5) || defined(rmx_us5)||defined(rux_us5)
-                    if (status)
-                        status = errno;     
-#endif /* dg8_us5 dgi_us5 */
 
 		    /* Note that EINTR shouldn't happen, including it here
 		    ** is defensive (or bogus, depending on your point of
@@ -3414,9 +3386,6 @@ CSMTsuspend(i4 mask, i4  to_cnt, PTR ecb)
      defined(LNX) || defined(xCL_USE_ETIMEDOUT)
 
 		    if ( status == ETIMEDOUT || status == EINTR )
-#elif defined (dg8_us5) || defined (dgi_us5)||defined(rmx_us5)||defined(rux_us5)
-
-                    if ( status == EAGAIN || status == EINTR )
 #else
 		    if ( status == ETIME || status == EINTR )
 # endif
@@ -3453,17 +3422,11 @@ CSMTsuspend(i4 mask, i4  to_cnt, PTR ecb)
                            }
                          }
 #endif
-#if defined (dg8_us5) || defined (dgi_us5) || defined(rmx_us5)||defined(rux_us5)
-                        if (status)
-                         status = errno;
-#endif /* dg8_us5 dgi_us5 */
 
 # if defined(any_aix) || defined(axp_osf) || defined(sgi_us5) || \
      defined(thr_hpux) || defined(LNX) || \
      defined(xCL_USE_ETIMEDOUT)
 			if ( status == ETIMEDOUT )
-#elif defined (dg8_us5) || defined (dgi_us5)||defined(rmx_us5)||defined(rux_us5)
-                        if ( status == EAGAIN )
 #else
 			if ( status == ETIME )
 # endif
@@ -3515,17 +3478,11 @@ CSMTsuspend(i4 mask, i4  to_cnt, PTR ecb)
                             }
                         }
 #endif
-#if defined (dg8_us5) || defined (dgi_us5) || defined(rmx_us5)||defined(rux_us5)
-                        if (status)
-                         status = errno;
-#endif /* dg8_us5 dgi_us5 */
 
 # if defined(any_aix) || defined(axp_osf) || defined(sgi_us5) || \
      defined(thr_hpux) || defined(LNX) || \
      defined(OSX) || defined(xCL_USE_ETIMEDOUT)
 			if ( status == ETIMEDOUT )
-#elif defined (dg8_us5) || defined (dgi_us5)||defined(rmx_us5)||defined(rux_us5)
-                        if ( status == EAGAIN )
 #else
 			if ( status == ETIME )
 # endif
@@ -3600,7 +3557,7 @@ CSMTsuspend(i4 mask, i4  to_cnt, PTR ecb)
 	else 
 	{
 	    /* we shouldn't be here */
-	    (*Cs_srv_block.cs_elog)(E_CS0019_INVALID_READY, 0, 0);
+	    (*Cs_srv_block.cs_elog)(E_CS0019_INVALID_READY, NULL, 0);
 	    rv = E_CS0019_INVALID_READY;
 	}
 
@@ -3681,7 +3638,7 @@ CSMTsuspend(i4 mask, i4  to_cnt, PTR ecb)
 	{
 #ifdef USE_IDLE_THREAD
 	    reset_wakeme = TRUE;
-	    CS_find_events(&reset_wakeme, &nevents);
+	    (void) CS_find_events(&reset_wakeme, &nevents);
 	    if (nevents == 0)
 	    {
 		/* CS_find_events cleared csi_wakeme */
@@ -4393,7 +4350,6 @@ CL_ERR_DESC	   *error;
 {
     STATUS		status;
     CS_SCB		*scb;
-    PTR			stkaddr = NULL;
 
     if ( error )
 	CL_CLEAR_ERR( error );
@@ -4433,7 +4389,7 @@ CL_ERR_DESC	   *error;
     scb->cs_priority = priority;
     scb->cs_self = (CS_SID)scb;
     scb->cs_mode = CS_INITIATE;
-    scb->cs_stk_area = 0;
+    scb->cs_stk_area = NULL;
     scb->cs_pid = Cs_srv_block.cs_pid;
     scb->cs_ppid = 0;       /* hack, really used for idle time */
     scb->cs_ef_mask = 0;
@@ -4483,11 +4439,9 @@ CL_ERR_DESC	   *error;
 	scb->cs_stk_area = NULL;
 # ifdef ibm_lnx
 	scb->cs_registers[CS_SP] = 0;
-# else
-# if !defined(NO_INTERNAL_THREADS)
+# elif !defined(NO_INTERNAL_THREADS)
 	scb->cs_sp = 0;
 # endif
-# endif /* ibm_lnx */
     }
 
     CSMTp_semaphore(1, &Cs_known_list_sem);       /* exclusive */
@@ -4505,12 +4459,6 @@ CL_ERR_DESC	   *error;
     CSMTv_semaphore(&Cs_known_list_sem);
     CS_synch_lock( &scb->cs_evcb->event_sem );  /* effectively suspend thread */
 
-#if defined(rux_us5)
-    CS_create_thread( Cs_srv_block.cs_stksize, CSMT_setup,
-                      scb, &scb->cs_thread_id, 
-		      (Cs_srv_block.cs_stkcache) ? CS_JOINABLE : CS_DETACHED,
-		      &status );
-# else
 # if defined(ibm_lnx) || (defined(a64_sol) && defined(NO_INTERNAL_THREADS))
     CS_create_thread( Cs_srv_block.cs_stksize, 
 		      (PTR)NULL, 
@@ -4534,7 +4482,6 @@ CL_ERR_DESC	   *error;
 		      (Cs_srv_block.cs_stkcache) ? CS_JOINABLE : CS_DETACHED, 
                       &status );
 # endif /* ibm_lnx */
-# endif
 
 # if defined(DCE_THREADS)
     if ( !CS_thread_id_equal( scb->cs_thread_id, Cs_thread_id_init ) )
@@ -4631,7 +4578,6 @@ STATUS
 CSMTremove(CS_SID sid)
 {
     CS_SCB		*scb;
-    CS_SCB		*cscb;
 
     scb = CSMT_find_scb(sid);
     if (scb == 0)
@@ -4658,11 +4604,9 @@ CSMTremove(CS_SID sid)
 	    scb->cs_state = CS_COMPUTABLE;
 # ifdef sparc_sol
 	    thr_continue( scb->cs_thread_id );
-# else
-# ifdef thr_hpux
+# elif defined(thr_hpux)
 	    pthread_continue( scb->cs_thread_id );
-# endif /* hpb_us5 */
-# endif /* su4_us5 */
+# endif
 	}
 	else if (scb->cs_state == CS_MUTEX)
 	{
@@ -5952,7 +5896,6 @@ CSMTintr_ack()
 
     CSMTget_scb( &scb );
 
-    /*
     /* Safely clear the pending-interrupt flags.  IRCV shouldn't be on,
     ** but clear it too anyway as it has a meaning similar to IRPENDING.
     ** (IRCV shouldn't be on because it applies to suspended sessions.)
@@ -6593,16 +6536,4 @@ int  pos;
     }
 }
 
-
-static i4
-CSMT_usercnt()
-{
-    int count;
-
-    CSMTp_semaphore(0, &Cs_known_list_sem);
-    count = Cs_srv_block.cs_user_sessions;
-    CSMTv_semaphore(&Cs_known_list_sem);
-
-    return (count);
-}
 # endif /* OS_THREADS_USED */

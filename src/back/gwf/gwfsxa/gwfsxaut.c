@@ -49,9 +49,10 @@
 **	    replace nat and longnat with i4
 **      24-Feb-2004 (kodse01)
 **          Removed gwxit.h inclusion which is not required.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Delete local scf_call() declaration.
 */
 GLOBALREF	GW_FACILITY	*Gwf_facility;
-FUNC_EXTERN	DB_STATUS	scf_call();
 /*
 ** gwsxa_priv_user - Checks whether current user has appropriate priv.
 **

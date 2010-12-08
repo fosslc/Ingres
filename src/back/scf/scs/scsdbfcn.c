@@ -53,7 +53,6 @@ NO_OPTIM=dr6_us5 dgi_us5 int_lnx int_rpl ibm_lnx i64_aix a64_lnx
 #include    <sc0a.h>
 #include    <sc0e.h>
 #include    <sc0m.h>
-#include    <sca.h>
 #include    <scc.h>
 #include    <scs.h>
 #include    <scd.h>
@@ -297,6 +296,9 @@ NO_OPTIM=dr6_us5 dgi_us5 int_lnx int_rpl ibm_lnx i64_aix a64_lnx
 **	    Re-type some ptr's as the proper struct pointer.
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Delete sca.h include. Function prototypes moved to
+**	    scf.h for exposure to DMF.
 **/
 
 /*
@@ -435,6 +437,9 @@ GLOBALREF SCS_DBLIST MustLog_DB_Lst;   /* database list etc.    */
 **	    check replication during the open-db.
 **      09-aug-2010 (maspa05) b123189, b123960
 **          Add DMC2_READONLYDB to indicate readonly database 
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Add SCV_NODBMO_MASK to prevent making MO objects for added
+**	    database, typically when fetching iidbdb information.
 **
 [@history_template@]...
 */
@@ -631,7 +636,30 @@ scs_dbopen(DB_DB_NAME *db_name,
             /* b97083 - Now we have the CNF file locked tell scd_dbadd() */
             new_dbcb->db_flags_mask |= DMC_CNF_LOCKED;
 
+	    /* If no MO objects wanted, tell dmc_add_db() */
+	    if ( flag & SCV_NODBMO_MASK )
+	        dmc->dmc_flags_mask2 |= DMC2_NODBMO;
+	    else switch (scb->scb_sscb.sscb_ics.ics_appl_code)
+	    {
+		/* No MO for any of these applications */
+		case DBA_CREATEDB:		
+		case DBA_SYSMOD:		
+		case DBA_DESTROYDB:		
+		case DBA_CONVERT:		
+		case DBA_NORMAL_VFDB:		
+		case DBA_PRETEND_VFDB:		
+		case DBA_FORCE_VFDB:		
+		case DBA_PURGE_VFDB:		
+		case DBA_OPTIMIZEDB:		
+			dmc->dmc_flags_mask2 |= DMC2_NODBMO;
+			break;
+	    }
+
 	    dbop_status = scd_dbadd(new_dbcb, error, dmc, &scf_cb);
+
+	    /* Undo for next use of dmc */
+	    dmc->dmc_flags_mask2 &= ~DMC2_NODBMO;
+
             if(dbop_status)
                break;
 
@@ -2460,6 +2488,8 @@ scs_ddbdb_info(SCD_SCB *scb,
 **	    expected and overwriting top of the stack.  
 **	    The size of the information being copied should be 
 **	    the size of the destination buffer not source buffer.
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Don't make MO objects here for iidbdb.
 */
 DB_STATUS
 scs_audit_thread( SCD_SCB *scb )
@@ -2492,7 +2522,7 @@ scs_audit_thread( SCD_SCB *scb )
 		scb->scb_sscb.sscb_ics.ics_act1);
             scb->scb_sscb.sscb_ics.ics_l_act1 = 20;
 	    status = scs_dbopen(&db_name, &db_owner, &db_loc, scb, 
-			&local_err, 0, dmc, &dbdb_dbtuple, NULL);
+			&local_err, SCV_NODBMO_MASK, dmc, &dbdb_dbtuple, NULL);
 	    if (status != E_DB_OK)
 	    {
 		/* 

@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2008 Ingres Corporation
+# Copyright (c) 2008,2010 Ingres Corporation
 #
 #
 # The entries in this file associate configuration resource names with
@@ -214,6 +214,10 @@ dbms.active_limit.title:		'DBMS Active Connection Limit'
 recovery.active_limit.title:		'Recovery Active Connection Limit'
 rms.active_limit.title:			'RMS Active Connection Limit'
 
+*.block_holdfactor.file:		dbmsbhld.hlp
+dbms.block_holdfactor.title:		'DBMS I/O QEP scaling factor'
+star.block_holdfactor.title:		'Star I/O QEP scaling factor'
+
 dbms.buf_caches.file:			dbmsbufc.hlp
 dbms.buf_caches.title:    		'DBMS Buffer Caches'
 
@@ -294,6 +298,12 @@ rms.define_address.title:		'II_DBMS_SERVER Symbol Definition'
 
 *.default_journaling.file:		dbmsjrnl.hlp	
 dbms.default_journaling.title:		'DBMS Default Journaling'
+
+*.default_collation.file:		dbmscoll.hlp
+dbms.default_collation.title:		'Default collation'
+
+*.default_unicode_collation.file:	dbmscoll.hlp
+dbms.default_unicode_collation.title:	'Default Unicode collation'
 
 dbms.degree_of_parallelism.file:	dbmsdegp.hlp
 dbms.degree_of_parallelism.title:	'DBMS Degree of DMF Parallelism'

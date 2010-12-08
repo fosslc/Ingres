@@ -31,7 +31,10 @@
 **      03-jun-1996 (canor01)
 **          New ME for operating-system threads does not need external
 **          semaphores. Removed ME_stream_sem.
-**
+**      03-nov-2010 (joea)
+**          Complete init_tag_sem prototype.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 /* # define's */
@@ -60,7 +63,7 @@ static u_i2 nexttag = MINTAGID;
 static MU_SEMAPHORE MEtag_sem ZERO_FILL;
 static bool tag_sem_init = FALSE;
 
-static VOID	init_tag_sem();
+static void init_tag_sem(void);
 
 /*{
 ** Name:	MEgettag	- Get an ME tag	
@@ -172,19 +175,9 @@ MEgettag(void)
 **		Remove check that the tag isn't already free. It can be 
 **		expensive, and isn't likely to be useful.
 */
-#ifdef CL_PROTOTYPED
 
 STATUS
 MEfreetag(u_i2 tag)
-
-#else  /* CL_PROTOTYPED */
-
-STATUS
-MEfreetag(tag)
-          u_i2 tag;
-
-#endif  /* CL_PROTOTYPED */
-
 {
     METAGNODE 	*node;
     STATUS 	rval;

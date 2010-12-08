@@ -5,7 +5,6 @@
 # include	<compat.h>
 # include       <cs.h>
 # include       <pc.h>
-# include       <csinternal.h>
 # include	<gl.h>
 # include	<clconfig.h>
 # include	<systypes.h>
@@ -47,9 +46,9 @@
 **	    Desktop porting changes.
 **      15-nov-1997 (canor01)
 **          Strip out Unix-specific code, return better numbers.
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Delete CS_SYSTEM ref, not used or needed.
 **/
-
-GLOBALREF CS_SYSTEM        Cs_srv_block;
 
 
 /*{

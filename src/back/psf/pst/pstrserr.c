@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -49,9 +49,15 @@
 **	10-Jan-2001 (jenjo02)
 **	    ADF_CB* is available in session's cb; use it
 **	    instead of SCU_INFORMATION.
-[@history_template@]...
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 **/
 
+/* TABLE OF CONTENTS */
+i4 pst_rserror(
+	i4 lineno,
+	PST_QNODE *opnode,
+	DB_ERROR *err_blk);
 
 /*{
 ** Name: pst_rserror	- Handle errors from pst_resolve

@@ -6,6 +6,8 @@
 # include	<me.h>
 # include	"mmint.h"
 
+#include <stdio.h>
+
 /*
 **
 ** History:
@@ -39,6 +41,8 @@
 **	    replace nat and longnat with i4
 **	11-May-2009 (kschendel) b122041
 **	    Compiler warning fixes.
+**	1-Dec-2010 (kschendel)
+**	    More warning fixes (include stdio).
 */
 int MM_dfl_stat (MM_POOL *);
 STATUS MM_dfl_free (MM_POOL *, PTR, CL_ERR_DESC *);
@@ -251,10 +255,8 @@ MM_dfl_stat(
 	freecnt++;
 	freesize += block->size;
     }
-#ifndef WIN16
     printf("free blocks/size %d/%d\n", freecnt, freesize );
     printf("alloc blocks/waste %d/%d\n", alloced, wastesiz );
-#endif
     return(OK);
 }
 

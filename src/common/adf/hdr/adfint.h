@@ -421,8 +421,11 @@
 **          Remove overlaps and inside since they are no longer comparison.
 **	28-Jul-2010 (kiria01) b124142
 **	    Tightened ADF_NVL_BIT handling
+**      23-Nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 **/
-
+#ifndef ADF_INT_HDR_INCLUDED
+#define ADF_INT_HDR_INCLUDED
 
 /*
 **  Defines of other constants.
@@ -1409,3 +1412,4 @@ FUNC_EXTERN ADP_VALCHK_FUNC adc_1valchk_rti;
 FUNC_EXTERN ADP_DBTOEV_FUNC adc_1dbtoev_ingres;
 
 FUNC_EXTERN STATUS ADFmo_attach_adg(void);
+#endif /* define ADF_INT_HDR_INCLUDED */

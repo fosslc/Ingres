@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2005 Ingres Corporation
+** Copyright (c) 1986, 2005, 2010 Ingres Corporation
 **
 **
 */
@@ -228,32 +228,161 @@ exec sql declare c1 cursor for s;
 **        Missing parameter in STxcompare in the above change
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+void opq_error(
+	i4 dbstatus,
+	i4 errnum,
+	i4 argcount,
+	...);
+void opq_sqlerror(void);
+void opq_adferror(
+	ADF_CB *adfcb,
+	i4 errnum,
+	i4 p1,
+	PTR p2,
+	i4 p3,
+	PTR p4);
+i4 opq_exhandler(
+	EX_ARGS *ex_args);
+void adfinit(
+	OPQ_GLOBAL *g);
+void adfreset(
+	OPQ_GLOBAL *g);
+void nostackspace(
+	char *utilid,
+	i4 status,
+	u_i4 size);
+PTR getspace(
+	char *utilid,
+	PTR *spaceptr,
+	SIZE_TYPE size);
+void fileinput(
+	char *utilid,
+	char ***argv,
+	i4 *argc);
+bool isrelation(
+	char *relptr,
+	bool *excl);
+bool isattribute(
+	char *attptr);
+static bool good_type(
+	DB_DT_ID typeid,
+	ADF_CB *opq_adfscbp);
+OPS_DTLENGTH align(
+	OPS_DTLENGTH realsize);
+void setattinfo(
+	OPQ_GLOBAL *g,
+	OPQ_ALIST **attlist,
+	i4 *index,
+	OPS_DTLENGTH bound_length);
+bool badarglist(
+	OPQ_GLOBAL *g,
+	i4 argc,
+	char **argv,
+	i4 *dbindex,
+	char *ifs[],
+	char ***dbnameptr,
+	bool *verbose,
+	bool *histoprint,
+	bool *key_attsplus,
+	bool *minmaxonly,
+	i4 *uniquecells,
+	i4 *regcells,
+	bool *quiet,
+	bool *deleteflag,
+	char **userptr,
+	char **ifilenm,
+	char **ofilenm,
+	bool *pgupdate,
+	f8 *samplepct,
+	bool *supress_nostats,
+	bool *comp_flag,
+	bool *nosetstatistics,
+	OPS_DTLENGTH *bound_length,
+	char **waitopt,
+	bool *nosample);
+void prelem(
+	OPQ_GLOBAL *g,
+	PTR dataptr,
+	DB_DATA_VALUE *datatype,
+	FILE *outf);
+static char *opq_current_date(
+	OPQ_GLOBAL *g,
+	char *out);
+void opq_print_stats(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *relp,
+	OPQ_ALIST *attrp,
+	char *version,
+	i4 row_count,
+	i4 pages,
+	i4 overflow,
+	char *date,
+	f8 nunique,
+	f8 reptfact,
+	char *unique_flag,
+	i1 iscomplete,
+	i2 domain,
+	i2 cellnm,
+	OPO_TUPLES nullcount,
+	OPH_COUNTS cell_count,
+	OPH_COUNTS cell_repf,
+	OPH_CELLS intervals,
+	FILE *outf,
+	bool verbose,
+	bool quiet);
+void opq_cntrows(
+	OPQ_RLIST *rp);
+void opq_phys(
+	OPQ_RLIST *rp);
+void opq_idxlate(
+	OPQ_GLOBAL *g,
+	char *src,
+	char *xlatename,
+	char *delimname);
+void opq_idunorm(
+	char *src,
+	char *dst);
+bool i_rel_list_from_input(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST **rellist,
+	char **argv,
+	bool statdump);
+void opq_mxrel(
+	OPQ_GLOBAL *g,
+	int argc,
+	char *argv[]);
+void opq_collation(
+	OPQ_GLOBAL *g);
+void opq_ucollation(
+	OPQ_GLOBAL *g);
+void opq_owner(
+	OPQ_GLOBAL *g);
+void opq_upd(
+	OPQ_GLOBAL *g);
+void opq_dbmsinfo(
+	OPQ_GLOBAL *g);
+void opq_translatetype(
+	ADF_CB *adfcb,
+	char *es_type,
+	char *es_nulls,
+	OPQ_ALIST *attrp);
+bool r_rel_list_from_rel_rel(
+	OPQ_GLOBAL *g,
+	OPQ_RLIST *rellst[],
+	OPQ_RLIST *ex_rellst[],
+	bool statdump);
+void opt_usage(void);
 
-
-/*
-**  Static function prototypes.
-*/
-
-static bool	good_type(
-		     DB_DT_ID    typeid,
-		     ADF_CB      *opq_adfscbp);
-
-static char 	*opq_current_date(
-		     OPQ_GLOBAL	 *g,
-		     char	 *out);
-
-VOID            opq_bufalloc(
-                            PTR                 utilid,
-                            PTR                 *mptr,
-                            i4                  len,
-                            OPQ_DBUF            *buf);
-
 /*
 **  Global variables
 */
 
-static OPQ_ERRCB	opq_errcb	ZERO_FILL;
+static OPQ_ERRCB	opq_errcb;
 						/* error control block */
 static	i4		charnunique[DB_MAX_HIST_LENGTH];
                                               /* Array of number of unique
@@ -268,14 +397,10 @@ static	f4		chardensity[DB_MAX_HIST_LENGTH];
 					      ** attributes
 					      */
 
-# if defined(hp3_us5) || defined(mac_us5)
 static OPQ_IO_VALUE	opq_convbuf;
-# else
-static OPQ_IO_VALUE	opq_convbuf	ZERO_FILL;
 						/* conversion buffer for
 						** prelem routine.
 						*/
-# endif
 
 GLOBALREF OPQ_GLOBAL	    opq_global;		/* global data struct */
 GLOBALREF ER_ARGUMENT	    er_args[OPQ_MERROR];/* array of arg structs for
@@ -916,8 +1041,6 @@ OPQ_GLOBAL  *g)
     ADF_CB     *feadfcb;	/* get front end control
                                 ** block if possible
 				*/
-    STATUS     status;
-    
     if (feadfcb = FEadfcb())
     {
 	STRUCT_ASSIGN_MACRO(*feadfcb, g->opq_adfscb); /* copy fields in the
@@ -3833,6 +3956,8 @@ bool		statdump)
 **	28-may-02 (inkdo01)
 **	    Add indexes to potential relation count (since they're the target
 **	    of composite histograms).
+**	30-Nov-2010 (kschendel)
+**	    Exclude new spatial catalogs, they don't start with ii.
 */
 VOID
 opq_mxrel(
@@ -3844,7 +3969,7 @@ char	    *argv[])
 	i4	rel_cnt = 0;
 	char	*es_ownr;
 	char	*es_dba;
-	char	es_pattern[4];
+	char	*es_notin1, *es_notin2;
     exec sql end declare section;
     i4	    parmno;
     i4	    relc = 0;
@@ -3861,28 +3986,19 @@ char	    *argv[])
 	/* no relations have been specified on the command line. */
 	es_dba = (char *)&g->opq_dba;
 	es_ownr = (char *)&g->opq_owner;
-
-	if (g->opq_cats)
+	es_notin1 = es_notin2 = " ";
+	if (!g->opq_cats)
 	{
-	    es_pattern[0] = EOS; 
-	}
-	else
-	{
-	    if (g->opq_dbcaps.tblname_case == (i4)OPQ_LOWER)
-	    {
-		STcopy("ii%", es_pattern);
-	    }
-	    else
-	    {
-		STcopy("II%", es_pattern);
-	    }
+	    es_notin1 = "S";
+	    es_notin2 = "G";
+	    /* i.e. leaving only 'U' to be selected */
 	}
 
 	exec sql select count(*)
 	    into :rel_cnt
 	from iitables
   	where table_owner in (:es_ownr, :es_dba) and
-	      table_name  not like :es_pattern and
+	      system_use not in (:es_notin1, :es_notin2) and
   	      table_type  in ('T', 'I');
     }
 
@@ -4752,6 +4868,10 @@ OPQ_ALIST 	*attrp)
 **          Fix for Bug 123898 excluded all Gateway tables. Rework fix
 **          for Bug 123898 and 117368 to use different query text
 **          if we are a STAR DB and use a cursor instead of a SELECT loop.
+**	30-Nov-2010 (kschendel)
+**	    Exclude new spatial catalogs, they don't start with ii.
+**	    Fix remotecmdlock exclusion to work properly in an ANSI
+**	    (uppercase name) installation.
 */
 bool
 r_rel_list_from_rel_rel(
@@ -4771,7 +4891,6 @@ bool		statdump)
 	i4	es_pages;
 	i4	es_ovflow;
         i4      es_relwid;        /* schang: tuple width */
-	char	es_pattern[4];
 	char	es_tabtype[9];
 	char	es_tstat[8 + 1];
         char    stmtbuf[2048];
@@ -4790,21 +4909,6 @@ bool		statdump)
     es_ownname = (char *)&townname;
     es_relname = (char *)&trelname;
 
-    if (g->opq_cats)
-    {
-	es_pattern[0] = EOS; 
-    }
-    else
-    {
-	if (g->opq_dbcaps.tblname_case == (i4)OPQ_LOWER)
-	{
-	    STcopy("ii%", es_pattern);
-	}
-	else
-	{
-	    STcopy("II%", es_pattern);
-	}
-    }
 
     /* In STAR, for now, iistats and iihistograms are treated as user
     ** tables and do not get sent across privileged connection; all other
@@ -4831,10 +4935,15 @@ bool		statdump)
                               "t.number_pages, t.overflow_pages, ",
                               "t.row_width, t.table_type, t.table_stats ",
                               stmtbuf);
-        STpolycat(4, stmtbuf, "from iitables t where t.table_owner in (?, ?) ",
-                              "and t.table_name  not like ? and t.table_type ",
-                              "in ('T', 'I') and t.table_subtype <> 'I' and ",
+        STcat(stmtbuf, "from iitables t where t.table_owner in (?, ?) ");
+	if (!g->opq_cats)
+	{
+	    STcat(stmtbuf, "and t.system_use = 'U' ");
+	}
+        STpolycat(3, stmtbuf, "and t.table_type in ('T', 'I') ",
+			      "and t.table_subtype <> 'I' and ",
                               stmtbuf);
+	/* Not sure if all Star LDB's can do "lowercase()" ?? */
         STpolycat(4, stmtbuf, "(t.table_name <> 'remotecmdlock' or ",
                               "t.table_owner <> '$ingres') order by ",
                               "t.table_name",
@@ -4850,16 +4959,20 @@ bool		statdump)
                               "t.number_pages, t.overflow_pages, ",
                               "t.row_width, t.table_type, t.table_stats ",
                               stmtbuf);
-        STpolycat(4, stmtbuf, "from iitables t, iirelation i where ",
-                              "t.table_owner in (?, ?) and t.table_name ",
-                              "not like ? and t.table_type  in ('T', 'I') ",
+        STpolycat(3, stmtbuf, "from iitables t, iirelation i where ",
+                              "t.table_owner in (?, ?) ",
                               stmtbuf);
-        STpolycat(4, stmtbuf, "and t.table_reltid = i.reltid and ",
+	if (!g->opq_cats)
+	{
+	    STcat(stmtbuf, "and t.system_use = 'U' ");
+	}
+	STpolycat(5, stmtbuf, "and t.table_type in ('T', 'I') ",
+			      "and t.table_reltid = i.reltid and ",
                               "t.table_name = i.relid and i.relgwid <> ",
                               gwid,
                               stmtbuf);
-        STpolycat(4, stmtbuf, "and (t.table_name <> 'remotecmdlock' or ",
-                              "t.table_owner <> '$ingres') order by ",
+        STpolycat(4, stmtbuf, "and (lowercase(t.table_name) <> 'remotecmdlock' or ",
+                              "lowercase(t.table_owner) <> '$ingres') order by ",
                               "t.table_name",
                               stmtbuf);
 
@@ -4867,7 +4980,7 @@ bool		statdump)
 
     EXEC SQL prepare stmt from :stmtbuf;
     EXEC SQL declare cs cursor for stmt;
-    EXEC SQL open cs for readonly using :es_ownr, :es_dba, :es_pattern;
+    EXEC SQL open cs for readonly using :es_ownr, :es_dba;
 
     while(1)
     {

@@ -2,6 +2,9 @@
 **Copyright (c) 2004 Ingres Corporation
 */
 
+#ifndef QEUQCB_H_INCLUDED
+#define QEUQCB_H_INCLUDED
+
 /**
 ** Name: QEUQCB.H - control blocks for high level QEU query functions
 **
@@ -92,7 +95,8 @@
 **		has been dropped previously.
 **      12-Apr-2004 (stial01)
 **          Define qeuq_length as SIZE_TYPE.
-[@history_line@]...
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 /*
@@ -491,14 +495,14 @@ struct _QEUQ_CB
 				** map of attributes of a specified underlying
 				** table or view
 				*/
-    DB_STATUS		(*qeuq_v2b_col_xlate)();
+    DB_STATUS	(*qeuq_v2b_col_xlate)(DB_TAB_ID *, i4 *, DB_TAB_ID *, i4 *);
 				/*
 				** this function will translate a map of a table
 				** or view into a map of attributes of a
 				** specified updateable view which is defined on
 				** top of that table or view
 				*/
-    DB_STATUS           (*qeuq_b2v_col_xlate)();
+    DB_STATUS	(*qeuq_b2v_col_xlate)(DB_TAB_ID *, i4 *, DB_TAB_ID *, i4 *);
 
     i4		qeuq_eflag;	/* type of error handling semantics: either
 				** QEF_EXTERNAL or QEF_INTERNAL */
@@ -512,4 +516,6 @@ struct _QEUQ_CB
 
 /* bit masks used when calling qeu_access_perm() */
 #define	    QEU_TO_PUBLIC   (i4) 0x01
-/* [@type_definitions@] */
+
+
+#endif /* QEUQCB_H_INCLUDED */

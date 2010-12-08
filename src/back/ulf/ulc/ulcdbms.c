@@ -22,6 +22,7 @@
 #include    <st.h>
 #include    <me.h>
 #include    <uls.h>
+#include    <ulc.h>
 
 /**
 **
@@ -83,6 +84,8 @@
 **	    to allow for extra flags in PST_RSDM_NODE
 **      01-apr-2010 (stial01)
 **          Changes for Long IDs
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Include ulc.h to get prototype.
 [@history_template@]...
 **/
 

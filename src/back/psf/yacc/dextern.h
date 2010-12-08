@@ -396,14 +396,7 @@ typedef struct
 } PARMTYPE;
 
 GLOBALREF  PARMTYPE	Params[];	/* Parameter types and names */
-GLOBALREF	i4 		Numparams;	/* Number of parameters */
-
-/* define functions with strange types... */
-
-FUNC_EXTERN	char *cstash();
-FUNC_EXTERN	struct looksets *flset();
-FUNC_EXTERN	char *symnam();
-FUNC_EXTERN	char *writem();
+GLOBALREF	i4 	Numparams;	/* Number of parameters */
 
 /* default settings for a number of macros */
 
@@ -459,3 +452,46 @@ FUNC_EXTERN	char *writem();
 **	Added.
 */
 #define ERROR yacc_error
+
+/*y1.c*/
+FUNC_EXTERN char *writem(
+	i4	*pp);
+FUNC_EXTERN char *symnam(
+	i4	i);
+FUNC_EXTERN void ERROR(
+	char *s);
+FUNC_EXTERN void aryfil(
+	i4	*v,
+	i4	n,
+	i4	c);
+FUNC_EXTERN i4 state(
+	i4	c);
+FUNC_EXTERN void putitem(
+	i4	*ptr,
+	struct looksets *lptr);
+FUNC_EXTERN void closure(
+	i4	i);
+FUNC_EXTERN struct looksets *flset(
+	struct looksets	*p);
+/*y2.c*/
+FUNC_EXTERN void setup(
+	i4	argc,
+	char	**argv);
+FUNC_EXTERN char *cstash(
+	register char *s);
+FUNC_EXTERN i4 funcid(
+	i4	ndx);
+/*y3.c*/
+FUNC_EXTERN void output (void);
+FUNC_EXTERN i4 apack (
+	i4	*p,
+	i4	n);
+FUNC_EXTERN void go2out (void);
+FUNC_EXTERN void warray (
+	i4	s,
+	i4	*v,
+	i4	n);
+void hideprod (void);
+/*y4.c*/
+void callopt (void);
+

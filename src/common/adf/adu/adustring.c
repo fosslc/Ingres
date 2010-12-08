@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 1986, 2008, 2009 Ingres Corporation
+** Copyright (c) 1986, 2008, 2009, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -202,12 +202,12 @@
 **          Add adu_strgenerate_digit() and adu_strvalidate_digit()
 **	11-May-2009 (kschendel) b122041
 **	    Compiler caught value instead of pointer being pass to adu-error.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
 **      01-Aug-2009 (martin bowes) SIR122320
 **          Added soundex_dm (Daitch-Mokotoff soundex)
-**  20-Aug-2009 (thich01)
-**      Treat all spatial types the same as LBYTE.
+**	20-Aug-2009 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **      03-Sep-2009 (coomi01) b122473
 **          Add adu_3alltobyte as a wrapper around adu_2alltobyte allowing a
 **          output length parameter to be specified.
@@ -221,6 +221,8 @@
 **	    i4 range when later logic would have adjusted the parameter anyway.
 **	    Examples include the CHAREXTRACT first paramter where any negative
 **	    should return an empty string.
+**      02-Dec-2010 (gupsh01) SIR 124685
+**          Prototype cleanup.
 **/
 
 
@@ -250,6 +252,25 @@ static DB_STATUS adu_strextract(
 #define ADU_UTF8_CASE_TOUPPER	1
 #define ADU_UTF8_CASE_TOLOWER	2
 
+#define CHECK_DIGIT_NUMERIC 0
+#define CHECK_DIGIT_ALPHA_NUMERIC 1
+#define CHECK_DIGIT_SCHEME_LENGTH 32
+
+enum CHECK_DIGIT_SCHEMES
+{
+    UNKNOWN_SCHEME,
+    EAN_12, EAN_13, EAN_8,
+    ISBN,
+    ISBN_13,
+    ISSN,
+    LUHN,
+    LUHN_A,
+    UPC, UPC_E,
+    VERHOEFF,
+    VERHOEFFNR,
+}
+;
+
 static	DB_STATUS ad0_utf8_casetranslate (
 	ADF_CB            *adf_scb,
 	DB_DATA_VALUE     *src_dv,
@@ -261,6 +282,101 @@ static bool soundex_dm_vowelage (
 	i4	b_ptr,
 	i4	b_len,
 	i4	skip);
+
+static
+enum CHECK_DIGIT_SCHEMES
+generate_cd_scheme(char *scheme_name);
+
+static
+DB_STATUS
+generate_isXn_digit(
+    ADF_CB           *adf_scb,
+    DB_DATA_VALUE    *p1,
+    DB_DATA_VALUE    *rdv,
+    i4               isXn_length);
+
+static
+DB_STATUS
+generate_ean_digit(
+    ADF_CB           *adf_scb,
+    DB_DATA_VALUE    *p1,
+    DB_DATA_VALUE    *rdv,
+    i4               ean_length);
+
+static
+DB_STATUS
+generate_luhn_digit(
+    ADF_CB           *adf_scb,
+    DB_DATA_VALUE    *p1,
+    DB_DATA_VALUE    *rdv,
+    i4               permit_alphas);
+
+static
+DB_STATUS
+generate_upce_digit(
+    ADF_CB        *adf_scb,
+    DB_DATA_VALUE *p1,
+    DB_DATA_VALUE *rdv);
+
+static
+DB_STATUS
+generate_verhoeff_digit(
+    ADF_CB        *adf_scb,
+    DB_DATA_VALUE *p1,
+    DB_DATA_VALUE *rdv);
+
+static
+DB_STATUS
+generate_verhoeffNR_digit(
+    ADF_CB        *adf_scb,
+    DB_DATA_VALUE *p1,
+    DB_DATA_VALUE *rdv);
+
+static
+DB_STATUS
+validate_isXn_digit(
+    ADF_CB           *adf_scb,
+    DB_DATA_VALUE    *p1,
+    DB_DATA_VALUE    *rdv,
+    i4               isXn_length);
+
+static
+DB_STATUS
+validate_ean_digit(
+    ADF_CB           *adf_scb,
+    DB_DATA_VALUE    *p1,
+    DB_DATA_VALUE    *rdv,
+    i4               ean_length);
+
+static
+DB_STATUS
+validate_luhn_digit(
+    ADF_CB        *adf_scb,
+    DB_DATA_VALUE *p1, 
+    DB_DATA_VALUE *rdv,
+    i4            permit_alphas);
+
+static
+DB_STATUS
+validate_upce_digit(
+    ADF_CB        *adf_scb,
+    DB_DATA_VALUE *p1,
+    DB_DATA_VALUE *rdv);
+
+static
+DB_STATUS
+validate_verhoeffNR_digit(
+    ADF_CB        *adf_scb,
+    DB_DATA_VALUE *p1, 
+    DB_DATA_VALUE *rdv);
+
+static
+DB_STATUS
+validate_verhoeff_digit(
+    ADF_CB        *adf_scb,
+    DB_DATA_VALUE *p1, 
+    DB_DATA_VALUE *rdv);
+
 
 /*{
 ** Name: adu_1cvrt_date() - Convert internal time to a date string in
@@ -1339,6 +1455,10 @@ DB_DATA_VALUE		*rdv)
 **	    init value of count).  So, use count instead of tmp_size.
 **	09-May-2007 (gupsh01)
 **	    Added support for UTF8 character sets.
+**	13-Oct-2010 (thaju02) B124469
+**	    For DB_LVCH_TYPE and UTF8, need to retrieve segments to 
+**	    determine length in char units. Coupon per_length1 is 
+**	    length in bytes.
 **	    
 */
 
@@ -1402,6 +1522,22 @@ register DB_DATA_VALUE	*rdv)
 	    break;
 
 	  case DB_LVCH_TYPE:
+	  {
+		if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+		{
+		    DB_DATA_VALUE	cnt_dv;
+
+		    cnt_dv.db_data = (PTR)&count;
+		    cnt_dv.db_length  = sizeof(count);
+		    cnt_dv.db_datatype = DB_INT_TYPE;
+		    cnt_dv.db_prec = 0;
+		    
+		    if (db_stat = adu_19lvch_chrlen(adf_scb, dv1, &cnt_dv))
+			return(db_stat);
+		    break;
+		}
+		/* otherwise if non-UTF8, drop down to DB_LBYTE_TYPE case. */ 
+	  }
 	  case DB_LBYTE_TYPE:
 	  case DB_GEOM_TYPE:
           case DB_POINT_TYPE:
@@ -6687,6 +6823,8 @@ register DB_DATA_VALUE	*rdv)
 **	    Propagated from 3.0 to main.
 **	09-May-2007 (gupsh01)
 **	    Added support for UTF8 character sets.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation.
 */
 
 DB_STATUS
@@ -6747,7 +6885,8 @@ DB_DATA_VALUE       *rdv)
     /* FIX ME position nvchr with alternate collations not supported */
     /* FIX ME db_collID is not init here */
     if ((bdt1 == DB_NCHR_TYPE || bdt1 == DB_NVCHR_TYPE) &&
-    	(dv1->db_collID > DB_UNICODE_COLL || dv2->db_collID > DB_UNICODE_COLL))
+    	(dv1->db_collID > DB_UNICODE_COLL && dv1->db_collID != DB_UCS_BASIC_COLL ||
+	dv2->db_collID > DB_UNICODE_COLL && dv2->db_collID != DB_UCS_BASIC_COLL))
     {
 	return(adu_error(adf_scb, E_AD2085_LOCATE_NEEDS_STR, 0));
     }
@@ -6944,6 +7083,9 @@ DB_DATA_VALUE       *rdv)
 **	    Correct prior change by actually changing the return type
 **	    as it is ultimatly needed to avoid UTF8 interferance with
 **	    single characters.
+**	08-Nov-2010 (thaju02) B124713
+**	    For UTF8 to determine start position, in char_len while-loop 
+**	    CMbytecnt() of src1, not src.
 */
 
 static DB_STATUS
@@ -7014,7 +7156,7 @@ DB_DATA_VALUE	*rdv)
 	    i4 char_len = 0;
 	    char *src1 = src;
 
-	    while (src1 + CMbytecnt(src) < endsrc)
+	    while (src1 + CMbytecnt(src1) < endsrc)
 	    {
 		CMnext(src1);
 		char_len++;
@@ -7344,24 +7486,6 @@ DB_DATA_VALUE		*rdv)
 **	    Correct error parameter, we were passing address of char pointer
 **	    not the char pointer itself.
 */
-
-#define CHECK_DIGIT_NUMERIC 0
-#define CHECK_DIGIT_ALPHA_NUMERIC 1
-#define CHECK_DIGIT_SCHEME_LENGTH 32
-enum CHECK_DIGIT_SCHEMES
-{
-    UNKNOWN_SCHEME,
-    EAN_12, EAN_13, EAN_8,
-    ISBN,
-    ISBN_13,
-    ISSN,
-    LUHN,
-    LUHN_A,
-    UPC, UPC_E,
-    VERHOEFF,
-    VERHOEFFNR,
-};
-
 /*
 ** generate_cd_scheme():
 **     This is used by the adu_strgenerate_digit() and adu_strvalidate_digit()
@@ -7369,6 +7493,7 @@ enum CHECK_DIGIT_SCHEMES
 **     that when called the scheme_name has already had some vetting and been 
 **     properly terminated.
 */
+static
 enum CHECK_DIGIT_SCHEMES
 generate_cd_scheme(char *scheme_name)
 {
@@ -7605,6 +7730,7 @@ adu_strvalidate_digit(
     }
 } /* validate_digit */
 
+static
 DB_STATUS
 generate_isXn_digit(
     ADF_CB           *adf_scb,
@@ -7658,6 +7784,7 @@ generate_isXn_digit(
     return(E_DB_OK);
 } /* generate_isXn_digit */
 
+static
 DB_STATUS
 validate_isXn_digit(
     ADF_CB           *adf_scb,
@@ -7709,6 +7836,7 @@ validate_isXn_digit(
     return(E_DB_OK);
 } /* validate_isXn_digit */
 
+static
 DB_STATUS
 generate_ean_digit(
     ADF_CB           *adf_scb,
@@ -7784,6 +7912,7 @@ generate_ean_digit(
     return(E_DB_OK);
 } /* generate_ean_digit */
 
+static
 DB_STATUS
 validate_ean_digit(
     ADF_CB           *adf_scb,
@@ -7839,6 +7968,7 @@ validate_ean_digit(
     return(E_DB_OK);
 } /* validate_ean_digit */
 
+static
 DB_STATUS
 generate_luhn_digit(
     ADF_CB           *adf_scb,
@@ -7921,6 +8051,7 @@ generate_luhn_digit(
     return(E_DB_OK);
 } /* generate_luhn_digit */
 
+static
 DB_STATUS
 validate_luhn_digit(
     ADF_CB        *adf_scb,
@@ -7988,6 +8119,7 @@ validate_luhn_digit(
     return(E_DB_OK);
 } /* validate_luhn_digit */
 
+static
 DB_STATUS
 generate_upce_digit(
     ADF_CB        *adf_scb,
@@ -8124,6 +8256,7 @@ generate_upce_digit(
     return(generate_ean_digit(adf_scb, &workv, rdv, (short )11));
 } /* generate_upce_digit */
 
+static
 DB_STATUS
 validate_upce_digit(
     ADF_CB        *adf_scb,
@@ -8162,6 +8295,7 @@ validate_upce_digit(
     return(E_DB_OK);
 } /* validate_upce_digit */
 
+static
 DB_STATUS
 generate_verhoeff_digit(
     ADF_CB        *adf_scb,
@@ -8250,6 +8384,7 @@ generate_verhoeff_digit(
     return(E_DB_OK);
 } /* generate_verhoeff_digit */
 
+static
 DB_STATUS
 validate_verhoeff_digit(
     ADF_CB        *adf_scb,
@@ -8300,6 +8435,7 @@ validate_verhoeff_digit(
     return(gen_return);
 } /* validate_verhoeff_digit */
 
+static
 DB_STATUS
 generate_verhoeffNR_digit(
     ADF_CB        *adf_scb,
@@ -8380,6 +8516,7 @@ generate_verhoeffNR_digit(
     return(E_DB_OK);
 } /* generate_verhoeffNR_digit */
 
+static
 DB_STATUS
 validate_verhoeffNR_digit(
     ADF_CB        *adf_scb,

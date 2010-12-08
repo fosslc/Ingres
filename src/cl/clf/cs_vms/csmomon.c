@@ -17,8 +17,6 @@
 # include "csmgmt.h"
 
 FUNC_EXTERN VOID str_to_uns();
-FUNC_EXTERN STATUS CS_breakpoint();
-STATUS CS_mod_session();
 
 /**
 ** Name:	csmomon.c	- active monitor methods.
@@ -55,6 +53,8 @@ STATUS CS_mod_session();
 **	01-dec-2000	(kinte01)
 **		Bug 103393 - removed nat, longnat, u_nat, & u_longnat
 **		from VMS CL as the use is no longer allowed
+**	15-Nov-2010 (kschendel) SIR 124685
+**	    Prototype / include fixes.
 **/
 
 
@@ -148,7 +148,7 @@ MO_CLASS_DEF CS_mon_classes[] =
 **	    documented
 */
 
-STATUS
+static STATUS
 CS_mod_session( char *uns_decimal_session, CS_SCB **scbp )
 {
     u_i4 scb_as_ulong;
@@ -218,7 +218,7 @@ CS_mod_session( char *uns_decimal_session, CS_SCB **scbp )
 **	28-Oct-1992 (daveb)
 **	    documented
 */
-STATUS
+static STATUS
 CS_is_internal( CS_SCB *an_scb )
 {
     STATUS stat = OK;
@@ -268,7 +268,8 @@ CS_is_internal( CS_SCB *an_scb )
 STATUS
 CS_breakpoint_set( i4 offset, i4 lsbuf, char *sbuf, i4 size, PTR object  )
 {
-    return( CS_breakpoint() );
+    CS_breakpoint();
+    return( OK );
 }
 
 
@@ -667,7 +668,7 @@ CS_debug_set( i4 offset, i4 lsbuf, char *sbuf, i4 size, PTR object  )
 # if 0
 	char	buffer[1048];
 	CS_fmt_scb(an_scb, sizeof(buffer), buffer);
-	CS_dump_stack(an_scb, output_fcn);
+	CS_dump_stack(an_scb, NULL, NULL, output_fcn, 0);
 # endif
     }
     return( stat );

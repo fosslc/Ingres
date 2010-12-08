@@ -31,9 +31,9 @@
 **	    Add addrinfo data for listens to LBCB to support IPv6.
 **	 1-mar-2007 (lunbr01)  Bug 117783 + Sir 116548
 **	    Add counter of good sockets in aiList to LBCB.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Tighten up callback prototype.
 */
-
-# include <sl.h>
 
 #define  SOCK_TRACE(n)	if(sock_trace >= n)(void)TRdisplay
 /*
@@ -44,8 +44,8 @@ typedef struct _LBCB
 {
 	i4	fd;			/* listen fd (active) */
 	char	port[ 108 ];		/* port we're listening on */
-	VOID	(*func)();		/* saved regop callback function */
-	PTR	closure;		/* Listen request parm list */
+	VOID	(*func)(void *, i4);	/* saved regop callback function */
+	void	*closure;		/* Listen request parm list */
 	PTR	aiList;			/* addrinfo list from getaddrinfo() */
 	i4	num_sockets;		/* # of sockets/addrs in aiList */
 	i4	num_good_sockets;	/* # of good sockets in aiList */

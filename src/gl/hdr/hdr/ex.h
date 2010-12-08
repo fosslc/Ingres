@@ -1,6 +1,9 @@
 /*
 **	Copyright (c) 2004 Ingres Corporation
 */
+#ifndef EX_H_INCLUDED
+#define EX_H_INCLUDED
+
 #include    <excl.h>
 
 /**CL_SPEC
@@ -40,29 +43,25 @@
 **	15-Dec-2009 (frima01) Bug 122490
 **	    Moved prototype for EXsetsig to hdr_unix/excl.h cause it is
 **	    Unix specific.
+**	11-Nov-2010 (kschendel)
+**	    Nested inclusion protection.  Prototype fixes.
 **/
 
 #ifndef	EXdeclare
 FUNC_EXTERN STATUS EXdeclare(
-#ifdef CL_PROTOTYPED
 	    STATUS	    (*handle)(EX_ARGS *args), 
 	    EX_CONTEXT	    *context
-#endif
 );
 #endif
 
 #ifndef EXdelete
 FUNC_EXTERN STATUS    EXdelete(
-#ifdef CL_PROTOTYPED
 	    void
-#endif
 );
 #endif
 
 FUNC_EXTERN VOID    EXinterrupt(
-#ifdef CL_PROTOTYPED
 	    i4		new_state
-#endif
 );
 
 #ifndef EXmatch
@@ -74,9 +73,7 @@ FUNC_EXTERN i4  EXmatch(
 
 #ifndef EXmath
 FUNC_EXTERN VOID    EXmath(
-#ifdef CL_PROTOTYPED
 	    i4		new_state
-#endif
 );
 #endif
 
@@ -84,18 +81,16 @@ FUNC_EXTERN VOID    EXmath(
 FUNC_EXTERN VOID    EXsignal( EX, i4, ...);
 #endif
 
+FUNC_EXTERN void EXdumpInit(void);
+
 FUNC_EXTERN bool    EXsys_report(
-#ifdef CL_PROTOTYPED
 	    EX_ARGS	*exargs,
 	    char	*buffer
-#endif
 );
 
 # define	EXsetclient	IIEXsetclient
 FUNC_EXTERN STATUS EXsetclient(
-# ifdef CL_PROTOTYPED
 	i4	client
-# endif
 );
 
 #if defined(axp_osf)
@@ -107,3 +102,5 @@ FUNC_EXTERN STATUS EXsetclient(
 #define IIEXcatch(exc)	if (0)
 #define IIEXendtry
 #endif
+
+#endif /* EX_H_INCLUDED */

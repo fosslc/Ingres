@@ -8,6 +8,8 @@
 **	    Added lnx_us5 support for Linux on Intel based platforms.
 **	06-oct-1999 (toumi01)
 **	    Linux config string for Intel has been changed to int_lnx.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Moved inkernel and current to front of CS_SYSTEM, fix here.
 **
 */
 
@@ -25,8 +27,8 @@
 # define CS__ESI	   0x2c 		   /* +0xc source index */
 # define CS__EDI	   0x30 	    	   /* +0x10 destination index */
 # define CS__EXSP	   0x34 		   /* + 0x14 Exception stk ptr*/
-# define CS__CURRENT	   0xb8 		   /* Current thread SCB */
-# define CS__INKERNEL	   0xcc 		   /* In kernel lock */
+# define CS__CURRENT	   0x14 		   /* Current thread SCB */
+# define CS__INKERNEL	   0x10 		   /* In kernel lock */
 
 .text
 .globl	 _CS_tas

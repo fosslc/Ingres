@@ -11,6 +11,7 @@
 #include    <iicommon.h>
 #include    <dbdbms.h>
 #include    <dmf.h>
+#include    <dmrcb.h>
 #include    <dmtcb.h>
 #include    <adf.h>
 #include    <ulf.h>
@@ -18,7 +19,9 @@
 #include    <er.h>
 #include    <me.h>
 #include    <scf.h>
+#include    <ulm.h>
 #include    <gwf.h>
+#include    <gwfint.h>
 
 /**
 **
@@ -28,7 +31,7 @@
 **      This file contains the error formatting and reporting functions for 
 **      the gateway (GWF) facility.
 **
-**          gwf_error - Format and report a gateway facility error.
+**          gwfErrorFcn - Format and report a gateway facility error.
 **	    gwf_errsend - Format error message and send to frontend
 **
 **  History:
@@ -58,7 +61,7 @@
 
 
 /*{
-** Name: gwf_error	- Format and report a gateway facility error.
+** Name: gwfErrorFcn	- Format and report a gateway facility error.
 **
 ** Description:
 **      This function formats and reports a gwf facility error.  There are 
@@ -130,25 +133,22 @@
 **	24-oct-92 (andre)
 **	    ule_format() will return an SQLSTATE status code instead of generic
 **	    error message.  SCC_ERROR will know how to handle SQLSTATEs
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Rewrote gwf_error() with variable parms for prototyping.
+**	    Replace ule_format with uleFormat.
+**	    gwfErrorFcn() called by way of gwf_error macro.
 */
 /* VARARGS5 */
 VOID
-gwf_error(errorno, err_type, num_parms, plen1, parm1, plen2, parm2,
-	  plen3, parm3, plen4, parm4, plen5, parm5)
-i4            errorno;
-i4                 err_type;
-i4		   num_parms;
-i4            *plen1;
-i4            *parm1;
-i4            *plen2;
-i4            *parm2;
-i4            *plen3;
-i4            *parm3;
-i4            *plen4;
-i4            *parm4;
-i4            *plen5;
-i4            *parm5;
+gwfErrorFcn(
+i4		err_code,
+i4		err_type,
+PTR		FileName,
+i4		LineNumber,
+i4		num_parms,
+... )
 {
+#define	NUM_ER_ARGS	12
     i4		    uletype;
     DB_STATUS		    uleret;
     i4		    ulecode;
@@ -156,6 +156,24 @@ i4            *parm5;
     DB_STATUS		    ret_val = E_DB_OK;
     char		    errbuf[DB_ERR_SIZE];
     SCF_CB		    scf_cb;
+    DB_ERROR	    localDBerror, *DBerror;
+    i4		    i;
+    va_list	    ap;
+    ER_ARGUMENT	    er_args[NUM_ER_ARGS];
+
+    va_start( ap, num_parms );
+    for ( i = 0; i < num_parms && i < NUM_ER_ARGS; i++ )
+    {
+        er_args[i].er_size = (i4) va_arg( ap, i4 );
+	er_args[i].er_value = (PTR) va_arg( ap, PTR );
+    }
+    va_end( ap );
+
+    DBerror = &localDBerror;
+    DBerror->err_file = FileName;
+    DBerror->err_line = LineNumber;
+    DBerror->err_code = err_code;
+    DBerror->err_data = 0;
 
     for (;;)	/* Not a loop, just gives a place to break to */
     {
@@ -173,11 +191,21 @@ i4            *parm5;
 	*/
 	if (err_type != GWF_CALLERR)
 	{
-	    uleret = ule_format(errorno, 0L, uletype,
+	    uleret = uleFormat(DBerror, 0, 0L, uletype,
 		&scf_cb.scf_aux_union.scf_sqlstate, errbuf,
-		(i4) sizeof(errbuf), &msglen, &ulecode, num_parms,
-		plen1, parm1, plen2, parm2, plen3, parm3,
-		plen4, parm4, plen5, parm5);
+		(i4) sizeof(errbuf), &msglen, &ulecode, i,
+		er_args[0].er_size, er_args[0].er_value,
+		er_args[1].er_size, er_args[1].er_value,
+		er_args[2].er_size, er_args[2].er_value,
+		er_args[3].er_size, er_args[3].er_value,
+		er_args[4].er_size, er_args[4].er_value,
+		er_args[5].er_size, er_args[5].er_value,
+		er_args[6].er_size, er_args[6].er_value,
+		er_args[7].er_size, er_args[7].er_value,
+		er_args[8].er_size, er_args[8].er_value,
+		er_args[9].er_size, er_args[9].er_value,
+		er_args[10].er_size, er_args[10].er_value,
+		er_args[11].er_size, er_args[11].er_value );
 
 	    /*
 	    ** If ule_format failed, we probably can't report any error.
@@ -186,9 +214,9 @@ i4            *parm5;
 	    if (uleret != E_DB_OK)
 	    {
 		STprintf(errbuf, "Error message corresponding to %d (%x) \
-		    not found in INGRES error file", errorno, errorno);
+		    not found in INGRES error file", err_code, err_code);
 		msglen = STlength(errbuf);
-		ule_format(0L, 0L, ULE_MESSAGE, NULL, errbuf, msglen, 0,
+		uleFormat(NULL, 0L, 0L, ULE_MESSAGE, NULL, errbuf, msglen, 0,
 		    &ulecode, 0);
 		break;
 	    }
@@ -209,7 +237,7 @@ i4            *parm5;
 	    scf_cb.scf_type = SCF_CB_TYPE;
 	    scf_cb.scf_facility = DB_GWF_ID;
 	    scf_cb.scf_session = DB_NOSESSION;
-	    scf_cb.scf_nbr_union.scf_local_error = errorno;
+	    scf_cb.scf_nbr_union.scf_local_error = err_code;
 	    scf_cb.scf_len_union.scf_blength = msglen;
 	    scf_cb.scf_ptr_union.scf_buffer = errbuf;
 	    ret_val = scf_call(SCC_ERROR, &scf_cb);
@@ -225,6 +253,46 @@ i4            *parm5;
     }
 
     return ;
+}
+/* Non-variadic form of gwf_error, insert __FILE__, __LINE__ manually */
+VOID
+gwfErrorNV(
+	 i4 err_code,
+         i4 err_type,
+         i4 num_parms,
+         ... )
+{
+    i4	 		i; 
+    va_list 		ap;
+    ER_ARGUMENT	        er_args[NUM_ER_ARGS];
+
+    va_start( ap , num_parms );
+
+    for( i = 0;  i < num_parms && i < NUM_ER_ARGS; i++ )
+    {
+        er_args[i].er_size = (i4) va_arg( ap, i4 );
+	er_args[i].er_value = (PTR) va_arg( ap, PTR );
+    }
+    va_end( ap );
+
+    gwfErrorFcn(
+	        err_code,
+	        err_type,
+	        __FILE__,
+	        __LINE__,
+	        i,
+		er_args[0].er_size, er_args[0].er_value,
+		er_args[1].er_size, er_args[1].er_value,
+		er_args[2].er_size, er_args[2].er_value,
+		er_args[3].er_size, er_args[3].er_value,
+		er_args[4].er_size, er_args[4].er_value,
+		er_args[5].er_size, er_args[5].er_value,
+		er_args[6].er_size, er_args[6].er_value,
+		er_args[7].er_size, er_args[7].er_value,
+		er_args[8].er_size, er_args[8].er_value,
+		er_args[9].er_size, er_args[9].er_value,
+		er_args[10].er_size, er_args[10].er_value,
+		er_args[11].er_size, er_args[11].er_value );
 }
 
 /*

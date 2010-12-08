@@ -38,7 +38,8 @@ FUNC_EXTERN 	int 	pgpnd();    	    /* pend */
 /* Serial I/O Driver functions */
 
 FUNC_EXTERN     int     sioinit();  	    /* initialise serial i/o */
-FUNC_EXTERN 	VOID	sioreg();    	    /* register callback */
+FUNC_EXTERN 	VOID	sioreg(void (*)(void *, i4),
+	void (*)(void *, i4), void *);    	    /* register callback */
 FUNC_EXTERN     VOID    siodone();  	    /* terminate serial i/o */
 FUNC_EXTERN 	VOID	siowrite();  	    /* complete serial i/o write */
 FUNC_EXTERN 	VOID	sioread();  	    /* complete serial i/o read */
@@ -50,13 +51,6 @@ FUNC_EXTERN     int     cominit();
 FUNC_EXTERN     int     comst();
 FUNC_EXTERN     VOID    comdone();
 
-/*
-** Forward functions
-*/
-static	VOID	GCblastsm();	    	    /* Async state machine */
-static  VOID	GCblastpnd();	    	    /* Async event pend */
-static	VOID	GCblastread();	    	    /* Async serial i/o read */
-static	VOID	GCblastwrite();	    	    /* Async serial i/o write */
 
 /*
 ** local variables
@@ -82,6 +76,18 @@ typedef struct _GC_PCB
     	bool	    	disconnecting;	    /* Disconnection in progress */
 	PG_CB		pgcb;		    /* control block for pg services */
 } GC_PCB;
+
+/*
+** Forward functions
+*/
+static	VOID	GCblastsm();	    	    /* Async state machine */
+static  VOID	GCblastpnd();	    	    /* Async event pend */
+static	VOID	GCblastread(void *, i4);	/* Async serial i/o read */
+static	VOID	GCblastwrite(void *, i4);	/* Async serial i/o write */
+STATUS 		GCblast( i4, GCC_P_PLIST * );
+static 	VOID	GCblastsm( GCC_P_PLIST * );
+static 	VOID	GCblastpnd( GC_PCB * );
+
 
 GLOBALDEF i4  GCblast_trace = 0;
 
@@ -258,6 +264,10 @@ static char async_port[GCC_L_PORT];
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
 **	26-Aug-2009 (kschendel) b121804
 **	    Remove function defns now in headers.
+**	15-nov-2010 (stephenb)
+**	    Add forwrd protos to quiet compiler.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Stricter callback prototyping.
 */
 STATUS
 GCblast( func_code, parms )
@@ -418,7 +428,7 @@ GCC_P_PLIST	*parms;
     	pcb->disconnecting = FALSE;
 
     	/* Register callbacks with serial i/o driver */
-    	sioreg(GCblastread, GCblastwrite, (PTR) pcb);
+    	sioreg(GCblastread, GCblastwrite, pcb);
 
 	/* Logon with pglgn() */
 	parms->state = GC_LSNCMP;
@@ -459,7 +469,7 @@ GCC_P_PLIST	*parms;
     	pcb->disconnecting = FALSE;
 
     	/* Register callbacks with serial i/o driver */
-    	sioreg(GCblastread, GCblastwrite, (PTR) pcb);
+    	sioreg(GCblastread, GCblastwrite, pcb);
 
 	/* Connect to remote host */
      	pcb->pgcb.buf = parms->function_parms.connect.port_id;
@@ -938,10 +948,9 @@ GC_PCB	*pcb;
 **	    For VMS, do not issue the sioread.
 */
 static VOID
-GCblastread( pcb, error )
-GC_PCB	*pcb;
-int error;
+GCblastread( void *parm, i4 error )
 {
+    GC_PCB	*pcb = (GC_PCB *) parm;
 #ifndef VMS
     /* Complete serial i/o read */
     sioread(error);
@@ -971,10 +980,9 @@ int error;
 **	    For VMS, do not issue the siowrite.
 */
 static VOID
-GCblastwrite( pcb, error )
-GC_PCB	*pcb;
-int error;
+GCblastwrite( void *parm, i4 error )
 {
+    GC_PCB	*pcb = (GC_PCB *) parm;
 
 #ifndef VMS
     /* Complete serial i/o write */

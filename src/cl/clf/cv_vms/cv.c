@@ -103,6 +103,8 @@
 **	    Update CVal, CVal8 with latest unix/win speed tweaks.
 **      19-feb-2010 (joea)
 **          Change #ifdef ALPHA to support both VMS variants.
+**      06-Dec-2010 (horda03) SIR 124685
+**          Fix VMS build problems, 
 */
 
 static	i4	cverrnum = 0;
@@ -1066,7 +1068,7 @@ register char	*a;
 */
 void
 CVla8(
-longlong	i,
+i8	i,
 char	*a)
 {
     char	*j;

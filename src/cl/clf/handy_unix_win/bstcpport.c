@@ -5,6 +5,7 @@
 # include	<gl.h>
 # include	<cm.h>
 # include	<st.h>
+# include	"handylocal.h"
 
 
 /*
@@ -76,6 +77,8 @@
 **	    The actual symbolic port will only be returned on success. The
 **	    failure cases simply indicate that the bounds have been exceeded 
 **	    and there is nothing valid left to return.  
+**      29-Nov-2010 (frima01) SIR 124685
+**	    Added include of handylocal.h.
 */
 
 STATUS

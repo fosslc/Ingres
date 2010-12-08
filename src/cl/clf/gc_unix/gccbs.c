@@ -270,13 +270,17 @@
 **	    When starting more than one GCC server the symbolic ports are not
 **	    incremented (Example: II1, II2) in the startup messages, while the 
 **	    actual portnumber is increasing and printed correctly.
+**	15-nov-2010 (stephenb)
+**	    Correctly proto all functions.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Make sure callback prototype agrees everywhere.
 **
 */
 
 /*
 ** Forward functions
 */
-static	VOID	GCbssm();
+static	VOID	GCbssm(void *, i4);
 
 /*
 ** local variables
@@ -330,8 +334,13 @@ typedef struct _GC_PCB
 
 } GC_PCB;
 
+/*
+** Forward references
+*/
 static i4  GCbs_trace = 0;
 static void GC_abort( GC_PCB *);
+STATUS	GCbk( i4, GCC_P_PLIST * );
+STATUS  GCbs( i4, GCC_P_PLIST * );
 
 # define GCTRACE(n) if( GCbs_trace >= n )(void)TRdisplay
 
@@ -398,7 +407,7 @@ GCC_P_PLIST	    *parms;
 
     /* Start sm. */
 
-    GCbssm( parms );
+    GCbssm( parms, 0 );
     return OK;
 }
 
@@ -432,14 +441,14 @@ GCC_P_PLIST	    *parms;
 
     /* Start sm. */
 
-    GCbssm( parms );
+    GCbssm( parms, 0 );
     return OK;
 }
 
 static VOID
-GCbssm( parms )
-GCC_P_PLIST	*parms;
+GCbssm( void *parm, i4 notused )
 {
+    GCC_P_PLIST	*parms = (GCC_P_PLIST *) parm;
     char			*portname, *hostname;
     GC_PCB			*pcb = (GC_PCB *)parms->pcb;
     GC_DCB			*dcb = (GC_DCB *)parms->pce->pce_dcb;
@@ -465,7 +474,7 @@ GCC_P_PLIST	*parms;
     /* Copy some parameters */
 
     bsp.func = GCbssm;
-    bsp.closure = (PTR)parms;
+    bsp.closure = parms;
     bsp.timeout = -1;
     bsp.syserr = &parms->system_status;
     bsp.bcb = pcb ? pcb->bcb : NULL;

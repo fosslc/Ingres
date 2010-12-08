@@ -9,12 +9,12 @@
 GLOBALDEF bool	TEcmdEnabled = FALSE;
 GLOBALDEF bool	TEstreamEnabled = FALSE;
 
-static STATUS	TErare(),
-		TEnoecho(),
-                TEechoon(),
-                TEechooff(),
-		TEset(),
-		TEcmdmode();
+static STATUS	TErare(VOID),
+		TEnoecho(VOID),
+                TEechoon(VOID),
+                TEechooff(VOID),
+		TEset(i4 mode),
+		TEcmdmode(VOID);
 
 # if defined( xCL_018_TERMIO_EXISTS ) || defined( xCL_TERMIOS_EXISTS )
 
@@ -63,6 +63,8 @@ static STATUS	TErare(),
 **	14-Feb-2008 (hanje04)
 **	    SIR S119978
 **	    Update includes for renamed header
+**	04-Nov-2010 (miket) SIR 124685
+**	    Prototype cleanup.
 */
 
 /*

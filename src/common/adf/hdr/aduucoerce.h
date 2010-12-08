@@ -15,6 +15,8 @@
 **	    Modified to support the xml format for mapping files.
 **	24-Aug-2009 (kschendel) 121804
 **	    Add more prototypes for gcc 4.3.
+**      23-Nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
 /*
@@ -33,6 +35,9 @@
 **	    Added more stuff for supporting UTR22. 
 **
 */
+#ifndef ADU_UCOERCE_HDR_INCLUDED
+#define ADU_UCOERCE_HDR_INCLUDED
+
 typedef struct _ADU_MAP_HEADER{
     SIZE_TYPE	validity_size;		/* size of the validity cells */
     SIZE_TYPE	assignment_size;	/* size of the assignments */
@@ -205,3 +210,8 @@ FUNC_EXTERN VOID adu_csnormalize(char        *instring,
 
 FUNC_EXTERN u_i4 adu_map_get_chartouni(u_i4 ***, u_i4 *);
 FUNC_EXTERN u_i2 adu_map_get_unitochar(u_i2 **, u_i2 *);
+FUNC_EXTERN DB_STATUS adu_map_check_validity(
+			ADU_MAP_STATETABLE  *validitytable,
+    			u_i4                *bval);
+
+#endif /* define ADU_UCOERCE_HDR_INCLUDED */

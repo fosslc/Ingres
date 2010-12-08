@@ -1,7 +1,12 @@
 /*
 ** Copyright (c) 2004 Ingres Corporation
 */
+#ifndef DISLAVE_H_INCLUDED
+#define DISLAVE_H_INCLUDED
+
 #include <meprivate.h>		/* get ME_SEGID definition */
+#include <fdset.h>
+
 
 /**
 ** Name: DISLAVE.H - Definition of structures for DI slave processing
@@ -36,6 +41,8 @@
 **	    eventually exported by the dimo.c module through a MO table.
 **      03-Nov-1997 (hanch04)
 **          Change i4 to OFFSET_TYPE
+**	10-Nov-2010 (kschendel) SIR 124685
+**	    Add slave prototypes here (not needed outside of the CL).
 **/
 
 /*
@@ -140,3 +147,9 @@ struct _DI_SLAVE_CB
 					/* Allocated to size_io_buf */
 };
 
+/* Function prototypes */
+
+FUNC_EXTERN STATUS DI_init_slave(fd_set fd_msk, i4 num_fds);
+FUNC_EXTERN STATUS DI_slave(CSEV_CB *evcb);
+
+#endif /* DISLAVE_H_INCLUDED */

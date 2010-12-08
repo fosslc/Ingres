@@ -202,18 +202,18 @@
 **      26-Jul-2004 (lakvi01)
 **          Backed-out the above change to keep the open-source stable.
 **          Will be revisited and submitted at a later date. 
+**	11-Nov-2010 (kschendel) SIR 124685
+**	    Delete CS_SYSTEM ref, is in csinternal.  Fix prototypes.
 */
 
-STATUS CS_del_thread(CS_SCB *);
+static STATUS CS_del_thread(CS_SCB *);
 int IICSExceptFilter( EXCEPTION_POINTERS* ep );
 
 /******************************************************************************
 ** externs
 ******************************************************************************/
 
-GLOBALREF CS_SYSTEM		Cs_srv_block;
 GLOBALREF CS_SCB		Cs_main_scb;
-GLOBALREF CS_SCB		Cs_known_list_hdr;
 GLOBALREF CS_SEMAPHORE	Cs_known_list_sem;
 GLOBALREF HANDLE		CsMultiTaskEvent;
 GLOBALREF HANDLE		hAsyncEvents[];
@@ -221,7 +221,6 @@ GLOBALREF HANDLE		hSignalShutdown;
 
 FACILITYDEF DWORD TlsIdxSCB = 0;
 GLOBALREF i4     		Cs_lastquant ;
-FUNC_EXTERN STATUS CS_admin_task();
 static void dump_extended();
 
 
@@ -714,10 +713,11 @@ CS_find_scb(CS_SID sid)
 **      none
 **
 ******************************************************************************/
-VOID
+static VOID
 CS_dump_scb(CS_SID sid,
             CS_SCB *scb,
-	    VOID (*output_fcn)())
+	    PTR output_arg,
+	    TR_OUTPUT_FCN *output_fcn)
 {
     char        buf[128];
 
@@ -728,28 +728,28 @@ CS_dump_scb(CS_SID sid,
 			return;
 		}
 	}
-	TRformat(output_fcn,1,buf,sizeof(buf)-1,"\n>>>CS_SCB found at %x<<<\n\n", scb);
-	TRformat(output_fcn,1,buf,sizeof(buf)-1,"cs_next: %x\tcs_prev: %x\n", scb->cs_next, scb->cs_prev);
-	TRformat(output_fcn,1,buf,sizeof(buf)-1,"cs_length: %d.\tcs_type: %x\n", scb->cs_length, scb->cs_type);
-	TRformat(output_fcn,1,buf,sizeof(buf)-1,"cs_self: %x%< (%d.)\n", scb->cs_self);
-	TRformat(output_fcn,1,buf,sizeof(buf)-1,"cs_stk_size: %x%< (%d.)\n", scb->cs_stk_size);
-	TRformat(output_fcn,1,buf,sizeof(buf)-1,"cs_state: %w %<(%x)\tcs_mask: %v %<(%x)\n",
+	TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"\n>>>CS_SCB found at %x<<<\n\n", scb);
+	TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"cs_next: %x\tcs_prev: %x\n", scb->cs_next, scb->cs_prev);
+	TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"cs_length: %d.\tcs_type: %x\n", scb->cs_length, scb->cs_type);
+	TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"cs_self: %x%< (%d.)\n", scb->cs_self);
+	TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"cs_stk_size: %x%< (%d.)\n", scb->cs_stk_size);
+	TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"cs_state: %w %<(%x)\tcs_mask: %v %<(%x)\n",
             cs_state_names,
             scb->cs_state,
             cs_mask_names,
             scb->cs_mask);
-	TRformat(output_fcn,1,buf,sizeof(buf)-1,"cs_mode: %w%<(%x)\tcs_nmode: %w%<(%x)\n",
+	TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"cs_mode: %w%<(%x)\tcs_nmode: %w%<(%x)\n",
 	 "<invalid>,CS_INITIATE,CS_INPUT,CS_OUTPUT,CS_TERMINATE,CS_EXCHANGE",
 		  scb->cs_mode,
 	 "<invalid>,CS_INITIATE,CS_INPUT,CS_OUTPUT,CS_TERMINATE,CS_EXCHANGE",
 		  scb->cs_nmode);
-	TRformat(output_fcn,1,buf,sizeof(buf)-1,"cs_thread_type: %w%<(%x)\n",
+	TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"cs_thread_type: %w%<(%x)\n",
 "CS_NORMAL,CS_MONITOR,CS_FAST_COMMIT,CS_WRITE_BEHIND,CS_SERVER_INIT,CS_EVENT,\
 CS_2PC,CS_RECOVERY,CS_LOGWRITER,CS_CHECK_DEAD,CS_GROUP_COMMIT,CS_FORCE_ABORT,\
 CS_AUDIT,CS_CP_TIMER,CS_CHECK_TERM,CS_SECAUD_WRITER,CS_WRITE_ALONG,CS_READ_AHEAD,\
 CS_INTRNL_THREAD,CS_USER_THREAD", scb->cs_thread_type);
-	TRformat(output_fcn,1,buf,sizeof(buf)-1,"cs_username: %32.32s\n",scb->cs_username);
-	TRformat(output_fcn,1,buf,sizeof(buf)-1,"cs_sem_count: %x\n", scb->cs_sem_count);
+	TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"cs_username: %32.32s\n",scb->cs_username);
+	TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"cs_sem_count: %x\n", scb->cs_sem_count);
 }
 
 /******************************************************************************
@@ -781,8 +781,8 @@ CS_INTRNL_THREAD,CS_USER_THREAD", scb->cs_thread_type);
 **	    reported.
 **
 ******************************************************************************/
-STATUS
-CS_rcv_request()
+static STATUS
+CS_rcv_request(void)
 {
 	STATUS status;
 	CL_ERR_DESC *err_code;
@@ -889,7 +889,7 @@ CS_rcv_request()
 **	23-jan-2004 (somas01)
 **	    Removed messing with cs_num_active.
 */
-STATUS
+static STATUS
 CS_del_thread(CS_SCB *scb)
 {
 	char	acc_rec[2048];
@@ -1050,7 +1050,7 @@ CS_del_thread(CS_SCB *scb)
 **
 ******************************************************************************/
 STATUS
-CS_admin_task()
+CS_admin_task(void)
 {
 	CS_SCB *scb;
 
@@ -1089,34 +1089,6 @@ CS_admin_task()
 
 	}
 	return FAIL;
-}
-
-/******************************************************************************
-**
-** Name: CS_exit_handler    - Terminate the server as gracefully as possible
-**
-** Description:
-**      This routine is called to cause the system to exit forcibly.
-**  It merely notes that the server is not dying voluntarily or nicely.
-**
-** Inputs:
-**      handler   bool:  is called as an exit handler
-**
-** Outputs:
-**  Returns:
-**      none
-**  Exceptions:
-**      none
-**
-** Side Effects:
-**      none
-**
-******************************************************************************/
-VOID
-CS_exit_handler(ULONG handler)
-{
-	if (handler)
-		(*Cs_srv_block.cs_elog) (E_CS0015_FORCED_EXIT, 0, 0);
 }
 
 /*{
@@ -1185,11 +1157,10 @@ CS_breakpoint()
 {
 }
 
-STATUS
+void
 CS_swuser()
 {
 	Sleep(0);	/* relinquish remainder of thread's timeslice */
-        return (OK);
 }
 
 VOID
@@ -1202,7 +1173,42 @@ CS_prf_setup(void *parm)
 
 	return;
 }
+
+/*{
+** Name: CS_default_output_fcn	- default output function for 
+**                                CS_dump_stack.
+**
+** Description:
+**      This routine logs messages to the errlog.log
+**
+** Inputs:
+**      arg1	   - ptr to argument list.
+**      msg_len    - length of buffer.
+**      msg_buffer - ptr to message buffer.
+**      
+** Outputs:
+**      Returns:
+**          Doesn't
+**      Exceptions:
+**          none
+**
+** Side Effects:
+**          none
+**
+** History:
+**      22-Oct-2002 (hanal04) Bug 108986
+**          Created.
+*/
+static void
+CS_default_output_fcn( PTR arg1, i4 msg_len, char *msg_buffer)
+{
+ CL_ERR_DESC err_code;
+ 
+ ERsend (ER_ERROR_MSG, msg_buffer, msg_len, &err_code);
+}
+ 
 
+
 /*{
 ** Name: CS_dump_stack()        - dump out stack trace.
 **
@@ -1226,15 +1232,14 @@ CS_prf_setup(void *parm)
 **      scb                             session id of stack to dumped.  If the
 **                                      value input is NULL then the current
 **                                      stack is assumed.
+**	output_arg			Passed to output_fcn
 **      output_fcn                      Function to call to perform the output.
 **                                      This routine will be called as
-**                                          (*output_fcn)(newline_present,
+**                                          (*output_fcn)(output_arg,
 **                                                          length,
 **                                                          buffer)
 **                                      where buffer is the length character
-**                                      output string, and newline_present
-**                                      indicates whether a newline needs to
-**                                      be added to the end of the string.
+**                                      output string
 **      verbose                         Should we print some information about
 **                                      where this diagnostic is coming from?
 **
@@ -1260,9 +1265,11 @@ CS_prf_setup(void *parm)
 **	    Initialize cp to bp[1] before starting our stack walk.
 */
 VOID
-CS_dump_stack( CS_SCB *scb, CONTEXT *ctxtp, VOID (*output_fcn)(), i4  verbose )
+CS_dump_stack( CS_SCB *scb, void *ctxarg, PTR output_arg,
+	TR_OUTPUT_FCN *output_fcn, i4  verbose )
 {
 # ifdef NT_INTEL
+    CONTEXT	*ctxtp = (CONTEXT *) ctxarg;
     u_i4   	**stack_p = NULL;
     char        buf[128];
     char	parmbuf[1024];
@@ -1297,12 +1304,18 @@ CS_dump_stack( CS_SCB *scb, CONTEXT *ctxtp, VOID (*output_fcn)(), i4  verbose )
     DWORD       status;
     DWORD	baseaddr;
 
+    if (output_fcn == NULL)
+    {
+	output_arg = NULL;
+	output_fcn = CS_default_output_fcn;
+    }
+
     if (ctxtp)
 	stack_p = (u_i4 **)ctxtp->Esp;
 
     if (scb)
     {
-	CS_dump_scb(0, scb, output_fcn);
+	CS_dump_scb(0, scb, output_arg, output_fcn);
 	return;
     }
     else
@@ -1315,7 +1328,7 @@ CS_dump_stack( CS_SCB *scb, CONTEXT *ctxtp, VOID (*output_fcn)(), i4  verbose )
 	    return;
         CSget_scb(&cur_scb);
         sp = stack_p;
-	CS_dump_scb(0, cur_scb, output_fcn);
+	CS_dump_scb(0, cur_scb, output_arg, output_fcn);
     }
 
     module.SizeOfStruct = sizeof(IMAGEHLP_MODULE);
@@ -1350,7 +1363,7 @@ CS_dump_stack( CS_SCB *scb, CONTEXT *ctxtp, VOID (*output_fcn)(), i4  verbose )
     pc = ctxtp->Eip;
     bp = (u_i4      **) ctxtp->Ebp;
 
-    TRformat(output_fcn,1,buf,sizeof(buf)-1,"-----------------------------------\n");
+    TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"-----------------------------------\n");
     tfstatus = SymGetSymFromAddr( hCurProc, (DWORD)ctxtp->Eip,
 	                          &displacement, &xsymbol.symbol );
     if ( tfstatus == TRUE )
@@ -1362,7 +1375,7 @@ CS_dump_stack( CS_SCB *scb, CONTEXT *ctxtp, VOID (*output_fcn)(), i4  verbose )
 	STprintf( funcstr, "%08x", ctxtp->Eip );
     }
 
-    TRformat(output_fcn,1,buf,sizeof(buf)-1,"Stack trace beginning at %s\n", funcstr);
+    TRformat(output_fcn,output_arg,buf,sizeof(buf)-1,"Stack trace beginning at %s\n", funcstr);
 
     cp = (unsigned char *) bp[1];
     while ((stack_depth-- > 0) && bp && bp[1])
@@ -1422,7 +1435,7 @@ CS_dump_stack( CS_SCB *scb, CONTEXT *ctxtp, VOID (*output_fcn)(), i4  verbose )
 		STcopy( xsymbol.symbol.Name, curstr );
 	     else
 		STprintf( curstr, "%08x", bp[1] );
-	     TRformat( output_fcn, 1, buf, sizeof(buf) - 1,
+	     TRformat( output_fcn, output_arg, buf, sizeof(buf) - 1,
 		       "%s%s: %s%s(%s )\n",
 		       verbose_string,
                        curstr, dllstr, funcstr, parmbuf );
@@ -1519,7 +1532,7 @@ VOID
 CSdump_stack( void )
 {
     /* Dump this thread's stack, non-verbose */
-    CS_dump_stack(0,0,0,0);
+    CS_dump_stack(NULL, NULL, NULL, NULL,0);
 }
 
 /*{

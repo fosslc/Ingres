@@ -125,10 +125,12 @@
 **          be compatible with 32 bit Ingres.
 **          The code within the #ifdef and #endif is only required for 
 **          platforms that support 64-bit Ingres.
-**  16-Jun-2009 (thich01)
-**      Treat GEOM type the same as LBYTE.
+**	16-Jun-2009 (thich01)
+**	    Treat GEOM type the same as LBYTE.
 **	24-Aug-2009 (stephenb/kschendel) 121804
 **	    Update some of the function declarations to fix gcc 4.3 problems.
+**	15-Oct-2010 (thich01)
+**	    Treat all spatial types the same as LBYTE.
 **/
 
 # define	II__OBJLEN	20	/* Length of object name */
@@ -1197,6 +1199,13 @@ PTR     data;                           /* union of data type ptrs */
 	    {
 		case DB_LBYTE_TYPE:
 		case DB_GEOM_TYPE:
+		case DB_POINT_TYPE:
+		case DB_MPOINT_TYPE:
+		case DB_LINE_TYPE:
+		case DB_MLINE_TYPE:
+		case DB_POLY_TYPE:
+		case DB_MPOLY_TYPE:
+		case DB_GEOMC_TYPE:
 		case DB_LVCH_TYPE:
 		case DB_LBIT_TYPE:
 			IIlbqcb->ii_lq_lodata.ii_lo_datatype = tmpnat;

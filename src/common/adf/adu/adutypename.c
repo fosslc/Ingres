@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -26,7 +26,7 @@
 ** Note -1 origin
 */
 static char *coll_array[] = {
-#define _DEFINE(n,v,t) t " ",
+#define _DEFINE(n,v,Ch,Un,t) t " ",
 #define _DEFINEEND
 	DB_COLL_MACRO
 #undef _DEFINEEND
@@ -97,6 +97,8 @@ static char *coll_array[] = {
 **	21-May-2009 (kiria01) b122051
 **	    Reduce uninit'ed collID and generalise the output strings driven
 **	    by table macro in iicommon.h
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation - updated macro for collations
 */
 
 

@@ -2,6 +2,9 @@
 **Copyright (c) 2004 Ingres Corporation
 */
 
+#ifndef QEFQRY_H_INCLUDED
+#define QEFQRY_H_INCLUDED
+
 /**
 ** Name: QEFQRY.H - Constants and type for QEF.
 **
@@ -28,6 +31,8 @@
 **	31-aug-2000 (hanch04)
 **	    cross change to main
 **	    replace nat and longnat with i4
+**	2-Dec-2010 (kschendel) SIR 124685
+**	    Prototype fixes.
 **/
 
 
@@ -453,7 +458,7 @@ typedef i4	QEQ_0CAN_ID;
 typedef struct _QEQ_1CAN_QRY
 {
     i4		     qeq_c1_can_id;	/* unique query id */
-    RQB_BIND	    *qeq_c2_rqf_bind_p;	/* ptr to RQF bind elements */
+    struct _RQB_BIND    *qeq_c2_rqf_bind_p;	/* ptr to RQF bind elements */
     union
     {
 	QEC_D1_DBDEPENDS	    *d1_dbdepends_p;
@@ -492,3 +497,6 @@ typedef struct _QEQ_1CAN_QRY
     DB_DATA_VALUE   *qeq_c9_dv_p;	/* ptr to first of DB_DATA_VALUE
 					** array, NULL if not used  */
 }   QEQ_1CAN_QRY;
+
+
+#endif /* QEFQRY_H_INCLUDED */

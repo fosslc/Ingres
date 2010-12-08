@@ -184,12 +184,22 @@
 **	18-Mar-2010 (hanje04)
 **	    SIR 123296
 **	    For LSB builds, look in /usr/bin for compiler exe too
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Copleted UTcfile, UTcsuffix and UTcexecute prototypes.
 */
 
 /* forward declarations */
-static  FILE            *UTcfile();
-static  STATUS          UTcsuffix();
-static  STATUS          UTcexecute();
+static  FILE            *UTcfile(void);
+static  STATUS          UTcsuffix(FILE *fp, char *suffix, char ***ret);
+static  STATUS          UTcexecute(
+	register char	*line,
+	char		*iname,
+	char		*oname,
+	char		*name,
+	LOCATION	*errfile,
+	i4		first,
+	char		**parms,
+	CL_ERR_DESC	*clerror);
 
 static	STATUS		UTtrcopen = FAIL;	/* OK if trace file opened */
 static	LOCATION	UTtracefile ZERO_FILL;	/* Location of tracefile */
@@ -241,9 +251,17 @@ CL_ERR_DESC	*clerror
 	i4	first;
 
 	/* UTS doesn't like static functions */
-	STATUS	UTcexecute();
-	FILE	*UTcfile();
-	STATUS	UTcsuffix();
+	STATUS          UTcexecute(
+	register char	*line,
+	char		*iname,
+	char		*oname,
+	char		*name,
+	LOCATION	*errfile,
+	i4		first,
+	char		**parms,
+	CL_ERR_DESC	*clerror);
+	FILE	*UTcfile(void);
+	STATUS	UTcsuffix(FILE *fp, char *suffix, char ***ret);
 
 
 	/* We can redirect everything */
@@ -335,7 +353,7 @@ CL_ERR_DESC	*clerror
 
 
 static FILE *
-UTcfile()
+UTcfile(void)
 {
 	FILE		*fp;
 	char		filebuf[20];

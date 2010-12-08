@@ -362,6 +362,8 @@
 **      25-Mar-2009 (drivi01)
 **          Require this process to run as elevated.
 **          If this tools isn't elevated, exit.
+**	1-Dec-2010 (kschendel)
+**	    Fix compiler warnings (at least one serious).
 */
 
 #include <compat.h>
@@ -1269,7 +1271,7 @@ SEP_copy_header_template ( char **hdr_name, LOCATION **hdr_loc, char *tst_sep,
     char                  *cptr ;
 
     if (shellMode||updateMode)
-	history_time(&timeStr);
+	history_time(&timeStr[0]);
 
     if (!shellMode)
 	return (ret_nat);
@@ -1487,7 +1489,7 @@ SEP_dispatch_command( FILE *tfile, i4  cmd, char **tokens )
 
         case TEST_CASE_END_CMMD:
 
-	    ret_status = testcase_end(NULL);
+	    ret_status = testcase_end(0);
 	    break;
 
         default:
@@ -1952,6 +1954,7 @@ get_args(i4 argc,char **argv,char *testname)
 
     LOINFORMATION          LocInfo ;
     i4                     infoflag ;
+    LOCTYPE		   infotype;
 
     char                   lo_dev  [LO_DEVNAME_MAX+1] ;
     char                   lo_path [LO_PATH_MAX+1] ;
@@ -2104,9 +2107,9 @@ get_args(i4 argc,char **argv,char *testname)
 			CVstat = LOfroms(outputDir_type,outputDir,&outLoc);
 			infoflag = (LO_I_TYPE | LO_I_PERMS);
 			outLoc_exists = (LOinfo(&outLoc,&infoflag,&LocInfo) == OK);
-			LOwhat(&outLoc,&infoflag);
+			LOwhat(&outLoc,&infotype);
 
-			if ((infoflag == PATH) && (!outLoc_exists))
+			if ((infotype == PATH) && (!outLoc_exists))
 			{
 			    STprintf(buffer_1,ERx("ERROR: no output dir => %s"),
 				     outputDir);

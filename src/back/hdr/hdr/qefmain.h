@@ -1099,7 +1099,7 @@ typedef struct _QEF_FUNC QEF_FUNC;
  */
 #define E_QE5423_SRID_MISMATCH	        (E_QEF_MASK + 0x5423L)
 #define E_QE5424_INVALID_SRID           (E_QEF_MASK + 0x5424L)
-#define E_QE5425_SRS_NONEXISTENT		(E_QEF_MASK + 0x5425L)
+#define E_QE5425_SRS_NONEXISTENT        (E_QEF_MASK + 0x5425L)
 
 #define TEMP_TABLE_MACRO(dmt_cb)    ((i4)(dmt_cb)->dmt_id.db_tab_base < 0 &&\
 					MEcmp( ( PTR) &(dmt_cb)->dmt_owner,\

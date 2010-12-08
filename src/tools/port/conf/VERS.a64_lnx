@@ -10,6 +10,8 @@
 #           Add WITH_GEO for platforms where spatial is not supported.
 #       30-Sep-2010 (troal01)
 #           Fixed a typo in set option WITH_GEO
+#	24-Nov-2010 (bonro01)
+#	    Remove temporary change and restore Hybrid build for a64_lnx
 
 
 #set: config32 int_lnx

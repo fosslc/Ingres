@@ -317,6 +317,8 @@
 **          Extend pad overhead to include a second copy of the orig_len.
 **          If the tail of the pad is corrupted we'll try to report pad errors
 **          for the wrong memory locations and hit spurious exceptions.
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes
 **/
 
 
@@ -336,6 +338,10 @@ static DB_STATUS ulm_challoc( ULM_PHEAD *pool, i4 nodesize,
 static VOID ulm_pad_error(ULM_NODE *node, char *padchar);
 
 static void ulm_printpool(PTR pool_ptr, char *facility);
+
+static void ulm_countpool(ULM_PHEAD *pool_ptr,
+			i4 *poolsum, i4 *poolnum,
+			i4 *free_blks, i4 *free_tot);
 
 
 /* Static definitions */
@@ -407,7 +413,7 @@ static char	    *conchk_names[] =
 **	This routine should only be called when pool_ptr->ulm_psem is held.
 **
 */
-void
+static void
 ulm_countpool(ULM_PHEAD *pool_ptr, i4 *poolsum, i4 *poolnum, i4 *free_blks, i4 *free_tot)
 {
     ULM_PHEAD   *pool = (ULM_PHEAD *)pool_ptr; 	/* current memory pool */
@@ -1064,6 +1070,8 @@ ulm_shutdown( register ULM_RCB *ulm_rcb )
 **	    Must mutex ulm_memleft to avoid corruption and E_UL0005 errors.
 **	13-Sep-2006 (wanfr01)
 **	    Bug 116632 - added ULM diagnostics for E_UL0005
+**      12-jul-2010 (huazh01)
+**          Cast output to i8 if using %ld in TRdisplay(). (b124066)
 */
 
 DB_STATUS
@@ -1137,7 +1145,7 @@ ulm_openstream( register ULM_RCB *ulm_rcb )
 
     if (req_size > *ulm_rcb->ulm_memleft)
     {
-        TRdisplay ("E_UL0005 at point 3;  %d > (%p) %ld \n",req_size , ulm_rcb->ulm_memleft, *ulm_rcb->ulm_memleft);
+        TRdisplay ("E_UL0005 at point 3;  %d > (%p) %ld \n",req_size , ulm_rcb->ulm_memleft, (i8)*ulm_rcb->ulm_memleft);
 
         TRdisplay("DIAG: %s:%d ulm_poolid = %p ulm_facility = %d\n",
        		__FILE__, __LINE__, ulm_rcb->ulm_poolid,
@@ -1653,6 +1661,8 @@ ulm_closestream( register ULM_RCB *ulm_rcb )
 **          Must mutex ulm_memleft to avoid corruption and E_UL0005 errors.
 **	13-Sep-2006 (wanfr01)
 **	    Bug 116632 - added ULM diagnostics for E_UL0005
+**      12-jul-2010 (huazh01)
+**          Cast output to i8 if using %ld in TRdisplay(). (b124066)
 */
 
 DB_STATUS
@@ -1875,7 +1885,7 @@ ulm_palloc( register ULM_RCB *ulm_rcb )
 	else
 	    facility = "UNKNOWN";
 	TRdisplay("%@ ULM %s alloc ERROR pool 0x%x psize %ld memleft %ld error %d\n",
-		facility, pool, ulm_rcb->ulm_psize, *ulm_rcb->ulm_memleft, 
+		facility, pool, (i8)ulm_rcb->ulm_psize, (i8)*ulm_rcb->ulm_memleft, 
 		ulm_rcb->ulm_error.err_code);
     }
 #endif /* xDEV_TEST */
@@ -3580,6 +3590,8 @@ ulm_fadd( register ULM_NODE *node, i4  owner, register ULM_HEAD *freehead, ULM_R
 **          More diagnostics for memory allocation failure.
 **	13-Sep-2006 (wanfr01)
 **	    Bug 116632 - added ULM diagnostics for E_UL0005
+**      12-jul-2010 (huazh01)
+**          Cast output to i8 if using %ld in TRdisplay(). (b124066)
 */
 
 static DB_STATUS
@@ -3643,9 +3655,9 @@ ulm_challoc( register ULM_PHEAD *pool, i4 nodesize, ULM_NODE **node, ULM_RCB *ul
 
 	TRdisplay("%@ ULM %s Alloc failed: psize_pag %d, pages_alloc %d remain %ld\n",
 		facility, pool->ulm_psize_pag, pool->ulm_pages_alloced, 
-		premain_pag);
+		(i8)premain_pag);
 	TRdisplay("%@ ULM %s Alloc failed: nodesize %d  needed %ld csize %ld\n",
-		facility, nodesize, need_pag, csize_pag);
+		facility, nodesize, (i8)need_pag, (i8)csize_pag);
 
 #ifdef xDEBUG
 	/* UL0017 .. and query printed only if ULM diagnostics configured */
@@ -3676,7 +3688,7 @@ ulm_challoc( register ULM_PHEAD *pool, i4 nodesize, ULM_NODE **node, ULM_RCB *ul
 		facility, pool->ulm_psize_pag, pool->ulm_pages_alloced, 
 		premain_pag);
 	TRdisplay("%@ ULM %s Alloc insufficient: nodesize %d  needed %ld csize %ld\n",
-		facility, nodesize, need_pag, csize_pag);
+		facility, nodesize, (i8)need_pag, (i8)csize_pag);
 	
 	/* UL0017 .. and query printed only if ULM diagnostics configured */
 #ifdef xDEBUG
@@ -3731,7 +3743,7 @@ ulm_challoc( register ULM_PHEAD *pool, i4 nodesize, ULM_NODE **node, ULM_RCB *ul
     {
 	TRdisplay("%@ ULM %s Extend pool at 0x%p to %d pages\n", facility, pool,pool->ulm_pages_alloced);
 	TRdisplay("%@ ULM %s Allocate chunk %d %ld pages at 0x%p\n",
-		    facility, pool->ulm_pchunks, csize_pag, chunk_ptr);
+		    facility, pool->ulm_pchunks, (i8)csize_pag, chunk_ptr);
 
 	*node = node_ptr;
     }
@@ -3739,7 +3751,7 @@ ulm_challoc( register ULM_PHEAD *pool, i4 nodesize, ULM_NODE **node, ULM_RCB *ul
     {
 	TRdisplay("%@ ULM %s ERROR Can't Extend pool at 0x%p\n", facility, pool);
 	TRdisplay("%@ ULM %s ERROR Can't Allocate chunk %d %ld pages at 0x%p\n",
-		    facility, pool->ulm_pchunks, csize_pag, chunk_ptr);
+		    facility, pool->ulm_pchunks, (i8)csize_pag, chunk_ptr);
 
 	*node = (ULM_NODE *) NULL;
     }

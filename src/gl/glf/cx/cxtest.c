@@ -132,6 +132,12 @@ NEEDLIBS = COMPAT MALLOCLIB
 **	    SIR 123296
 **	    Add support for LSB builds, writable files go to ADMIN and logs
 **	    got to LOG instead of everything going to files.
+**      03-nov-2010 (joea)
+**          Declare local functions static.
+**      29-Nov-2010 (frima01) SIR 124685
+**          Removed prototypes that reside in gl.h now.
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Fix CS assignments for new prototypes.
 */
 
 # include <stdarg.h>
@@ -182,11 +188,6 @@ NEEDLIBS = COMPAT MALLOCLIB
 
 GLOBALDEF       CS_SEMAPHORE    sc0m_semaphore; /* mem sem expected by SC */
 
-# if !defined(VMS) /* _VMS_ */
-/* Externs that should really be in a CS header. */
-extern	STATUS iiCL_increase_fd_table_size( bool, i4 );
-extern	i4 iiCL_get_fd_table_size(void);
-# endif /* _VMS_ */
 extern  VOID CS_swuser(void);
 
 # if defined(VMS) /* _VMS_ */
@@ -431,7 +432,7 @@ CX_NODE_CB	Cx_node_cb = { 0 };
 /*
 ** Forward declarations
 */
-VOID logger( i4 errnum, i4 arg1, i4 arg2 );
+static VOID logger( i4 errnum, CL_ERR_DESC *, i4, ... );
 
 i4 Psem( CS_SEMAPHORE *sp );
 i4 Vsem( CS_SEMAPHORE *sp );
@@ -444,7 +445,7 @@ i4 Vsem( CS_SEMAPHORE *sp );
 /*
 **  Get text eqiv of error code.
 */
-char *
+static char *
 get_err_name( STATUS status, char *buf )
 {
     *buf = '\0';
@@ -459,7 +460,7 @@ get_err_name( STATUS status, char *buf )
 /*
 **  Free format error formatting routine.
 */
-void
+static void
 report_error( i4 instance, STATUS status, char *fmt, ... )
 {
     time_t	errtime;
@@ -489,7 +490,7 @@ report_error( i4 instance, STATUS status, char *fmt, ... )
 /*
 **  Specialized error routine for "log" file analysis.
 */
-void
+static void
 report_log_error( i4 record, CX_LSN *lsn, char *fmt, ... )
 {
     va_list	ap;
@@ -510,7 +511,7 @@ report_log_error( i4 record, CX_LSN *lsn, char *fmt, ... )
 **  Empty function for ease in setting break points
 **  to catch severe errors when using a debugger.
 */
-void
+static void
 bad_error( i4 lineno, i4 self, STATUS status )
 {
     report_error( self, status, "Unexpected error from line %d", lineno );
@@ -519,7 +520,7 @@ bad_error( i4 lineno, i4 self, STATUS status )
 /*
 **  Fill array with 0 .. count-1 in random order.
 */
-void
+static void
 shuffle( i4 *deck, i4 count )
 {
     i4		i, r, t;
@@ -539,7 +540,7 @@ shuffle( i4 *deck, i4 count )
 /*
 **  Add multiple results into statistics summary array.
 */
-void
+static void
 sum_res_stat( ST_RES_STATS * rs, STATUS status, i4 qty )
 {
     int     i;
@@ -585,7 +586,7 @@ sum_res_stat( ST_RES_STATS * rs, STATUS status, i4 qty )
 /*
 **  Add result into statistics array.
 */
-void
+static void
 add_res_stat( STATUS status, i4 index, i4 interval, i4 stat )
 {
     sum_res_stat( &ResStats[index][interval][stat], status, 1 );
@@ -594,7 +595,7 @@ add_res_stat( STATUS status, i4 index, i4 interval, i4 stat )
 } /* add_res_stat */
 
 
-void
+static void
 dump_results( char *statdesc, ST_RES_STATS *rs )
 {
     ST_RES_STAT     *st;
@@ -627,7 +628,7 @@ dump_results( char *statdesc, ST_RES_STATS *rs )
 /*
 ** dump a session queue.
 */
-void
+static void
 dump_queue( char *name, CS_SCB *start )
 {
     CS_SCB	 *scb;
@@ -652,7 +653,7 @@ dump_queue( char *name, CS_SCB *start )
     }
 }
 
-
+static void
 dump_parameters( FILE *outfile )
 {
     SIfprintf( outfile,
@@ -673,7 +674,7 @@ dump_parameters( FILE *outfile )
 /*
 ** dump information for all sessions. (called from debugger)
 */
-void
+static void
 dump_all(void)
 {
 #   define	CVT_TO_ID(pscb) \
@@ -743,7 +744,7 @@ typedef struct
 }	TEST_MSG;
 
 
-bool
+static bool
 message_handler( CX_MSG *pmessage, PTR pudata, bool invalid )
 {
     static i4	 clueless = 1;
@@ -804,7 +805,7 @@ message_handler( CX_MSG *pmessage, PTR pudata, bool invalid )
 }
 
 
-STATUS
+static STATUS
 message_send( CX_MSG *curval, CX_MSG *newval, PTR pudata, bool invalid )
 {
     TEST_MSG    *ptmsgi = (TEST_MSG*)curval;
@@ -846,7 +847,8 @@ typedef struct
 	i4		half;
 	i4		balance;
 }	AUX_DATA;
-i4
+
+static i4
 cmo_read( i4 id, i4 gang )
 {
     STATUS	 status;
@@ -868,7 +870,7 @@ cmo_read( i4 id, i4 gang )
 
 }
 
-STATUS
+static STATUS
 cmo_set_acct_bal( CX_CMO *pold, CX_CMO *pnew, PTR paux, bool invalid )
 {
     i4	half = ((AUX_DATA *)paux)->half;
@@ -878,7 +880,7 @@ cmo_set_acct_bal( CX_CMO *pold, CX_CMO *pnew, PTR paux, bool invalid )
     return OK;
 }
 
-i4
+static i4
 cmo_update( i4 id, i4 gang, i4 newbalance )
 {
     STATUS	 status;
@@ -902,7 +904,7 @@ cmo_update( i4 id, i4 gang, i4 newbalance )
 }
 
 
-void
+static void
 confirm_interrupt( void )
 {
     static i4	already_prompting = 0;
@@ -977,7 +979,7 @@ confirm_interrupt( void )
 **	    Print test style and deadlock status.
 */
 
-i4
+static i4
 test_startup(void)
 {
     STATUS	status;
@@ -1365,7 +1367,7 @@ test_startup(void)
 **
 **	Simulate a transaction log.
 */
-void
+static void
 log_transaction( CX_LSN *lsn, i4 thug, i4 tgang, i4 tbal, i4 victim, i4 vbal,
 CX_LSN *synclsn )
 {
@@ -1434,7 +1436,7 @@ CX_LSN *synclsn )
 **	    be granted synchronously).
 */
 
-void
+static void
 test_thread( MY_SCB *scb )
 {
     typedef struct
@@ -2008,7 +2010,7 @@ test_thread( MY_SCB *scb )
 **	  - Correct reported program instances calculation
 **	    in "Waiting for ... to finish" message.
 */
-void
+static void
 report_thread( MY_SCB *scb )
 {
 #   define	STALL_LIMIT	3
@@ -2311,7 +2313,7 @@ report_thread( MY_SCB *scb )
 **
 **  Body of thread to monitor broadcast messages.
 */
-void
+static void
 monitor_thread( MY_SCB *scb )
 {
     STATUS status;
@@ -2327,7 +2329,7 @@ monitor_thread( MY_SCB *scb )
 **
 **  Body of thread to receive  broadcast messages.
 */
-void
+static void
 message_thread( MY_SCB *scb )
 {
     static char *msgs[2] =
@@ -2381,7 +2383,7 @@ struct _stat_titles {
 ** Sort comparator for "transaction" log records.  Sort order is
 ** by LSN, with NODE as a tie breaker if needed.
 */
-int
+static int
 log_sort_func( const void *a, const void *b )
 {
     const LOGREC	*plra = a, *plrb = b;
@@ -2404,7 +2406,7 @@ log_sort_func( const void *a, const void *b )
 /*
 **  Routine called when all test threads have completed.
 */
-void
+static void
 test_shutdown(void)
 {
     STATUS	status;
@@ -2901,9 +2903,10 @@ test_shutdown(void)
 /*
 ** Generic thread function, called out of CSdispatch 
 */
-STATUS
-threadproc( i4 mode, MY_SCB *scb, i4 *next_mode )
+static STATUS
+threadproc( i4 mode, CS_SCB *csscb, i4 *next_mode )
 {
+    MY_SCB *scb = (MY_SCB *) csscb;
     if ( OSthreaded < 0 )
     {
 	/*
@@ -2989,7 +2992,7 @@ threadproc( i4 mode, MY_SCB *scb, i4 *next_mode )
 **	Setup global variables and add each thread.
 **	Called by CSinitialize before threads are started
 */
-STATUS
+static STATUS
 hello( CS_INFO_CB *csib )
 {
     i4  i;
@@ -3029,7 +3032,7 @@ hello( CS_INFO_CB *csib )
 
 
 /* Called when all thread functions return from the TERMINATE state */
-STATUS
+static STATUS
 bye(void)
 {
     test_shutdown();
@@ -3051,7 +3054,7 @@ bye(void)
 
 /* If we get semaphore errors, do simple decoding */
 
-char *
+static char *
 mapsemerr( i4 rv )
 {
     switch( rv )
@@ -3073,7 +3076,7 @@ mapsemerr( i4 rv )
 
 
 /* Report semaphore error */
-VOID
+static void
 semerr( i4 rv, CS_SEMAPHORE *sp, char *msg )
 {
     MY_SCB *scb;
@@ -3121,17 +3124,29 @@ Vsem( CS_SEMAPHORE *sp )
 
 /* log function, called as the output when needed */
 
-VOID
-logger( i4 errnum, i4 arg1, i4 arg2 )
+static VOID
+logger( i4 errnum, CL_ERR_DESC *dum, i4 numargs, ... )
 {
     char buf[ ER_MAX_LEN ];
+    va_list args;
 
     if( ERreport( errnum, buf ) == OK )
-    	SIfprintf(stderr, ERx("%s\n"), buf);
+    	SIfprintf(stderr, "%s\n", buf);
     else
-	SIfprintf(stderr, ERx("ERROR %d (%x), %s %d\n"), 
+    {
+	char *arg1 = "";
+	i4 arg2 = 0;
+	if (numargs > 0)
+	{
+	    va_start(args, numargs);
+	    arg1 = va_arg(args, char *);
+	    if (numargs > 1)
+		arg2 = va_arg(args, i4);
+	    va_end(args);
+	}
+	SIfprintf(stderr, "ERROR %d (%x), %s %d\n", 
 		errnum, errnum, arg1, arg2 );
-    SIflush( stderr );
+    }
     if(errnum != E_CS0018_NORMAL_SHUTDOWN)
 	PCexit(FAIL);
     PCexit(OK);
@@ -3142,36 +3157,52 @@ logger( i4 errnum, i4 arg1, i4 arg2 )
 **
 ** 'type', passed by 6.1 CS, is ignored here for compatibility with 6.0 CS.
 */
-STATUS
-newscbf( MY_SCB **newscb, PTR crb, i4 type )
+static STATUS
+newscbf( CS_SCB **newscb, void *crb, i4 type )
 {
-    *newscb = (MY_SCB*) calloc( 1, sizeof( **newscb ) );
+    /* god this is ugly, making us store type here... */
+
+    *(MY_SCB **)newscb = (MY_SCB*) calloc( 1, sizeof( **newscb ) );
     return( NULL == *newscb );
 }
 
 /* release an scb */
-STATUS
-freescb( MY_SCB *oldscb )
+
+static STATUS
+freescb( CS_SCB *oldscb )
 {
     free( oldscb );
-    return OK;
+    return (OK);
 }
 
 /* Function used when CS_CB insists on having one and we don't care */
-STATUS
-fnull(void)
+
+static STATUS
+fnull1(void *dum1, i4 dum2)
 {
-    return( OK );
+    return (OK);
 }
 
-VOID
-vnull(void)
+static STATUS
+fnull2(i4 dum1, CS_SCB *dum2)
+{
+    return (OK);
+}
+static STATUS
+fnull3(CS_SCB *dum1, char *dum2, i4 dum3, i4 dum4)
+{
+    return (OK);
+}
+
+static VOID
+vnull(CS_SCB *dum)
 {
 }
 
 /* Function needed for read and write stub */
-STATUS
-rwnull( MY_SCB *scb, i4 sync )
+
+static STATUS
+rwnull( CS_SCB *dummy, i4 sync )
 {
     CS_SID sid;
 
@@ -3180,8 +3211,13 @@ rwnull( MY_SCB *scb, i4 sync )
     return( OK );
 }
 
+static i4
+pidnull(void)
+{
+    return (1234);
+}
 
-void
+static void
 usage( char *badparm )
 {
     if ( badparm )
@@ -3431,23 +3467,23 @@ main( i4 argc, char *argv[] )
     cb.cs_scnt = Num_Threads + THR_EXTRA; /* Number of sessions */
     cb.cs_ascnt = 0;		/* nbr of active sessions */
     cb.cs_stksize = (16 * 1024);/* size of stack in bytes */
+    cb.cs_process = threadproc;	/* Routine to do major processing */
+    cb.cs_stkcache = FALSE;     /* Match csoptions default - no stack caching */
     cb.cs_scballoc = newscbf;	/* Routine to allocate SCB's */
     cb.cs_scbdealloc = freescb;	/* Routine to dealloc  SCB's */
-    cb.cs_saddr = fnull;	/* Routine to await session requests */
-    cb.cs_reject = fnull;	/* how to reject connections */
+    cb.cs_saddr = fnull1;	/* Routine to await session requests */
+    cb.cs_reject = fnull1;	/* how to reject connections */
     cb.cs_disconnect = vnull;	/* how to dis- connections */
     cb.cs_read = rwnull;	/* Routine to do reads */
     cb.cs_write = rwnull;	/* Routine to do writes */
-    cb.cs_process = threadproc;	/* Routine to do major processing */
-    cb.cs_attn = fnull;		/* Routine to process attn calls */
+    cb.cs_attn = fnull2;	/* Routine to process attn calls */
     cb.cs_elog = logger;	/* Routine to log errors */
     cb.cs_startup = hello;	/* startup the server */
     cb.cs_shutdown = bye;	/* shutdown the server */
-    cb.cs_format = fnull;	/* format scb's */
-    cb.cs_get_rcp_pid = fnull;  /* init to fix SEGV in CSMTp_semaphore*/
-    cb.cs_scbattach = vnull;    /* init to fix SEGV in CSMT_setup */
-    cb.cs_scbdetach = vnull;    /* init to fix SEGV in CSMT_setup */
-    cb.cs_stkcache = FALSE;     /* Match csoptions default - no stack caching */
+    cb.cs_format = fnull3;	/* format scb's */
+    cb.cs_get_rcp_pid = pidnull; /* init to fix SEGV in CSMTp_semaphore*/
+    cb.cs_scbattach = vnull;	/* init to fix SEGV in CSMT_setup */
+    cb.cs_scbdetach = vnull;	/* init to fix SEGV in CSMT_setup */
     cb.cs_format_lkkey = NULL;  /* Not used in this context. */
 
     /* now fudge argc and argv for CSinitiate */

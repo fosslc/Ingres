@@ -63,6 +63,8 @@
 **      17-Jul-2206 (hanal04) Bug 116358
 **          Prototype ulm_print_pool(). Quiets the compiler warnings in
 **          QSF and QEF.
+**	05-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Add missing prototypes
 **/
 
 /*}
@@ -185,6 +187,8 @@ FUNC_EXTERN DB_STATUS ulm_reclaim( ULM_RCB *ulm_rcb );
 FUNC_EXTERN DB_STATUS ulm_shutdown( ULM_RCB *ulm_rcb );
 FUNC_EXTERN DB_STATUS ulm_startup( ULM_RCB *ulm_rcb );
 FUNC_EXTERN DB_STATUS ulm_xcleanup( ULM_RCB *ulm_rcb );
+FUNC_EXTERN DB_STATUS ulm_pad_bytes_init( i4 pad_bytes );
+FUNC_EXTERN DB_STATUS ulm_trace( ULM_RCB *ulm_rcb );
 
 #ifdef NOT_YET_READY
 FUNC_EXTERN DB_STATUS ulm_szstream( PTR stream_id, i4 *nbytes,

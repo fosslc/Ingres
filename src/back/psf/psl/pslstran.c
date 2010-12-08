@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -63,7 +63,25 @@
 **	10-Jan-2001 (jenjo02)
 **	    Added *PSS_SELBLK parm to psf_mopen(), psf_mlock(), psf_munlock(),
 **	    psf_malloc(), psf_mclose(), psf_mroot(), psf_mchtyp().
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
 */
+
+/* TABLE OF CONTENTS */
+i4 psl_st0_settransaction(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+i4 psl_st1_settranstmnt(
+	PSS_SESBLK *sess_cb,
+	PSQ_CB *psq_cb);
+i4 psl_st2_settranisolation_level(
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	i4 isolation_level);
+i4 psl_st3_accessmode(
+	PSS_SESBLK *sess_cb,
+	DB_ERROR *err_blk,
+	i4 accessmode);
 
 /* Useful defines */
 					/*
@@ -150,7 +168,6 @@ psl_st1_settranstmnt(
 	PSQ_CB		*psq_cb)
 {
     DB_STATUS		status;
-    i4		err_code;
     DMC_CB		*dmc_cb;
 
     psq_cb->psq_mode = PSQ_STRANSACTION;
@@ -233,7 +250,6 @@ psl_st2_settranisolation_level(
     i4		err_code;
     DMC_CHAR_ENTRY	*chr;
     DM_DATA	    	*char_array;
-    DMC_CB		*dmc_cb; 
     bool		not_distr = ~sess_cb->pss_distrib & DB_3_DDB_SESS;
 
     if (not_distr)
@@ -286,10 +302,9 @@ psl_st3_accessmode(
         DB_ERROR    *err_blk,
 	i4     accessmode)
 {
-    i4             err_code, err_no = 0L;
+    i4             err_code;
     DMC_CHAR_ENTRY      *chr;
     DM_DATA             *char_array;
-    DMC_CB              *dmc_cb;
     bool                not_distr = ~sess_cb->pss_distrib & DB_3_DDB_SESS;
  
     if (not_distr)

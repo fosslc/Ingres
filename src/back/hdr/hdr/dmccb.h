@@ -208,6 +208,9 @@
 **          Changes for Long IDs
 **      09-aug-2010 (maspa05) b123189, b123960
 **          Added DMC2_READONLYDB to indicate a readonly database
+**	17-Nov-2010 (jonj) SIR 124738
+**	    Add DMC2_NODBMO to prevent making MO objects for
+**	    database, typically when fetching iidbdb information.
 **/
 
 
@@ -490,6 +493,8 @@ typedef struct _DMC_CB
                         /* Database must be logged when access from this DBMS */
 #define                 DMC2_READONLYDB     0x00000004L
                         /* readonlydb */
+#define                 DMC2_NODBMO	    0x00000008L
+                        /* Don't make MO objects when adding DB */
 
     DM_DATA         dmc_char_array;	/* Pointer to an array of 
 					** configuration variables. */
@@ -728,6 +733,8 @@ typedef struct _DMC_CB
 **	    DMC_C_PAGETYPE_V7
 **	13-Apr-2010 (toumi01) SIR 122403
 **	    Add DMC_C_CRYPT_MAXKEYS for data at rest encryption.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for controlling the defaulting of the collation type
 */
 typedef struct _DMC_CHAR_ENTRY
 {
@@ -1016,6 +1023,8 @@ typedef struct _DMC_CHAR_ENTRY
 #define			DMC_C_PAGETYPE_V6    129L /* page type V6 */
 #define			DMC_C_PAGETYPE_V7    130L /* page type V7 */
 #define			DMC_C_CRYPT_MAXKEYS  131L /* max shmem encrypt keys */
+#define			DMC_C_DEF_COLL	     132L /* Default collation */
+#define			DMC_C_DEF_UNI_COLL   133L /* Default Unicode collation */
     i4         char_value;             /* Value of characteristic. */
 #define                 DMC_C_ON            1L
 #define                 DMC_C_OFF           0L

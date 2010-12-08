@@ -251,6 +251,8 @@
 **          For shared lock lists, llb_stamp may not be the same value as
 **          lkb_lkreq.request_id. The message is stamped with
 **          lkb_lkreq.request_id, not llb_stamp, when originated.
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Renamed TRformat_to_buffer to TRvformat
 */
 
 
@@ -537,10 +539,10 @@ vadcl
 #endif
 
     if ( Lk_cluster_deadlock_debug == TRACE_BUFFER )
-	TRformat_to_buffer( move_to_tbuf, (PTR)1, locl_buf, sizeof(locl_buf), fmt, ap );
+	TRvformat( move_to_tbuf, (PTR)1, locl_buf, sizeof(locl_buf), fmt, ap );
     else if ( Lk_cluster_deadlock_debug == TRACE_DIRECT )
     {
-	TRformat_to_buffer( TRwrite, (PTR)1, locl_buf, sizeof(locl_buf), fmt, ap );
+	TRvformat( TRwrite, (PTR)1, locl_buf, sizeof(locl_buf), fmt, ap );
 	TRflush();
     }
 
@@ -811,10 +813,13 @@ vadcl
 **	    the local thread, then retry the message later.
 **	15-Jan-2010 (jonj)
 **	    SIR 121619 MVCC: Maintain stats by lock type.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Prototype LKdist_deadlock_thread(void *dmc)
 */
-DB_STATUS
-LKdist_deadlock_thread( DMC_CB *dmc_cb )
+STATUS
+LKdist_deadlock_thread( void *dmc )
 {
+    DMC_CB		*dmc_cb = (DMC_CB*)dmc;
     i4			max_dsms_per_buffer = 65535 / sizeof(LK_DSM);
     LKD			*lkd = (LKD *)LGK_base.lgk_lkd_ptr;
     LLB			*llb, *o_llb, *dead_llb, *wait_llb;
@@ -2940,8 +2945,8 @@ i4		*dsm_num )
 
 #else
 
-DB_STATUS
-LKdist_deadlock_thread( DMC_CB *dmc_cb )
+STATUS
+LKdist_deadlock_thread( void *dmc )
 {
     return E_DB_ERROR;
 }

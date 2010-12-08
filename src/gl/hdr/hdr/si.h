@@ -6,9 +6,10 @@
 #define SI_INCLUDE
 
 #include    <sicl.h>
-#ifdef CL_PROTOTYPED
 /* get LOCATION type if prototyped */
 #include    <lo.h>
+#ifdef VMS
+# include   <stdarg.h>
 #endif
 
 /**CL_SPEC
@@ -63,6 +64,8 @@
 **      07-may-2010 (coomi01)
 **          Move SI result codes here from silocal.h
 **          Add two new results, SI_CANT_OPEN_EACCES and SI_CANT_OPEN_EEXIST 
+**	1-Dec-2010 (kschendel) SIR 124685
+**	    Kill CL_PROTOTYPED (always on now).
 **/
 
 #ifndef  SI_RESULT_CODES /* Thwart multiple inclusions */
@@ -90,218 +93,172 @@
 
 #ifndef SIcat
 FUNC_EXTERN STATUS  SIcat(
-#ifdef CL_PROTOTYPED
 	LOCATION	*in, 
 	FILE		*out
-#endif
 );
 #endif
 
 #ifndef SIclose
 FUNC_EXTERN STATUS  SIclose(
-#ifdef CL_PROTOTYPED
 	FILE		*close
-#endif
 );
 #endif
 
 #ifndef SIcopy
 FUNC_EXTERN STATUS  SIcopy(
-#ifdef CL_PROTOTYPED
         LOCATION        *in,
         LOCATION        *out
-#endif
 );
 #endif
 
 #ifndef SIeqinit
 FUNC_EXTERN STATUS  SIeqinit(
-#ifdef CL_PROTOTYPED
 	void
-#endif
 );
 #endif
 
 #ifndef SIflush
 FUNC_EXTERN STATUS  SIflush(
-#ifdef CL_PROTOTYPED
 	FILE		*s
-#endif
 );
 #endif
 
 #ifndef SIfopen
 FUNC_EXTERN STATUS  SIfopen(
-#ifdef CL_PROTOTYPED
 	LOCATION	*loc, 
 	char		*mode, 
 	i4		type, 
 	i4		length, 
 	FILE		**desc
-#endif
 );
 #endif
 
 #ifndef SIfprintf
 FUNC_EXTERN VOID SIfprintf(
-#ifdef CL_PROTOTYPED
         FILE		*fp,
 	const char	*fmt,
 	...
-#endif
 );
 #endif
 
 #ifndef SIfseek
 FUNC_EXTERN STATUS  SIfseek(
-#ifdef CL_PROTOTYPED
 	FILE		*fp, 
 	OFFSET_TYPE	offset, 
 	i4		mode
-#endif
 );
 #endif
 
 #ifndef SIftell
 FUNC_EXTERN OFFSET_TYPE SIftell(
-#ifdef CL_PROTOTYPED
 	FILE		*fp
-#endif
 );
 #endif
 
 #ifndef SIgetattr
 FUNC_EXTERN STATUS     SIgetattr(
-#ifdef CL_PROTOTYPED
 	FILE		*stream,
 	i4		*type,
 	i4		*length
-#endif
 );
 #endif
 
 #ifndef SIgetc
 FUNC_EXTERN i4      SIgetc(
-#ifdef CL_PROTOTYPED
 	FILE		*stream
-#endif
 );
 #endif
 
 #ifndef SIgetrec
 FUNC_EXTERN STATUS  SIgetrec(
-#ifdef CL_PROTOTYPED
 	char		*bug, 
 	i4		n, 
 	FILE		*stream
-#endif
 );
 #endif
 
 #ifndef SIisopen
 FUNC_EXTERN bool    SIisopen(
-#ifdef CL_PROTOTYPED
 	FILE		*streamptr
-#endif
 );
 #endif
 
 #ifndef SIopen
 FUNC_EXTERN STATUS  SIopen(
-#ifdef CL_PROTOTYPED
 	LOCATION	*loc, 
 	char		*mode, 
 	FILE		**desc
-#endif
 );
 #endif
 
 #ifndef SIprintf
 FUNC_EXTERN VOID SIprintf(
-#ifdef CL_PROTOTYPED
 	const char		*fmt,
 	...
-#endif
 );
 #endif
 
 #ifndef SIputc
 FUNC_EXTERN i4      SIputc(
-#ifdef CL_PROTOTYPED
 	i4		c, 
 	FILE		*stream
-#endif
 );
 #endif
 
 #ifndef SIputrec
 FUNC_EXTERN STATUS  SIputrec(
-#ifdef CL_PROTOTYPED
 	char		*buf, 
 	FILE		*stream
-#endif
 );
 #endif
 
 #ifndef SIread
 FUNC_EXTERN STATUS  SIread(
-#ifdef CL_PROTOTYPED
 	FILE		*stream, 
 	i4		numofbytes, 
 	i4		*actual_count, 
 	char		*pointer
-#endif
 );
 #endif
 
 #ifndef SIterminal
 FUNC_EXTERN bool    SIterminal(
-#ifdef CL_PROTOTYPED
 	FILE		*s
-#endif
 );
 #endif
 
 #ifndef SIungetc
 FUNC_EXTERN i4      SIungetc(
-#ifdef CL_PROTOTYPED
 	char		c, 
 	FILE		*stream
-#endif
 );
 #endif
 
 #ifndef SIwrite
 FUNC_EXTERN STATUS  SIwrite(
-#ifdef CL_PROTOTYPED
 	i4		typesize, 
 	char		*pointer, 
 	i4		*count, 
 	FILE		*stream
-#endif
 );
 #endif
 
 #ifndef SIcreate
 FUNC_EXTERN STATUS  SIcreate(
-#ifdef CL_PROTOTYPED
         LOCATION        *lo
-#endif
 );
 #endif
 
 #ifndef SIhistgetrec
 FUNC_EXTERN STATUS  SIhistgetrec(
-#ifdef CL_PROTOTYPED
 	char		*bug, 
 	i4		n, 
 	FILE		*stream
-#endif
 );
 #endif
 
 #ifndef SIclearhistory
-FUNC_EXTERN void SIclearhistory();
+FUNC_EXTERN void SIclearhistory(void);
 #endif
 
 #ifdef NT_GENERIC
@@ -311,10 +268,16 @@ FUNC_EXTERN VOID SIsaveDatabase(
 #endif /* NT_GENERIC */
 
 FUNC_EXTERN STATUS SIstd_write(
-#ifdef CL_PROTOTYPED
 	i4		std_stream,
 	char		*str
-#endif
 );
+
+#ifdef VMS
+VOID
+SIdofrmt(FILE *outarg, const char *fmt, STATUS (*flfunc)(), va_list ap);
+#else
+VOID
+SIdofrmt(i4, void *, const char *, va_list);
+#endif
 
 #endif /*SI_INCLUDE*/

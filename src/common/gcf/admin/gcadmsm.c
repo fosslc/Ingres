@@ -34,6 +34,8 @@
 ** History:
 **	 9-10-2003 (wansh01) 
 **	    Created.
+**       15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 /*
 ** Forward references.
 */
@@ -263,7 +265,7 @@ static struct
 
 static  bool    gcadm_active = FALSE;
 static  void 	gcadm_complete( PTR  );
-static  GCADM_RCB * gcadm_new_rcb( );
+static  GCADM_RCB * gcadm_new_rcb( void );
 static  void    gcadm_free_rcb( GCADM_RCB * );
 static  void 	gcadm_event( GCADM_RCB *  );
 static 	void    gcadm_sm( GCADM_RCB * );
@@ -1059,7 +1061,7 @@ gcadm_free_scb( GCADM_SCB *scb )
 **	    Created.
 */
 
-GCADM_RCB *
+static GCADM_RCB *
 gcadm_new_rcb( )
 {
    GCADM_RCB  *rcb;

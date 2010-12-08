@@ -2,6 +2,9 @@
 ** Copyright (c) 2004 Ingres Corporation
 */
 
+#ifndef DIASYNC_H_INCLUDED
+#define DIASYNC_H_INCLUDED
+
 /**
 ** Name: diasync.h - defines to be used with ASYNC_IO
 **
@@ -106,21 +109,21 @@
 **	    Replace mg5_osx with generic OSX
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Multi-inclusion protection.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
 **/
 
-#ifdef dr6_us5
-#include <sys/iclaio.h>
-#else
 #ifdef xCL_ASYNC_IO
 #include <aio.h>
 #else
 #if defined(sparc_sol) || defined(usl_us5) || defined(any_aix) || \
-  defined(axp_osf)  || defined(sui_us5) || \
+  defined(axp_osf)  || \
   defined (sgi_us5) || defined(LNX) || defined(a64_sol)
 #include <aio.h>
 #else
-#if !defined(dgi_us5) && !defined(sgi_us5) && !defined(dg8_us5) && \
-    !defined(rux_us5) && !defined(LNX) && !defined(OSX)
+#if !defined(OSX)
 union      notifyinfo {
         int             nisigno;        /* signal number */
         void            (*nifunc)(union sigval);
@@ -136,7 +139,7 @@ struct    sigevent
     union notifyinfo    sigev_notifyinfo;
     union sigval        sigev_value;
     };
-#endif    /* !defined( dgi_us5 )  !defined(sgi_us5) */
+#endif
 
 struct     aiocb
         {
@@ -156,14 +159,11 @@ struct     aiocb
 #define LIO_READ                        ((int) 1)
 #define LIO_WRITE                       ((int) 2)
 #define LIO_NOWAIT                      ((int) 0)
-#if !defined(LNX)
 #define sigev_signo     sigev_notifyinfo.nisigno
 typedef struct aiocb aiocb_t;
-#endif /* Linux */
 
-#endif /* su4_us5 */
+#endif /* sol aix lnx etc */
 #endif /* xCL_ASYNC_IO */
-#endif /* dr6_us5 */
 
 
 /*
@@ -245,3 +245,5 @@ struct _DI_LISTIOCB {
 # endif
 };
 typedef struct _DI_LISTIOCB DI_LISTIOCB;
+
+#endif /* DIASYNC_H_INCLUDED */

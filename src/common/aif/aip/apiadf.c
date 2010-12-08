@@ -78,6 +78,8 @@
 **	    Support date type alias.
 **       29-Nov-2007 (rapma01)
 **          added include of pm.h to provide prototype for PMhost()
+**       15-Nov-2010 (stial01) SIR 124685 Prototype Cleanup
+**          Changes to eliminate compiler prototype warnings.
 */
 
 /*
@@ -85,7 +87,11 @@
 ** the values used for converting 'today' and 'now'
 ** date constants to INGRES dates.
 */
-static DB_STATUS	adf_time();
+static DB_STATUS adf_time(
+		ADF_DBMSINFO	*dbi, 
+		DB_DATA_VALUE	*dv1,
+		DB_DATA_VALUE	*dvr,
+		DB_ERROR	*err);
 
 /*
 ** The following structure is used to initialize ADF
@@ -124,11 +130,11 @@ static ADF_TAB_DBMSINFO adf_tab_dbms =
 */
 
 static DB_STATUS 
-adf_time( dbi, dv1, dvr, err )
-ADF_DBMSINFO	*dbi; 
-DB_DATA_VALUE	*dv1;
-DB_DATA_VALUE	*dvr;
-DB_ERROR	*err;
+adf_time(
+ADF_DBMSINFO	*dbi, 
+DB_DATA_VALUE	*dv1,
+DB_DATA_VALUE	*dvr,
+DB_ERROR	*err)
 {
     *(i4 *)dvr->db_data = TMsecs();
     return( OK );

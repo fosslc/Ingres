@@ -1,5 +1,5 @@
 /*
-** Copyright (c) 2004 Ingres Corporation
+** Copyright (c) 2004, 2010 Ingres Corporation
 NO_OPTIM = usl_us5 
 */
 
@@ -246,19 +246,11 @@ NO_OPTIM = usl_us5
 **          Added byte string datatypes.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adc_helem(
 ADF_CB              *adf_scb,
 DB_DATA_VALUE       *adc_dvfrom,
 DB_DATA_VALUE       *adc_dvhg)
-# else
-DB_STATUS
-adc_helem( adf_scb, adc_dvfrom, adc_dvhg)
-ADF_CB              *adf_scb;
-DB_DATA_VALUE       *adc_dvfrom;
-DB_DATA_VALUE       *adc_dvhg;
-# endif
 {
     DB_STATUS           db_stat = E_DB_OK;
     i4			bdt     = abs((i4) adc_dvfrom->db_datatype);
@@ -342,9 +334,8 @@ DB_DATA_VALUE       *adc_dvhg;
 	}
 	else					/* nullable, but not NULL */
 	{
-	    DB_DATA_VALUE	tmp_dv;
+	    DB_DATA_VALUE tmp_dv = *adc_dvfrom;
 
-	    STRUCT_ASSIGN_MACRO(*adc_dvfrom, tmp_dv);
 	    tmp_dv.db_datatype = bdt;
 	    tmp_dv.db_length--;
 
@@ -522,6 +513,9 @@ DB_DATA_VALUE       *adc_dvhg;
 **          A standard interface is expected by fcn lookup / execute 
 **          operations. Force NFC normalization is now achieved by temporarily 
 **          updating the adf_uninorm_flag in the ADF_CB.
+**	19-Nov-2010 (kiria01) SIR 124690
+**	    Add support for UCS_BASIC collation. Don't allow UTF8 strings with it
+**	    to use UCS2 CEs for comparison related actions.
 */
 
 DB_STATUS
@@ -548,14 +542,15 @@ DB_DATA_VALUE      *adc_dvhg)
 	/*  Compress out spaces and null pad end */
 	while (fromp < fromendp)
 	    if (CMspace(fromp))
-    		CMnext(fromp);
-    	    else
-	       	if (top + CMbytecnt(fromp) <= toendp)
+		CMnext(fromp);
+	    else
+		if (top + CMbytecnt(fromp) <= toendp)
 		    CMcpyinc(fromp, top);
 		else
 		    break;
 
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_dvfrom->db_collID != DB_UCS_BASIC_COLL)
 	    /* Cut out before we pad buffer & leave top
 	    ** at end of string for next bit.
 	    */
@@ -589,7 +584,8 @@ DB_DATA_VALUE      *adc_dvhg)
 	while (fromp < fromendp && top + CMbytecnt(fromp) <= toendp)
 	    CMcpyinc(fromp, top);
 
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_dvfrom->db_collID != DB_UCS_BASIC_COLL)
 	    /* Cut out before we pad buffer & leave top
 	    ** at end of string for next bit.
 	    */
@@ -664,7 +660,8 @@ DB_DATA_VALUE      *adc_dvhg)
 	while (fromp < fromendp && top + CMbytecnt(fromp) <= toendp)
 	    CMcpyinc(fromp, top);
 
-	if (adf_scb->adf_utf8_flag & AD_UTF8_ENABLED)
+	if ((adf_scb->adf_utf8_flag & AD_UTF8_ENABLED) &&
+		adc_dvfrom->db_collID != DB_UCS_BASIC_COLL)
 	    /* Cut out before we pad buffer & leave top
 	    ** at end of string for next bit.
 	    */
@@ -745,7 +742,7 @@ DB_DATA_VALUE      *adc_dvhg)
 	    res_dv.db_datatype = DB_VBYTE_TYPE;
 	    res_dv.db_length = sizeof(cw);
 	    res_dv.db_prec = 0;
-	    res_dv.db_collID = -1;
+	    res_dv.db_collID = DB_UNSET_COLL;
 
 	    /* Ensure we don't ask for more than we'll use */
 	    if (res_dv.db_length > adc_dvhg->db_length + DB_CNTSIZE)
@@ -809,7 +806,7 @@ UTF8prep:
 	res_dv.db_datatype = DB_CHA_TYPE;
 	res_dv.db_length = top - (u_char*)adc_dvhg->db_data;
 	res_dv.db_prec = 0;
-	res_dv.db_collID = -1;
+	res_dv.db_collID = DB_UNSET_COLL;
 
 	/* utf8_dv will be used to get the expanded form of the original
 	** and is likely to be a truncated representation of the data.
@@ -818,7 +815,7 @@ UTF8prep:
 	utf8_dv.db_datatype = DB_NVCHR_TYPE;
 	utf8_dv.db_length = sizeof(uval);
 	utf8_dv.db_prec = 0;
-	utf8_dv.db_collID = -1; /* UTF8 default collation? */
+	utf8_dv.db_collID = DB_UNSET_COLL;
 
 	if (db_stat = adu_nvchr_fromutf8(adf_scb, adc_dvfrom, &utf8_dv))
 	    return(db_stat);
@@ -828,7 +825,7 @@ UTF8prep:
 	res_dv.db_datatype = DB_VBYTE_TYPE;
 	res_dv.db_length = sizeof(cw);
 	res_dv.db_prec = 0;
-	res_dv.db_collID = -1;
+	res_dv.db_collID = DB_UNSET_COLL;
 
 	/* Ensure we don't ask for more than we'll use */
 	if (res_dv.db_length > adc_dvhg->db_length + DB_CNTSIZE)

@@ -113,22 +113,16 @@
 **	    Change names of variables to enhance readability and debugability.
 **	06-apr-1998 (hanch04)
 **	    Do abs once, don't pass it to macro.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 [@history_template@]...
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_dtinfo(
 ADF_CB		    *adf_scb,
 DB_DT_ID            dtid,
 i4		    *dtinfo)
-# else
-DB_STATUS
-adi_dtinfo( adf_scb, dtid, dtinfo)
-ADF_CB		    *adf_scb;
-DB_DT_ID            dtid;
-i4		    *dtinfo;
-# endif
 {
     dtid = abs(dtid);
     dtid = ADI_DT_MAP_MACRO(dtid);
@@ -203,22 +197,16 @@ i4		    *dtinfo;
 **          Created.
 **      18-Oct-1993 (fred)
 **          Rebuilt to include all underlying information -- type and length.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 [@history_template@]...
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 adi_per_under(
 ADF_CB		    *adf_scb,
 DB_DT_ID	    dtid,
 DB_DATA_VALUE	    *under_dv)
-# else
-DB_STATUS
-adi_per_under( adf_scb, dtid, under_dv)
-ADF_CB		    *adf_scb;
-DB_DT_ID	    dtid;
-DB_DATA_VALUE	    *under_dv;
-# endif
 {
     DB_STATUS       	status;
     DB_DT_ID        	mapped_id;

@@ -98,6 +98,8 @@
 **          Correct broken line ifdef from integration of change 484289.
 **      22-dec-2008 (stegr01)
 **         Itanium VMS port.
+**	12-Nov-2010 (kschendel) SIR 124685
+**	    Include stdlib to fix compile warning.
 */
 
 /* NO_OPTIM = sgi_us5 */
@@ -106,6 +108,7 @@
 # include <pthread.h>
 #endif
 # include <stdio.h>
+# include <stdlib.h>
 # include <setjmp.h>
 #ifdef _SGI_SOURCE 
 # include <math.h>

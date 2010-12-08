@@ -5,10 +5,7 @@
 */
 
 #include <systypes.h>
-# if !defined(__STDARG_H__) && !defined(dg8_us5) && !defined(dgi_us5) \
-  && !defined(any_hpux) && !defined(su4_u42) \
-  && !defined(any_aix) && !defined(rmx_us5) \
-  && !defined(rux_us5)
+# if !defined(__STDARG_H__)  && !defined(any_hpux) && !defined(any_aix)
 #include    <stdarg.h>
 #endif
 
@@ -96,6 +93,10 @@
 **	    TRdisplay output to the NULL device.
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports.
+**	3-Dec-2010 (kschendel)
+**	    Turns out DESKTOP was on for windows, fix.
 **/
 
 /*
@@ -151,7 +152,7 @@
 
 #endif	/* VMS */
 
-#if defined (UNIX) || defined (DESKTOP)
+#if defined (UNIX) || defined(NT_GENERIC)
 
 #define			TR_OUTPUT	"stdio"
 #define			TR_L_OUTPUT	5
@@ -160,7 +161,7 @@
 #define			TR_NULLOUT	"/dev/null"
 #define			TR_L_NULLOUT	9
 
-#endif	/* UNIX || DESKTOP */
+#endif	/* UNIX */
 
 /*
 ** Name: TR_CONTEXT - Trace I/O context

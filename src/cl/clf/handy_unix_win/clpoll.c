@@ -15,10 +15,6 @@
 # endif /* OS_THREADS_USED */
 #include    <gl.h>
 
-# ifdef sos_us5
-# undef FD_SETSIZE
-# define    FD_SETSIZE 8192
-# endif
 
 #include    <er.h>
 #include    <lo.h>
@@ -34,27 +30,22 @@
 #include    <me.h>
 #include    <meprivate.h>
 #include    <pc.h>
-
+#include    <bsi.h>
 #include    "bsshmio.h"   
 PTR shm_addr();
 
 #include    <sys/stat.h>
 
-/*
-**  NO_OPTIM = dg8_us5 || i64_aix
-*/
-
 #ifndef GCF63
 #include    <cs.h>
 #endif 
 
-# if defined(dr6_us5) || defined(usl_us5) || defined(sparc_sol) \
-  || defined(sui_us5) || defined(nc4_us5) || defined(sqs_ptx)
+# if defined(usl_us5) || defined(sparc_sol)
 /*
 ** setjump/longjmp is used to fix to bug #44975
 */
 # include <setjmp.h>
-# endif /* dr6_us5, usl_us5, su4_us5, sui_us5, nc4_us5, sqs_ptx */
+# endif /* usl_us5, su4_us5 */
 
 /* use select() unless only poll() is available */
 
@@ -510,6 +501,10 @@ PTR shm_addr();
 **	    Declare errno correctly (i.e. via errno.h).
 **	22-Jun-2009 (kschendel) SIR 122138
 **	    Use any_aix, sparc_sol, any_hpux symbols as needed.
+**	29-Nov-2010 (frima01) SIR 124685
+**	    Added prototypes and includes of bsi.h and bsshmio.h.
+**	23-Nov-2010 (kschendel)
+**	    Drop obsolete ports;  do a wee bit more prototyping.
 */
 
 
@@ -542,8 +537,7 @@ typedef struct {
 static i4  cltrace = 0;
 static i4  callvec_incr = 8;
 
-# if defined(dr6_us5) || defined(usl_us5) || defined(sparc_sol) \
-  || defined(sui_us5) || defined(nc4_us5) || defined(sqs_ptx)
+# if defined(usl_us5) || defined(sparc_sol)
 /*
 ** setjump/longjmp environment for fix to bug #44975
 */
@@ -555,7 +549,7 @@ static jmp_buf jmp_env;
 static i4     use_longjmp = 0;
 
 
-# endif /* dr6_us5, usl_us5, su4_us5, sui_us5, nc4_us5, sqs_ptx */
+# endif /* usl_us5, su4_us5 */
 
 # define CLTRACE(n) if( cltrace >= n )(void)TRdisplay
 
@@ -616,8 +610,8 @@ static struct _CLpoll
 		int		last_fd;  /* for bit scans  */
 
 		struct calls {
-			VOID		(*func)();
-			PTR		closure;
+			VOID		(*func)(void *, i4);
+			void		*closure;
 			i4		timeout;	/* -1 = forever */
 		} *callvec;
 
@@ -639,6 +633,37 @@ static struct _CLpoll
 } CL_poll ZERO_FILL;
 
 static bool CL_poll_init = FALSE;
+
+/* TABLE OF CONTENTS */
+static PTR ii_CLrealloc(
+	PTR ptr,
+	i4 size,
+	i4 old,
+	i4 new,
+	STATUS *status);
+STATUS iiCLfdreg(
+	int fd,
+	i4 op,
+	VOID (*func)(void *, i4),
+	void *closure,
+	i4 timeout);
+void iiCLintrp(
+	i4 signum);
+STATUS iiCLpoll(
+	i4 *timeout);
+static void ii_CL_poll_call(
+	struct _CLpoll *CL_poll_ptr,
+	int bits_set);
+static void ii_CL_timeout(
+	struct _CLpoll *CL_poll_ptr);
+static i4 ii_CL_poll_poll(
+	struct _CLpoll *CL_poll_ptr,
+	int minfd,
+	int maxfd,
+	int timeout,
+	int *poll_errno);
+i4 CL_poll_fd(
+	i4 fd);
 
 # ifdef OS_THREADS_USED
 static ME_TLS_KEY CLpoll_key = 0;
@@ -769,12 +794,7 @@ STATUS	*status;
 # define ROUNDUP( x, n ) ( ( (x) | ( (n) - 1 ) ) + 1 )
 
 STATUS
-iiCLfdreg( fd, op, func, closure, timeout )
-register int	fd;
-i4		op;
-VOID		(*func)();
-PTR		closure;
-i4		timeout;
+iiCLfdreg( int fd, i4 op, void (*func)(void *, i4), void *closure, i4 timeout )
 {
         i4      batch_mode_ind = 0;
 	register struct selector *sel;
@@ -1443,6 +1463,7 @@ done:
 # define STEPS 8
 # define MASK ( (long)( 1L << STEPS ) - 1L )
 
+static void
 ii_CL_poll_call( 
 struct _CLpoll *CL_poll_ptr,
 int	bits_set)
@@ -1608,6 +1629,7 @@ int	bits_set)
 **	    Prevent 'k' from exceeding bit array bounds.
 */
 
+static void
 ii_CL_timeout( struct _CLpoll *CL_poll_ptr )
 {
     i4  o;

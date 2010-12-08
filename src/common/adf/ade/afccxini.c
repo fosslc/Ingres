@@ -96,23 +96,16 @@
 **	    remove dbdbms.h
 **	17-Feb-2005 (schka24)
 **	    minor changes for cx segment struct.
+**      09-nov-2010 (gupsh01) SIR 124685
+**          Protype cleanup.
 */
 
-# ifdef ADF_BUILD_WITH_PROTOS
 DB_STATUS
 afc_cxhead_init(
 ADF_CB		*adf_scb,
 PTR		afc_cxhd,
 AFC_VERALN	*afc_veraln,
 i4		*offset_array)
-# else
-DB_STATUS
-afc_cxhead_init( adf_scb, afc_cxhd, afc_veraln, offset_array)
-ADF_CB		*adf_scb;
-PTR		afc_cxhd;
-AFC_VERALN	*afc_veraln;
-i4		*offset_array;
-# endif
 {
 	register ADE_CXHEAD	*cxhead = (ADE_CXHEAD *) afc_cxhd;
 	register i4		*optr = offset_array;

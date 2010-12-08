@@ -216,6 +216,8 @@
 **	    Open no-coupon to avoid unnecessary LOB overhead.
 **	21-Jul-2010 (stial01) (SIR 121123 Long Ids)
 **          Remove table name,owner from log records.
+**	15-Oct-2010 (kschendel) SIR 124544
+**	    Delete DM2U_KEY_ENTRY, it's really a DMU_KEY_ENTRY.
 **/
 
 static DB_STATUS dmv_remodify(
@@ -593,9 +595,9 @@ DM0L_MODIFY 	*log_rec)
     i4		local_error;
     DB_STATUS		status = E_DB_OK;
     i4                  merge = 0;
-    DM2U_KEY_ENTRY       *keyentry;
-    DM2U_KEY_ENTRY       *curentry;
-    DM2U_KEY_ENTRY       **keyptrs;
+    DMU_KEY_ENTRY       *keyentry;
+    DMU_KEY_ENTRY       *curentry;
+    DMU_KEY_ENTRY       **keyptrs;
     DB_OWN_NAME         table_owner;
     DB_TAB_NAME         table_name;
     DB_TAB_ID		master_id;
@@ -692,28 +694,28 @@ DM0L_MODIFY 	*log_rec)
 	}
 
 	/*
-	** Allocate memory for MISC_CB, 
-	** and DM2U_KEY_ENTRY pointers and entries
+	** Allocate memory for MISC_CB,
+	** and DMU_KEY_ENTRY pointers and entries
 	*/
 	status = dm0m_allocate(sizeof(DMP_MISC) +
-	    kcount * sizeof (DM2U_KEY_ENTRY *) + 
-	    kcount * sizeof(DM2U_KEY_ENTRY),
+	    kcount * sizeof (DMU_KEY_ENTRY *) +
+	    kcount * sizeof(DMU_KEY_ENTRY),
 	    (i4)DM0M_ZERO, (i4)MISC_CB, (i4)MISC_ASCII_ID,
 	    (char *)NULL, (DM_OBJECT **)&misc, &dmve->dmve_error);
 	if (status != E_DB_OK)
 	    break;
 	misc->misc_data = (char*)misc + sizeof(DMP_MISC);
 
-	/* We have attribute numbers, allocate & init DM2U_KEY_ENTRYs */
+	/* We have attribute numbers, allocate & init DMU_KEY_ENTRYs */
 	if (log_rec->dum_structure == DM0L_TRUNCATE)
 	{
-	    keyptrs = (DM2U_KEY_ENTRY **)NULL;
-	    keyentry = (DM2U_KEY_ENTRY *)NULL;
+	    keyptrs = (DMU_KEY_ENTRY **)NULL;
+	    keyentry = (DMU_KEY_ENTRY *)NULL;
 	}
 	else
 	{
-	    keyptrs = (DM2U_KEY_ENTRY **)(misc + 1);
-	    keyentry = (DM2U_KEY_ENTRY *)(keyptrs + kcount);
+	    keyptrs = (DMU_KEY_ENTRY **)(misc + 1);
+	    keyentry = (DMU_KEY_ENTRY *)(keyptrs + kcount);
 
 	    for (i = 0; i < kcount; i++)
 	    {

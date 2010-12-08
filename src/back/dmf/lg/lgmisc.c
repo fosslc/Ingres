@@ -208,6 +208,12 @@
 **          LG_check_dead() Check for lone logwriter sleeping & unassigned bufs
 **	07-Aug-2009 (drivi01)
 **	    In order to port to Visual Studio 2008, cleanup the warnings.
+**	03-Nov-2010 (jonj) SIR 124685 Prototype Cleanup
+**	    Delete non-conforming LG_status_is_abort() function.
+**	    Those that need to know this must use LGshow().
+**	11-Nov-2010 (kschendel)
+**	    CS_xxx_critical_sems exists on VMS as well as unix, change the
+**	    conditional.
 */
 
 static	STATUS	get_critical_sems(void);
@@ -1443,7 +1449,7 @@ LG_check_dead(CL_ERR_DESC *sys_err)
 
     (VOID)LG_unmutex(&lgd->lgd_lpb_q_mutex);
 
-#ifdef UNIX
+#ifndef NT_GENERIC
     /* Call cs to cleanup up any programs which may have owned a server
     ** slot but never have exited without freeing it.  This includes
     ** programs which may never have opened any database (and thus are
@@ -1452,7 +1458,10 @@ LG_check_dead(CL_ERR_DESC *sys_err)
     ** ...
     */
 
+#  ifdef OS_THREADS_USED
     CS_check_dead();
+#  endif
+
 #endif
 
     if (lgd->lgd_lwlxb.lwq_count != 1)
@@ -1994,8 +2003,10 @@ get_critical_sems(void)
 	ret_status = status;
     }
 
-#ifdef UNIX
+#ifndef NT_GENERIC
+#  ifdef OS_THREADS_USED
     CS_get_critical_sems();
+#  endif
 #endif
 
     return (ret_status);
@@ -2047,8 +2058,10 @@ rel_critical_sems(void)
     SIZE_TYPE	*lxbb_table;
     i4	i;
 
-#ifdef UNIX
+#ifndef NT_GENERIC
+#   ifdef OS_THREADS_USED
     CS_rel_critical_sems();
+#   endif
 #endif
 
     /*
@@ -3217,53 +3230,3 @@ register LPD	*lpd)
 
     return (OK);
 }
-
-
-/*{
-** Name: LG_status_id_abort - Return flag for current transaction 
-**
-** Description:
-**      This routine looks for the specified distributed transaction
-**      and returns its status
-**
-** Inputs:
-**      lx_id			lock identifier
-**
-** Outputs:
-**	Returns:
-**	    TRUE means transaction should be force-aborted
-**	Exceptions:
-**	    None
-**
-** Side Effects:
-**	None
-**
-** History:
-**	16-Aug-2007 (kibro01) b118626
-**	    Created.
-*/
-bool
-LG_status_is_abort(
-LG_ID		*lx_id)
-{
-    register LGD	*lgd = (LGD *)LGK_base.lgk_lgd_ptr;
-    SIZE_TYPE		*lxbb_table;
-    register LXB	*handle_lxb;
-
-    if (lx_id->id_id == 0 || (i4)lx_id->id_id > lgd->lgd_lxbb_count)
-    {
-	return (TRUE);
-    }
-
-    lxbb_table = (SIZE_TYPE *)LGK_PTR_FROM_OFFSET(lgd->lgd_lxbb_table);
-    handle_lxb = (LXB *)LGK_PTR_FROM_OFFSET(lxbb_table[lx_id->id_id]);
-
-    if (handle_lxb == NULL)
-	return (TRUE);
-
-    if (handle_lxb->lxb_status & LXB_FORCE_ABORT)
-	return (TRUE);
-
-    return (FALSE);
-}
-

@@ -1,5 +1,5 @@
 /*
-**Copyright (c) 2004 Ingres Corporation
+**Copyright (c) 2004, 2010 Ingres Corporation
 */
 
 #include    <compat.h>
@@ -59,6 +59,181 @@
 #include    <opxlint.h>
 #include    <opclint.h>
 
+/*
+** Name: opctrutl.c
+**
+** Description:
+**
+** History:
+**	08-Nov-2010 (kiria01) SIR 124685
+**	    Rationalise function prototypes
+*/
+
+/*
+** Forward Structure Defenitions:
+*/
+typedef struct _ULD_TTCB ULD_TTCB;
+typedef struct _ULD_TSTATE ULD_TSTATE;
+
+/* TABLE OF CONTENTS */
+static i4 opcu_handler(
+	EX_ARGS *args);
+static void opcu_msignal(
+	ULD_TTCB *ttcbptr,
+	DB_ERRTYPE error,
+	i4 status,
+	DB_ERRTYPE facility);
+static void opcu_printf(
+	ULD_TTCB *ttcbptr,
+	char *stringp);
+static void opc_flshb(
+	OPC_TTCB *textcb,
+	ULD_TSTRING *tstring,
+	ULD_TSTATE *tempbuf);
+static void opcu_flush(
+	ULD_TTCB *ttcbptr,
+	ULD_TSTRING *tstring);
+static void opc_printtemp(
+	OPC_TTCB *ttcbptr,
+	i4 tempnum,
+	ULD_TSTATE *bufstruct);
+static void opcu_tabprintf(
+	ULD_TTCB *ttcbptr,
+	ULD_TSTRING *tname,
+	i4 tempnum);
+static void opcu_from(
+	ULD_TTCB *ttcbptr,
+	bool resultonly,
+	bool noresult);
+static i4 opcu_joinwhere(
+	ULD_TTCB *ttcbptr);
+static void opcu_intprintf(
+	ULD_TTCB *ttcbptr,
+	i4 intvalue);
+static void opc_pttresname(
+	ULD_TTCB *ttcbptr,
+	i4 resnum);
+static void opc_varnode(
+	ULD_TTCB *ttcbptr,
+	i4 varno,
+	i4 atno);
+static void opcu_prvar(
+	ULD_TTCB *ttcbptr,
+	PST_QNODE *varp);
+static void opcu_prconst(
+	ULD_TTCB *ttcbptr,
+	PST_QNODE *constp);
+static void opc_uop(
+	ULD_TTCB *ttcbptr,
+	PST_QNODE *qnode);
+static void opc_bop(
+	ULD_TTCB *ttcbptr,
+	PST_QNODE *qnode);
+static void opc_mop(
+	ULD_TTCB *ttcbptr,
+	PST_QNODE *qnode);
+static void opc_case(
+	ULD_TTCB *ttcbptr,
+	PST_QNODE *qnode);
+void opc_gatname(
+	OPS_STATE *global,
+	OPV_IGVARS gvarno,
+	DB_ATT_ID *ingres_atno,
+	OPT_NAME *attrname,
+	DD_CAPS *cap_ptr);
+static void opcu_curval(
+	ULD_TTCB *ttcbptr,
+	PST_QNODE *qnode);
+static void opcu_prexpr(
+	ULD_TTCB *ttcbptr,
+	PST_QNODE *qnode);
+static void opcu_swapf(
+	ULD_TTCB *ttcbptr);
+static void opcu_resright(
+	ULD_TTCB *ttcbptr,
+	PST_QNODE *resdomptr);
+static void opcu_target(
+	ULD_TTCB *ttcbptr,
+	QEQ_TXT_SEG **targetpp,
+	char *delimiter,
+	char *equals);
+static void opcu_winit(
+	ULD_TTCB *ttcbptr);
+void opcu_joinseg(
+	QEQ_TXT_SEG **main_seg,
+	QEQ_TXT_SEG *seg_to_add);
+static void opcu_wend(
+	ULD_TTCB *ttcbptr);
+static void opcu_where(
+	ULD_TTCB *ttcbptr);
+static bool opcu_isconstant(
+	PST_QNODE *qnodep);
+static void opcu_groupby(
+	ULD_TTCB *ttcbptr);
+static void opcu_for(
+	ULD_TTCB *ttcbptr);
+static void opcu_quel(
+	ULD_TTCB *ttcbptr);
+void opcu_getrange(
+	OPCQHD *qhdptr,
+	i4 tno,
+	char *rangename);
+static bool opc_tblnam(
+	ULD_TTCB *ttcbptr,
+	OPC_TTCB *global,
+	ULD_TSTRING **namepp,
+	ULD_TSTRING **aliaspp,
+	i4 *tempnum,
+	bool *is_result);
+static void opcu_sql(
+	ULD_TTCB *ttcbptr);
+static bool opc_conjunct(
+	OPC_TTCB *handle,
+	PST_QNODE **qtreepp);
+static bool opc_jconjunct(
+	OPC_TTCB *handle,
+	PST_QNODE **qtreepp);
+static void opcu_nullj(
+	ULD_TTCB *ttcbptr,
+	OPC_TTCB *handle);
+static void opcu_sort(
+	ULD_TTCB *ttcbptr);
+void opcu_arraybld(
+	PST_QNODE *root,
+	PST_TYPE nodetype,
+	PST_QNODE *stop_at,
+	PST_QNODE *nodearray[],
+	i4 *nnodes);
+static PST_QNODE *opc_resdom(
+	ULD_TTCB *ttcbptr,
+	bool use_list,
+	PST_QNODE *resdomp,
+	char *namep,
+	i4 *attno,
+	bool base_colname);
+static void opc_prbuf(
+	OPC_TTCB *textcb,
+	char *stringp,
+	ULD_TSTATE *bufstruct);
+static void opcu_tidjoin(
+	ULD_TTCB *ttcbptr);
+i4 opcu_tree_to_text(
+	PTR handle,
+	PSQ_MODE qmode,
+	ULD_TSTRING *rnamep,
+	ADF_CB *adfcb,
+	ULM_RCB *ulmcb,
+	ULD_LENGTH linelength,
+	bool pretty,
+	PST_QNODE *qroot,
+	i4 conjflag,
+	bool resdomflg,
+	ULD_TSTRING **tstring,
+	DB_ERROR *error,
+	DB_LANG language,
+	bool qualonly,
+	bool finish,
+	bool notqual);
 # define OPCU_MAXRES	DD_MAXCOLUMN
 /* max no. columns in a target list */
 
@@ -97,7 +272,7 @@
 **      01-oct-2010 (stial01) (SIR 121123 Long Ids)
 **          Store blank trimmed names in DMT_ATT_ENTRY
 */
-typedef struct _ULD_TSTATE
+struct _ULD_TSTATE
 {
 	char	    uld_tempbuf[ULD_TSIZE]; /* temp buffer used to build string
                                         ** this should be larger than any other
@@ -107,7 +282,7 @@ typedef struct _ULD_TSTATE
 					*/
     ULD_TSTRING     **uld_tstring;      /* linked list of text strings to return
                                         ** to the user */
-} ULD_TSTATE;
+};
 
 /*}
 ** Name: ULD_TTCB - control block for tree to text conversion
@@ -133,7 +308,7 @@ typedef struct _ULD_TSTATE
 [@history_line@]...
 [@history_template@]...
 */
-typedef struct _ULD_TTCB
+struct _ULD_TTCB
 {
     PTR             handle;             /* user handle */
     ADF_CB	    *adfcb;             /* adf session control block */
@@ -175,7 +350,7 @@ typedef struct _ULD_TTCB
     PST_QNODE	    *uld_nodearray[ OPCU_MAXRES ];
     i4		    uld_nnodes;
 
-} ULD_TTCB;
+};
 
 /*}
 ** Name: NULL_COERCE - vector of null coercion descriptors
@@ -232,7 +407,7 @@ static NULL_COERCE	nc_array[] =
 	 {{NULL, 9,  (DB_DT_ID)-DB_MNY_TYPE,   0,-1}, "money"},
 	 {{NULL, 3,  (DB_DT_ID)-DB_VCH_TYPE,   0,-1}, "varchar"},
 	 {{NULL, 4,  (DB_DT_ID)-DB_VBYTE_TYPE, 0,-1}, "varbyte"}};
-#define NCA_SIZE sizeof(nc_array)/sizeof(nc_array[0])
+#define NCA_SIZE (i4)(sizeof(nc_array)/sizeof(nc_array[0]))
 
 
 /*
@@ -328,44 +503,6 @@ opcu_handler(
         (VOID) ulx_exception(args, DB_OPF_ID, E_OP08A2_EXCEPTION, TRUE);
     }
     return(EXDECLARE);
-}
-
-/*{
-** Name: opcu_signal	- this routine will report an error
-**
-** Description:
-**      This routine will report a E_DB_ERROR error.  The routine
-**      will not return but instead generate an internal exception and
-**      exit via the exception handling mechanism.
-**
-** Inputs:
-**      ttcbptr				ptr to global state variable
-**      error                           error code to report
-**
-** Outputs:
-**	Returns:
-**	    - routine does not return
-**	Exceptions:
-**	    - internal exception generated
-**
-** Side Effects:
-**
-** History:
-**	8-apr-88 (seputis)
-**          initial creation
-**	09-jan-1996 (toumi01; from 1.1 axp_osf port)
-**	    Cast (long) 3rd... EXsignal args to avoid truncation.
-[@history_line@]...
-*/
-static VOID
-opcu_signal(
-	ULD_TTCB           *ttcbptr,
-	DB_ERRTYPE          error )
-{
-    ttcbptr->uld_retstatus = E_DB_ERROR;         /* return status code */
-    ttcbptr->error->err_code = error;		/* error code */
-    ulx_rverror("Tree to Text", E_DB_ERROR, error, 0, ULE_LOG, (DB_FACILITY)DB_ULF_ID);
-    EXsignal( (EX)EX_JNP_LJMP, (i4)1, (long)error);/* signal a long jump */
 }
 
 /*{
@@ -1830,7 +1967,6 @@ opc_bop(
 {
     DB_STATUS	    status;
     ADI_OPINFO	    adi_info;
-    i4		    i;
     u_i4	    pat_flags;
     PST_QNODE       *cnst;
     bool            in_list = FALSE;
@@ -1937,7 +2073,7 @@ opc_bop(
 	    if ((pat_flags & AD_PAT_ISESCAPE_MASK) == AD_PAT_HAS_UESCAPE)
 	    {
 		u_i4 s = qnode->pst_sym.pst_value.pst_s_op.pst_escape;
-		STprintf( escape_str, "U&'\%04x' ", s);
+		STprintf( escape_str, "U&'\\%04x' ", s);
 	    }
 	    else
 	    {
@@ -2139,7 +2275,6 @@ opc_case(
          ULD_TTCB           *ttcbptr,
          PST_QNODE          *qnode )
 {
-    DB_STATUS       status;
     PST_QNODE *whlistp = qnode->pst_left;
 
     opcu_printf(ttcbptr, " CASE ");
@@ -2249,7 +2384,7 @@ opc_gatname(
 	length = grvp->opv_relation->rdr_attr[dmfattr]->att_nmlen;
     }
 
-    if ( length >= sizeof(OPT_NAME))
+    if ( length >= (i4)sizeof(OPT_NAME))
 	length = sizeof(OPT_NAME)-1;	/* cannot use more space than
 					** available */
     length = opt_noblanks((i4)length, (char *)att_name);
@@ -2762,7 +2897,6 @@ opcu_target(
     bool	    base_colname;
     i4		    attno;
     i4		    size;
-    u_i4	    len;
     bool	    build_colarray; /* TRUE if column array needs to be built */
 
 
@@ -3215,7 +3349,7 @@ opcu_groupby(
 
     first_time = TRUE;
 
-    opcu_arraybld( textcb->subquery->ops_byexpr, (i4) PST_RESDOM, (PST_QNODE *) NULL,
+    opcu_arraybld( textcb->subquery->ops_byexpr, PST_RESDOM, (PST_QNODE *) NULL,
 	&ttcbptr->uld_nodearray[0], &ttcbptr->uld_nnodes );
     ttcbptr->uld_nnodes--;
 
@@ -4066,7 +4200,7 @@ opc_jconjunct(
 	**  created to materialize the expression-LIKE.
 	*/
 
-	return;
+	return TRUE;
     }
 
     while (handle->jeqclsp
@@ -4264,7 +4398,7 @@ opcu_sort(
 VOID
 opcu_arraybld(
 	PST_QNODE   *root,
-	i4	    nodetype,
+	PST_TYPE    nodetype,
 	PST_QNODE   *stop_at,
 	PST_QNODE   *nodearray[],
 	i4	    *nnodes )
@@ -4386,7 +4520,7 @@ opc_resdom(
 
 	if ( resdomp == NULL)
         {
-		opcu_arraybld( ttcbptr->uld_qroot->pst_left, (i4) PST_RESDOM,
+		opcu_arraybld( ttcbptr->uld_qroot->pst_left, PST_RESDOM,
 		    NULL, &ttcbptr->uld_nodearray[0], &ttcbptr->uld_nnodes );
         }
 	ttcbptr->uld_nnodes--;
@@ -4913,7 +5047,7 @@ opcu_tidjoin(
 DB_STATUS
 opcu_tree_to_text(
 	PTR                handle,
-	i4		   qmode,
+	PSQ_MODE	   qmode,
 	ULD_TSTRING	   *rnamep,
 	ADF_CB             *adfcb,
 	ULM_RCB		   *ulmcb,
