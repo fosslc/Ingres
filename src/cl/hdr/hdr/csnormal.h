@@ -973,6 +973,9 @@
 **	    Some void prototypes for gcc 4.3.
 **      21-jan-2010 (joea)
 **          Add KP Services block pointer to CS_SCB for VMS.
+**      17-feb-2010 (joea)
+**          Correct CS_TAS/CS_ACLR implementations for i64_vms.  Define CS_ASET
+**          as i8 and remove cs_pad member of CS_SEMAPHORE as no longer needed.
 **      20-apr-2010 (stephenb)
 **          Add defines for CScas8() and CSadjust_i8counter. Re-define
 **          CSadjust_counter() and CScas() to built-ins on GCC platforms
@@ -2439,7 +2442,7 @@ typedef volatile long		CS_ASET;	/* atomicly setable item */
 
 # if defined(VMS)
 # define cs_aset_type
-typedef volatile i4 CS_ASET;
+typedef volatile i8 CS_ASET;
 #endif
 
 # if defined(a64_lnx) || defined(int_lnx) || defined(int_rpl)
@@ -2758,8 +2761,8 @@ FUNC_EXTERN i4 CS_tas(CS_ASET *);
 # define CS_TAS(aset) ((__TESTBITSSI(aset,0))?0:1)                
 # endif  /* axm_vms */
 # if defined(i64_vms)
-# define CS_ACLR(aset) __ATOMIC_EXCH_LONG(aset, 0)
-# define CS_TAS(aset) (__ATOMIC_EXCH_LONG(aset, 1) ? 0 : 1)
+# define CS_ACLR(aset) (_InterlockedCompareExchange64_rel((aset), 0, 1))
+# define CS_TAS(aset) (_InterlockedCompareExchange64_acq((aset), 1, 0) ? 0 : 1)
 # endif  /* i64_vms */
 # define CS_SPININIT(s) { STATUS st; CS_cp_synch_init(&(s)->cssp_mutex,&st); }
 # define CS_getspin(s) CS_synch_lock(&(s)->cssp_mutex)
@@ -3142,8 +3145,6 @@ struct _CS_SEMAPHORE
 #endif
     i4         	    cs_pid;             /* process id of holder if semaphore
                                         ** is CS_SEM_MULTI type */
-/* BOAMA01, 30-jul-1996  Added 2 flds to resolve BBSSI/BBCCI interlock failure*/
-    i4              cs_pad;		/* Protects next long's bit 0 */
     CS_ASET	    cs_test_set;	/* Field to use for cross-process
 					** spin-lock semaphores - this field
 					** is used instead of cs_value. */
