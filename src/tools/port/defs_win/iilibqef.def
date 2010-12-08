@@ -31,6 +31,8 @@
 ;	    Remove qea_load.
 ;	18-May-2010 (kschendel) b123565
 ;	    Remove qeq_validate.
+;	7-Dec-2010 (kschendel) b124685
+;	    Remove qef routines made static by change 508850.
 ;
 EXPORTS
     qec_alter                       @100
@@ -257,7 +259,7 @@ EXPORTS
     qel_83_columns                  @322
     qel_84_altcols                  @323
     qel_85_registrations            @324
-    qel_86_proceduress              @325
+;              @325
     qel_a0_map_col                  @326
     qel_a1_min_cap_lvls             @327
     qel_a2_case_col                 @328
@@ -354,20 +356,20 @@ EXPORTS
     qea_scontext                    @426
     qea_xcimm                       @427
     qea_fetch                       @428
-    qea_0list_file                  @429
-    qea_10_updconfig                @430
-    qea_11_deldmp_config            @431
-    qea_12alter_extension           @432
-    qea_13_convert_table            @433
-    qea_1drop_file                  @434
-    qea_2create_db                  @435
-    qea_3destroy_db                 @436
-    qea_4alter_db                   @437
-    qea_5add_location               @438
-    qea_67_check_patch              @439
-    qea_8_finddbs                   @440
-    qea_9_readconfig                @441
-    qea_findlen                     @442
+;                  @429
+;                @430
+;            @431
+;           @432
+;            @433
+;                  @434
+;                  @435
+;                 @436
+;                   @437
+;               @438
+;              @439
+;                   @440
+;                @441
+;                     @442
     qea_iproc                       @443
 ;    qea_load                        @446
     qea_emessage                    @447
