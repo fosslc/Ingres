@@ -654,13 +654,22 @@ struct _GCA_PEER_INFO
 **	21-May-98 (gordy)
 **	    Use GCA_MSG_HDR structure rather than char array 
 **	    for proper alignment.
+**	17-Aug-2010 (thaju02 for Gordy) Bug 124252
+**	    Define usrlen as an i8 for 64-bit. 
+**	    This is due to unusual values returned from gco_encode() 
+**	    during message processing.  This will be removed with the 
+**	    removal of  GCA formatted interface.
 */
 
 struct _GCA_SR_SM 
 {
     char		*usrbuf;	/* user buffer */
     char		*usrptr;	/* active part of buffer */
+#if defined(LP64)
+    i8			usrlen;		/* user buffer length */
+#else
     i4			usrlen;		/* user buffer length */
+#endif
     char		*svcbuf;	/* service buffer */
     i4			svclen;		/* length of svcbuf */
     char		*buffer;	/* buffer to below */
