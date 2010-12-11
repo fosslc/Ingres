@@ -31,7 +31,7 @@ SVR_ARLIB = "TRUE" ;	#set: option SVR_AR
 
 # Hybridization...
 # a64_lnx normally builds reverse hybrid
-BUILD_ARCH = "64+32" ;	#set: arch 64+32
+BUILD_ARCH = "64" ;	#set: arch 64
 XERCES_ARCH ?= 64 ;
 
 PAX_CHECK = TRUE ;
